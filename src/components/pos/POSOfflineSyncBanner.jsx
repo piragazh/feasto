@@ -276,36 +276,142 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
         return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const formatTime = (d) => (d ? new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null);
+
+    // Stuck orders always take priority — they need a human decision and will not
+    // resolve on their own.
+    const stuckBanner = stuckCount > 0 ? (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium mb-2 border bg-red-500/15 border-red-500/40 text-red-200">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-xs leading-tight">
+                <strong>{stuckCount} order{stuckCount > 1 ? 's' : ''} could not be synced</strong> after {MAX_SYNC_ATTEMPTS} attempts — needs review
+            </span>
+            <button
+                onClick={openStuckReview}
+                className="bg-red-500/25 hover:bg-red-500/40 border border-red-500/40 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
+            >
+                Review
+            </button>
+        </div>
+    ) : null;
+
+    const stuckDialog = showStuck ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowStuck(false)}>
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-auto p-5" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-red-400" />Orders needing review
+                    </h3>
+                    <button onClick={() => setShowStuck(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button>
+                </div>
+                <p className="text-xs text-gray-400 mb-4">
+                    These orders failed to sync {MAX_SYNC_ATTEMPTS} times and are no longer retried automatically.
+                    They are still stored safely on this device. Retry once the problem is fixed, or discard if
+                    the order has already been re-entered.
+                </p>
+                <div className="space-y-2">
+                    {stuckOrders.length === 0 && <p className="text-sm text-gray-400">Nothing to review.</p>}
+                    {stuckOrders.map(o => (
+                        <div key={o.offline_id} className="border border-gray-700 rounded-xl p-3 bg-gray-800/60">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-white">
+                                        £{Number(o.total || 0).toFixed(2)}
+                                        <span className="text-gray-400 font-normal"> · {o.items?.length || 0} item{(o.items?.length || 0) === 1 ? '' : 's'}</span>
+                                        {o._kind === 'table' && o.table_number && (
+                                            <span className="text-gray-400 font-normal"> · Table {o.table_number}</span>
+                                        )}
+                                    </p>
+                                    <p className="text-[11px] text-gray-500 mt-0.5">
+                                        Taken {formatTime(o.created_at)} · {o.syncAttempts || 0} attempts
+                                    </p>
+                                    {o.syncError && (
+                                        <p className="text-[11px] text-red-300 mt-1 font-mono break-all">{o.syncError}</p>
+                                    )}
+                                </div>
+                                <div className="flex flex-col gap-1.5 shrink-0">
+                                    <button
+                                        onClick={async () => {
+                                            if (o._kind === 'table') await resetTableOrderSyncAttempts(o.offline_id);
+                                            else await resetOrderSyncAttempts(o.offline_id);
+                                            await refreshCount();
+                                            await openStuckReview();
+                                            triggerSync(restaurantId, { manual: true });
+                                            toast.success('Retrying order…');
+                                        }}
+                                        className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-200 px-3 py-1 rounded-lg text-xs font-bold"
+                                    >
+                                        Retry
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (!window.confirm(`Discard this £${Number(o.total || 0).toFixed(2)} order permanently? This cannot be undone.`)) return;
+                                            if (o._kind === 'table') await discardPendingTableOrder(o.offline_id);
+                                            else await discardPendingOrder(o.offline_id);
+                                            await refreshCount();
+                                            await openStuckReview();
+                                            toast.success('Order discarded');
+                                        }}
+                                        className="bg-gray-700 hover:bg-red-600/40 border border-gray-600 text-gray-300 px-3 py-1 rounded-lg text-xs font-bold"
+                                    >
+                                        Discard
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    ) : null;
+
     // Only show banner if offline, syncing, or there are pending items
     if (isOnline && pendingCount === 0 && !isSyncing) {
         // Show a subtle "cached" indicator if we have cached data
         if (lastCached && !dismissed) {
             return (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium mb-2 bg-green-500/10 border border-green-500/20 text-green-400">
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                    <span className="flex-1">Menu cached locally · {formatCachedAt(lastCached)}</span>
-                    {onForceRefresh && (
-                        <button onClick={onForceRefresh} className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
-                            <RefreshCw className="h-3 w-3" /> Refresh
+                <>
+                    {stuckBanner}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium mb-2 bg-green-500/10 border border-green-500/20 text-green-400">
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="flex-1">
+                            Menu cached locally · {formatCachedAt(lastCached)}
+                            {lastSynced && ` · last synced ${formatTime(lastSynced)}`}
+                        </span>
+                        {onForceRefresh && (
+                            <button onClick={onForceRefresh} className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+                                <RefreshCw className="h-3 w-3" /> Refresh
+                            </button>
+                        )}
+                        <button onClick={() => setDismissed(true)} className="opacity-50 hover:opacity-100 transition-opacity ml-1">
+                            <X className="h-3 w-3" />
                         </button>
-                    )}
-                    <button onClick={() => setDismissed(true)} className="opacity-50 hover:opacity-100 transition-opacity ml-1">
-                        <X className="h-3 w-3" />
-                    </button>
-                </div>
+                    </div>
+                    {stuckDialog}
+                </>
             );
         }
-        return null;
+        return <>{stuckBanner}{stuckDialog}</>;
     }
-    if (dismissed && isOnline && pendingCount === 0) return null;
+    if (dismissed && isOnline && pendingCount === 0) return <>{stuckBanner}{stuckDialog}</>;
+
+    // Escalate visual urgency once the offline backlog gets large — during a rush
+    // staff need to notice they're accumulating a big unsynced queue.
+    const backlogHeavy = pendingCount >= 20;
 
     return (
+        <>
+        {stuckBanner}
         <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium mb-3 border transition-all ${
             !isOnline
-                ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                ? backlogHeavy
+                    ? 'bg-red-500/20 border-red-500/50 text-red-200 animate-pulse'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
                 : isSyncing
                     ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
-                    : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                    : backlogHeavy
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-200'
+                        : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
         }`}>
             {!isOnline ? (
                 <WifiOff className="h-4 w-4 shrink-0" />
@@ -322,11 +428,17 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
                         ? 'Syncing offline changes to server...'
                         : `${pendingCount} offline change${pendingCount > 1 ? 's' : ''} pending sync`
                 }
+                {backlogHeavy && !isSyncing && (
+                    <strong className="block mt-0.5">Large backlog — check the connection when you get a moment.</strong>
+                )}
+                {lastSynced && !isSyncing && (
+                    <span className="block opacity-70 mt-0.5">Last synced {formatTime(lastSynced)}</span>
+                )}
             </span>
 
             {isOnline && !isSyncing && pendingCount > 0 && (
                 <button
-                    onClick={() => triggerSync(restaurantId)}
+                    onClick={() => triggerSync(restaurantId, { manual: true })}
                     className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
                 >
                     <RefreshCw className="h-3 w-3" />
@@ -340,5 +452,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
                 </button>
             )}
         </div>
+        {stuckDialog}
+        </>
     );
 }
