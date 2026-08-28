@@ -292,7 +292,7 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     // ══════════════════════════════════════════
     //  FOOTER
     // ══════════════════════════════════════════
-    if (config.footer_text) {
+    if (config.footer_text && !isKitchen) {
         line('=');
         add(cmd.alignCenter);
         add(`${config.footer_text}\n`);
