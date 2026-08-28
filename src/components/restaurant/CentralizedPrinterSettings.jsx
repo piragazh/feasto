@@ -879,7 +879,9 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
     // Channel → assigned printers summary
     const channelSummary = ORDER_CHANNELS.map(ch => ({
         ...ch,
-        assignedPrinters: printers.filter(p => (p.assigned_channels || []).includes(ch.id)).map(p => p.name || 'Unnamed'),
+        assignedPrinters: printers
+            .filter(p => (p.assigned_channels || []).includes(ch.id))
+            .map(p => ({ name: p.name || 'Unnamed', role: p.role || 'receipt', enabled: p.enabled !== false })),
     }));
 
     const [activeTab, setActiveTab] = useState('printers');
@@ -957,9 +959,13 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                                         <ChIcon className="h-4 w-4" />{ch.label}
                                     </div>
                                     {ch.assignedPrinters.length > 0 ? (
-                                        ch.assignedPrinters.map((name, i) => (
+                                        ch.assignedPrinters.map((p, i) => (
                                             <div key={i} className="flex items-center gap-1.5 text-xs text-gray-600">
-                                                <Printer className="h-3 w-3" />{name}
+                                                {p.role === 'kitchen'
+                                                    ? <ChefHat className="h-3 w-3 text-gray-500" />
+                                                    : <Receipt className="h-3 w-3 text-gray-500" />}
+                                                <span className={p.enabled ? '' : 'line-through opacity-50'}>{p.name}</span>
+                                                <span className="text-[10px] text-gray-400">({p.role === 'kitchen' ? 'kitchen' : 'receipt'})</span>
                                             </div>
                                         ))
                                     ) : (
