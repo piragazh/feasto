@@ -124,12 +124,17 @@ class QZTrayService {
         // Pre-flight: check if the self-signed cert is accepted by the browser.
         // Without this, qz-tray scans 4 ports × 2 hosts (each timing out on TLS
         // handshake failure), which eats the entire watchdog before failing.
+        //
+        // NOTE: this probe is a plain `fetch`, which on a public/custom domain
+        // (not localhost) can be blocked by Chrome's Private Network Access
+        // preflight even when QZ Tray is running fine and the cert IS trusted.
+        // That looks identical to a real cert/offline failure, so a failed
+        // preflight is treated as advisory only — we still attempt the real
+        // qz-tray WebSocket connect (which goes over `ws`, not `fetch`, and
+        // isn't subject to the same preflight) rather than bailing out.
         const certOk = await this._preflightCertCheck();
         if (!certOk) {
-            this._lastError = 'Cannot reach QZ Tray. Ensure QZ Tray is running, then open https://localhost:8181 in a new tab and click "Advanced" → "Proceed" to accept the certificate.';
-            this._cooldownUntil = Date.now() + 2000;
-            this._notifyStatus();
-            return false;
+            console.warn('[QZTray] Pre-flight probe failed (may be a false negative from Private Network Access on non-localhost origins) — attempting real connect anyway.');
         }
 
         this._connecting = true;
