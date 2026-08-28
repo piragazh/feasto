@@ -146,6 +146,12 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
         add(cmd.normal, cmd.boldOff, cmd.alignLeft);
     }
 
+    if (isKitchen) {
+        add(cmd.alignCenter, cmd.boldOn);
+        add('*** KITCHEN TICKET ***\n');
+        add(cmd.boldOff, cmd.alignLeft);
+    }
+
     line('=');
 
     const orderTypeLabel = order.order_type
