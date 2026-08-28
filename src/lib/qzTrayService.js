@@ -113,28 +113,40 @@ class QZTrayService {
     /**
      * Connect to QZ Tray using SECURE wss://localhost.
      *
-     * QZ Tray requires a trusted self-signed certificate for wss:// on HTTPS
-     * pages. The user must accept it once by visiting https://localhost:8181.
-     * A single attempt avoids the qz-tray library's stuck inProgress flag.
+     * Two separate browser gates must both be satisfied for this on a
+     * non-localhost (public/custom-domain) page:
+     *  1. Chrome's Local Network Access (LNA) permission — a real, explicit
+     *     per-origin permission prompt ("[site] wants to look for and
+     *     connect to any device on your local network"), required since
+     *     Chrome 142 (~Oct 2025) whenever a public origin reaches a
+     *     loopback/local address. If missed/blocked, every request —
+     *     fetch AND WebSocket alike — fails immediately with a CORS-style
+     *     "Permission was denied for this request to access the loopback
+     *     address space" error, indistinguishable in JS from QZ Tray being
+     *     offline. Each distinct origin (including preview subdomains)
+     *     needs its own separate grant via the site's Local Network Access
+     *     permission (site info icon → Site settings → Permissions).
+     *  2. QZ Tray's self-signed TLS certificate, accepted once by visiting
+     *     https://localhost:8181 directly.
+     * A single connect attempt avoids the qz-tray library's stuck
+     * inProgress flag.
      */
     async connect() {
         if (this._connected || this._connecting) return this._connected;
         if (Date.now() < this._cooldownUntil) return false;
 
-        // Pre-flight: check if the self-signed cert is accepted by the browser.
-        // Without this, qz-tray scans 4 ports × 2 hosts (each timing out on TLS
-        // handshake failure), which eats the entire watchdog before failing.
-        //
-        // NOTE: this probe is a plain `fetch`, which on a public/custom domain
-        // (not localhost) can be blocked by Chrome's Private Network Access
-        // preflight even when QZ Tray is running fine and the cert IS trusted.
-        // That looks identical to a real cert/offline failure, so a failed
-        // preflight is treated as advisory only — we still attempt the real
-        // qz-tray WebSocket connect (which goes over `ws`, not `fetch`, and
-        // isn't subject to the same preflight) rather than bailing out.
-        const certOk = await this._preflightCertCheck();
-        if (!certOk) {
-            console.warn('[QZTray] Pre-flight probe failed (may be a false negative from Private Network Access on non-localhost origins) — attempting real connect anyway.');
+        // Fail fast with an accurate message if Chrome reports LNA as
+        // explicitly denied for this origin — no point burning the full
+        // connect watchdog on a request the browser will reject outright.
+        // Permissions API support for 'local-network-access' is new and not
+        // universal, so any unsupported/unknown result falls through to a
+        // real connect attempt rather than blocking on it.
+        const lnaDenied = await this._isLocalNetworkAccessDenied();
+        if (lnaDenied) {
+            this._lastError = 'Blocked by Chrome\'s Local Network Access permission for this site. Click the site info icon next to the address bar → Site settings → Permissions → set "Local Network Access" to Allow, then reload this page and Reconnect.';
+            this._cooldownUntil = Date.now() + 2000;
+            this._notifyStatus();
+            return false;
         }
 
         this._connecting = true;
@@ -145,9 +157,33 @@ class QZTrayService {
     }
 
     /**
+     * Checks Chrome's Permissions API for the 'local-network-access'
+     * permission, if the browser supports querying it. Returns true only
+     * when the browser explicitly reports it as denied for this origin;
+     * returns false (i.e. "not known to be denied") if the permission name
+     * is unsupported, the query throws, or the state is 'granted'/'prompt'.
+     */
+    async _isLocalNetworkAccessDenied() {
+        try {
+            if (!navigator?.permissions?.query) return false;
+            const status = await navigator.permissions.query({ name: 'local-network-access' });
+            return status.state === 'denied';
+        } catch (e) {
+            // Permission name not recognized by this browser, or query failed —
+            // treat as unknown rather than denied.
+            return false;
+        }
+    }
+
+    /**
      * Quick fetch to https://localhost:8181 to verify the self-signed cert
      * is trusted by the browser. Returns true if the fetch succeeds (even
      * with a non-200 status), false if it fails due to cert rejection.
+     * NOTE: kept only as a helper for _getCertificate()'s fallback path
+     * below — no longer used as a connect() gate, since on non-localhost
+     * origins this fetch fails identically for LNA blocks and real cert
+     * issues, and the real qz-tray WebSocket connect is a better source of
+     * truth (see connect() above).
      */
     async _preflightCertCheck() {
         const controller = new AbortController();
