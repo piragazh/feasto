@@ -373,8 +373,16 @@ function PrinterReceiptSettings({ printer, onUpdate }) {
     );
 }
 
-// BT services are only available for the first 2 printer slots
+// BT services are only available for 2 physical slots. Which bluetooth-type
+// printer gets which slot is based on its position AMONG bluetooth-type
+// printers specifically — not its raw position in the full printer list.
+// This must stay in sync with resolveBtService() in src/lib/printUtils.js.
 const BT_SERVICES = [printerManager.printerA, printerManager.printerB];
+
+function resolveBtSlotIndex(printers, printer) {
+    const btPrinters = printers.filter(p => (p.connection_type || 'bluetooth') === 'bluetooth');
+    return btPrinters.indexOf(printer);
+}
 
 // ── Single printer card ────────────────────────────────────────────────────
 function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
