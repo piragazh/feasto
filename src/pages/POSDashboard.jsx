@@ -20,6 +20,8 @@ import POSStaffLogin from '@/components/pos/POSStaffLogin.jsx';
 import POSEndOfDay from '@/components/pos/POSEndOfDay.jsx';
 import QZTrayStatusBadge from '@/components/pos/QZTrayStatusBadge.jsx';
 import POSPrinterSettings from '@/components/pos/POSPrinterSettings.jsx';
+import POSSoundSettings from '@/components/pos/POSSoundSettings.jsx';
+import { playItemAdded, playItemRemoved } from '@/lib/posSound';
 import { toast } from 'sonner';
 
 function useTime() {
@@ -433,7 +435,12 @@ export default function POSDashboard() {
                 {activeTab === 'reports' && <POSReports restaurantId={restaurant.id} posTheme={posTheme} />}
                 {activeTab === 'eod' && <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />}
                 {activeTab === 'staff' && <POSStaffManager restaurantId={restaurant.id} posTheme={posTheme} currentUser={user} />}
-                {activeTab === 'settings' && <POSPrinterSettings restaurantId={restaurant.id} />}
+                {activeTab === 'settings' && (
+                    <div className="space-y-6">
+                        <POSSoundSettings />
+                        <POSPrinterSettings restaurantId={restaurant.id} />
+                    </div>
+                )}
             </main>
         </div>
     );
