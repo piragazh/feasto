@@ -44,7 +44,13 @@ export async function triggerSync(restaurantId) {
 
             for (const order of forRestaurant) {
                 try {
-                    const { offline_id, synced: _s, syncStatus: _ss, syncError: _se, syncAttempts: _sa, ...orderData } = order;
+                    // NOTE: offline_id MUST be forwarded to the server — it is the
+                    // idempotency key that stops a retried sync from creating a
+                    // duplicate order (syncOfflineOrder looks up existing orders
+                    // by offline_id before creating). Only strip local-only
+                    // bookkeeping fields.
+                    const { synced: _s, syncStatus: _ss, syncError: _se, syncAttempts: _sa, ...orderData } = order;
+                    const offline_id = order.offline_id;
                     // Route through syncOfflineOrder for re-validation
                     const syncResult = await base44.functions.invoke('syncOfflineOrder', orderData);
                     
