@@ -602,7 +602,7 @@ function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantI
             {type === 'bluetooth' && !service && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                    Bluetooth is only supported on printer slots 1 and 2. Please switch to Network or USB.
+                    Bluetooth is limited to 2 printers at once. Please switch to QZ Tray, Network, or USB.
                 </div>
             )}
             {type === 'usb' && (
