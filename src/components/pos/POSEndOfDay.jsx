@@ -92,10 +92,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
         } finally {
             setIsPrinting(false);
         }
-    };
-
-
-        if (!config?.bluetooth_printer?.id && !config?.qz_printer_name) {
+REMOVED_A
             toast.error('No printer configured. Please connect a printer in Settings > Printing.');
             return;
         }
