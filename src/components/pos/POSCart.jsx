@@ -82,39 +82,42 @@ export default function POSCart({
                         <div key={item.id} className={`${t.cartItem} rounded-xl border p-2.5`}>
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1 pr-2 min-w-0">
-                                    <p className={`${t.text} font-semibold text-xs leading-tight truncate`}>{item.name}</p>
+                                    <p className={`${t.text} font-semibold text-sm leading-snug`}>{item.name}</p>
                                     {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                        <div className={`${t.textSub} text-[9px] mt-0.5 space-y-0.5`}>
-                                            {Object.entries(item.customizations).slice(0, 3).map(([key, value]) => (
-                                                <p key={key} className="truncate">{key}: {Array.isArray(value) ? value.join(', ') : value}</p>
+                                        <div className={`${t.textSub} text-[11px] mt-1 space-y-0.5`}>
+                                            {Object.entries(item.customizations).map(([key, value]) => (
+                                                <p key={key}>{key}: {Array.isArray(value) ? value.join(', ') : value}</p>
                                             ))}
                                         </div>
                                     )}
                                     {item.specialInstructions && (
-                                        <p className={`${t.textSub} text-[9px] italic mt-0.5 truncate`}>"{item.specialInstructions}"</p>
+                                        <p className={`${t.textSub} text-[11px] italic mt-0.5`}>"{item.specialInstructions}"</p>
                                     )}
-                                    <p className="text-orange-500 text-xs mt-1 font-bold">£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
+                                    <p className="text-orange-500 text-sm mt-1 font-bold">£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
                                 </div>
                                 <button
                                     onClick={() => handleRemove(item.id, item.name)}
-                                    className="w-6 h-6 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-colors flex-shrink-0"
+                                    aria-label={`Remove ${item.name}`}
+                                    className="w-11 h-11 rounded-lg bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 text-red-400 flex items-center justify-center transition-colors flex-shrink-0"
                                 >
-                                    <X className="h-3 w-3" />
+                                    <X className="h-5 w-5" />
                                 </button>
                             </div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => handleDecrement(item)}
-                                    className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.qtyMinus}`}
+                                    aria-label={`Decrease quantity of ${item.name}`}
+                                    className={`h-11 w-11 rounded-lg flex items-center justify-center transition-colors active:scale-95 ${t.qtyMinus}`}
                                 >
-                                    <Minus className="h-3 w-3" />
+                                    <Minus className="h-5 w-5" />
                                 </button>
-                                <span className={`${t.text} font-bold text-sm flex-1 text-center`}>{item.quantity}</span>
+                                <span className={`${t.text} font-bold text-lg flex-1 text-center tabular-nums`}>{item.quantity}</span>
                                 <button
                                     onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                    className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.qtyPlus}`}
+                                    aria-label={`Increase quantity of ${item.name}`}
+                                    className={`h-11 w-11 rounded-lg flex items-center justify-center transition-colors active:scale-95 ${t.qtyPlus}`}
                                 >
-                                    <Plus className="h-3 w-3" />
+                                    <Plus className="h-5 w-5" />
                                 </button>
                             </div>
                         </div>
