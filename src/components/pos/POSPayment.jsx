@@ -267,6 +267,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             }
             onPaymentComplete();
         } catch (e) {
+            playError();
             toast.error('Payment failed: ' + (e?.message || 'Unknown error'));
         } finally {
             setIsProcessing(false);
