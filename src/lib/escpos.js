@@ -234,30 +234,32 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
 
     line('=');
 
-    if (!isCompact && !isMinimal) {
-        const sub = `\xA3${(order.subtotal || 0).toFixed(2)}`;
-        add(`${rPad('Subtotal:', sub, W)}\n`);
-        if ((order.delivery_fee || 0) > 0) {
-            const fee = `\xA3${order.delivery_fee.toFixed(2)}`;
-            add(`${rPad('Delivery:', fee, W)}\n`);
+    if (!isKitchen) {
+        if (!isCompact && !isMinimal) {
+            const sub = `\xA3${(order.subtotal || 0).toFixed(2)}`;
+            add(`${rPad('Subtotal:', sub, W)}\n`);
+            if ((order.delivery_fee || 0) > 0) {
+                const fee = `\xA3${order.delivery_fee.toFixed(2)}`;
+                add(`${rPad('Delivery:', fee, W)}\n`);
+            }
+            if ((order.discount || 0) > 0) {
+                const disc = `-\xA3${order.discount.toFixed(2)}`;
+                add(`${rPad('Discount:', disc, W)}\n`);
+            }
+            line('-');
         }
-        if ((order.discount || 0) > 0) {
-            const disc = `-\xA3${order.discount.toFixed(2)}`;
-            add(`${rPad('Discount:', disc, W)}\n`);
+
+        add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
+        add(`TOTAL: \xA3${(order.total || 0).toFixed(2)}\n`);
+        add(cmd.normal, cmd.boldOff, cmd.alignLeft);
+
+        if (!isMinimal) {
+            const payLabel = (order.payment_method || 'N/A').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            add(`Payment: ${payLabel}\n`);
         }
-        line('-');
     }
 
-    add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
-    add(`TOTAL: \xA3${(order.total || 0).toFixed(2)}\n`);
-    add(cmd.normal, cmd.boldOff, cmd.alignLeft);
-
-    if (!isMinimal) {
-        const payLabel = (order.payment_method || 'N/A').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        add(`Payment: ${payLabel}\n`);
-    }
-
-    if (config.footer_text) {
+    if (config.footer_text && !isKitchen) {
         line('=');
         add(cmd.alignCenter, `${config.footer_text}\n`, cmd.alignLeft);
     }
