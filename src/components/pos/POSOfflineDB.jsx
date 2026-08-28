@@ -201,6 +201,74 @@ export async function getAllPendingUnsynced() {
     return all.filter(o => !o.synced);
 }
 
+/**
+ * After this many failed attempts an order stops being retried automatically
+ * and is surfaced to a manager for a decision instead. Without a cap, an order
+ * the server permanently rejects (e.g. failed revalidation) would be retried on
+ * every sync cycle forever, re-toasting an error each time during service.
+ */
+export const MAX_SYNC_ATTEMPTS = 5;
+
+/** Orders still worth retrying automatically. */
+export async function getRetryablePendingOrders() {
+    const all = await getAllPendingUnsynced();
+    return all.filter(o => (o.syncAttempts || 0) < MAX_SYNC_ATTEMPTS);
+}
+
+/** Orders that have exhausted their retries and need a manager decision. */
+export async function getStuckOrders(restaurantId) {
+    const all = await getAllPendingUnsynced();
+    const stuck = all.filter(o => (o.syncAttempts || 0) >= MAX_SYNC_ATTEMPTS);
+    return restaurantId ? stuck.filter(o => o.restaurant_id === restaurantId) : stuck;
+}
+
+export async function getRetryableTableOrders() {
+    const all = await getAllPendingTableOrders();
+    return all.filter(o => (o.syncAttempts || 0) < MAX_SYNC_ATTEMPTS);
+}
+
+export async function getStuckTableOrders(restaurantId) {
+    const all = await getAllPendingTableOrders();
+    const stuck = all.filter(o => (o.syncAttempts || 0) >= MAX_SYNC_ATTEMPTS);
+    return restaurantId ? stuck.filter(o => o.restaurant_id === restaurantId) : stuck;
+}
+
+/** Reset the attempt counter so a stuck order is retried again (manager action). */
+export async function resetOrderSyncAttempts(offline_id) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_ORDERS, 'readwrite');
+    const record = await promisify(store.get(offline_id));
+    if (record) {
+        await promisify(store.put({ ...record, syncAttempts: 0, syncStatus: 'pending', syncError: null }));
+    }
+}
+
+export async function resetTableOrderSyncAttempts(offline_id) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_TABLE_ORDERS, 'readwrite');
+    const record = await promisify(store.get(offline_id));
+    if (record) {
+        await promisify(store.put({ ...record, syncAttempts: 0, syncStatus: 'pending', syncError: null }));
+    }
+}
+
+/**
+ * Permanently drop a stuck order from the queue (manager action, e.g. the order
+ * was re-entered manually). Kept deliberately explicit — nothing discards
+ * order data automatically.
+ */
+export async function discardPendingOrder(offline_id) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_ORDERS, 'readwrite');
+    await promisify(store.delete(offline_id));
+}
+
+export async function discardPendingTableOrder(offline_id) {
+    const db = await openDB();
+    const store = txStore(db, STORES.PENDING_TABLE_ORDERS, 'readwrite');
+    await promisify(store.delete(offline_id));
+}
+
 export async function getPendingOrderCount(restaurantId) {
     const pending = await getPendingOrders(restaurantId);
     return pending.length;
