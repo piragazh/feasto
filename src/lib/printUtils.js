@@ -1,24 +1,42 @@
 /**
- * Centralized print utility — routes print jobs through the
- * centralized_printers config based on order channel.
+ * Centralized print utility — the SINGLE dispatch point for printing an
+ * order receipt / kitchen ticket, regardless of where the order came from
+ * (POS, kiosk, online) or which app screen configured the printer.
  *
- * Supports: Bluetooth (Web BT), Network (TCP/IP via networkPrint backend)
- * Channels: 'pos_order' | 'kiosk_order' | 'online_order'
+ * Data model: restaurant.printer_config.centralized_printers[] is the one
+ * source of truth for printer configuration. Every printer entry has:
+ *   - connection_type: 'qz_tray' | 'bluetooth' | 'network' | 'usb'
+ *   - role:            'receipt' | 'kitchen'   (kitchen tickets omit prices)
+ *   - assigned_channels: any of 'online_order' | 'pos_order' | 'kiosk_order'
+ * See CentralizedPrinterSettings.jsx for the settings UI that manages this
+ * array (used both from the Restaurant Dashboard "Printers" tab and from
+ * POS Settings — there is only one printer list, not two).
+ *
+ * Unlike the old "try printers one at a time, stop at first success" logic,
+ * printWithCentralizedConfig() BROADCASTS to every enabled printer assigned
+ * to the resolved channel — so a receipt printer and a kitchen printer can
+ * both be assigned to 'pos_order' and both get a copy automatically.
  */
 import { printerManager } from '@/components/restaurant/PrinterService';
 import { base44 } from '@/api/base44Client';
 import qzTrayService from '@/lib/qzTrayService';
 
-const btServices = () => [printerManager.printerA, printerManager.printerB];
+// Only two physical Bluetooth radios/services exist in this app (Web Bluetooth
+// has no concept of "N devices" beyond what we've wired up). A printer's
+// *position among bluetooth-type printers* (not its raw position in the full
+// list) determines which slot it gets — this fixes the earlier bug where a
+// network printer occupying an earlier array index could push a real
+// bluetooth printer past the 2 available hardware slots.
+const BT_SLOTS = [printerManager.printerA, printerManager.printerB];
 
 /**
  * Resolve the effective printer channel — kiosk falls back to online_order
  * if no kiosk_order printer is explicitly configured.
  */
-function resolveChannel(channel, centralized) {
+function resolveChannel(channel, printers) {
     if (
         channel === 'kiosk_order' &&
-        !centralized.some(p => (p.assigned_channels || []).includes('kiosk_order'))
+        !printers.some(p => (p.assigned_channels || []).includes('kiosk_order'))
     ) {
         return 'online_order';
     }
@@ -26,12 +44,13 @@ function resolveChannel(channel, centralized) {
 }
 
 /**
- * Build the per-printer config object used for both BT and network printing.
- * Merges defaults → global → per-printer, keeping only relevant receipt keys.
+ * Build the per-printer receipt config. Merges defaults → legacy global
+ * fields (for restaurants that haven't migrated yet) → per-printer fields.
+ * Passes `role` through so byte-builders can render a prices-free kitchen
+ * ticket instead of a customer receipt.
  */
 function buildPerPrinterConfig(globalCfg, printerConfig) {
-    // Extract only the receipt-relevant keys from globalCfg (avoid polluting with centralized_printers etc.)
-    const globalReceipt = {
+    const legacy = {
         printer_width: globalCfg.printer_width,
         command_set: globalCfg.command_set,
         template: globalCfg.template,
@@ -43,319 +62,274 @@ function buildPerPrinterConfig(globalCfg, printerConfig) {
         footer_text: globalCfg.footer_text,
     };
     return {
-        printer_width: printerConfig.printer_width || globalReceipt.printer_width || '80mm',
-        command_set: printerConfig.command_set || globalReceipt.command_set || 'esc_pos',
-        template: printerConfig.template || globalReceipt.template || 'standard',
-        font_size: printerConfig.font_size || globalReceipt.font_size || 'medium',
-        show_logo: printerConfig.show_logo !== undefined ? printerConfig.show_logo : (globalReceipt.show_logo !== false),
-        show_order_number: printerConfig.show_order_number !== undefined ? printerConfig.show_order_number : (globalReceipt.show_order_number !== false),
-        show_customer_details: printerConfig.show_customer_details !== undefined ? printerConfig.show_customer_details : (globalReceipt.show_customer_details !== false),
-        header_text: printerConfig.header_text !== undefined ? printerConfig.header_text : (globalReceipt.header_text || ''),
-        footer_text: printerConfig.footer_text !== undefined ? printerConfig.footer_text : (globalReceipt.footer_text || ''),
+        printer_width: printerConfig.printer_width || legacy.printer_width || '80mm',
+        command_set: printerConfig.command_set || legacy.command_set || 'esc_pos',
+        template: printerConfig.template || legacy.template || 'standard',
+        font_size: printerConfig.font_size || legacy.font_size || 'medium',
+        show_logo: printerConfig.show_logo !== undefined ? printerConfig.show_logo : (legacy.show_logo !== false),
+        show_order_number: printerConfig.show_order_number !== undefined ? printerConfig.show_order_number : (legacy.show_order_number !== false),
+        show_customer_details: printerConfig.show_customer_details !== undefined ? printerConfig.show_customer_details : (legacy.show_customer_details !== false),
+        header_text: printerConfig.header_text !== undefined ? printerConfig.header_text : (legacy.header_text || ''),
+        footer_text: printerConfig.footer_text !== undefined ? printerConfig.footer_text : (legacy.footer_text || ''),
         bluetooth_printer: printerConfig.bluetooth_printer || null,
+        role: printerConfig.role || 'receipt',
     };
 }
 
-/**
- * Send a receipt to a network printer via the networkPrint backend function.
- */
-async function printNetworkReceipt(order, restaurant, printerConfig, globalCfg) {
+function restaurantPayload(restaurant) {
+    return {
+        name: restaurant?.name || '',
+        address: restaurant?.address || '',
+        phone: restaurant?.phone || '',
+        logo_url: restaurant?.logo_url || '',
+    };
+}
+
+/** Which of the 2 Bluetooth hardware slots (if any) a bluetooth-type printer maps to. */
+function resolveBtService(printers, printerConfig) {
+    const btPrinters = printers.filter(p => (p.connection_type || 'bluetooth') === 'bluetooth');
+    const btIndex = btPrinters.indexOf(printerConfig);
+    if (btIndex === -1 || btIndex >= BT_SLOTS.length) return null;
+    return BT_SLOTS[btIndex];
+}
+
+async function printViaQz(order, restaurant, printerConfig, globalCfg, openCashDrawer = false) {
+    if (!printerConfig.qz_printer_name) throw new Error('QZ Tray printer name not set for this printer');
+    if (!qzTrayService.isConnected()) {
+        await qzTrayService.connect();
+    }
+    if (!qzTrayService.isConnected()) {
+        throw new Error(qzTrayService.getStatus().lastError || 'QZ Tray is not connected');
+    }
     const cfg = buildPerPrinterConfig(globalCfg, printerConfig);
-    const ip = printerConfig.network_ip;
-    const port = String(printerConfig.network_port || '9100');
-    if (!ip) throw new Error('Printer IP not configured');
-    const res = await base44.functions.invoke('networkPrint', {
-        action: 'print_receipt',
-        printer_ip: ip,
-        printer_port: port,
-        order,
-        restaurant: {
-            name: restaurant?.name || '',
-            address: restaurant?.address || '',
-            phone: restaurant?.phone || '',
-            logo_url: restaurant?.logo_url || '',
-        },
-        config: cfg,
-    });
-    if (!res.data?.success) throw new Error(res.data?.error || res.data?.message || 'Network print failed');
-    return true;
+    await qzTrayService.printReceipt(printerConfig.qz_printer_name, order, restaurant, cfg, openCashDrawer);
+}
+
+async function printViaBluetooth(order, restaurant, printerConfig, globalCfg, printers) {
+    const service = resolveBtService(printers, printerConfig);
+    if (!service) throw new Error('No Bluetooth hardware slot available (max 2 Bluetooth printers) — switch this printer to Network or QZ Tray');
+    if (!printerConfig.bluetooth_printer?.id) throw new Error('No Bluetooth printer paired for this slot');
+    if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
+    if (!service.isConnected()) throw new Error('Bluetooth printer not connected on this device');
+    const cfg = buildPerPrinterConfig(globalCfg, printerConfig);
+    await service.printReceipt(order, restaurant, cfg);
 }
 
 /**
- * Print an order using the centralized printer config.
- * Respects per-printer template, paper width, command set, and connection type.
- * Falls back to browser/dialog print via the provided fallback function.
+ * Network printers are almost never directly reachable from the cloud (they
+ * sit behind a router on a private IP) — see NetworkPrinterManager's own UI
+ * copy for the full explanation. So the reliable, primary path here is the
+ * print-job queue: a Local Print Agent (desktop) or Android Print Agent
+ * (tablet) running inside the restaurant polls this queue and delivers the
+ * job to the printer over the LAN. We still attempt a quick direct send
+ * first in case the printer genuinely is cloud-reachable (rare, e.g. port
+ * forwarded), but we never block success on that — we always fall through
+ * to the queue rather than surfacing a failure the agent could have handled.
+ */
+async function printViaNetwork(order, restaurant, printerConfig, globalCfg, { openCashDrawer = false } = {}) {
+    if (!printerConfig.network_ip) throw new Error('Printer IP not configured');
+    const cfg = buildPerPrinterConfig(globalCfg, printerConfig);
+
+    try {
+        const res = await base44.functions.invoke('networkPrint', {
+            action: 'print_receipt',
+            printer_ip: printerConfig.network_ip,
+            printer_port: String(printerConfig.network_port || '9100'),
+            open_cash_drawer: openCashDrawer,
+            order,
+            restaurant: restaurantPayload(restaurant),
+            config: cfg,
+        });
+        if (res.data?.success) return 'network';
+    } catch (e) {
+        // Expected for LAN-only printers — fall through to the agent queue.
+    }
+
+    const queued = await base44.functions.invoke('managePrintQueue', {
+        action: 'enqueue',
+        restaurant_id: restaurant?.id,
+        print_action: 'print_receipt',
+        printer_ip: printerConfig.network_ip,
+        printer_port: String(printerConfig.network_port || '9100'),
+        open_cash_drawer: openCashDrawer,
+        command_set: cfg.command_set,
+        printer_width: cfg.printer_width,
+        template: cfg.template,
+        order_data: order,
+        restaurant_data: restaurantPayload(restaurant),
+        config: cfg,
+    });
+    if (!queued?.data) throw new Error('Could not reach the printer directly and could not queue the job for an agent either — check your connection');
+    return 'agent_queue';
+}
+
+/**
+ * Print an order to every enabled printer assigned to the given channel —
+ * e.g. a receipt printer AND a kitchen printer both assigned to 'pos_order'
+ * will both receive a copy of the same order.
  *
  * @param {object}   order
  * @param {object}   restaurant
  * @param {string}   channel          - 'pos_order' | 'kiosk_order' | 'online_order'
- * @param {function} [browserFallback] - called if no printer is available
- * @returns {string|null} name of printer used, or null if fallback was used
+ * @param {function} [browserFallback] - called only if NOTHING printed successfully
+ * @returns {{printed: Array<{name:string,role:string,method:string}>, failed: Array<{name:string,role:string,error:string}>, usedFallback: boolean}}
  */
 export async function printWithCentralizedConfig(order, restaurant, channel, browserFallback) {
     const globalCfg = restaurant?.printer_config || {};
-    const centralized = globalCfg.centralized_printers || [];
-    const svcs = btServices();
+    const printers = globalCfg.centralized_printers || [];
+    const printed = [];
+    const failed = [];
 
-    // ── QZ Tray (preferred for Windows POS with local/network printers) ──
-    // Sends raw ESC/POS bytes directly via localhost — instant, reaches LAN printers.
-    const qzPrinterName = globalCfg.qz_printer_name;
-    if (qzPrinterName && qzTrayService.isConnected() && channel === 'pos_order') {
-        try {
-            const cfg = buildPerPrinterConfig(globalCfg, {});
-            await qzTrayService.printReceipt(qzPrinterName, order, restaurant, cfg);
-            return qzPrinterName;
-        } catch (e) {
-            console.warn('[printUtils] QZ Tray print failed, falling back:', e.message);
+    if (printers.length > 0) {
+        const effectiveChannel = resolveChannel(channel, printers);
+        let matched = printers.filter(p => p.enabled !== false && (p.assigned_channels || []).includes(effectiveChannel));
+        // Nothing explicitly assigned to this channel — fall back to the first
+        // enabled printer only (not all of them), same as before.
+        if (matched.length === 0) {
+            const anyEnabled = printers.filter(p => p.enabled !== false);
+            if (anyEnabled.length > 0) matched = [anyEnabled[0]];
         }
-    }
 
-    if (centralized.length > 0) {
-        const effectiveChannel = resolveChannel(channel, centralized);
-        const assigned = centralized.filter(p =>
-            p.enabled !== false && (p.assigned_channels || []).includes(effectiveChannel)
-        );
-        // If nothing assigned to this channel, fall back to first enabled printer only (not ALL)
-        const fallbackPrinters = centralized.filter(p => p.enabled !== false);
-        const toTry = assigned.length > 0 ? assigned : (fallbackPrinters.length > 0 ? [fallbackPrinters[0]] : []);
-
-        for (let toTryIdx = 0; toTryIdx < toTry.length; toTryIdx++) {
-            const printerConfig = toTry[toTryIdx];
-            // slotIndex is the position in the ORIGINAL centralized array (0-based),
-            // used to pick the correct BT service. Only 2 BT services exist (A and B).
-            // Use strict reference equality first, then fall back to index-of-assigned-list
-            // mapped back to the centralized array.
-            let slotIndex = centralized.indexOf(printerConfig);
-            if (slotIndex === -1) {
-                // Object identity lost (e.g. after JSON round-trip) — fall back to position
-                // within the assigned list as a best-effort slot approximation.
-                slotIndex = toTryIdx;
-            }
+        for (const printerConfig of matched) {
             const type = printerConfig.connection_type || 'bluetooth';
-
-            if (type === 'network' && printerConfig.network_ip) {
-                // ── Network print via backend function ──
-                try {
-                    await printNetworkReceipt(order, restaurant, printerConfig, globalCfg);
-                    return printerConfig.name || `Network Printer ${slotIndex + 1}`;
-                } catch (e) {
-                    console.warn(`[printUtils] Network printer failed (${printerConfig.name}):`, e.message);
-                    // Continue to try next printer
+            const role = printerConfig.role || 'receipt';
+            const name = printerConfig.name || `Printer (${type})`;
+            try {
+                if (type === 'qz_tray') {
+                    await printViaQz(order, restaurant, printerConfig, globalCfg);
+                    printed.push({ name, role, method: 'qz_tray' });
+                } else if (type === 'bluetooth') {
+                    await printViaBluetooth(order, restaurant, printerConfig, globalCfg, printers);
+                    printed.push({ name, role, method: 'bluetooth' });
+                } else if (type === 'network') {
+                    const method = await printViaNetwork(order, restaurant, printerConfig, globalCfg);
+                    printed.push({ name, role, method });
+                } else if (type === 'usb') {
+                    throw new Error('Direct USB printing is not implemented yet — use Network with a Local Print Agent on the PC the USB printer is plugged into instead.');
+                } else {
+                    throw new Error(`Unknown connection type: ${type}`);
                 }
-            } else if (type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
-                // ── Bluetooth print via PrinterService ──
-                // BT services only exist for slots 0 and 1 — slots 2+ are network/USB only
-                const service = svcs[slotIndex];
-                if (!service) {
-                    console.warn(`[printUtils] No BT service for slot ${slotIndex} — only 2 BT slots supported`);
-                    continue;
-                }
-                if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
-                if (service.isConnected()) {
-                    try {
-                        const cfg = buildPerPrinterConfig(globalCfg, printerConfig);
-                        await service.printReceipt(order, restaurant, cfg);
-                        return printerConfig.name || `Bluetooth Printer ${slotIndex + 1}`;
-                    } catch (e) {
-                        console.warn(`[printUtils] Bluetooth printer failed (${printerConfig.name}):`, e.message);
-                    }
-                }
+            } catch (e) {
+                console.warn(`[printUtils] ${name} (${type}/${role}) failed:`, e?.message || e);
+                failed.push({ name, role, error: e?.message || String(e) });
             }
-            // USB: not yet supported for direct send — fall through
         }
     } else {
-        // ── Legacy single-printer fallback ──
-        const cfg = globalCfg;
-        if (cfg.printer_type === 'network' && cfg.network_ip) {
-            try {
-                await printNetworkReceipt(order, restaurant, cfg, cfg);
-                return 'Network Printer';
-            } catch (e) {
-                console.warn('[printUtils] Legacy network printer failed:', e.message);
-            }
-        }
-        // Try Printer A — fall through to B on failure
-        if (cfg.bluetooth_printer?.id) {
-            if (!printerManager.printerA.isConnected()) await printerManager.printerA.tryAutoConnect().catch(() => {});
-            if (printerManager.printerA.isConnected()) {
-                try {
-                    await printerManager.printerA.printReceipt(order, restaurant, cfg);
-                    return 'Bluetooth Printer';
-                } catch (e) {
-                    console.warn('[printUtils] Legacy BT printer A failed, trying B:', e.message);
-                }
-            }
-        }
-        // Try Printer B (only if explicitly configured as printer_b)
-        if (cfg.printer_b_config?.bluetooth_printer?.id) {
-            if (!printerManager.printerB.isConnected()) await printerManager.printerB.tryAutoConnect().catch(() => {});
-            if (printerManager.printerB.isConnected()) {
-                try {
-                    const bCfg = buildPerPrinterConfig(cfg, cfg.printer_b_config);
-                    await printerManager.printerB.printReceipt(order, restaurant, bCfg);
-                    return 'Bluetooth Printer B';
-                } catch (e) {
-                    console.warn('[printUtils] Legacy BT printer B failed:', e.message);
-                }
-            }
-        }
+        // Restaurant has never configured a printer via the Printers screen.
+        console.warn('[printUtils] No printers configured (printer_config.centralized_printers is empty)');
     }
 
-    // No direct printer succeeded — try Android agent queue as last resort before browser fallback
-    try {
-        const restaurantId = restaurant?.id;
-        if (restaurantId) {
-            // Use the channel-matched printer config (or first enabled printer as fallback)
-            const effectiveChannel = centralized.length > 0 ? resolveChannel(channel, centralized) : null;
-            const channelPrinter = effectiveChannel
-                ? (centralized.find(p => p.enabled !== false && (p.assigned_channels || []).includes(effectiveChannel)) || centralized.find(p => p.enabled !== false))
-                : null;
-            const agentPrinterCfg = channelPrinter || centralized[0] || {};
-
-            // Only enqueue if the agent printer has a network IP — the Android agent
-            // communicates over network (TCP/IP). Bluetooth-only printers cannot be
-            // reached by the agent, so enqueueing them would create ghost jobs.
-            const hasNetworkTarget = !!agentPrinterCfg.network_ip;
-            if (!hasNetworkTarget) throw new Error('No network printer target for agent queue');
-
-            // Build a clean receipt config — strip non-receipt fields
-            const receiptConfig = buildPerPrinterConfig(globalCfg, agentPrinterCfg);
-
-            await base44.functions.invoke('managePrintQueue', {
-                action: 'enqueue',
-                restaurant_id: restaurantId,
-                print_action: 'print_receipt',
-                printer_ip: agentPrinterCfg.network_ip || '',
-                printer_port: String(agentPrinterCfg.network_port || '9100'),
-                command_set: receiptConfig.command_set,
-                printer_width: receiptConfig.printer_width,
-                template: receiptConfig.template,
-                order_data: order,
-                restaurant_data: {
-                    name: restaurant?.name || '',
-                    address: restaurant?.address || '',
-                    phone: restaurant?.phone || '',
-                    logo_url: restaurant?.logo_url || '',
-                },
-                config: {
-                    printer_width: receiptConfig.printer_width,
-                    command_set: receiptConfig.command_set,
-                    template: receiptConfig.template,
-                    font_size: receiptConfig.font_size,
-                    show_logo: receiptConfig.show_logo,
-                    show_order_number: receiptConfig.show_order_number,
-                    show_customer_details: receiptConfig.show_customer_details,
-                    header_text: receiptConfig.header_text,
-                    footer_text: receiptConfig.footer_text,
-                },
-            });
-            return 'Android Agent';
-        }
-    } catch (e) {
-        console.warn('[printUtils] Android agent queue failed:', e.message);
+    if (printed.length === 0) {
+        if (browserFallback) browserFallback();
+        return { printed, failed, usedFallback: true };
     }
-
-    // All methods failed — use browser/dialog fallback
-    if (browserFallback) browserFallback();
-    return null;
+    return { printed, failed, usedFallback: false };
 }
 
 /**
- * Open the cash drawer by sending the ESC/POS drawer-open command
- * to the first available configured POS printer (network or Bluetooth).
+ * Open the cash drawer by sending the ESC/POS drawer-open command to the
+ * first available printer assigned to 'pos_order' (prefers QZ Tray, then
+ * Bluetooth, then Network).
  */
 export async function openCashDrawer(restaurant) {
     const globalCfg = restaurant?.printer_config || {};
-    const centralized = globalCfg.centralized_printers || [];
-    const svcs = btServices();
+    const printers = globalCfg.centralized_printers || [];
+    const candidates = printers.filter(p => p.enabled !== false && (p.assigned_channels || []).includes('pos_order'));
+    const toTry = candidates.length > 0 ? candidates : printers.filter(p => p.enabled !== false);
 
-    // ── QZ Tray (preferred) ──
-    const qzPrinterName = globalCfg.qz_printer_name;
-    if (qzPrinterName && qzTrayService.isConnected()) {
-        try {
-            await qzTrayService.openCashDrawer(qzPrinterName);
-            return true;
-        } catch (e) {
-            console.warn('[printUtils] QZ Tray cash drawer failed, falling back:', e.message);
-        }
-    }
+    // Prefer QZ Tray if any candidate uses it — instant, no LAN round-trip.
+    const ordered = [...toTry].sort((a, b) => {
+        const rank = t => (t === 'qz_tray' ? 0 : t === 'bluetooth' ? 1 : 2);
+        return rank(a.connection_type || 'bluetooth') - rank(b.connection_type || 'bluetooth');
+    });
 
-    // Find the first pos_order printer
-    const candidates = centralized.length > 0
-        ? centralized.filter(p => p.enabled !== false && (p.assigned_channels || []).includes('pos_order'))
-        : [];
-    const toTry = candidates.length > 0 ? candidates : centralized.filter(p => p.enabled !== false);
+    const dummyOrder = { items: [], subtotal: 0, total: 0, order_type: 'pos', order_number: '-' };
+    let lastError = null;
 
-    for (let cdIdx = 0; cdIdx < toTry.length; cdIdx++) {
-        const printerConfig = toTry[cdIdx];
-        // Use strict reference equality; fall back to loop index if objects lost identity
-        let slotIndex = centralized.indexOf(printerConfig);
-        if (slotIndex === -1) slotIndex = cdIdx;
+    for (const printerConfig of ordered) {
         const type = printerConfig.connection_type || 'bluetooth';
-
-        if (type === 'network' && printerConfig.network_ip) {
-            const res = await base44.functions.invoke('networkPrint', {
-                action: 'print_receipt',
-                printer_ip: printerConfig.network_ip,
-                printer_port: String(printerConfig.network_port || '9100'),
-                open_cash_drawer: true,
-                order: { items: [], subtotal: 0, total: 0, order_type: 'pos', order_number: '-' },
-                restaurant: {},
-                config: {
-                    template: 'minimal',
-                    command_set: printerConfig.command_set || globalCfg.command_set || 'esc_pos',
-                    show_order_number: false,
-                    show_customer_details: false,
-                },
-            });
-            if (res.data?.success) return true;
-        } else if (type === 'bluetooth' && printerConfig.bluetooth_printer?.id) {
-            const service = svcs[slotIndex];
-            if (!service) continue;
-            if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
-            if (service.isConnected()) {
+        try {
+            if (type === 'qz_tray') {
+                await printViaQz(dummyOrder, restaurant, printerConfig, globalCfg, true);
+                return true;
+            } else if (type === 'bluetooth') {
+                const service = resolveBtService(printers, printerConfig);
+                if (!service) continue;
+                if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
+                if (!service.isConnected()) continue;
                 const CASH_DRAWER_CMD = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
                 await service.sendCommand(CASH_DRAWER_CMD);
                 return true;
+            } else if (type === 'network') {
+                await printViaNetwork(dummyOrder, restaurant, printerConfig, globalCfg, { openCashDrawer: true });
+                return true;
             }
+        } catch (e) {
+            lastError = e;
         }
     }
 
-    // Legacy fallback
-    if (globalCfg.network_ip) {
-        const res = await base44.functions.invoke('networkPrint', {
-            action: 'print_receipt',
-            printer_ip: globalCfg.network_ip,
-            printer_port: String(globalCfg.network_port || '9100'),
-            open_cash_drawer: true,
-            order: { items: [], subtotal: 0, total: 0, order_type: 'pos', order_number: '-' },
-            restaurant: {},
-            config: {
-                template: 'minimal',
-                command_set: globalCfg.command_set || 'esc_pos',
-                show_order_number: false,
-                show_customer_details: false,
-            },
-        });
-        if (res.data?.success) return true;
-    }
-    if (printerManager.printerA.isConnected()) {
-        const CASH_DRAWER_CMD = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
-        await printerManager.printerA.sendCommand(CASH_DRAWER_CMD);
-        return true;
-    }
-
-    throw new Error('No connected printer found to open cash drawer');
+    throw new Error(lastError?.message || 'No connected printer found to open cash drawer');
 }
 
 /**
- * Returns true if any printer is assigned to the given channel.
+ * Returns true if any enabled printer is assigned to the given channel.
  */
 export function hasPrinterForChannel(restaurant, channel) {
     const cfg = restaurant?.printer_config || {};
-    const centralized = cfg.centralized_printers || [];
-    if (centralized.length > 0) {
-        return centralized.some(p => p.enabled !== false && (p.assigned_channels || []).includes(channel));
+    const printers = cfg.centralized_printers || [];
+    return printers.some(p => p.enabled !== false && (p.assigned_channels || []).includes(channel));
+}
+
+/**
+ * Resolve the printer that should be used for POS-only utility print jobs
+ * that aren't a per-order receipt — End of Day reports, shift reports, etc.
+ * Prefers a 'receipt'-role printer assigned to pos_order; falls back to any
+ * enabled pos_order printer. Used by POSEndOfDay.jsx and POSReports.jsx so
+ * they read the SAME printer list as real order receipts do, instead of
+ * their own separate (and easily out-of-sync) legacy fields.
+ *
+ * @returns {object|null} the printer config entry, or null if none configured
+ */
+export function resolvePosUtilityPrinter(restaurant) {
+    const cfg = restaurant?.printer_config || {};
+    const printers = cfg.centralized_printers || [];
+    const posPrinters = printers.filter(p => p.enabled !== false && (p.assigned_channels || []).includes('pos_order'));
+    if (posPrinters.length === 0) return null;
+    return posPrinters.find(p => (p.role || 'receipt') === 'receipt') || posPrinters[0];
+}
+
+/**
+ * Print arbitrary pre-built ESC/POS bytes (used by EOD/shift reports, which
+ * build their own report layout) to the resolved POS utility printer.
+ * Routes through QZ Tray (preferred) or Bluetooth — reports are a POS-only
+ * concern and are not queued to a network agent.
+ *
+ * @param {object} restaurant
+ * @param {Uint8Array} bytes
+ * @returns {Promise<string>} the name of the printer used
+ */
+export async function printRawBytesToPosPrinter(restaurant, bytes) {
+    const printer = resolvePosUtilityPrinter(restaurant);
+    if (!printer) throw new Error('No POS printer configured. Set one up in Settings > Printing.');
+
+    const type = printer.connection_type || 'bluetooth';
+    if (type === 'qz_tray') {
+        if (!printer.qz_printer_name) throw new Error('QZ Tray printer name not set');
+        if (!qzTrayService.isConnected()) await qzTrayService.connect();
+        if (!qzTrayService.isConnected()) throw new Error(qzTrayService.getStatus().lastError || 'QZ Tray is not connected');
+        await qzTrayService.print(printer.qz_printer_name, bytes);
+        return printer.name || 'QZ Tray printer';
     }
-    return !!(cfg.bluetooth_printer?.id || cfg.network_ip);
+    if (type === 'bluetooth') {
+        const list = (restaurant?.printer_config?.centralized_printers) || [];
+        const service = resolveBtService(list, printer);
+        if (!service) throw new Error('No Bluetooth hardware slot available for this printer');
+        if (!printer.bluetooth_printer?.id) throw new Error('No Bluetooth printer paired');
+        if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
+        if (!service.isConnected()) throw new Error('Bluetooth printer not connected');
+        await service.sendCommand(bytes);
+        return printer.name || 'Bluetooth printer';
+    }
+    throw new Error(`Reports can only print via QZ Tray or Bluetooth — this printer is set to "${type}". Assign a QZ Tray or Bluetooth printer to POS Orders, or use Export CSV instead.`);
 }
