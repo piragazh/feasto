@@ -190,6 +190,15 @@ export default function QZTraySettingsCard({ restaurantId }) {
                                 in a new tab, click <strong>Advanced → Proceed</strong>, then come back and click <strong>Reconnect</strong>.
                             </span>
                         </div>
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-2 text-xs text-amber-800">
+                            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                            <span>
+                                Certificate accepted but still stuck? Chrome now requires a separate <strong>Local Network Access</strong> permission
+                                for this exact site before it will talk to QZ Tray at all. Click the site info icon next to the
+                                address bar → <strong>Site settings</strong> → <strong>Permissions</strong> → set <strong>Local Network Access</strong> to <strong>Allow</strong>,
+                                reload this page, then click <strong>Reconnect</strong>. This has to be granted separately on every domain this POS is opened from.
+                            </span>
+                        </div>
                     </div>
                 )}
 
