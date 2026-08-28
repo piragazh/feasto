@@ -10,7 +10,6 @@ import { Download, Calendar, TrendingUp, Clock, DollarSign, Printer, FileText, C
 import { generateReportPDF } from '@/lib/generatePDF';
 import { toast } from 'sonner';
 import moment from 'moment';
-import { printerService } from '@/components/restaurant/PrinterService';
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
