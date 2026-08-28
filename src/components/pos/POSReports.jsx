@@ -23,9 +23,6 @@ const PRESETS = [
     { label: 'Custom', key: 'custom', start: null, end: null },
 ];
 
-const ESC = '\x1B';
-const GS = '\x1D';
-
 export default function POSReports({ restaurantId, posTheme = 'dark' }) {
     const isDark = posTheme === 'dark';
     const t = {
