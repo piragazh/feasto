@@ -47,6 +47,23 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
+        // ── IDEMPOTENCY ───────────────────────────────────────────────────────
+        // Offline table orders are queued locally and retried on reconnect. If a
+        // previous attempt created the order but the response never reached the
+        // client (network dropped mid-flight, tab closed, agent restarted), the
+        // client will retry with the SAME offline_id. Without this check that
+        // retry would create a duplicate order and the restaurant would make the
+        // food twice. Return the already-created order instead.
+        if (orderData.offline_id) {
+            const existing = await base44.asServiceRole.entities.Order.filter({
+                offline_id: orderData.offline_id,
+            });
+            if (existing?.length > 0) {
+                console.log(`[POS-CREATE-ORDER] Duplicate suppressed — offline_id=${orderData.offline_id} already exists as order=${existing[0].id}`);
+                return Response.json({ order: existing[0], isDuplicate: true });
+            }
+        }
+
         // TENANT CHECK
         if (user.role !== 'admin') {
             const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
