@@ -187,7 +187,7 @@ class QZTrayService {
                 if (settled) return;
                 settled = true;
                 console.warn(`[QZTray] Watchdog: connect timed out after ${timeoutMs / 1000}s`);
-                this._lastError = 'Connection timed out. Make sure QZ Tray is running, then accept its certificate by visiting https://localhost:8181 in a new tab.';
+                this._lastError = 'Connection timed out. Make sure QZ Tray is running on this computer, that you\'ve accepted its certificate at https://localhost:8181, and that this site has "Local Network Access" allowed (site info icon → Site settings → Permissions).';
                 this._connecting = false;
                 this._notifyStatus();
 
