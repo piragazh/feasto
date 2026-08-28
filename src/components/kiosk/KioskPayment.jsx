@@ -151,8 +151,11 @@ export default function KioskPayment({
 
             const placedOrder = { ...result.order, payment_method: 'pay_at_counter' };
             let didPrinterFail = false;
-            try { await printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order'); }
-            catch { didPrinterFail = true; setPrinterWarning(true); }
+            try {
+                const printResult = await printWithCentralizedConfig(placedOrder, restaurant, 'kiosk_order');
+                didPrinterFail = printResult.printed.length === 0;
+            } catch { didPrinterFail = true; }
+            if (didPrinterFail) setPrinterWarning(true);
             onOrderPlaced(placedOrder, didPrinterFail);
         } catch (err) {
             setPaymentState('failed');
