@@ -262,7 +262,16 @@ class QZTrayService {
                 clearTimeout(watchdogTimer);
                 const msg = e?.message || String(e);
                 console.warn('[QZTray] Connect failed:', msg);
-                this._lastError = msg;
+                // qz-tray's own error text (e.g. "Unable to establish connection
+                // with QZ Tray") gives no detail on *why* the socket never
+                // opened — it's identical whether QZ Tray is offline, the cert
+                // isn't trusted, or Chrome's Local Network Access permission is
+                // blocking the request outright. Append the LNA hint so staff
+                // aren't stuck guessing (the browser doesn't expose the real
+                // reason to JS — see console for the actual network error).
+                this._lastError = /unable to establish connection/i.test(msg)
+                    ? `${msg}. If QZ Tray is running and its certificate is accepted, check this site's "Local Network Access" permission (site info icon → Site settings → Permissions → Local Network Access → Allow) — Chrome blocks local connections from this site until that's granted.`
+                    : msg;
                 this._connecting = false;
                 this._notifyStatus();
                 if (!/has not returned yet/i.test(msg)) {
