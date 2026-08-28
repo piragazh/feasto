@@ -10,6 +10,7 @@ import { savePendingOrder } from './POSOfflineDB';
 import { publishCustomerDisplay } from './CustomerDisplay';
 import { printWithCentralizedConfig, hasPrinterForChannel, openCashDrawer } from '@/lib/printUtils';
 import { isNetworkError } from '@/lib/networkStatus';
+import { playSuccess, playError, playAlert } from '@/lib/posSound';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
     AlertDialogContent, AlertDialogDescription,
@@ -219,13 +220,16 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             const changeNow = Math.max(0, totalPaidNow - effectiveTotal);
 
             if (result?.offline) {
+                playAlert();
                 toast.success(
                     `Order saved offline. Will sync when connection restores.`,
                     { icon: <WifiOff className="h-4 w-4 text-yellow-400" />, duration: 4000 }
                 );
             } else if (hasCash && changeNow > 0.005) {
+                playSuccess();
                 toast.success(`Payment complete. Change: £${changeNow.toFixed(2)}`);
             } else {
+                playSuccess();
                 toast.success('Payment complete');
             }
             publishCustomerDisplay({
