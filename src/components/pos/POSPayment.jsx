@@ -393,8 +393,12 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     notes: payments.length > 1 ? payments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ') : undefined,
                                 };
                                 try {
-                                    await printWithCentralizedConfig(orderData, restaurant, 'pos_order');
-                                    toast.success('Receipt printed');
+                                    const result = await printWithCentralizedConfig(orderData, restaurant, 'pos_order');
+                                    if (result.printed.length > 0) {
+                                        toast.success(`Printed via ${result.printed.map(p => p.name).join(', ')}`);
+                                    } else {
+                                        toast.error(result.failed[0]?.error || 'No printer available');
+                                    }
                                 } catch (e) {
                                     toast.error('Print failed: ' + e.message);
                                 }
