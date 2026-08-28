@@ -228,10 +228,34 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             }
 
             // Online: route through posCreateOrder for server-side tenant check + subtotal recompute
-            const res = await base44.functions.invoke('posCreateOrder', orderData);
-            if (res?.data?.error) throw new Error(res.data.error);
-            const created = res?.data?.order;
-            if (!created) throw new Error('Order creation returned no order object');
+            // If the backend turns out to be unreachable (navigator.onLine lies when
+            // the router is up but the internet is down), fall back to the offline
+            // queue instead of losing the order — see src/lib/networkStatus.js.
+            let created;
+            try {
+                const res = await base44.functions.invoke('posCreateOrder', orderData);
+                if (res?.data?.error) throw new Error(res.data.error);
+                created = res?.data?.order;
+                if (!created) throw new Error('Order creation returned no order object');
+            } catch (err) {
+                if (isNetworkError(err)) {
+                    console.warn('[POS-TABLE] Backend unreachable — queueing table order offline:', err?.message || err);
+                    await savePendingTableOrder(orderData, table.id, table.table_number);
+                    const cachedTables = await getCachedTables(restaurantId);
+                    if (cachedTables) {
+                        const updated = cachedTables.map(t =>
+                            t.id === table.id ? { ...t, status: 'occupied', current_order_id: 'offline_pending' } : t
+                        );
+                        await cacheTables(restaurantId, updated);
+                    }
+                    toast.success(`Connection lost — order saved offline for ${table.table_number}, will sync automatically`);
+                    onClearCart();
+                    setSelectedTable(null);
+                    await refetchTables();
+                    return;
+                }
+                throw err;
+            }
             await base44.entities.RestaurantTable.update(table.id, { status: 'occupied', current_order_id: created.id });
             toast.success(`Order added to ${table.table_number}!`);
             onClearCart();
