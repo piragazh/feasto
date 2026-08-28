@@ -25,6 +25,7 @@ import HeldOrdersDrawer from './HeldOrdersDrawer';
 import PhoneOrderDialog from './PhoneOrderDialog';
 import QuickItemLookupDialog from './QuickItemLookupDialog';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables, savePendingStatusUpdate, setCacheMeta, savePendingTableOrder } from './POSOfflineDB';
+import { isNetworkError } from '@/lib/networkStatus';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
     const isDark = posTheme === 'dark';
