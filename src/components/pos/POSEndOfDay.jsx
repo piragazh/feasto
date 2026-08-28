@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Printer, RefreshCw, TrendingUp, DollarSign, CreditCard, Banknote, XCircle, Receipt, Calendar } from 'lucide-react';
-import { printerService } from '@/components/restaurant/PrinterService';
 import { toast } from 'sonner';
 import { format, startOfDay, endOfDay } from 'date-fns';
 
