@@ -19,11 +19,12 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[180px]">
+            <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[190px]">
                 {filteredItems.map(item => (
                     <button
                         key={item.id}
                         onClick={() => onItemClick(item)}
+                        title={item.name}
                         className={`${t.itemCard} border rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg active:scale-[0.97] flex flex-col h-full`}
                     >
                         <div className={`h-24 flex-shrink-0 w-full ${t.itemImg} overflow-hidden`}>
@@ -36,11 +37,11 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                             )}
                         </div>
                         <div className="p-2.5 flex flex-col flex-1 min-h-0">
-                            <h3 className={`font-semibold text-xs line-clamp-2 leading-snug mb-1 transition-colors ${t.itemName}`}>{item.name}</h3>
-                            <p className="text-orange-500 font-bold text-sm mt-auto">
+                            <h3 className={`font-semibold text-sm line-clamp-3 leading-snug mb-1 transition-colors ${t.itemName}`}>{item.name}</h3>
+                            <p className="text-orange-500 font-bold text-base mt-auto tabular-nums">
                                 £{(item.pos_price != null ? item.pos_price : item.price).toFixed(2)}
                                 {item.pos_price != null && item.pos_price !== item.price && (
-                                    <span className={`text-[10px] line-through ml-1.5 ${t.textMuted}`}>£{item.price.toFixed(2)}</span>
+                                    <span className={`text-[11px] line-through ml-1.5 ${t.textMuted}`}>£{item.price.toFixed(2)}</span>
                                 )}
                             </p>
                         </div>
