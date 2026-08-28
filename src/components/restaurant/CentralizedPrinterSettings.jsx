@@ -545,6 +545,39 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                 </div>
             </div>
 
+            {type === 'qz_tray' && (
+                <div className="space-y-3">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
+                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <span>Connects directly to QZ Tray running on this computer — instant local printing, no cloud round-trip. Requires the free <a href="https://qz.io/download" target="_blank" rel="noopener noreferrer" className="underline font-semibold">QZ Tray app</a> installed and running here.</span>
+                    </div>
+                    <div>
+                        <Label className="text-xs">QZ Tray Printer Name</Label>
+                        <Input
+                            placeholder="e.g. EPSON_TM_T20III"
+                            value={printer.qz_printer_name || ''}
+                            onChange={e => onUpdate({ qz_printer_name: e.target.value })}
+                            className="mt-1 font-mono text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">The exact printer name as QZ Tray/Windows sees it. Connect below, then use Test to confirm.</p>
+                    </div>
+                    {!qzStatus.connected && !qzStatus.connecting && (
+                        <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" onClick={() => window.open('https://localhost:8181', '_blank')}>
+                                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />Accept Cert
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => qzTrayService.connect()}>
+                                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Reconnect
+                            </Button>
+                        </div>
+                    )}
+                    {!qzStatus.connected && !qzStatus.connecting && qzStatus.lastError && (
+                        <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-800 font-mono break-all">
+                            {qzStatus.lastError}
+                        </div>
+                    )}
+                </div>
+            )}
             {type === 'bluetooth' && service && (
                 <BluetoothPrinterManager
                     selectedPrinter={printer.bluetooth_printer}
