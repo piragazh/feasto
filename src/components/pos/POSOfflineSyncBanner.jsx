@@ -72,15 +72,17 @@ function backoffDelayMs(failures) {
 
 let syncPromise = null;
 
-export async function triggerSync(restaurantId) {
+export async function triggerSync(restaurantId, { manual = false } = {}) {
     if (syncPromise) return syncPromise;
+    // Respect backoff for automatic syncs; a manual "Sync Now" always runs.
+    if (!manual && Date.now() < nextSyncAllowedAt) return null;
     syncPromise = (async () => {
         updateShared({ isSyncing: true });
         let synced = 0;
         let failed = 0;
         try {
-            // 1. Sync pending orders
-            const pending = await getAllPendingUnsynced();
+            // 1. Sync pending orders (only those still within their retry budget)
+            const pending = await getRetryablePendingOrders();
             const forRestaurant = restaurantId
                 ? pending.filter(o => o.restaurant_id === restaurantId)
                 : pending;
@@ -132,7 +134,7 @@ export async function triggerSync(restaurantId) {
             }
 
             // 3. Sync pending table orders via posCreateOrder
-            const tableOrders = await getAllPendingTableOrders();
+            const tableOrders = await getRetryableTableOrders();
             const tableOrdersForRestaurant = restaurantId
                 ? tableOrders.filter(o => o.restaurant_id === restaurantId)
                 : tableOrders;
