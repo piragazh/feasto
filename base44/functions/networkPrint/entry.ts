@@ -212,23 +212,37 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     add(cmd.boldOff);
     line('-');
 
+    if (isKitchen) {
+        add(cmd.alignCenter, cmd.boldOn);
+        add('*** KITCHEN TICKET ***\n');
+        add(cmd.boldOff, cmd.alignLeft);
+    }
+
     const items = order.items || [];
     items.forEach((item, idx) => {
         const qty = item.quantity || 1;
-        const itemPrice = `\xA3${((item.price || 0) * qty).toFixed(2)}`;
         const itemLabel = `${idx + 1}. ${qty}x ${item.name}`;
 
-        // Item name — bold, with price right-aligned
-        add(cmd.boldOn);
-        if (byteLen(itemLabel) + byteLen(itemPrice) + 1 <= W) {
-            add(`${rPad(itemLabel, itemPrice, W)}\n`);
-        } else {
-            // Name too long — wrap it, price on its own line
+        if (isKitchen) {
+            // Kitchen tickets: no price, larger text — what to make, not what it costs.
+            add(cmd.boldOn, cmd.doubleHeight);
             const nameLines = wrapText(itemLabel, W);
             for (const nl of nameLines) add(`${nl}\n`);
-            add(`${' '.repeat(Math.max(0, W - itemPrice.length))}${itemPrice}\n`);
+            add(cmd.normal, cmd.boldOff);
+        } else {
+            const itemPrice = `\xA3${((item.price || 0) * qty).toFixed(2)}`;
+            // Item name — bold, with price right-aligned
+            add(cmd.boldOn);
+            if (byteLen(itemLabel) + byteLen(itemPrice) + 1 <= W) {
+                add(`${rPad(itemLabel, itemPrice, W)}\n`);
+            } else {
+                // Name too long — wrap it, price on its own line
+                const nameLines = wrapText(itemLabel, W);
+                for (const nl of nameLines) add(`${nl}\n`);
+                add(`${' '.repeat(Math.max(0, W - itemPrice.length))}${itemPrice}\n`);
+            }
+            add(cmd.boldOff);
         }
-        add(cmd.boldOff);
 
         // Customizations — clearly indented
         const custLines = formatCustomizations(item);
