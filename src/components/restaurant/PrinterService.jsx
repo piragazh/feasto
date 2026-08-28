@@ -260,6 +260,8 @@ export class PrinterService {
         if (!config.bluetooth_printer) throw new Error('No printer configured.');
         this.setCommandSet(config.command_set);
         const cmd = this.getCommands();
+        // Kitchen tickets are item-focused and never show prices/totals/payment.
+        const isKitchen = config.role === 'kitchen';
 
         if (!this.isConnected()) {
             await this.connect(config.bluetooth_printer, true);
