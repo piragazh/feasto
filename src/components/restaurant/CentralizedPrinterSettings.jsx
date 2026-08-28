@@ -868,7 +868,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
     };
 
     const addPrinter = () => {
-        if (printers.length >= 4) { toast.error('Maximum 4 printers supported'); return; }
+        if (printers.length >= 8) { toast.error('Maximum 8 printers supported'); return; }
         setPrinters(prev => [...prev, { ...DEFAULT_PRINTER, name: `Printer ${String.fromCharCode(65 + prev.length)}` }]);
     };
 
@@ -980,7 +980,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                             <CardTitle className="flex items-center gap-2"><Printer className="h-5 w-5" />Printers ({printers.length})</CardTitle>
                             <CardDescription>Configure each printer individually — paper width, template, and channels are set per printer</CardDescription>
                         </div>
-                        <Button variant="outline" size="sm" onClick={addPrinter} disabled={printers.length >= 4}>
+                        <Button variant="outline" size="sm" onClick={addPrinter} disabled={printers.length >= 8}>
                             <Plus className="h-4 w-4 mr-1.5" />Add Printer
                         </Button>
                     </div>
