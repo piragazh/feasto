@@ -12,10 +12,10 @@ function ConfirmPopup({ message, onConfirm, onCancel, isDark }) {
                     <p className="text-sm font-semibold">{message}</p>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={onCancel} className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${isDark ? 'border-white/[0.1] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                    <button onClick={onCancel} className={`flex-1 h-12 rounded-xl text-sm font-semibold border transition-colors ${isDark ? 'border-white/[0.1] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                         Cancel
                     </button>
-                    <button onClick={onConfirm} className="flex-1 py-2 rounded-xl text-xs font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors">
+                    <button onClick={onConfirm} className="flex-1 h-12 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 active:bg-red-700 text-white transition-colors">
                         Confirm
                     </button>
                 </div>
@@ -58,8 +58,8 @@ export default function POSCart({
                 <div className="flex items-center gap-2">
                     <h2 className={`${t.text} font-bold text-base`}>Order</h2>
                     {totalUnits > 0 && (
-                        <span className="text-[10px] bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold flex-shrink-0">
-                            {totalUnits > 9 ? '9+' : totalUnits}
+                        <span className="text-xs bg-orange-500 text-white rounded-full min-w-[22px] h-[22px] px-1.5 flex items-center justify-center font-bold flex-shrink-0 tabular-nums">
+                            {totalUnits}
                         </span>
                     )}
                 </div>
