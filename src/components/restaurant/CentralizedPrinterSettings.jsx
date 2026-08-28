@@ -385,8 +385,32 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
     const [testing, setTesting] = useState(false);
     const [reconnecting, setReconnecting] = useState(false);
 
+    const [qzStatus, setQzStatus] = useState(qzTrayService.getStatus());
+    useEffect(() => {
+        if (type !== 'qz_tray') return undefined;
+        const unsub = qzTrayService.subscribe(setQzStatus);
+        qzTrayService.connect();
+        return unsub;
+    }, [type]);
+
     const handleTestPrint = async () => {
         if (type === 'network') return; // handled by NetworkPrinterManager's own test button
+        if (type === 'qz_tray') {
+            if (!printer.qz_printer_name) { toast.error('Enter the QZ Tray printer name first'); return; }
+            if (!qzStatus.connected) { toast.error('QZ Tray is not connected'); return; }
+            setTesting(true);
+            try {
+                const { buildTestBytes } = await import('@/lib/escpos');
+                const bytes = buildTestBytes(printer.qz_printer_name, printer.command_set || 'esc_pos', printer.printer_width || '80mm');
+                await qzTrayService.print(printer.qz_printer_name, bytes);
+                toast.success('Test page sent to printer!');
+            } catch (e) {
+                toast.error(`Test failed: ${e.message}`);
+            } finally {
+                setTesting(false);
+            }
+            return;
+        }
         if (!service) { toast.error('Bluetooth is only supported on printer slots 1 and 2'); return; }
         setTesting(true);
         try {
