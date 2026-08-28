@@ -95,7 +95,11 @@ export async function triggerSync(restaurantId) {
                 : tableOrders;
             for (const tOrder of tableOrdersForRestaurant) {
                 try {
-                    const { offline_id, synced: _s, syncStatus: _ss, syncError: _se, syncAttempts: _sa, created_at: _ca, table_id, table_number: _tn, ...orderData } = tOrder;
+                    // offline_id is forwarded as the idempotency key (see posCreateOrder)
+                    // so a retry after a mid-flight network drop returns the existing
+                    // order instead of creating a duplicate.
+                    const { synced: _s, syncStatus: _ss, syncError: _se, syncAttempts: _sa, created_at: _ca, table_number: _tn, ...orderData } = tOrder;
+                    const { offline_id, table_id } = tOrder;
                     const result = await base44.functions.invoke('posCreateOrder', orderData);
                     if (result?.data?.order) {
                         // Link the real order to the table
