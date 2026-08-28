@@ -574,13 +574,27 @@ function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantI
                         />
                         <p className="text-xs text-gray-500 mt-1">The exact printer name as QZ Tray/Windows sees it. Connect below, then use Test to confirm.</p>
                     </div>
-                    {!qzStatus.connected && !qzStatus.connecting && (
+                    {!qzStatus.connected && (
                         <div className="flex items-center gap-2">
-                            <Button size="sm" variant="outline" onClick={() => window.open('https://localhost:8181', '_blank')}>
+                            <Button type="button" size="sm" variant="outline" onClick={() => window.open('https://localhost:8181', '_blank')}>
                                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" />Accept Cert
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => qzTrayService.connect()}>
-                                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Reconnect
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={qzStatus.connecting}
+                                onClick={async () => {
+                                    try {
+                                        const ok = await qzTrayService.connect();
+                                        if (!ok) toast.error(qzTrayService.getStatus().lastError || 'QZ Tray did not connect');
+                                    } catch (e) {
+                                        toast.error('QZ Tray connect error: ' + (e?.message || e));
+                                    }
+                                }}
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${qzStatus.connecting ? 'animate-spin' : ''}`} />
+                                {qzStatus.connecting ? 'Connecting…' : 'Reconnect'}
                             </Button>
                         </div>
                     )}
