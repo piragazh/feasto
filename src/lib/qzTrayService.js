@@ -121,11 +121,42 @@ class QZTrayService {
         if (this._connected || this._connecting) return this._connected;
         if (Date.now() < this._cooldownUntil) return false;
 
+        // Pre-flight: check if the self-signed cert is accepted by the browser.
+        // Without this, qz-tray scans 4 ports × 2 hosts (each timing out on TLS
+        // handshake failure), which eats the entire watchdog before failing.
+        const certOk = await this._preflightCertCheck();
+        if (!certOk) {
+            this._lastError = 'Cannot reach QZ Tray. Ensure QZ Tray is running, then open https://localhost:8181 in a new tab and click "Advanced" → "Proceed" to accept the certificate.';
+            this._cooldownUntil = Date.now() + 2000;
+            this._notifyStatus();
+            return false;
+        }
+
         this._connecting = true;
         this._notifyStatus();
         this._lastError = null;
 
         return this._attemptConnect(true, 15000);
+    }
+
+    /**
+     * Quick fetch to https://localhost:8181 to verify the self-signed cert
+     * is trusted by the browser. Returns true if the fetch succeeds (even
+     * with a non-200 status), false if it fails due to cert rejection.
+     */
+    async _preflightCertCheck() {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        try {
+            // Any response (even 404/500) means the TLS handshake succeeded.
+            await fetch('https://localhost:8181', { signal: controller.signal, mode: 'no-cors' });
+            clearTimeout(timeoutId);
+            return true;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            console.warn('[QZTray] Pre-flight cert check failed:', e?.message || e);
+            return false;
+        }
     }
 
     /**
@@ -160,6 +191,10 @@ class QZTrayService {
                     retries: 0,
                     delay: 0,
                     usingSecure,
+                    // Only try localhost:8181 — avoids slow multi-port scanning
+                    usingSurf: false,
+                    host: ['localhost'],
+                    port: { secure: [8181], insecure: [], portIndex: 0 },
                 });
             } catch (syncErr) {
                 if (settled) return;
