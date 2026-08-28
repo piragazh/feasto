@@ -94,11 +94,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
         }
 REMOVED_B
             // ── Fall back to Bluetooth ────────────────────────────────────────
-            if (!config.bluetooth_printer?.id) {
-                toast.error('QZ Tray not connected and no Bluetooth printer configured. Please connect a printer in Settings.');
-                return;
-            }
-            const ESC = '\x1B';
+REMOVED_TAIL
             const GS = '\x1D';
             const cmd = {
                 init: `${ESC}@`,
