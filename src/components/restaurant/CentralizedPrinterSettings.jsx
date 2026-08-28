@@ -519,11 +519,15 @@ function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantI
             {/* Connection type selector */}
             <div>
                 <Label className="mb-2 block text-xs text-gray-500 uppercase tracking-wide">Connection Type</Label>
-                {index >= 2 && (
-                    <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />Bluetooth is only available on printer slots 1 & 2. Use Network or USB for this slot.
-                    </p>
-                )}
+                {(() => {
+                    const btCountExcludingSelf = (printers || []).filter(p => p !== printer && (p.connection_type || 'bluetooth') === 'bluetooth').length;
+                    const bluetoothWouldOverflow = type !== 'bluetooth' && btCountExcludingSelf >= 2;
+                    return bluetoothWouldOverflow && (
+                        <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />Only 2 Bluetooth printers can be connected at once — use QZ Tray, Network, or USB for this one.
+                        </p>
+                    );
+                })()}
                 <div className="grid grid-cols-4 gap-2">
                     {[
                         { value: 'qz_tray',   label: 'QZ Tray',   icon: Zap       },
@@ -531,7 +535,8 @@ function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantI
                         { value: 'usb',       label: 'USB',       icon: Usb       },
                         { value: 'network',   label: 'Network',   icon: Wifi      },
                     ].map(({ value, label, icon: ConnIcon }) => {
-                        const disabled = value === 'bluetooth' && index >= 2;
+                        const btCountExcludingSelf = (printers || []).filter(p => p !== printer && (p.connection_type || 'bluetooth') === 'bluetooth').length;
+                        const disabled = value === 'bluetooth' && type !== 'bluetooth' && btCountExcludingSelf >= 2;
                         return (
                             <button
                                 key={value}
