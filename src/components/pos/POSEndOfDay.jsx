@@ -92,9 +92,6 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
         } finally {
             setIsPrinting(false);
         }
-REMOVED_B
-            // ── Fall back to Bluetooth ────────────────────────────────────────
-REMOVED_TAIL
     const PAYMENT_ICONS = {
         cash: <Banknote className="h-4 w-4 text-green-400" />,
         card: <CreditCard className="h-4 w-4 text-blue-400" />,
