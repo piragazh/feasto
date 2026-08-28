@@ -149,12 +149,15 @@ export default function POSDashboard() {
     };
     const updateQuantity = (itemId, quantity) => {
         if (quantity < 1) { removeFromCart(itemId); return; }
-        setCart(prev => prev.map(i => {
-            if (i.id !== itemId) return i;
-            if (quantity > i.quantity) playItemAdded();
-            else if (quantity < i.quantity) playItemRemoved();
-            return { ...i, quantity };
-        }));
+        // Decide the sound from current state before updating — never inside the
+        // setState updater, which React may invoke twice (StrictMode) and would
+        // double-play the beep.
+        const current = cart.find(i => i.id === itemId);
+        if (current) {
+            if (quantity > current.quantity) playItemAdded();
+            else if (quantity < current.quantity) playItemRemoved();
+        }
+        setCart(prev => prev.map(i => i.id === itemId ? { ...i, quantity } : i));
     };
     const clearCart = () => {
         setCart([]);
