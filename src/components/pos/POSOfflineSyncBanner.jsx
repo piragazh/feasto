@@ -171,7 +171,18 @@ export async function triggerSync(restaurantId, { manual = false } = {}) {
             if (failed > 0) {
                 toast.error(`${failed} update${failed > 1 ? 's' : ''} failed to sync`);
             }
+            // Track consecutive failure rounds for backoff. A round that synced
+            // something is treated as progress and resets the delay.
+            if (synced > 0 || failed === 0) {
+                consecutiveSyncFailures = 0;
+                nextSyncAllowedAt = 0;
+            } else {
+                consecutiveSyncFailures++;
+                nextSyncAllowedAt = Date.now() + backoffDelayMs(consecutiveSyncFailures);
+            }
         } catch {
+            consecutiveSyncFailures++;
+            nextSyncAllowedAt = Date.now() + backoffDelayMs(consecutiveSyncFailures);
             toast.error('Sync failed — will retry automatically');
         } finally {
             const remaining = await getAllPendingUnsynced();
@@ -183,7 +194,12 @@ export async function triggerSync(restaurantId, { manual = false } = {}) {
             const tableOrderCount = restaurantId
                 ? tableRemaining.filter(o => o.restaurant_id === restaurantId).length
                 : tableRemaining.length;
-            updateShared({ isSyncing: false, pendingCount: orderCount + statusRemaining.length + tableOrderCount });
+            const stuck = [...(await getStuckOrders(restaurantId)), ...(await getStuckTableOrders(restaurantId))];
+            updateShared({
+                isSyncing: false,
+                pendingCount: orderCount + statusRemaining.length + tableOrderCount,
+                stuckCount: stuck.length,
+            });
             syncPromise = null;
         }
     })();
