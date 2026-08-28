@@ -469,6 +469,15 @@ function PrinterCard({ printer, index, onUpdate, onRemove, restaurantId }) {
                     </div>
                     {type === 'bluetooth' && service && <PrinterStatusBadge service={service} label={`Printer ${index + 1}`} />}
                     {type === 'network' && <NetworkPrinterStatusBadge ip={printer.network_ip} port={printer.network_port} />}
+                    {type === 'qz_tray' && (
+                        qzStatus.connecting ? (
+                            <Badge className="bg-amber-100 text-amber-700 gap-1.5"><RefreshCw className="h-3 w-3 animate-spin" />Connecting…</Badge>
+                        ) : qzStatus.connected ? (
+                            <Badge className="bg-green-100 text-green-700 gap-1.5"><CheckCircle2 className="h-3 w-3" />QZ Tray Online</Badge>
+                        ) : (
+                            <Badge className="bg-red-100 text-red-700 gap-1.5"><Circle className="h-3 w-3" />QZ Tray Offline</Badge>
+                        )
+                    )}
                     {type === 'bluetooth' && service && (
                         <button
                             onClick={handleReconnect}
