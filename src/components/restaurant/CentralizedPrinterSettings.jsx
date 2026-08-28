@@ -724,6 +724,21 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                 show_customer_details: p.show_customer_details !== undefined ? p.show_customer_details : (c.show_customer_details !== false),
                 auto_print: p.auto_print !== undefined ? p.auto_print : (c.auto_print || false),
             }));
+            // A standalone QZ Tray printer name from the old (pre-unification) POS
+            // Settings screen isn't part of this array yet — fold it in as its own
+            // printer rather than dropping it silently.
+            if (c.qz_printer_name && !migrated.some(p => p.connection_type === 'qz_tray' && p.qz_printer_name === c.qz_printer_name)) {
+                migrated.push({
+                    ...DEFAULT_PRINTER,
+                    name: 'QZ Tray Printer (migrated)',
+                    connection_type: 'qz_tray',
+                    qz_printer_name: c.qz_printer_name,
+                    assigned_channels: ['pos_order'],
+                    printer_width: c.printer_width || '80mm',
+                    command_set: c.command_set || 'esc_pos',
+                    template: c.template || 'standard',
+                });
+            }
             setPrinters(migrated);
         } else {
             // Migrate from old single/legacy structure
