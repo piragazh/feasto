@@ -162,8 +162,28 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         }
 
         // Route through posCreateOrder — server validates coupon, writes coupon_code, increments usage_count
-        await base44.functions.invoke('posCreateOrder', orderData);
-        return { offline: false };
+        //
+        // CRITICAL: navigator.onLine only reports whether a network interface is
+        // up — it is `true` when the restaurant's WiFi is fine but the internet
+        // (or our backend) is unreachable, which is the most common real-world
+        // failure. Without this catch, the invoke throws, the payment aborts, and
+        // the order is LOST after cash has already been taken. Any network-level
+        // failure therefore falls back to the offline queue rather than losing
+        // the sale; it will sync (idempotently, via offline_id) on reconnect.
+        try {
+            await base44.functions.invoke('posCreateOrder', orderData);
+            return { offline: false };
+        } catch (err) {
+            if (isNetworkError(err)) {
+                console.warn('[POS-PAYMENT] Backend unreachable despite navigator.onLine — queueing order offline:', err?.message || err);
+                await savePendingOrder(orderData);
+                return { offline: true, degraded: true };
+            }
+            // A genuine server-side rejection (validation, auth, tenant check) is
+            // NOT a connectivity problem — surface it rather than silently
+            // queueing an order the server has already refused.
+            throw err;
+        }
     };
 
     const printReceiptAfterPayment = async (orderData, finalPayments) => {
