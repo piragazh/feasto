@@ -207,8 +207,10 @@ export async function triggerSync(restaurantId, { manual = false } = {}) {
 }
 
 export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
-    const { isOnline, pendingCount, isSyncing, lastSynced } = useOfflineSyncState();
+    const { isOnline, pendingCount, stuckCount, isSyncing, lastSynced } = useOfflineSyncState();
     const [dismissed, setDismissed] = useState(false);
+    const [showStuck, setShowStuck] = useState(false);
+    const [stuckOrders, setStuckOrders] = useState([]);
     const autoSyncRef = useRef(false);
     const lastCached = getLastCachedAt(restaurantId, 'menu_items');
 
@@ -222,20 +224,38 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
         const tableOrderCount = restaurantId
             ? tableOrders.filter(o => o.restaurant_id === restaurantId).length
             : tableOrders.length;
-        updateShared({ pendingCount: orderCount + statusUpdates.length + tableOrderCount });
+        const stuck = [...(await getStuckOrders(restaurantId)), ...(await getStuckTableOrders(restaurantId))];
+        updateShared({
+            pendingCount: orderCount + statusUpdates.length + tableOrderCount,
+            stuckCount: stuck.length,
+        });
+    }, [restaurantId]);
+
+    const openStuckReview = useCallback(async () => {
+        const orders = await getStuckOrders(restaurantId);
+        const tables = await getStuckTableOrders(restaurantId);
+        setStuckOrders([
+            ...orders.map(o => ({ ...o, _kind: 'order' })),
+            ...tables.map(o => ({ ...o, _kind: 'table' })),
+        ]);
+        setShowStuck(true);
     }, [restaurantId]);
 
     useEffect(() => {
-        const onOnline = () => { updateShared({ isOnline: true }); setDismissed(false); };
+        // Browser events give us an instant signal; the heartbeat catches the
+        // "router up, internet down" case that those events never fire for.
+        const onOnline = () => { runHeartbeat(); setDismissed(false); };
         const onOffline = () => updateShared({ isOnline: false });
         window.addEventListener('online', onOnline);
         window.addEventListener('offline', onOffline);
+        startHeartbeat();
         refreshCount();
         const interval = setInterval(refreshCount, 8000);
         return () => {
             window.removeEventListener('online', onOnline);
             window.removeEventListener('offline', onOffline);
             clearInterval(interval);
+            stopHeartbeat();
         };
     }, [refreshCount]);
 
@@ -244,7 +264,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
         if (isOnline && pendingCount > 0 && !isSyncing && !autoSyncRef.current) {
             autoSyncRef.current = true;
             setTimeout(() => {
-                triggerSync(restaurantId).finally(() => { autoSyncRef.current = false; });
+                Promise.resolve(triggerSync(restaurantId)).finally(() => { autoSyncRef.current = false; });
             }, 1500); // slight delay so network is stable
         }
     }, [isOnline, pendingCount, isSyncing, restaurantId]);
