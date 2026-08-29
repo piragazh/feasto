@@ -307,7 +307,18 @@ class QZTrayService {
     }
 
     isConnected() {
-        return this._connected && qz.websocket.isConnected();
+        // NOTE: the qz-tray API method is isActive() — there is no isConnected().
+        // Calling the non-existent name threw a TypeError the moment _connected
+        // became true (the `this._connected &&` short-circuit hid it while
+        // disconnected), which blew up inside _notifyStatus() in the connect
+        // success handler and left the connect promise permanently unresolved.
+        // Guard defensively so a future API change degrades instead of throwing.
+        try {
+            return this._connected && qz.websocket.isActive();
+        } catch (e) {
+            console.warn('[QZTray] isActive() check failed:', e?.message || e);
+            return this._connected;
+        }
     }
 
     getStatus() {
