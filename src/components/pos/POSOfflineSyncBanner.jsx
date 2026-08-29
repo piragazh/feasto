@@ -18,6 +18,17 @@ function updateShared(patch) {
     notifyListeners();
 }
 
+/** Shared 'x mins ago' formatter for the cached-menu timestamp. */
+export function formatCachedAt(iso) {
+    if (!iso) return '';
+    const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const h = Math.floor(diffMin / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+}
+
 export function useOfflineSyncState() {
     const [state, setState] = useState({ ...sharedState });
     useEffect(() => {
