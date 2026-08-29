@@ -27,7 +27,6 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
         setSpecialInstructions(initialSpecialInstructions || '');
         setIsMeal(!!initialIsMeal);
         setShowKeyboard(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item?.id, open]);
 
     const optPrice = (opt) => opt?.pos_price != null ? opt.pos_price : (opt?.price || 0);
