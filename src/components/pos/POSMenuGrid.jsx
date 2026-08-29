@@ -19,6 +19,31 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                 </div>
             </div>
 
+            {/* Empty state. A blank grid gives no clue whether the search matched
+                nothing, the category is empty, or the menu failed to load - during
+                service staff need to know which. */}
+            {filteredItems.length === 0 && (
+                <div className={`flex-1 flex flex-col items-center justify-center text-center px-6 ${t.textSub}`}>
+                    <Search className="h-12 w-12 mb-3 opacity-20" />
+                    {searchQuery ? (
+                        <>
+                            <p className="text-sm font-semibold">No items match &ldquo;{searchQuery}&rdquo;</p>
+                            <button
+                                onClick={() => onSearchChange('')}
+                                className="text-orange-500 text-xs font-semibold mt-2 underline"
+                            >
+                                Clear search
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-sm font-semibold">No items in this category</p>
+                            <p className="text-xs mt-1 opacity-70">Add items in Menu Management, or pick another category.</p>
+                        </>
+                    )}
+                </div>
+            )}
+
             <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[200px] content-start">
                 {filteredItems.map(item => {
                     const effectivePrice = item.pos_price != null ? item.pos_price : item.price;
