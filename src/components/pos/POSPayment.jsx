@@ -300,7 +300,14 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             }
             // Store the completed order so the success view can offer a Reprint
             // button — staff can retry printing in one tap if the auto-print failed.
-            setCompletedOrder(orderDataForPrint);
+            // Include the cash fields so a Reprint reproduces the ORIGINAL receipt
+            // exactly, change line included - a reprint that silently drops the
+            // change is worse than no reprint when a customer is querying it.
+            setCompletedOrder({
+                ...orderDataForPrint,
+                cash_tendered: hasCash ? finalPayments.filter(p => p.method === 'cash').reduce((s, p) => s + (p.amount || 0), 0) : 0,
+                change_due: hasCash ? changeNow : 0,
+            });
             // If no printer is configured, skip the success view and complete immediately
             // (no reprint possible, so no point showing the button).
             if (!hasPrinterForChannel(restaurant, 'pos_order')) {
