@@ -199,8 +199,13 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     {item.customization_options?.map(option => (
                         <div key={option.name} className="space-y-2">
                            <div className="flex items-baseline gap-1">
+                               {/* Fall back to a generic label when a group has no
+                                   name. An unnamed group otherwise renders as a
+                                   headerless column here, and as a stray ": value"
+                                   line in the cart, with staff unable to tell what
+                                   they are choosing. */}
                                <Label className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} ${columns === 1 ? 'text-xl' : columns === 2 ? 'text-lg' : 'text-base'}`}>
-                                   {option.name}
+                                   {option.name?.trim() || 'Options'}
                                </Label>
                                {option.required && (
                                    <span className="text-red-500 font-bold">*</span>
