@@ -140,6 +140,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const [terminalError, setTerminalError] = useState('');
     const terminalCancelRef = useRef(false);
 
+    // Which tender the cashier has selected. Drives the segmented control and
+    // guarantees the primary button below never contradicts it.
+    const [tenderType, setTenderType] = useState('cash');
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
     const remaining = Math.max(0, effectiveTotal - totalPaid);
     // Denominations recalculate as the amount owed changes (split payments, part-cash).
@@ -626,17 +629,31 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 {/* Method buttons */}
                 {!activeMethod && (
                     <>
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                            <Button onClick={() => setActiveMethod('cash')}
-                                className={`h-14 text-lg font-bold ${t.cashBtn}`}>
-                                <DollarSign className="h-5 w-5 mr-1" /> Cash
-                            </Button>
-                            <Button onClick={() => setActiveMethod('card')}
-                                className={`h-14 text-lg font-bold ${t.cardBtn}`}>
-                                <CreditCard className="h-5 w-5 mr-1" /> Card
-                            </Button>
+                        {/* Segmented control rather than two competing solid buttons.
+                            Both being equally prominent gave no sense of which tender
+                            was selected, and the primary action below could contradict
+                            it (e.g. "Charge to Card" while Cash was highlighted). */}
+                        <div className={`grid grid-cols-2 gap-1 p-1 rounded-xl mb-4 ${t.segTrack}`}>
+                            {[
+                                { key: 'cash', label: 'Cash', icon: DollarSign },
+                                { key: 'card', label: 'Card', icon: CreditCard },
+                            ].map(({ key, label, icon: Icon }) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    aria-pressed={tenderType === key}
+                                    onClick={() => setTenderType(key)}
+                                    className={`h-12 rounded-lg text-base font-bold flex items-center justify-center gap-2 transition-all ${
+                                        tenderType === key ? t.segActive : t.segIdle
+                                    }`}
+                                >
+                                    <Icon className="h-5 w-5" />{label}
+                                </button>
+                            ))}
                         </div>
 
+                        {tenderType === 'cash' && (
+                        <>
                         <p className={`${t.subtext} text-xs mb-2`}>Quick cash</p>
                         <div className="grid grid-cols-4 gap-2 mb-4">
                             {quickCash.map(amt => (
@@ -655,13 +672,23 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             Exact Cash (£{remaining.toFixed(2)})
                         </Button>
 
-                        <Button onClick={() => {
-                            setRawValue(String(Math.round(remaining * 100)));
-                            setActiveMethod('card');
-                            setShowCardConfirm(true);
-                        }} className={`w-full h-10 text-sm font-bold ${t.cardBtn}`}>
-                            Charge £{remaining.toFixed(2)} to Card
+                        <Button onClick={() => setActiveMethod('cash')}
+                            className={`w-full h-12 text-base font-bold ${t.cashBtn}`}>
+                            Other Amount &mdash; Enter on Keypad
                         </Button>
+                        </>
+                        )}
+
+                        {/* The primary action always matches the selected tender. */}
+                        {tenderType === 'card' && (
+                            <Button onClick={() => {
+                                setRawValue(String(Math.round(remaining * 100)));
+                                setActiveMethod('card');
+                                setShowCardConfirm(true);
+                            }} className={`w-full h-14 text-lg font-bold ${t.cardBtn}`}>
+                                Charge £{remaining.toFixed(2)} to Card
+                            </Button>
+                        )}
                     </>
                 )}
 
