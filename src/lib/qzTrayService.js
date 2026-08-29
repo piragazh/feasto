@@ -131,9 +131,17 @@ class QZTrayService {
      * A single connect attempt avoids the qz-tray library's stuck
      * inProgress flag.
      */
-    async connect() {
+    async connect(opts = {}) {
+        const manual = !!opts.manual;
         if (this._connected || this._connecting) return this._connected;
-        if (Date.now() < this._cooldownUntil) return false;
+        // A manual attempt ignores the post-failure cooldown and resets the
+        // auto-reconnect budget - otherwise clicking Reconnect within the
+        // cooldown window returns false silently and the button looks dead.
+        if (!manual && Date.now() < this._cooldownUntil) return false;
+        if (manual) {
+            this._cooldownUntil = 0;
+            this._reconnectAttempts = 0;
+        }
 
         // NOTE: we deliberately do NOT gate the connection on any pre-check.
         // Two previous attempts to "fail fast" here (a preflight fetch to
