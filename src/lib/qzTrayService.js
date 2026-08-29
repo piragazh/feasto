@@ -161,31 +161,18 @@ class QZTrayService {
             return false;
         }
 
-        // Pre-flight: can the browser actually reach QZ Tray's HTTPS endpoint?
-        // On an https page the browser blocks wss://localhost:8181 unless (1) the
-        // self-signed TLS cert is trusted and (2) Chrome's Local Network Access
-        // permission is granted. This fetch detects the exact blocker so we can
-        // show a specific error instead of waiting 20s for the watchdog.
-        let timeoutId;
-        try {
-            console.log('[QZTray] Pre-flight: checking if browser can reach https://localhost:8181...');
-            const controller = new AbortController();
-            timeoutId = setTimeout(() => controller.abort(), 5000);
-            await fetch('https://localhost:8181', { signal: controller.signal, mode: 'no-cors' });
-            clearTimeout(timeoutId);
-            console.log('[QZTray] Pre-flight: QZ Tray HTTPS endpoint reachable');
-        } catch (preflightErr) {
-            if (timeoutId) clearTimeout(timeoutId);
-            const msg = preflightErr?.message || String(preflightErr);
-            console.warn('[QZTray] Pre-flight FAILED — browser cannot reach QZ Tray:', msg);
-            this._lastError = 'Your browser cannot reach QZ Tray. You need to do BOTH of these:\n\n' +
-                '1. ACCEPT THE CERTIFICATE: Open a new tab, go to https://localhost:8181, click "Advanced" → "Proceed to localhost (unsafe)".\n\n' +
-                '2. ALLOW LOCAL NETWORK ACCESS: Click the 🔒 (or tune) icon next to the address bar → Site settings → Permissions → "Local Network Access" → Allow.\n\n' +
-                'Then reload this page and click Reconnect.';
-            this._connecting = false;
-            this._notifyStatus();
-            return false;
-        }
+        // DO NOT ADD A PRE-FLIGHT CHECK HERE.
+        //
+        // This has now been added and removed three times. Every version - a
+        // fetch() to https://localhost:8181, a navigator.permissions query for
+        // 'local-network-access' - blocks working setups, because a plain fetch
+        // from an HTTPS page to a self-signed loopback endpoint fails for
+        // reasons that have nothing to do with whether the WebSocket can open.
+        // The failure is indistinguishable from a real outage, so the gate
+        // reports a confident, wrong diagnosis and prevents the real attempt.
+        //
+        // The WebSocket connect below is the ONLY trustworthy signal. Diagnose
+        // failures from its result, never before it.
 
         return this._attemptConnect(true, 20000);
     }
