@@ -152,25 +152,6 @@ class QZTrayService {
     }
 
     /**
-     * Checks Chrome's Permissions API for the 'local-network-access'
-     * permission, if the browser supports querying it. Returns true only
-     * when the browser explicitly reports it as denied for this origin;
-     * returns false (i.e. "not known to be denied") if the permission name
-     * is unsupported, the query throws, or the state is 'granted'/'prompt'.
-     */
-    async _isLocalNetworkAccessDenied() {
-        try {
-            if (!navigator?.permissions?.query) return false;
-            const status = await navigator.permissions.query({ name: 'local-network-access' });
-            return status.state === 'denied';
-        } catch (e) {
-            // Permission name not recognized by this browser, or query failed —
-            // treat as unknown rather than denied.
-            return false;
-        }
-    }
-
-    /**
      * Single connection attempt with a hard watchdog.
      * Returns true on success, false on failure/timeout.
      */
