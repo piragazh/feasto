@@ -85,6 +85,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         changeBox:isDark ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200',
         changeTxt:isDark ? 'text-green-300' : 'text-green-600',
         changeAmt:isDark ? 'text-white' : 'text-green-900',
+        // Segmented control: a recessed track with one raised active segment, so
+        // the selected tender is unambiguous at a glance.
+        segTrack:  isDark ? 'bg-black/30 border border-white/[0.06]' : 'bg-gray-100 border border-gray-200',
+        segActive: isDark ? 'bg-orange-500 text-white shadow' : 'bg-orange-500 text-white shadow',
+        segIdle:   isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-white/5' : 'text-gray-500 hover:text-gray-800 hover:bg-white',
         cashBtn:  'bg-green-600 hover:bg-green-500 text-white',
         cardBtn:  'bg-blue-600 hover:bg-blue-500 text-white',
         cardBtn2: isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200',
