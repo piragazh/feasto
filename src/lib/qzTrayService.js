@@ -39,10 +39,35 @@ class QZTrayService {
 
     // ── Security (certificate + signature) ────────────────────────────────────
 
+    /**
+     * Diagnostic toggle. Set localStorage 'qz_unsigned' = '1' and reload to skip
+     * the signing certificate entirely, letting QZ Tray run in its own prompt
+     * mode (a dialog appears in the QZ Tray desktop app instead of the request
+     * being signed silently).
+     *
+     * Use this to separate the two independent certificates involved:
+     *   - the SIGNING cert (QZ_TRAY_CERTIFICATE / QZ_TRAY_PRIVATE_KEY secrets),
+     *     which this flag bypasses;
+     *   - QZ Tray's own TLS cert (CN=localhost), which secures the wss:// socket
+     *     and CANNOT be bypassed from JavaScript at all - the browser enforces
+     *     it, and the only fix is trusting QZ Tray's root CA on the machine.
+     *
+     * If the connection still fails with this flag on, the problem is definitively
+     * TLS trust, not the signing secrets.
+     */
+    _isUnsignedMode() {
+        try { return localStorage.getItem('qz_unsigned') === '1'; } catch { return false; }
+    }
+
     _setupSecurity() {
         this._certCache = null;
         this._certCacheTime = 0;
         this._certTTL = 5 * 60 * 1000;
+
+        if (this._isUnsignedMode()) {
+            console.warn('[QZTray] UNSIGNED MODE - skipping signing certificate. QZ Tray will show its own approval prompt. Remove localStorage "qz_unsigned" to restore signed mode.');
+            return;
+        }
 
         // Callback-style promises (resolve/reject) — the classic QZ Tray API.
         // More compatible across QZ versions than async-function style.
