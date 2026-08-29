@@ -313,7 +313,21 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                 ))}
             </div>
 
+            {/* Empty state. Without it the page shows a full set of £0.00 KPI cards
+                and blank charts, which reads as broken rather than "no trade in
+                this period" - especially on a newly-opened site. */}
+            {filteredOrders.length === 0 && (
+                <div className={`${t.panel} rounded-lg border p-12 text-center`}>
+                    <TrendingUp className={`h-12 w-12 mx-auto mb-3 opacity-20 ${t.text}`} />
+                    <p className={`${t.text} font-semibold`}>No orders in this period</p>
+                    <p className={`${t.label} text-sm mt-1`}>
+                        Try a wider date range, or check back once you&rsquo;ve taken some orders.
+                    </p>
+                </div>
+            )}
+
             {/* ── Chart Tabs ── */}
+            {filteredOrders.length > 0 && (
             <div className={`${t.panel} rounded-lg border`}>
                 <div className={`flex border-b ${t.tabBorder}`}>
                     {[
