@@ -200,7 +200,16 @@ class QZTrayService {
                     // to avoid slow multi-port/qz.surf scanning.
                     usingSurf: false,
                     host: ['localhost', '127.0.0.1'],
-                    port: { secure: [8181], insecure: [], portIndex: 0 },
+                    // Try ALL of QZ Tray's default secure ports, not just 8181.
+                    // QZ Tray binds 8181 by default but falls back to 8282/8383/
+                    // 8484 when that port is already taken by another app - a
+                    // previous version of this file hardcoded [8181] to avoid
+                    // slow port scanning, which silently broke every machine
+                    // where something else held 8181.
+                    // Insecure (ws://) ports are intentionally omitted: this page
+                    // is served over HTTPS, so the browser blocks ws:// as mixed
+                    // content and trying them only wastes watchdog time.
+                    port: { secure: [8181, 8282, 8383, 8484], insecure: [], portIndex: 0 },
                 });
             } catch (syncErr) {
                 if (settled) return;
