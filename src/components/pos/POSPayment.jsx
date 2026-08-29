@@ -602,11 +602,14 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         </button>
                     )}
 
-                    <div className={`${t.totalBox} p-3 rounded-xl`}>
-                        <p className={`${t.totalTxt} text-xs`}>
+                    {/* The total is the anchor figure on this screen, so it stays
+                        the largest number - previously "Still owed" was rendered
+                        heavier than it, inverting the hierarchy. */}
+                    <div className={`${t.totalBox} px-4 py-3 rounded-xl flex items-baseline justify-between gap-3`}>
+                        <p className={`${t.totalTxt} text-xs font-semibold uppercase tracking-wide`}>
                             Total{(manualDiscountAmount > 0 || couponDiscountAmount > 0) ? ` (was £${cartSubtotal.toFixed(2)})` : ''}
                         </p>
-                        <p className={`${t.totalAmt} text-3xl font-bold`}>£{effectiveTotal.toFixed(2)}</p>
+                        <p className={`${t.totalAmt} text-4xl font-bold tabular-nums leading-none`}>£{effectiveTotal.toFixed(2)}</p>
                     </div>
 
                     {payments.length > 0 && (
@@ -624,9 +627,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             </div>
 
                             {remaining > 0 ? (
-                                <div className={`${t.owedBox} p-2.5 rounded-xl`}>
-                                    <p className={`${t.owedTxt} text-xs`}>Still owed</p>
-                                    <p className={`${t.owedAmt} text-2xl font-bold`}>£{remaining.toFixed(2)}</p>
+                                <div className={`${t.owedBox} px-4 py-2.5 rounded-xl flex items-baseline justify-between gap-3`}>
+                                    <p className={`${t.owedTxt} text-xs font-semibold uppercase tracking-wide`}>Still owed</p>
+                                    <p className={`${t.owedAmt} text-2xl font-bold tabular-nums leading-none`}>£{remaining.toFixed(2)}</p>
                                 </div>
                             ) : (
                                 <div className={`${t.changeBox} p-2.5 rounded-xl`}>
