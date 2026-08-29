@@ -1,6 +1,6 @@
 import React from 'react';
 import { Input } from "@/components/ui/input";
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Search } from 'lucide-react';
 
 export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange, onSearchFocus, onItemClick, t }) {
     return (
@@ -44,7 +44,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                 </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[200px] content-start">
+            <div className={`flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[200px] content-start ${filteredItems.length === 0 ? 'hidden' : ''}`}>
                 {filteredItems.map(item => {
                     const effectivePrice = item.pos_price != null ? item.pos_price : item.price;
                     const hasPosOverride = item.pos_price != null && item.pos_price !== item.price;
