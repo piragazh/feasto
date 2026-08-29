@@ -478,6 +478,16 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         category:   { cat: '',              menu: 'md:col-span-9', cart: 'md:col-span-3', showCat: false, quickActions: false, isCategoryGrid: true },
     }[posLayout] || { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true, quickActions: false };
 
+    // The quick-actions bar should sit UNDER THE MENU ONLY and stop where the
+    // cart panel begins, so the cart can run the full height of the screen.
+    // Implemented as a 2-row grid: the cart spans both rows, the bar occupies
+    // row 2 across the remaining columns. Width is derived from the cart span so
+    // it stays correct across all six POS layouts.
+    const cartSpan = parseInt((layoutCols.cart.match(/col-span-(\d+)/) || [])[1] || '3', 10);
+    const barSpanClass = {
+        2: 'md:col-span-10', 3: 'md:col-span-9', 5: 'md:col-span-7',
+    }[cartSpan] || 'md:col-span-9';
+
     // Main entry view.
     // Height note: use h-full (not calc(100vh-130px)) - <main> is flex-1 inside a
     // min-h-screen flex column, so it already owns the remaining height. The old
@@ -487,7 +497,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         <div className={`flex flex-col h-full min-h-0 ${t.bg}`}>
             <POSOfflineSyncBanner restaurantId={restaurantId} onForceRefresh={() => { refetchMenuItems(); refetchTables(); }} />
 
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
+            <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 md:grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden">
                 {layoutCols.quickActions && (
                     <div className="md:col-span-1 overflow-hidden flex flex-col gap-2">
                         <button onClick={() => setViewMode('tables')} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold ${t.itemCard} border text-center transition-colors`}>
@@ -542,7 +552,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         </div>
                     </>
                 )}
-                <div className={`${layoutCols.cart} overflow-hidden flex flex-col gap-2`}>
+                <div className={`${layoutCols.cart} md:row-span-2 min-h-0 overflow-hidden flex flex-col gap-2`}>
                     {(orderType === 'phone_collection' || orderType === 'phone_delivery') && (
                         <button
                             onClick={() => setPhoneDialogOpen(true)}
