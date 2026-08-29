@@ -446,6 +446,11 @@
       "type": "number",
       "default": 1
     },
+    "pos_palette": {
+      "type": "string",
+      "description": "POS accent colour palette key (see src/lib/posThemes.js). Applies to every till at this restaurant.",
+      "default": "orange"
+    },
     "pos_layout": {
       "type": "string",
       "enum": [

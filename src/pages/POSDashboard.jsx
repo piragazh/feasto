@@ -21,6 +21,7 @@ import POSEndOfDay from '@/components/pos/POSEndOfDay.jsx';
 import QZTrayStatusBadge from '@/components/pos/QZTrayStatusBadge.jsx';
 import POSPrinterSettings from '@/components/pos/POSPrinterSettings.jsx';
 import POSSoundSettings from '@/components/pos/POSSoundSettings.jsx';
+import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
 import { toast } from 'sonner';
 
@@ -510,6 +511,11 @@ export default function POSDashboard() {
                 {activeTab === 'settings' && (
                     <div className="h-full min-h-0 overflow-y-auto rounded-2xl bg-gray-50 border border-gray-200 p-4">
                         <div className="space-y-6 max-w-5xl mx-auto">
+                            <POSThemeSettings
+                                restaurantId={restaurant.id}
+                                restaurant={restaurant}
+                                onPaletteChange={setPosPalette}
+                            />
                             <POSSoundSettings />
                             <POSPrinterSettings restaurantId={restaurant.id} />
                         </div>
