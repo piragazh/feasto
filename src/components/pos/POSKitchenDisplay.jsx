@@ -49,6 +49,21 @@ export default function POSKitchenDisplay({ restaurantId }) {
         }
     };
 
+    // Final step - without this, orders pile up in the Ready column forever and
+    // the KDS becomes unusable over a service. Delivery completes as 'delivered',
+    // everything else as 'collected'; both are terminal statuses so the order
+    // drops out of the KDS query.
+    const markAsCompleted = async (order) => {
+        const newStatus = order.order_type === 'delivery' ? 'delivered' : 'collected';
+        try {
+            await base44.functions.invoke('updateOrderStatus', { order_id: order.id, new_status: newStatus });
+            toast.success(newStatus === 'delivered' ? 'Marked delivered' : 'Marked collected');
+            refetch();
+        } catch (error) {
+            toast.error(error?.message || 'Failed to update order');
+        }
+    };
+
     const OrderCard = ({ order, canStartPreparing, canMarkReady, isUrgentOrder }) => {
         const waitMinutes = getWaitTime(order.created_date);
 
@@ -217,9 +232,16 @@ export default function POSKitchenDisplay({ restaurantId }) {
                                             ))}
                                         </div>
 
-                                        <p className="text-green-200 text-base font-semibold">
+                                        <p className="text-green-200 text-base font-semibold mb-3">
                                             Ready since {new Date(order.updated_date).toLocaleTimeString()}
                                         </p>
+
+                                        <Button
+                                            onClick={() => markAsCompleted(order)}
+                                            className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold h-11 text-base"
+                                        >
+                                            {order.order_type === 'delivery' ? 'Mark Delivered' : 'Mark Collected'}
+                                        </Button>
                                     </CardContent>
                                 </Card>
                             ))
