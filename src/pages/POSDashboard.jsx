@@ -146,6 +146,15 @@ export default function POSDashboard() {
             return [...prev, { ...item, id: uniqueId, menu_item_id: item.menu_item_id || item.id, quantity: item.quantity || 1 }];
         });
     };
+    // Replace a cart line in place, preserving its position in the list. Used
+    // when staff edit an existing item's customizations - removing and re-adding
+    // would jump the line to the bottom of the order, which is disorienting
+    // mid-service when reading the cart back to a customer.
+    const replaceCartItem = (itemId, newItem) => {
+        setCart(prev => prev.map(i => i.id === itemId
+            ? { ...newItem, id: itemId, menu_item_id: newItem.menu_item_id || newItem.id }
+            : i));
+    };
     const removeFromCart = (itemId) => {
         playItemRemoved();
         setCart(prev => prev.filter(i => i.id !== itemId));
@@ -461,6 +470,7 @@ export default function POSDashboard() {
                         restaurantId={restaurant.id} cart={cart}
                         onAddItem={addToCart} onRemoveItem={removeFromCart}
                         onUpdateQuantity={updateQuantity} onClearCart={clearCart}
+                        onReplaceItem={replaceCartItem}
                         cartTotal={cartTotal} orderType={orderType} setOrderType={setOrderType}
                         posTheme={posTheme}
                         restaurant={restaurant}

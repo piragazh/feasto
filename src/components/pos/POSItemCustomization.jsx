@@ -424,7 +424,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                         onClick={handleConfirm}
                         className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg h-12 text-sm"
                     >
-                        Add to Cart
+                        {isEditing ? 'Update Item' : 'Add to Cart'}
                     </Button>
                 </div>
 
