@@ -663,7 +663,9 @@ export default function Layout({ children, currentPageName }) {
                 </header>
             )}
 
-            <main id="main-content" className="min-h-screen">
+            {/* h-full on full-screen pages so the POS/KDS can size to the viewport
+                via h-full instead of guessing with calc(100vh - Npx). */}
+            <main id="main-content" className={isFullScreenPage ? 'h-full min-h-0' : 'min-h-screen'}>
                 {isFullScreenPage ? (
                     children
                 ) : (
