@@ -17,7 +17,45 @@ import {
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const QUICK_AMOUNTS = [5, 10, 20, 50];
+/**
+ * Quick-cash denominations, generated from the amount still owed.
+ *
+ * A fixed [5, 10, 20, 50] list is wrong most of the time: on an £8.99 bill the
+ * £5 button cannot cover it, and on a £62 bill every button is useless. Cashiers
+ * then fall back to the keypad, which is slower and more error-prone during a rush.
+ *
+ * What staff are actually handed is a small number of realistic notes, so we
+ * offer: the next round pound up, then the realistic UK notes above the total,
+ * de-duplicated and capped at four. Every option is >= the amount owed, so no
+ * button can produce a short payment.
+ */
+const UK_NOTES = [5, 10, 20, 50];
+
+export function quickCashOptions(owed) {
+    if (!(owed > 0)) return UK_NOTES;
+    const opts = [];
+
+    // Next whole pound (e.g. £8.99 -> £9) - the commonest "here's the coins" case
+    const nextPound = Math.ceil(owed);
+    if (nextPound > owed) opts.push(nextPound);
+
+    // Next multiple of 5 (e.g. £8.99 -> £10, £62 -> £65)
+    const nextFive = Math.ceil(owed / 5) * 5;
+    if (nextFive > owed) opts.push(nextFive);
+
+    // Realistic notes above the total, plus combinations for larger bills
+    for (const note of UK_NOTES) {
+        if (note > owed) opts.push(note);
+    }
+    // For bills beyond a single £50, offer sensible multi-note totals
+    if (owed >= 50) {
+        const nextFifty = Math.ceil(owed / 50) * 50;
+        if (nextFifty > owed) opts.push(nextFifty);
+        opts.push(nextFifty + 50);
+    }
+
+    return [...new Set(opts)].sort((a, b) => a - b).slice(0, 4);
+}
 
 export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {} }) {
     const isDark = posTheme === 'dark';
