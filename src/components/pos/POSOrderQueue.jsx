@@ -34,7 +34,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
 
     const { data: orders = [], refetch } = useQuery({
         queryKey: ['pos-orders', restaurantId],
-        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId, status: { $in: ['pending', 'confirmed', 'preparing', 'ready_for_collection'] } }, '-created_date', 100),
+        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId, status: { $in: ['pending', 'confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery'] } }, '-created_date', 100),
         enabled: !!restaurantId,
         refetchInterval: 5000,
     });
@@ -44,6 +44,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
         confirmed: orders.filter(o => o.status === 'confirmed'),
         preparing: orders.filter(o => o.status === 'preparing'),
         ready: orders.filter(o => o.status === 'ready_for_collection'),
+        out_for_delivery: orders.filter(o => o.status === 'out_for_delivery'),
     };
 
     const updateOrderStatus = async (orderId, newStatus) => {
@@ -233,10 +234,21 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                                             )}
                                             {status === 'preparing' && (
                                                 <Button
-                                                    onClick={() => updateOrderStatus(order.id, 'ready_for_collection')}
+                                                    onClick={() => updateOrderStatus(order.id, order.order_type === 'delivery' ? 'out_for_delivery' : 'ready_for_collection')}
                                                     className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8"
                                                 >
-                                                    Mark Ready
+                                                    {order.order_type === 'delivery' ? 'Send Out' : 'Mark Ready'}
+                                                </Button>
+                                            )}
+                                            {/* Final step - without this the order stays in the queue forever.
+                                                Delivery orders complete as 'delivered', everything else as
+                                                'collected'; both are terminal so the order leaves the queue. */}
+                                            {(status === 'ready' || status === 'out_for_delivery') && (
+                                                <Button
+                                                    onClick={() => updateOrderStatus(order.id, order.order_type === 'delivery' ? 'delivered' : 'collected')}
+                                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
+                                                >
+                                                    {order.order_type === 'delivery' ? 'Mark Delivered' : 'Mark Collected'}
                                                 </Button>
                                             )}
                                         </div>
