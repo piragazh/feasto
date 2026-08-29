@@ -76,22 +76,32 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         dialogTxt:isDark ? 'text-white' : 'text-gray-900',
         dialogDesc:isDark ? 'text-gray-400' : 'text-gray-600',
         cancelDlg:isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300 border-white/[0.08]' : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-300',
-        totalBox: isDark ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-blue-50 border border-blue-200',
-        totalTxt: isDark ? 'text-blue-300' : 'text-blue-600',
-        totalAmt: isDark ? 'text-white' : 'text-blue-900',
-        owedBox:  isDark ? 'bg-red-500/10 border border-red-500/30' : 'bg-red-50 border border-red-200',
-        owedTxt:  isDark ? 'text-red-300' : 'text-red-600',
-        owedAmt:  isDark ? 'text-white' : 'text-red-900',
-        changeBox:isDark ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200',
-        changeTxt:isDark ? 'text-green-300' : 'text-green-600',
-        changeAmt:isDark ? 'text-white' : 'text-green-900',
+        // Colour is used to signal MEANING, not decoration. Previously the total
+        // was blue, the tender segment green, the charge button blue and the
+        // coupon green - five competing hues with no hierarchy, none of which
+        // followed the restaurant's palette.
+        //
+        // Now: the accent marks money and primary actions; amber means "action
+        // still required" (outstanding balance); green is reserved solely for
+        // change owed back to the customer, which is the one thing a cashier
+        // must not miss.
+        totalBox: isDark ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-orange-50 border border-orange-200',
+        totalTxt: isDark ? 'text-orange-300' : 'text-orange-700',
+        totalAmt: isDark ? 'text-white' : 'text-gray-900',
+        owedBox:  isDark ? 'bg-amber-500/10 border border-amber-500/40' : 'bg-amber-50 border border-amber-300',
+        owedTxt:  isDark ? 'text-amber-300' : 'text-amber-700',
+        owedAmt:  isDark ? 'text-amber-200' : 'text-amber-900',
+        changeBox:isDark ? 'bg-green-500/15 border-2 border-green-500/50' : 'bg-green-50 border-2 border-green-400',
+        changeTxt:isDark ? 'text-green-300' : 'text-green-700',
+        changeAmt:isDark ? 'text-green-300' : 'text-green-800',
         // Segmented control: a recessed track with one raised active segment, so
         // the selected tender is unambiguous at a glance.
         segTrack:  isDark ? 'bg-black/30 border border-white/[0.06]' : 'bg-gray-100 border border-gray-200',
         segActive: isDark ? 'bg-orange-500 text-white shadow' : 'bg-orange-500 text-white shadow',
         segIdle:   isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-white/5' : 'text-gray-500 hover:text-gray-800 hover:bg-white',
-        cashBtn:  'bg-green-600 hover:bg-green-500 text-white',
-        cardBtn:  'bg-blue-600 hover:bg-blue-500 text-white',
+        cashBtn:  'bg-orange-500 hover:bg-orange-400 text-white',
+        // Primary actions use the accent so they follow the restaurant palette.
+        cardBtn:  'bg-orange-500 hover:bg-orange-400 text-white',
         cardBtn2: isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200',
     };
     // Local discount state — initialised from prop (set in cart), can be changed on payment screen too
