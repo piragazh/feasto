@@ -11,7 +11,22 @@ import POSPayment from './POSPayment';
 const TABLE_W = 90;
 const TABLE_H = 90;
 
-export default function POSTablesView({ restaurantId }) {
+export default function POSTablesView({ restaurantId, posTheme = 'dark' }) {
+    // This view was hardcoded dark (text-white / bg-gray-800), so the whole
+    // Tables tab stayed dark when the operator switched the POS to light mode.
+    const isDark = posTheme === 'dark';
+    const t = {
+        text:     isDark ? 'text-white'        : 'text-gray-900',
+        textSub:  isDark ? 'text-gray-400'     : 'text-gray-500',
+        textMuted:isDark ? 'text-gray-500'     : 'text-gray-400',
+        panel:    isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
+        toggle:   isDark ? t.toggle : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+        tableIdle:isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300',
+        iconBtn:  isDark ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-900',
+        grid:     isDark ? '#374151' : '#d1d5db',
+        backBtn:  isDark ? 'text-white border-gray-600' : 'text-gray-700 border-gray-300',
+    };
+
     const [showPayment, setShowPayment] = useState(false);
     const [viewingTable, setViewingTable] = useState(null);
     const [tableActionsOpen, setTableActionsOpen] = useState(false);
@@ -40,11 +55,11 @@ export default function POSTablesView({ restaurantId }) {
     const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, o) => sum + o.total, 0);
 
     const statusColor = (status) => ({
-        available: 'bg-gray-700 border-gray-600',
+        available: t.tableIdle,
         occupied: 'bg-orange-500/20 border-orange-500',
         reserved: 'bg-blue-500/20 border-blue-500',
         needs_cleaning: 'bg-yellow-500/20 border-yellow-500',
-    }[status] || 'bg-gray-700 border-gray-600');
+    }[status] || t.tableIdle);
 
     const statusBadgeColor = (status) => ({
         available: 'bg-green-500',
@@ -60,7 +75,7 @@ export default function POSTablesView({ restaurantId }) {
             occupied: 'border-orange-500 bg-orange-500/25',
             reserved: 'border-blue-500 bg-blue-500/25',
             needs_cleaning: 'border-yellow-400 bg-yellow-400/20',
-        }[status] || 'border-gray-500 bg-gray-700';
+        }[status] || (isDark ? 'border-gray-500 bg-gray-700' : 'border-gray-400 bg-gray-100');
     };
 
     const shapeClass = (shape) => shape === 'round' ? 'rounded-full' : shape === 'rect' ? 'rounded-lg' : 'rounded-xl';
@@ -92,8 +107,8 @@ export default function POSTablesView({ restaurantId }) {
         return (
             <div className="flex flex-col h-full min-h-0">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-white font-bold text-2xl">{viewingTable.table_number} – Payment</h2>
-                    <Button onClick={() => { setShowPayment(false); setViewingTable(null); }} variant="outline" className="text-white border-gray-600">Back</Button>
+                    <h2 className={`${t.text} font-bold text-2xl`}>{viewingTable.table_number} – Payment</h2>
+                    <Button onClick={() => { setShowPayment(false); setViewingTable(null); }} variant="outline" className={t.backBtn}>Back</Button>
                 </div>
                 <POSPayment
                     cart={allItems}
@@ -101,6 +116,7 @@ export default function POSTablesView({ restaurantId }) {
                     onPaymentComplete={handlePaymentComplete}
                     onBackToCart={() => { setShowPayment(false); setViewingTable(null); }}
                     restaurantId={restaurantId}
+                    posTheme={posTheme}
                 />
             </div>
         );
@@ -114,21 +130,21 @@ export default function POSTablesView({ restaurantId }) {
             {/* Toolbar */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-white font-bold text-xl">Tables</h2>
-                    <p className="text-gray-400 text-xs">{tables.length} tables · {tableOrders.length} active orders</p>
+                    <h2 className={`${t.text} font-bold text-xl`}>Tables</h2>
+                    <p className={`${t.textSub} text-xs`}>{tables.length} tables · {tableOrders.length} active orders</p>
                 </div>
                 <div className="flex gap-2">
                     <Button
                         size="sm"
                         onClick={() => setViewMode('floorplan')}
-                        className={`h-9 px-3 ${viewMode === 'floorplan' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                        className={`h-9 px-3 ${viewMode === 'floorplan' ? 'bg-orange-500 hover:bg-orange-600 text-white' : t.toggle}`}
                     >
                         <LayoutGrid className="h-4 w-4 mr-1.5" /> Floor Plan
                     </Button>
                     <Button
                         size="sm"
                         onClick={() => setViewMode('grid')}
-                        className={`h-9 px-3 ${viewMode === 'grid' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                        className={`h-9 px-3 ${viewMode === 'grid' ? 'bg-orange-500 hover:bg-orange-600 text-white' : t.toggle}`}
                     >
                         <Grid3x3 className="h-4 w-4 mr-1.5" /> Grid
                     </Button>
@@ -136,7 +152,7 @@ export default function POSTablesView({ restaurantId }) {
             </div>
 
             {/* Legend */}
-            <div className="flex gap-4 text-xs text-gray-400 flex-wrap">
+            <div className={`flex gap-4 text-xs ${t.textSub} flex-wrap`}>
                 {[
                     { label: 'Available', color: 'bg-green-500' },
                     { label: 'Occupied', color: 'bg-orange-500' },
@@ -153,15 +169,15 @@ export default function POSTablesView({ restaurantId }) {
             {/* ── Floor Plan View ── */}
             {viewMode === 'floorplan' && (
                 <div
-                    className="flex-1 bg-gray-800 rounded-xl border border-gray-700 relative overflow-auto"
+                    className={`flex-1 ${t.panel} rounded-xl border relative overflow-auto`}
                     style={{
                         minHeight: '500px',
-                        backgroundImage: 'radial-gradient(circle, #374151 1px, transparent 1px)',
+                        backgroundImage: `radial-gradient(circle, ${t.grid} 1px, transparent 1px)`,
                         backgroundSize: '20px 20px',
                     }}
                 >
                     {tables.length === 0 && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none">
+                        <div className={`absolute inset-0 flex flex-col items-center justify-center ${t.textMuted} pointer-events-none text-center px-6`}>
                             <LayoutGrid className="h-16 w-16 mb-3 opacity-20" />
                             <p>No tables configured. Set them up in Restaurant Settings → POS Configuration → Table Layout.</p>
                         </div>
@@ -188,12 +204,12 @@ export default function POSTablesView({ restaurantId }) {
                                     size="sm"
                                     variant="ghost"
                                     onClick={(e) => { e.stopPropagation(); setSelectedTableForActions(table); setTableActionsOpen(true); }}
-                                    className="absolute top-1 left-1 h-6 w-6 p-0 text-gray-400 hover:text-white"
+                                    className={`absolute top-1 left-1 h-6 w-6 p-0 ${t.iconBtn}`}
                                 >
                                     <Settings className="h-3.5 w-3.5" />
                                 </Button>
 
-                                <p className="text-white font-bold text-sm text-center leading-tight px-1">{table.table_number}</p>
+                                <p className={`${t.text} font-bold text-sm text-center leading-tight px-1`}>{table.table_number}</p>
                                 {table.assigned_server && (
                                     <div className="flex items-center gap-0.5 text-indigo-300 text-[10px] mt-0.5">
                                         <Users className="h-2.5 w-2.5" /><span className="truncate max-w-[70px]">{table.assigned_server}</span>
@@ -202,12 +218,12 @@ export default function POSTablesView({ restaurantId }) {
                                 {hasOrders ? (
                                     <>
                                         <p className="text-orange-300 text-[10px] mt-0.5">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-                                        <p className="text-white font-bold text-sm">£{total.toFixed(2)}</p>
+                                        <p className={`${t.text} font-bold text-sm`}>£{total.toFixed(2)}</p>
                                     </>
                                 ) : (
-                                    <p className="text-gray-400 text-[10px] capitalize mt-0.5">{table.status?.replace('_', ' ')}</p>
+                                    <p className={`${t.textSub} text-[10px] capitalize mt-0.5`}>{table.status?.replace('_', ' ')}</p>
                                 )}
-                                <p className="text-gray-500 text-[9px]">{table.capacity} seats</p>
+                                <p className={`${t.textMuted} text-[9px]`}>{table.capacity} seats</p>
                             </div>
                         );
                     })}
@@ -216,7 +232,7 @@ export default function POSTablesView({ restaurantId }) {
 
             {/* ── Grid View ── */}
             {viewMode === 'grid' && (
-                <div className="flex-1 bg-gray-800 rounded-xl border border-gray-700 p-4 overflow-y-auto">
+                <div className={`flex-1 ${t.panel} rounded-xl border p-4 overflow-y-auto`}>
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {tables.map(table => {
                             const orders = getTableOrders(table.id);
@@ -234,12 +250,12 @@ export default function POSTablesView({ restaurantId }) {
                                         size="sm"
                                         variant="ghost"
                                         onClick={(e) => { e.stopPropagation(); setSelectedTableForActions(table); setTableActionsOpen(true); }}
-                                        className="absolute top-1 left-1 h-5 w-5 p-0 text-gray-400 hover:text-white"
+                                        className={`absolute top-1 left-1 h-5 w-5 p-0 ${t.iconBtn}`}
                                     >
                                         <Settings className="h-3 w-3" />
                                     </Button>
                                     <div className="flex-1 flex flex-col items-center justify-center">
-                                        <p className="text-white font-bold text-sm text-center leading-tight">{table.table_number}</p>
+                                        <p className={`${t.text} font-bold text-sm text-center leading-tight`}>{table.table_number}</p>
                                         {table.assigned_server && (
                                             <div className="flex items-center gap-0.5 text-indigo-400 text-[10px]">
                                                 <Users className="h-2.5 w-2.5" /><span className="truncate max-w-[60px]">{table.assigned_server}</span>
@@ -248,10 +264,10 @@ export default function POSTablesView({ restaurantId }) {
                                         {hasOrders ? (
                                             <>
                                                 <p className="text-orange-400 text-[10px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-                                                <p className="text-white font-bold text-sm">£{total.toFixed(2)}</p>
+                                                <p className={`${t.text} font-bold text-sm`}>£{total.toFixed(2)}</p>
                                             </>
                                         ) : (
-                                            <p className="text-gray-400 text-[10px] capitalize">{table.status?.replace('_', ' ')}</p>
+                                            <p className={`${t.textSub} text-[10px] capitalize`}>{table.status?.replace('_', ' ')}</p>
                                         )}
                                     </div>
                                 </div>
