@@ -227,7 +227,30 @@ class QZTrayService {
                 // refused almost instantly, not 5s each.
                 //
                 // This matches a known-working QZ Tray integration. Keep it minimal.
-                connectPromise = qz.websocket.connect({ retries: 1, delay: 1 });
+                // Host order and the single port are BOTH deliberate.
+                //
+                // 'localhost.qz.io' MUST be first. It is a public DNS name that
+                // resolves to 127.0.0.1 but serves a genuinely CA-signed
+                // certificate - on an HTTPS page it is the only host that
+                // reliably completes the wss:// TLS handshake, because a cert
+                // exception clicked through in a browser tab is NOT honoured for
+                // a WebSocket opened from a different origin. Connecting to
+                // plain 'localhost' completes TCP and is then dropped during TLS
+                // (observed as TIME_WAIT sockets with no working link).
+                //
+                // Only port 8181 is tried. Measured behaviour: each dead port
+                // takes ~5s to fail, not milliseconds - so scanning the library
+                // default [8181, 8282, 8383, 8484] burned the entire watchdog
+                // budget on 'localhost' and 'localhost.qz.io' was cut off
+                // mid-handshake before it could ever succeed. QZ Tray binds 8181
+                // by default; if a deployment ever needs another port, add it
+                // here rather than restoring the full scan.
+                connectPromise = qz.websocket.connect({
+                    retries: 1,
+                    delay: 1,
+                    host: ['localhost.qz.io', 'localhost'],
+                    port: { secure: [8181], insecure: [] },
+                });
             } catch (syncErr) {
                 if (settled) return;
                 settled = true;
