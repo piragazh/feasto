@@ -43,18 +43,21 @@ export function quickCashOptions(owed) {
     const nextFive = Math.ceil(owed / 5) * 5;
     if (nextFive > owed) opts.push(nextFive);
 
-    // Realistic notes above the total, plus combinations for larger bills
+    // Realistic notes above the total
     for (const note of UK_NOTES) {
         if (note > owed) opts.push(note);
     }
-    // For bills beyond a single £50, offer sensible multi-note totals
-    if (owed >= 50) {
-        const nextFifty = Math.ceil(owed / 50) * 50;
-        if (nextFifty > owed) opts.push(nextFifty);
-        opts.push(nextFifty + 50);
+
+    // Pad with progressively rounder figures so we always fill the four slots -
+    // an exact total like £10.00 or £47.00 otherwise yields only one or two
+    // buttons and leaves dead space in the grid.
+    for (const step of [10, 20, 50, 100]) {
+        const rounded = Math.ceil(owed / step) * step;
+        if (rounded > owed) opts.push(rounded);
+        opts.push(rounded + step);
     }
 
-    return [...new Set(opts)].sort((a, b) => a - b).slice(0, 4);
+    return [...new Set(opts)].filter(v => v > owed).sort((a, b) => a - b).slice(0, 4);
 }
 
 export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {} }) {
