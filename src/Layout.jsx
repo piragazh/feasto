@@ -425,7 +425,27 @@ export default function Layout({ children, currentPageName }) {
     return (
         <LayoutErrorBoundary>
         <DarkModeProvider>
-        <div className={`w-full min-h-screen bg-gray-50 dark:bg-gray-900 ${currentPageName !== 'RestaurantDashboard' ? 'pb-20 md:pb-0' : ''}`} style={{ paddingBottom: currentPageName === 'RestaurantDashboard' ? '0' : 'max(5rem, env(safe-area-inset-bottom, 5rem))' }}>
+        {/*
+          * Bottom padding reserves room for the mobile bottom nav. It must be tied
+          * to whether that nav actually renders (showBottomNav), NOT applied to
+          * everything except one page.
+          *
+          * Two bugs this fixes:
+          *  1. The inline paddingBottom always beat the `md:pb-0` class (inline
+          *     styles win over utility classes), so every page carried 80px of
+          *     dead space on desktop even with no bottom nav present.
+          *  2. On full-screen app pages (POS, KDS, kiosk, customer display) that
+          *     80px pushed the layout past the viewport, producing a page-level
+          *     scrollbar and a strip of empty space under the UI - a POS should
+          *     be pinned to the viewport, not scroll like a web page.
+          *
+          * Full-screen pages are also locked to exactly 100vh with overflow
+          * hidden so only their own internal panels scroll.
+          */}
+        <div
+            className={`w-full bg-gray-50 dark:bg-gray-900 ${isFullScreenPage ? 'h-screen overflow-hidden' : 'min-h-screen'}`}
+            style={showBottomNav ? { paddingBottom: 'max(5rem, env(safe-area-inset-bottom, 5rem))' } : undefined}
+        >
             {/* Google Tag Manager Noscript */}
             {window.__gtmId && window.__gtmId !== 'undefined' && (
                 <noscript 
