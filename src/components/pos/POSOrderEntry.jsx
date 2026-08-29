@@ -581,28 +581,31 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             </div>
 
             {/* Bottom Quick Actions */}
-            <div className={`${t.bottomBar} rounded-2xl border p-2.5 flex items-center gap-2`}>
+            {/* Compact: these are occasional-use utilities, so they don't need the
+                same height as the primary ordering surface. Reclaims vertical
+                space for the cart and menu grid. */}
+            <div className={`${t.bottomBar} rounded-2xl border p-1.5 flex items-center gap-1.5 flex-shrink-0`}>
                 {orderType === 'dine_in' && (
-                    <button onClick={() => setViewMode('tables')} className={`h-12 px-4 ${t.floorBack} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
+                    <button onClick={() => setViewMode('tables')} className={`h-10 px-3 ${t.floorBack} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                         <Users className="h-4 w-4" /> Tables
                     </button>
                 )}
-                <button onClick={() => setQuickLookupOpen(true)} className={`h-12 px-4 ${isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
+                <button onClick={() => setQuickLookupOpen(true)} className={`h-10 px-3 ${isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                     <Zap className="h-4 w-4" /> Item #
                 </button>
-                <button onClick={() => setCustomItemOpen(true)} className={`h-12 px-4 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
+                <button onClick={() => setCustomItemOpen(true)} className={`h-10 px-3 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                     <PlusCircle className="h-4 w-4" /> Custom Item
                 </button>
                 <button
                     onClick={holdOrder}
                     disabled={optimisticCart.length === 0}
-                    className={`h-12 px-4 ${isDark ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400 disabled:opacity-40' : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-600 disabled:opacity-40'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
+                    className={`h-10 px-3 ${isDark ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400 disabled:opacity-40' : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-600 disabled:opacity-40'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
                 >
                     <PauseCircle className="h-4 w-4" /> Hold
                 </button>
                 <button
                     onClick={() => setHeldDrawerOpen(true)}
-                    className={`h-12 px-4 relative ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
+                    className={`h-10 px-3 relative ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
                 >
                     <PauseCircle className="h-4 w-4" /> Held Orders
                     {heldOrders.length > 0 && (
