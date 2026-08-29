@@ -394,6 +394,28 @@ function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantI
     const [reconnecting, setReconnecting] = useState(false);
 
     const [qzStatus, setQzStatus] = useState(qzTrayService.getStatus());
+    const [qzPrinters, setQzPrinters] = useState([]);
+    const [loadingPrinters, setLoadingPrinters] = useState(false);
+
+    // Ask QZ Tray which printers Windows exposes, so staff pick from a list
+    // instead of guessing the exact name (a single character off and printing
+    // silently fails).
+    const loadQzPrinters = useCallback(async () => {
+        setLoadingPrinters(true);
+        try {
+            const found = await qzTrayService.findPrinters();
+            if (!found || found.length === 0) {
+                toast.error('QZ Tray reported no printers. Check the printer is installed in Windows.');
+            } else {
+                setQzPrinters(found);
+                toast.success(`Found ${found.length} printer${found.length === 1 ? '' : 's'}`);
+            }
+        } catch (e) {
+            toast.error('Could not list printers: ' + (e?.message || e));
+        } finally {
+            setLoadingPrinters(false);
+        }
+    }, []);
     useEffect(() => {
         if (type !== 'qz_tray') return undefined;
         const unsub = qzTrayService.subscribe(setQzStatus);
@@ -565,14 +587,47 @@ function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantI
                         <span>Connects directly to QZ Tray running on this computer — instant local printing, no cloud round-trip. Requires the free <a href="https://qz.io/download" target="_blank" rel="noopener noreferrer" className="underline font-semibold">QZ Tray app</a> installed and running here.</span>
                     </div>
                     <div>
-                        <Label className="text-xs">QZ Tray Printer Name</Label>
-                        <Input
-                            placeholder="e.g. EPSON_TM_T20III"
-                            value={printer.qz_printer_name || ''}
-                            onChange={e => onUpdate({ qz_printer_name: e.target.value })}
-                            className="mt-1 font-mono text-sm"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">The exact printer name as QZ Tray/Windows sees it. Connect below, then use Test to confirm.</p>
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs">QZ Tray Printer Name</Label>
+                            <button
+                                type="button"
+                                onClick={loadQzPrinters}
+                                disabled={!qzStatus.connected || loadingPrinters}
+                                className="text-xs text-orange-600 hover:text-orange-700 font-semibold disabled:opacity-40 flex items-center gap-1"
+                            >
+                                <RefreshCw className={`h-3 w-3 ${loadingPrinters ? 'animate-spin' : ''}`} />
+                                {loadingPrinters ? 'Loading\u2026' : 'Detect printers'}
+                            </button>
+                        </div>
+                        {qzPrinters.length > 0 ? (
+                            <select
+                                value={printer.qz_printer_name || ''}
+                                onChange={e => onUpdate({ qz_printer_name: e.target.value })}
+                                className="mt-1 w-full border rounded-md px-3 py-2 font-mono text-sm bg-white"
+                            >
+                                <option value="">\u2014 Select a printer \u2014</option>
+                                {qzPrinters.map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                ))}
+                                {printer.qz_printer_name && !qzPrinters.includes(printer.qz_printer_name) && (
+                                    <option value={printer.qz_printer_name}>{printer.qz_printer_name} (not currently detected)</option>
+                                )}
+                            </select>
+                        ) : (
+                            <Input
+                                placeholder="e.g. EPSON_TM_T20III"
+                                value={printer.qz_printer_name || ''}
+                                onChange={e => onUpdate({ qz_printer_name: e.target.value })}
+                                className="mt-1 font-mono text-sm"
+                            />
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                            {qzPrinters.length > 0
+                                ? `${qzPrinters.length} printer${qzPrinters.length === 1 ? '' : 's'} detected. Pick one, save, then Test.`
+                                : qzStatus.connected
+                                    ? 'Click "Detect printers" to list what QZ Tray can see, or type the exact Windows printer name.'
+                                    : 'Connect to QZ Tray first, then click "Detect printers".'}
+                        </p>
                     </div>
                     {!qzStatus.connected && (
                         <div className="flex items-center gap-2">
