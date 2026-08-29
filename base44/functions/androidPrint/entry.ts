@@ -18,7 +18,16 @@ const GS = 0x1D;
 
 // ESC/POS cash drawer open command (works on both drawer pin 2 and pin 5)
 // ESC p <pin> <on-time> <off-time>
-const CASH_DRAWER_CMD = [ESC, 0x70, 0x00, 0x19, 0xFA];
+// ESC p m t1 t2 - cash drawer kick-out pulse.
+// m=0 selects drawer pin 2. t1/t2 are ON/OFF durations in 2ms units, so
+// t1=0x64 (100) = a 200ms pulse.
+//
+// This was previously t1=0x19 (25) = a 50ms pulse, which is the value most
+// ESC/POS examples use - but many drawer solenoids will not physically throw
+// on a pulse that short and simply do nothing. Verified on real hardware:
+// a 50ms pulse did not open the drawer on either pin, while a 200ms pulse
+// opened it on both. 200ms is well within spec and safe for the solenoid.
+const CASH_DRAWER_CMD = [ESC, 0x70, 0x00, 0x64, 0x64];
 
 function buildCommands(commandSet = 'esc_pos') {
     const sets = {

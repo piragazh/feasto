@@ -257,7 +257,8 @@ export async function openCashDrawer(restaurant) {
                 if (!service) continue;
                 if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
                 if (!service.isConnected()) continue;
-                const CASH_DRAWER_CMD = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
+                // 200ms pulse - see CASH_DRAWER_CMD in src/lib/escpos.js for why
+                const CASH_DRAWER_CMD = new Uint8Array([0x1B, 0x70, 0x00, 0x64, 0x64]);
                 await service.sendCommand(CASH_DRAWER_CMD);
                 return true;
             } else if (type === 'network') {
