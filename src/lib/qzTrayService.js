@@ -216,22 +216,39 @@ class QZTrayService {
                 clearTimeout(watchdogTimer);
                 this._connected = true;
                 this._reconnectAttempts = 0;
-                console.log('[QZTray] Connected successfully');
                 this._connecting = false;
                 this._lastError = null;
-                this._notifyStatus();
+                console.log('[QZTray] Connected successfully');
 
-                qz.websocket.setErrorCallbacks(
-                    (err) => {
-                        console.warn('[QZTray] Connection error:', err?.message || err);
-                        this._handleDisconnect();
-                    },
-                    () => {
-                        console.log('[QZTray] Connection closed');
-                        this._handleDisconnect();
-                    }
-                );
+                // Resolve BEFORE any callback work. Listener callbacks and the
+                // qz error-callback registration are third-party/consumer code;
+                // if any of them throws, the exception would otherwise land in
+                // the .catch() below, which returns early because `settled` is
+                // already true — leaving this promise permanently unresolved
+                // even though the connection is live. Resolving first makes a
+                // successful connect impossible to lose.
                 resolve(true);
+
+                try {
+                    qz.websocket.setErrorCallbacks(
+                        (err) => {
+                            console.warn('[QZTray] Connection error:', err?.message || err);
+                            this._handleDisconnect();
+                        },
+                        () => {
+                            console.log('[QZTray] Connection closed');
+                            this._handleDisconnect();
+                        }
+                    );
+                } catch (e) {
+                    console.warn('[QZTray] Could not register error callbacks:', e?.message || e);
+                }
+
+                try {
+                    this._notifyStatus();
+                } catch (e) {
+                    console.warn('[QZTray] Status listener threw:', e?.message || e);
+                }
             }).catch((e) => {
                 if (settled) return;
                 settled = true;
