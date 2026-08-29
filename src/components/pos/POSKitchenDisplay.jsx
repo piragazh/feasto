@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 export default function POSKitchenDisplay({ restaurantId }) {
      const [sortBy, setSortBy] = useState('time');
 
-     const { data: orders = [], refetch } = useQuery({
+     const { data: orders = [], refetch, isLoading } = useQuery({
          queryKey: ['pos-kitchen-orders', restaurantId],
          queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId, status: { $in: ['pending', 'preparing', 'ready_for_collection'] } }, '-created_date', 100),
          enabled: !!restaurantId,
@@ -131,8 +131,24 @@ export default function POSKitchenDisplay({ restaurantId }) {
         );
     };
 
+    if (isLoading && orders.length === 0) {
+        return (
+            <div className="h-full flex flex-col gap-4 p-4 bg-gray-900">
+                <div className="h-10 w-96 rounded-lg bg-gray-800 animate-pulse" />
+                <div className="flex-1 grid grid-cols-3 gap-4">
+                    {[0, 1, 2].map(i => (
+                        <div key={i} className="rounded-xl bg-gray-800 animate-pulse" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    // h-full, not calc(100vh-200px): the parent <main> is flex-1 in a min-h-screen
+    // column and already owns the remaining height. A hardcoded viewport offset
+    // does not match the real header height and leaves dead space at the bottom.
     return (
-        <div className="h-[calc(100vh-200px)] flex flex-col gap-4 p-4 bg-gray-900">
+        <div className="h-full min-h-0 flex flex-col gap-4 p-4 bg-gray-900">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-4xl font-bold text-white">Kitchen Display System</h1>
