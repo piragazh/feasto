@@ -19,7 +19,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark' }) {
         textSub:  isDark ? 'text-gray-400'     : 'text-gray-500',
         textMuted:isDark ? 'text-gray-500'     : 'text-gray-400',
         panel:    isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
-        toggle:   isDark ? t.toggle : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+        toggle:   isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
         tableIdle:isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300',
         iconBtn:  isDark ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-900',
         grid:     isDark ? '#374151' : '#d1d5db',
