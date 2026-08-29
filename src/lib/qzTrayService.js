@@ -40,37 +40,14 @@ class QZTrayService {
     // ── Security (certificate + signature) ────────────────────────────────────
 
     _setupSecurity() {
-        this._certCache = null;
-        this._certCacheTime = 0;
-        this._certTTL = 5 * 60 * 1000; // 5 minutes — handles cert rotation
-
-        // CRITICAL: These MUST be `async` functions, not regular arrow functions
-        // that return Promises. QZ Tray 2.2.6 detects AsyncFunction via
-        // .constructor.name === "AsyncFunction" and calls the factory directly.
-        // Regular functions get wrapped in new Promise(fn) which never resolves,
-        // causing the handshake to hang → connection timeout.
-        qz.security.setCertificatePromise(async () => {
-            // Invalidate stale cache
-            if (this._certCache && Date.now() - this._certCacheTime > this._certTTL) {
-                this._certCache = null;
-            }
-            return withTimeout(this._getCertificate(), this._certFetchTimeoutMs, 'QZ Tray certificate fetch');
-        });
-
-        qz.security.setSignaturePromise(async (toSign) => {
-            try {
-                return await withTimeout(
-                    this._signChallenge(toSign),
-                    this._certFetchTimeoutMs,
-                    'QZ Tray signature'
-                );
-            } catch (e) {
-                // If signing fails, return empty string so QZ falls back to
-                // prompt mode cleanly — resolving with undefined can hang QZ.
-                console.warn('[QZTray] Signing failed, using prompt mode:', e?.message || e);
-                return '';
-            }
-        });
+        // TEMPORARILY DISABLED: certificate + signature validation.
+        // Both promises return empty strings → QZ Tray falls back to its
+        // built-in prompt mode, showing an "Allow [website] to connect?"
+        // dialog to the user. This bypasses the backend cert/signing flow
+        // entirely, which was causing connection hangs and false negatives.
+        // TODO: Re-enable signed mode once cert trust issues are resolved.
+        qz.security.setCertificatePromise(async () => '');
+        qz.security.setSignaturePromise(async () => '');
     }
 
     async _getCertificate() {
