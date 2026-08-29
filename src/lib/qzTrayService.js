@@ -135,20 +135,15 @@ class QZTrayService {
         if (this._connected || this._connecting) return this._connected;
         if (Date.now() < this._cooldownUntil) return false;
 
-        // Fail fast with an accurate message if Chrome reports LNA as
-        // explicitly denied for this origin — no point burning the full
-        // connect watchdog on a request the browser will reject outright.
-        // Permissions API support for 'local-network-access' is new and not
-        // universal, so any unsupported/unknown result falls through to a
-        // real connect attempt rather than blocking on it.
-        const lnaDenied = await this._isLocalNetworkAccessDenied();
-        if (lnaDenied) {
-            this._lastError = 'Blocked by Chrome\'s Local Network Access permission for this site. Click the site info icon next to the address bar → Site settings → Permissions → set "Local Network Access" to Allow, then reload this page and Reconnect.';
-            this._cooldownUntil = Date.now() + 2000;
-            this._notifyStatus();
-            return false;
-        }
-
+        // NOTE: we deliberately do NOT gate the connection on any pre-check.
+        // Two previous attempts to "fail fast" here (a preflight fetch to
+        // https://localhost:8181, then a navigator.permissions query for
+        // 'local-network-access') both produced false negatives and blocked
+        // working setups from ever reaching QZ Tray. Browser probes of local
+        // resources are unreliable and their semantics differ between Chrome
+        // versions. The real WebSocket connect is the only trustworthy signal,
+        // so always attempt it; diagnostics are used only to explain a failure
+        // after the fact, never to prevent the attempt.
         this._connecting = true;
         this._notifyStatus();
         this._lastError = null;
