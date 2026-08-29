@@ -32,7 +32,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
     const [applyingPromo, setApplyingPromo] = useState(null);
     const [voidingOrder, setVoidingOrder] = useState(null);
 
-    const { data: orders = [], refetch } = useQuery({
+    const { data: orders = [], refetch, isLoading } = useQuery({
         queryKey: ['pos-orders', restaurantId],
         queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId, status: { $in: ['pending', 'confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery'] } }, '-created_date', 100),
         enabled: !!restaurantId,
@@ -129,6 +129,27 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
 
     const displayOrders = searchResults !== null ? { search: searchResults } : statusGroups;
 
+    // Explicit first-load state. Without it the queue renders as five empty
+    // columns while data is in flight, which reads as "no orders" during service
+    // and leads staff to re-tap or assume the till has lost the order.
+    if (isLoading && orders.length === 0) {
+        return (
+            <div className="grid gap-4 grid-cols-4">
+                {[0, 1, 2, 3].map(i => (
+                    <div key={i} className={`${t.bg} rounded-xl border ${t.border} p-4`}>
+                        <div className={`h-8 rounded-lg mb-4 animate-pulse ${t.colHeader}`} />
+                        <div className="space-y-2">
+                            {[0, 1].map(j => (
+                                <div key={j} className={`h-24 rounded-lg animate-pulse ${t.colHeader} opacity-60`} />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // Grid is 5 columns now that Out for Delivery exists as its own group.
     return (
         <div>
             <OrderSearch onSearch={handleSearch} />
@@ -143,7 +164,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                 </Button>
             )}
 
-            <div className={`grid gap-4 ${searchResults !== null ? 'grid-cols-1' : 'grid-cols-4'}`}>
+            <div className={`grid gap-4 ${searchResults !== null ? 'grid-cols-1' : 'grid-cols-2 xl:grid-cols-5'}`}>
                 {Object.entries(displayOrders).map(([status, statusOrders]) => (
                 <div key={status} className={`${t.bg} rounded-xl border ${t.border} p-4`}>
                     <h3 className={`${t.text} font-bold mb-4 capitalize text-center p-2 ${t.colHeader} rounded-lg text-sm`}>
