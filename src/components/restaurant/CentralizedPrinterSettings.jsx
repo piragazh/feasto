@@ -192,6 +192,10 @@ const DEFAULT_PRINTER = {
     show_logo: true,
     show_order_number: true,
     show_customer_details: true,
+    // Prints "Cash Tendered" and "Change Due" on cash sales - lets the customer
+    // check their change and gives staff a paper trail for till reconciliation.
+    // Only renders when cash was actually taken, so card receipts stay clean.
+    show_cash_details: true,
     auto_print: false,
 };
 
@@ -329,6 +333,7 @@ function PrinterReceiptSettings({ printer, onUpdate }) {
                                 { key: 'show_logo',             label: 'Show Logo' },
                                 { key: 'show_order_number',     label: 'Show Order Number' },
                                 { key: 'show_customer_details', label: 'Show Customer Details' },
+                                { key: 'show_cash_details',      label: 'Show Cash Tendered & Change' },
                             ].map(({ key, label, highlight }) => (
                                 <div key={key} className={`flex items-center justify-between p-2.5 border rounded-lg ${highlight ? 'border-orange-200 bg-orange-50' : ''}`}>
                                     <p className="text-xs font-medium text-gray-700">{label}</p>
@@ -800,6 +805,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                 show_logo: p.show_logo !== undefined ? p.show_logo : (c.show_logo !== false),
                 show_order_number: p.show_order_number !== undefined ? p.show_order_number : (c.show_order_number !== false),
                 show_customer_details: p.show_customer_details !== undefined ? p.show_customer_details : (c.show_customer_details !== false),
+                show_cash_details: p.show_cash_details !== undefined ? p.show_cash_details : (c.show_cash_details !== false),
                 auto_print: p.auto_print !== undefined ? p.auto_print : (c.auto_print || false),
             }));
             // A standalone QZ Tray printer name from the old (pre-unification) POS
