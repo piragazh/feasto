@@ -588,13 +588,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         restaurant={restaurant}
                     />
                 </div>
-            </div>
-
-            {/* Bottom Quick Actions */}
+                {/* Quick actions live INSIDE the grid, in row 2, spanning every
+                    column except the cart - so the bar stops at the cart edge
+                    and the cart panel runs the full height of the screen. */}
             {/* Compact: these are occasional-use utilities, so they don't need the
                 same height as the primary ordering surface. Reclaims vertical
                 space for the cart and menu grid. */}
-            <div className={`${t.bottomBar} rounded-2xl border p-1.5 flex items-center gap-1.5 flex-shrink-0`}>
+                <div className={`${barSpanClass} ${t.bottomBar} rounded-2xl border p-1.5 flex items-center gap-1.5 flex-shrink-0`}>
                 {orderType === 'dine_in' && (
                     <button onClick={() => setViewMode('tables')} className={`h-10 px-3 ${t.floorBack} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                         <Users className="h-4 w-4" /> Tables
@@ -625,6 +625,8 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     )}
                 </button>
             </div>
+            </div>
+
 
             {selectedItem && (() => {
                 const props = {
