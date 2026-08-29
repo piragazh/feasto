@@ -7,6 +7,7 @@ import { createPageUrl } from '@/utils';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import { useOfflineSyncState, formatCachedAt } from '@/components/pos/POSOfflineSyncBanner';
 import { getLastCachedAt } from '@/components/pos/POSOfflineDB';
+import { paletteStyle, DEFAULT_PALETTE } from '@/lib/posThemes';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
@@ -42,6 +43,10 @@ export default function POSDashboard() {
     const [accessDenied, setAccessDenied] = useState(false);
     const { isOnline, pendingCount, isSyncing } = useOfflineSyncState();
     const [posTheme, setPosTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
+    // Accent palette. Stored on the restaurant so every till at the site matches,
+    // with a localStorage mirror so the first paint after reload doesn't flash
+    // the default before the restaurant record arrives.
+    const [posPalette, setPosPalette] = useState(() => localStorage.getItem('pos_palette') || DEFAULT_PALETTE);
     const [activeStaffMember, setActiveStaffMember] = useState(null);
     const [staffList, setStaffList] = useState([]);
     const [showStaffLogin, setShowStaffLogin] = useState(false);
@@ -102,6 +107,10 @@ export default function POSDashboard() {
                 if (!r) { toast.error('Restaurant not found'); return; }
                 if (userData.role !== 'admin' && !r.pos_enabled) { setAccessDenied(true); return; }
                 setRestaurant(r);
+                if (r.pos_palette) {
+                    setPosPalette(r.pos_palette);
+                    localStorage.setItem('pos_palette', r.pos_palette);
+                }
                 const maxPos = r.max_pos_count || 1;
                 if (urlPosNum && urlPosNum >= 1 && urlPosNum <= maxPos) setPosNumber(urlPosNum);
                 else if (maxPos === 1) setPosNumber(1);
@@ -300,7 +309,10 @@ export default function POSDashboard() {
     }
 
     return (
-        <div className={`min-h-screen ${t.bg} flex flex-col`} style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div
+            className={`min-h-screen ${t.bg} flex flex-col`}
+            style={{ fontFamily: "'Inter', sans-serif", ...paletteStyle(posPalette) }}
+        >
             {/* ── Header ── */}
             <header className={`${t.header} border-b ${t.border} sticky top-0 z-20 shadow-sm`}>
                 <div className="px-5 py-0 flex items-center justify-between h-16">
