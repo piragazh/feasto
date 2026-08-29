@@ -71,7 +71,15 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
             }
         });
         if (missing.length > 0) { toast.error(`Please select: ${missing.join(', ')}`); return; }
-        onConfirm({ ...item, price: currentPrice, customizations: isMeal ? { ...customizations, ...mealCustomizations } : customizations, specialInstructions: specialInstructions.trim(), isMeal });
+        onConfirm({
+            ...item,
+            price: currentPrice,
+            pos_price: item?.pos_price != null ? currentPrice : undefined,
+            customizations: isMeal ? { ...customizations, ...mealCustomizations } : customizations,
+            mealCustomizations: isMeal ? { ...mealCustomizations } : null,
+            specialInstructions: specialInstructions.trim(),
+            isMeal,
+        });
     };
 
     const toggleSingle = (name, label, isMealSub = false) => {

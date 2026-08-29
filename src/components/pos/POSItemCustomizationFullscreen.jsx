@@ -86,7 +86,15 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
             if (idx >= 0) setStep(idx);
             return;
         }
-        onConfirm({ ...item, price: currentPrice, customizations: isMeal ? { ...customizations, ...mealCustomizations } : customizations, specialInstructions: specialInstructions.trim(), isMeal });
+        onConfirm({
+            ...item,
+            price: currentPrice,
+            pos_price: item?.pos_price != null ? currentPrice : undefined,
+            customizations: isMeal ? { ...customizations, ...mealCustomizations } : customizations,
+            mealCustomizations: isMeal ? { ...mealCustomizations } : null,
+            specialInstructions: specialInstructions.trim(),
+            isMeal,
+        });
     };
 
     const handleNext = () => {

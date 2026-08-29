@@ -113,10 +113,17 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
             return;
         }
         const allCustomizations = isMeal ? { ...customizations, ...mealCustomizations } : customizations;
-        onConfirm({ 
-            ...item, 
+        onConfirm({
+            ...item,
             price: currentPrice,
+            // Keep pos_price in step with price. Cart display prefers pos_price,
+            // so leaving it at the base value made customised items show a lower
+            // line price than the total actually charged.
+            pos_price: item?.pos_price != null ? currentPrice : undefined,
             customizations: allCustomizations,
+            // Kept separately (customizations stays merged for receipts) so that
+            // editing a cart line can re-seed the meal sub-selections.
+            mealCustomizations: isMeal ? { ...mealCustomizations } : null,
             specialInstructions: specialInstructions.trim(),
             isMeal
         });

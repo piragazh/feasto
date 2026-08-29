@@ -136,7 +136,15 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
             return;
         }
         const allCustomizations = isMeal ? { ...customizations, ...mealCustomizations } : customizations;
-        onConfirm({ ...item, price: currentPrice, customizations: allCustomizations, specialInstructions: specialInstructions.trim(), isMeal });
+        onConfirm({
+            ...item,
+            price: currentPrice,
+            pos_price: item?.pos_price != null ? currentPrice : undefined,
+            customizations: allCustomizations,
+            mealCustomizations: isMeal ? { ...mealCustomizations } : null,
+            specialInstructions: specialInstructions.trim(),
+            isMeal,
+        });
     };
 
     const handleNext = () => {
