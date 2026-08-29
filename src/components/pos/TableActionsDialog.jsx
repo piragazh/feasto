@@ -23,7 +23,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
             onRefresh();
             onClose();
         } catch (error) {
-            toast.error('Failed to save notes');
+            toast.error(`Failed to save notes: ${error?.message || 'unknown error'}`);
         } finally {
             setLoading(false);
         }
@@ -36,7 +36,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
             toast.success(`Table status updated to ${newStatus}!`);
             onRefresh();
         } catch (error) {
-            toast.error('Failed to update status');
+            toast.error(`Failed to update status: ${error?.message || 'unknown error'}`);
         } finally {
             setLoading(false);
         }
@@ -68,7 +68,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
             onRefresh();
             onClose();
         } catch (error) {
-            toast.error('Failed to merge tables');
+            toast.error(`Failed to merge tables: ${error?.message || 'unknown error'}`);
         } finally {
             setLoading(false);
         }
@@ -98,7 +98,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
             onRefresh();
             onClose();
         } catch (error) {
-            toast.error('Failed to unmerge tables');
+            toast.error(`Failed to unmerge tables: ${error?.message || 'unknown error'}`);
         } finally {
             setLoading(false);
         }
@@ -112,7 +112,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
             onRefresh();
             onClose();
         } catch (error) {
-            toast.error('Failed to assign server');
+            toast.error(`Failed to assign server: ${error?.message || 'unknown error'}`);
         } finally {
             setLoading(false);
         }
@@ -142,7 +142,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
             onRefresh();
             onClose();
         } catch (error) {
-            toast.error('Failed to split table');
+            toast.error(`Failed to split table: ${error?.message || 'unknown error'}`);
         } finally {
             setLoading(false);
         }
@@ -173,7 +173,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
             onRefresh();
             onClose();
         } catch (error) {
-            toast.error('Failed to clean table');
+            toast.error(`Failed to clean table: ${error?.message || 'unknown error'}`);
         } finally {
             setLoading(false);
         }
