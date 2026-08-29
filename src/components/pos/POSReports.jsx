@@ -395,6 +395,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                     )}
                 </div>
             </div>
+            )}
 
             {/* ── Payment Method Split ── */}
             <div className="grid grid-cols-2 gap-3">
