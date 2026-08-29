@@ -20,6 +20,7 @@
 import { printerManager } from '@/components/restaurant/PrinterService';
 import { base44 } from '@/api/base44Client';
 import qzTrayService from '@/lib/qzTrayService';
+import { buildCashDrawerBytes } from '@/lib/escpos';
 
 // Only two physical Bluetooth radios/services exist in this app (Web Bluetooth
 // has no concept of "N devices" beyond what we've wired up). A printer's
@@ -243,23 +244,27 @@ export async function openCashDrawer(restaurant) {
         return rank(a.connection_type || 'bluetooth') - rank(b.connection_type || 'bluetooth');
     });
 
-    const dummyOrder = { items: [], subtotal: 0, total: 0, order_type: 'pos', order_number: '-' };
+    // A no-sale drawer open must send ONLY the kick-out pulse. Routing it
+    // through the receipt builder (as this used to for QZ Tray) prints a blank
+    // dummy receipt on every cash sale - wasted paper on every transaction.
+    const drawerBytes = buildCashDrawerBytes();
     let lastError = null;
 
     for (const printerConfig of ordered) {
         const type = printerConfig.connection_type || 'bluetooth';
         try {
             if (type === 'qz_tray') {
-                await printViaQz(dummyOrder, restaurant, printerConfig, globalCfg, true);
+                if (!printerConfig.qz_printer_name) continue;
+                if (!qzTrayService.isConnected()) await qzTrayService.connect();
+                if (!qzTrayService.isConnected()) throw new Error(qzTrayService.getStatus().lastError || 'QZ Tray is not connected');
+                await qzTrayService.print(printerConfig.qz_printer_name, drawerBytes);
                 return true;
             } else if (type === 'bluetooth') {
                 const service = resolveBtService(printers, printerConfig);
                 if (!service) continue;
                 if (!service.isConnected()) await service.tryAutoConnect().catch(() => {});
                 if (!service.isConnected()) continue;
-                // 200ms pulse - see CASH_DRAWER_CMD in src/lib/escpos.js for why
-                const CASH_DRAWER_CMD = new Uint8Array([0x1B, 0x70, 0x00, 0x64, 0x64]);
-                await service.sendCommand(CASH_DRAWER_CMD);
+                await service.sendCommand(drawerBytes);
                 return true;
             } else if (type === 'network') {
                 await printViaNetwork(dummyOrder, restaurant, printerConfig, globalCfg, { openCashDrawer: true });
