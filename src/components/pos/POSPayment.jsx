@@ -197,12 +197,20 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             const dominantMethod = finalPayments.length === 1 ? finalPayments[0].method : 'cash';
             const hasCash = finalPayments.find(p => p.method === 'cash');
             const changeAmt = Math.max(0, finalPayments.reduce((s, p) => s + p.amount, 0) - effectiveTotal);
+            // Cash tendered / change are passed as real fields rather than being
+            // stuffed into the notes string, so the receipt builder can lay them
+            // out properly (and so kitchen tickets can ignore them).
+            const cashTendered = finalPayments
+                .filter(p => p.method === 'cash')
+                .reduce((sum, p) => sum + (p.amount || 0), 0);
             const printOrder = {
                 ...orderData,
                 id: existingOrderIds?.[0] || Date.now().toString(),
                 created_date: new Date().toISOString(),
                 payment_method: dominantMethod,
-                notes: hasCash && changeAmt > 0 ? `Change: £${changeAmt.toFixed(2)}` : orderData.notes,
+                cash_tendered: hasCash ? cashTendered : 0,
+                change_due: hasCash ? changeAmt : 0,
+                notes: orderData.notes,
             };
             const result = await printWithCentralizedConfig(printOrder, restaurant, 'pos_order');
             if (result.printed.length === 0) {
