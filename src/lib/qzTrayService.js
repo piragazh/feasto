@@ -60,7 +60,13 @@ class QZTrayService {
         try {
             const res = await base44.functions.invoke('signQzTrayRequest', { action: 'getCert' });
             if (!res?.data?.certificate) throw new Error('No certificate in response');
-            this._certCache = res.data.certificate;
+            let cert = res.data.certificate;
+            // Safety net: ensure PEM format with clean base64 (no stray spaces)
+            if (!cert.includes('-----BEGIN')) {
+                const clean = cert.replace(/\s+/g, '');
+                cert = `-----BEGIN CERTIFICATE-----\n${clean}\n-----END CERTIFICATE-----`;
+            }
+            this._certCache = cert;
             this._certCacheTime = Date.now();
             console.log('[QZTray] Certificate obtained from backend');
             return this._certCache;

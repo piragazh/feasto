@@ -75,7 +75,14 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getCert") {
-      return Response.json({ certificate: cert });
+      // QZ Tray expects clean base64 or PEM format. The secret may contain
+      // spaces/newlines from PEM formatting — strip ALL whitespace so it's
+      // parseable. If PEM headers are missing, wrap it.
+      const clean = cert.replace(/\s+/g, "");
+      const pem = clean.startsWith("-----BEGIN")
+        ? clean
+        : `-----BEGIN CERTIFICATE-----\n${clean}\n-----END CERTIFICATE-----`;
+      return Response.json({ certificate: pem });
     }
 
     if (action === "sign" && toSign) {
