@@ -381,6 +381,17 @@ export class PrinterService {
             await this.sendCommand(cmd.boldOff);
 
             if (config.template !== 'minimal') await this.sendText(`Payment: ${order.payment_method || 'N/A'}\n`);
+
+            // Cash tendered / change - see the same block in src/lib/escpos.js.
+            if (config.show_cash_details !== false && order.cash_tendered > 0) {
+                await this.sendText('--------------------------------\n');
+                const tendered = `£${Number(order.cash_tendered).toFixed(2)}`;
+                await this.sendText(`Cash Tendered:${' '.repeat(Math.max(1, lineWidth - 14 - tendered.length))}${tendered}\n`);
+                const change = `£${Number(order.change_due || 0).toFixed(2)}`;
+                await this.sendCommand(cmd.boldOn);
+                await this.sendText(`Change Due:${' '.repeat(Math.max(1, lineWidth - 11 - change.length))}${change}\n`);
+                await this.sendCommand(cmd.boldOff);
+            }
         }
         if (order.notes) {
             await this.sendText('--------------------------------\n');
