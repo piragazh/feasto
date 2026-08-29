@@ -324,7 +324,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                         {isLastStep ? (
                             <>
                                 <Check className="h-5 w-5" />
-                                Add to Cart — £{currentPrice.toFixed(2)}
+                                {isEditing ? 'Update Item' : 'Add to Cart'} — £{currentPrice.toFixed(2)}
                             </>
                         ) : currentStep?.type === 'instructions' ? (
                             <>Skip / Next <ChevronRight className="h-5 w-5" /></>

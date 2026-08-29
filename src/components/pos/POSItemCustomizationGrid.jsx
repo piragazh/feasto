@@ -209,7 +209,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                     </Button>
                     <Button onClick={handleConfirm} className="flex-[3] h-14 font-bold text-base rounded-2xl bg-green-600 hover:bg-green-500 text-white flex items-center justify-center gap-2">
                         <Check className="h-5 w-5" />
-                        Add to Cart — £{currentPrice.toFixed(2)}
+                        {isEditing ? 'Update Item' : 'Add to Cart'} — £{currentPrice.toFixed(2)}
                     </Button>
                 </div>
 

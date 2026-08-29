@@ -254,7 +254,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                         </Button>
                     )}
                     <Button onClick={handleNext} className={`flex-[4] h-16 font-bold text-xl rounded-2xl flex items-center justify-center gap-3 ${isLastStep ? 'bg-green-600 hover:bg-green-500' : 'bg-orange-500 hover:bg-orange-400'} text-white`}>
-                        {isLastStep ? (<><Check className="h-6 w-6" />Add to Cart — £{currentPrice.toFixed(2)}</>) : currentStep?.type === 'instructions' ? (<>Skip / Next <ChevronRight className="h-6 w-6" /></>) : (<>Next <ChevronRight className="h-6 w-6" /></>)}
+                        {isLastStep ? (<><Check className="h-6 w-6" />{isEditing ? 'Update Item' : 'Add to Cart'} — £{currentPrice.toFixed(2)}</>) : currentStep?.type === 'instructions' ? (<>Skip / Next <ChevronRight className="h-6 w-6" /></>) : (<>Next <ChevronRight className="h-6 w-6" /></>)}
                     </Button>
                 </div>
 
