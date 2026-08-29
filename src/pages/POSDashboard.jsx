@@ -7,7 +7,7 @@ import { createPageUrl } from '@/utils';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import { useOfflineSyncState, formatCachedAt } from '@/components/pos/POSOfflineSyncBanner';
 import { getLastCachedAt } from '@/components/pos/POSOfflineDB';
-import { paletteStyle, DEFAULT_PALETTE } from '@/lib/posThemes';
+import { paletteStyle, DEFAULT_PALETTE, readCachedPalette, writeCachedPalette } from '@/lib/posThemes';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
@@ -44,10 +44,12 @@ export default function POSDashboard() {
     const [accessDenied, setAccessDenied] = useState(false);
     const { isOnline, pendingCount, isSyncing } = useOfflineSyncState();
     const [posTheme, setPosTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
-    // Accent palette. Stored on the restaurant so every till at the site matches,
-    // with a localStorage mirror so the first paint after reload doesn't flash
-    // the default before the restaurant record arrives.
-    const [posPalette, setPosPalette] = useState(() => localStorage.getItem('pos_palette') || DEFAULT_PALETTE);
+    // Accent palette. Stored on the restaurant record so every till at that site
+    // matches. The localStorage mirror is keyed BY RESTAURANT - an operator can
+    // run several restaurants from one device, and a shared key would paint one
+    // restaurant's brand colour onto another's till. Starts at the default and
+    // resolves once the restaurant id is known.
+    const [posPalette, setPosPalette] = useState(DEFAULT_PALETTE);
     const [activeStaffMember, setActiveStaffMember] = useState(null);
     const [staffList, setStaffList] = useState([]);
     const [showStaffLogin, setShowStaffLogin] = useState(false);
@@ -108,9 +110,13 @@ export default function POSDashboard() {
                 if (!r) { toast.error('Restaurant not found'); return; }
                 if (userData.role !== 'admin' && !r.pos_enabled) { setAccessDenied(true); return; }
                 setRestaurant(r);
+                // Paint the cached value for THIS restaurant first (avoids a flash
+                // of the default), then trust whatever the record says.
+                const cached = readCachedPalette(r.id);
+                if (cached) setPosPalette(cached);
                 if (r.pos_palette) {
                     setPosPalette(r.pos_palette);
-                    localStorage.setItem('pos_palette', r.pos_palette);
+                    writeCachedPalette(r.id, r.pos_palette);
                 }
                 const maxPos = r.max_pos_count || 1;
                 if (urlPosNum && urlPosNum >= 1 && urlPosNum <= maxPos) setPosNumber(urlPosNum);

@@ -118,3 +118,28 @@ export function paletteStyle(key) {
     }
     return style;
 }
+
+/**
+ * localStorage key for a restaurant's cached palette.
+ *
+ * MUST be scoped per restaurant: an operator may run several restaurants from
+ * the same device (or the same back-office browser), and a single shared key
+ * would paint one restaurant's brand colour onto another's till until the
+ * record loaded - and would persist the wrong value if the record failed to load.
+ */
+export function paletteStorageKey(restaurantId) {
+    return restaurantId ? `pos_palette:${restaurantId}` : 'pos_palette';
+}
+
+/** Cached palette for a restaurant, or the default. */
+export function readCachedPalette(restaurantId) {
+    try {
+        return localStorage.getItem(paletteStorageKey(restaurantId)) || DEFAULT_PALETTE;
+    } catch {
+        return DEFAULT_PALETTE;
+    }
+}
+
+export function writeCachedPalette(restaurantId, key) {
+    try { localStorage.setItem(paletteStorageKey(restaurantId), key); } catch { /* storage unavailable */ }
+}

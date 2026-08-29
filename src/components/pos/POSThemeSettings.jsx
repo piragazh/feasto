@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Palette, Check, Info, Sun, Moon } from 'lucide-react';
 import { toast } from 'sonner';
-import { POS_PALETTES, DEFAULT_PALETTE, paletteStyle } from '@/lib/posThemes';
+import { POS_PALETTES, DEFAULT_PALETTE, paletteStyle, writeCachedPalette } from '@/lib/posThemes';
 
 /**
  * Accent palette + light/dark picker for the POS.
@@ -26,7 +26,7 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
         const previous = selected;
         setSelected(key);
         // Apply immediately so the change is visible while it saves.
-        localStorage.setItem('pos_palette', key);
+        writeCachedPalette(restaurantId, key);
         onPaletteChange?.(key);
         setSaving(true);
         try {
@@ -34,7 +34,7 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
             toast.success(`${POS_PALETTES[key].label} applied to all tills`);
         } catch (e) {
             setSelected(previous);
-            localStorage.setItem('pos_palette', previous);
+            writeCachedPalette(restaurantId, previous);
             onPaletteChange?.(previous);
             toast.error('Could not save theme: ' + (e?.message || 'unknown error'));
         } finally {
