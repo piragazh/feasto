@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Plus, Minus, ShoppingCart, X, Users, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, X, Users, AlertTriangle, Pencil } from 'lucide-react';
 import POSNoSaleButton from './POSNoSaleButton';
 
 // Inline mini confirm dialog
@@ -31,8 +31,7 @@ export default function POSCart({
     onSelectTable, onAddToTable, onCharge,
     isAddingToTable,
     discount,
-    restaurant,
-}) {
+    restaurant,, onEditItem }) {
     const [confirmAction, setConfirmAction] = useState(null); // { message, onConfirm }
 
     const ask = (message, onConfirm) => setConfirmAction({ message, onConfirm });
@@ -81,20 +80,36 @@ export default function POSCart({
                     optimisticCart.map(item => (
                         <div key={item.id} className={`${t.cartItem} rounded-xl border p-2.5`}>
                             <div className="flex justify-between items-start mb-2">
-                                <div className="flex-1 pr-2 min-w-0">
-                                    <p className={`${t.text} font-semibold text-sm leading-snug`}>{item.name}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => onEditItem?.(item)}
+                                    title="Tap to change options"
+                                    className="flex-1 pr-2 min-w-0 text-left group"
+                                >
+                                    <p className={`${t.text} font-semibold text-sm leading-snug flex items-center gap-1.5`}>
+                                        {item.name}
+                                        {onEditItem && <Pencil className={`h-3 w-3 flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity`} />}
+                                    </p>
                                     {item.customizations && Object.keys(item.customizations).length > 0 && (
                                         <div className={`${t.textSub} text-[11px] mt-1 space-y-0.5`}>
-                                            {Object.entries(item.customizations).map(([key, value]) => (
-                                                <p key={key}>{key}: {Array.isArray(value) ? value.join(', ') : value}</p>
-                                            ))}
+                                            {Object.entries(item.customizations)
+                                                // Skip blank selections - an option group left unset was
+                                                // rendering as a stray ": value" line with no label.
+                                                .filter(([key, value]) => {
+                                                    if (value === null || value === undefined || value === '') return false;
+                                                    if (Array.isArray(value) && value.length === 0) return false;
+                                                    return true;
+                                                })
+                                                .map(([key, value]) => (
+                                                    <p key={key}>{key ? `${key}: ` : ''}{Array.isArray(value) ? value.join(', ') : value}</p>
+                                                ))}
                                         </div>
                                     )}
                                     {item.specialInstructions && (
                                         <p className={`${t.textSub} text-[11px] italic mt-0.5`}>"{item.specialInstructions}"</p>
                                     )}
                                     <p className="text-orange-500 text-sm mt-1 font-bold">£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
-                                </div>
+                                </button>
                                 <button
                                     onClick={() => handleRemove(item.id, item.name)}
                                     aria-label={`Remove ${item.name}`}
