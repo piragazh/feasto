@@ -186,15 +186,17 @@ export default function POSCart({
                                 </button>
                             </>
                         )}
-                        <button
-                            onClick={handleClear}
-                            disabled={optimisticCart.length === 0}
-                            className="w-full bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-9 rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Clear
-                        </button>
-                        <POSNoSaleButton restaurant={restaurant} isDark={isDark} t={t} />
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={handleClear}
+                                disabled={optimisticCart.length === 0}
+                                className="bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-10 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Clear
+                            </button>
+                            <POSNoSaleButton restaurant={restaurant} isDark={isDark} t={t} />
+                        </div>
                     </>
                 ) : (
                     <>
@@ -206,15 +208,19 @@ export default function POSCart({
                             <ShoppingCart className="h-4 w-4" />
                             Charge · £{discountedTotal.toFixed(2)}
                         </button>
-                        <button
-                            onClick={handleClear}
-                            disabled={optimisticCart.length === 0}
-                            className="w-full bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-9 rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Clear Cart
-                        </button>
-                        <POSNoSaleButton restaurant={restaurant} isDark={isDark} t={t} />
+                        {/* Secondary actions share one row: stacked full-width they
+                            ate ~40px of height that the cart list needs more. */}
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={handleClear}
+                                disabled={optimisticCart.length === 0}
+                                className="bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-10 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Clear
+                            </button>
+                            <POSNoSaleButton restaurant={restaurant} isDark={isDark} t={t} />
+                        </div>
                     </>
                 )}
             </div>

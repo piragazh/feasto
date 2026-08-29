@@ -42,7 +42,7 @@ export default function POSNoSaleButton({ restaurant, isDark, t }) {
         <>
             <button
                 onClick={() => setShowConfirm(true)}
-                className={`w-full flex items-center justify-center gap-2 h-9 rounded-xl text-xs font-semibold border transition-colors ${
+                className={`w-full flex items-center justify-center gap-1.5 h-10 rounded-xl text-xs font-semibold border transition-colors ${
                     isDark
                         ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400'
                         : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-700'
