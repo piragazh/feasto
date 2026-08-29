@@ -149,7 +149,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                 <div className={`${t.card} rounded-2xl p-12 text-center`}>
                     <Receipt className={`h-12 w-12 mx-auto mb-3 opacity-20 ${t.text}`} />
                     <p className={`${t.text} font-semibold`}>No orders on this date</p>
-                    <p className={`${t.textSub} text-sm mt-1`}>
+                    <p className={`${t.textMuted} text-sm mt-1`}>
                         Nothing was taken on {format(new Date(reportDate), 'dd MMM yyyy')}. Pick another date above if this looks wrong.
                     </p>
                 </div>
