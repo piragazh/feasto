@@ -9,7 +9,7 @@ import { X } from 'lucide-react';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import { toast } from 'sonner';
 
-export default function POSItemCustomization({ item, open, onClose, onConfirm, posTheme = 'dark' }) {
+export default function POSItemCustomization({ item, open, onClose, onConfirm, posTheme = 'dark', initialCustomizations = null, initialSpecialInstructions = '', initialIsMeal = false, initialMealCustomizations = null, isEditing = false }) {
     const isDark = posTheme === 'dark';
      const [customizations, setCustomizations] = useState({});
      const [specialInstructions, setSpecialInstructions] = useState('');
@@ -17,13 +17,17 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
      const [mealCustomizations, setMealCustomizations] = useState({});
      const [showKeyboard, setShowKeyboard] = useState(false);
 
-     // Reset state whenever a new item opens (key on item id + open flag)
+     // Reset state whenever a new item opens (key on item id + open flag).
+     // When editing an existing cart line we seed the dialog with that line's
+     // current selections instead of blanking them, so staff can change one
+     // topping without re-picking everything from scratch.
      useEffect(() => {
-         setCustomizations({});
-         setMealCustomizations({});
-         setSpecialInstructions('');
-         setIsMeal(false);
+         setCustomizations(initialCustomizations ? { ...initialCustomizations } : {});
+         setMealCustomizations(initialMealCustomizations ? { ...initialMealCustomizations } : {});
+         setSpecialInstructions(initialSpecialInstructions || '');
+         setIsMeal(!!initialIsMeal);
          setShowKeyboard(false);
+     // eslint-disable-next-line react-hooks/exhaustive-deps
      }, [item?.id, open]);
 
      const optionCount = item?.customization_options?.length || 0;
