@@ -187,42 +187,19 @@ class QZTrayService {
 
             let connectPromise;
             try {
-                connectPromise = qz.websocket.connect({
-                    retries: 0,
-                    delay: 0,
-                    usingSecure,
-                    // Try 'localhost' then the explicit IPv4 loopback. On some
-                    // dual-stack systems (notably Windows) the browser resolves
-                    // 'localhost' to the IPv6 loopback (::1) first; QZ Tray only
-                    // binds to IPv4 127.0.0.1, so that first attempt is refused
-                    // immediately even though QZ Tray is running fine. Falling
-                    // back to 127.0.0.1 catches that case. usingSurf stays off
-                    // to avoid slow multi-port/qz.surf scanning.
-                    usingSurf: false,
-                    // 'localhost.qz.io' MUST stay first. It is a public DNS name
-                    // that resolves to 127.0.0.1 but serves a real, publicly
-                    // trusted TLS certificate - which is the only way an HTTPS
-                    // page can open a wss:// socket to local QZ Tray without
-                    // hitting self-signed certificate rejection. Chrome will
-                    // complete the TCP connection to 'localhost' and then drop it
-                    // during the TLS handshake (visible as TIME_WAIT sockets with
-                    // no working connection), because a certificate exception
-                    // accepted for a browser tab is not honoured for a WebSocket
-                    // from a different origin. An earlier version of this file
-                    // hardcoded only ['localhost'], removing qz-tray's own
-                    // default and breaking every HTTPS deployment.
-                    host: ['localhost.qz.io', 'localhost', '127.0.0.1'],
-                    // Try ALL of QZ Tray's default secure ports, not just 8181.
-                    // QZ Tray binds 8181 by default but falls back to 8282/8383/
-                    // 8484 when that port is already taken by another app - a
-                    // previous version of this file hardcoded [8181] to avoid
-                    // slow port scanning, which silently broke every machine
-                    // where something else held 8181.
-                    // Insecure (ws://) ports are intentionally omitted: this page
-                    // is served over HTTPS, so the browser blocks ws:// as mixed
-                    // content and trying them only wastes watchdog time.
-                    port: { secure: [8181, 8282, 8383, 8484], insecure: [], portIndex: 0 },
-                });
+                // Deliberately minimal - this matches a known-working QZ Tray
+                // integration. We pass NO host or port overrides so qz-tray's
+                // own defaults apply: hosts ['localhost', 'localhost.qz.io']
+                // and secure ports [8181, 8282, 8383, 8484].
+                //
+                // 'localhost.qz.io' is the important one: it is a public DNS
+                // name resolving to 127.0.0.1 that serves a genuinely CA-signed
+                // certificate, which is how an HTTPS page opens a wss:// socket
+                // to local QZ Tray without the browser rejecting a self-signed
+                // cert. Earlier versions of this file overrode `host` and
+                // `port`, which silently dropped localhost.qz.io and broke every
+                // HTTPS deployment. Do not reintroduce those overrides.
+                connectPromise = qz.websocket.connect({ retries: 1, delay: 1 });
             } catch (syncErr) {
                 if (settled) return;
                 settled = true;
