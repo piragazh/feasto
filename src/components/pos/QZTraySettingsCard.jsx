@@ -153,7 +153,7 @@ export default function QZTraySettingsCard({ restaurantId }) {
                                 Accept Cert
                             </Button>
                         )}
-                        <Button size="sm" variant="outline" onClick={() => qzTrayService.connect()} disabled={status.connecting}>
+                        <Button size="sm" variant="outline" onClick={() => qzTrayService.connect({ manual: true })} disabled={status.connecting}>
                             <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${status.connecting ? 'animate-spin' : ''}`} />
                             Reconnect
                         </Button>

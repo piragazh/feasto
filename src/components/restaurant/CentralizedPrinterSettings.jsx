@@ -586,7 +586,7 @@ function PrinterCard({ printer, index, printers, onUpdate, onRemove, restaurantI
                                 disabled={qzStatus.connecting}
                                 onClick={async () => {
                                     try {
-                                        const ok = await qzTrayService.connect();
+                                        const ok = await qzTrayService.connect({ manual: true });
                                         if (!ok) toast.error(qzTrayService.getStatus().lastError || 'QZ Tray did not connect');
                                     } catch (e) {
                                         toast.error('QZ Tray connect error: ' + (e?.message || e));
