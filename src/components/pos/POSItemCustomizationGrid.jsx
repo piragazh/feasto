@@ -131,7 +131,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className={`${bg} border ${divider} p-0 flex flex-col max-w-xl w-full max-h-[90vh]`}>
+            <DialogContent hideClose className={`${bg} border ${divider} p-0 flex flex-col max-w-xl w-full max-h-[90vh]`}>
                 {/* Header */}
                 <div className={`flex items-center justify-between px-5 py-4 border-b ${divider} flex-shrink-0`}>
                     <div>

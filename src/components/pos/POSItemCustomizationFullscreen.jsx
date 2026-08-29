@@ -158,7 +158,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className={`${bg} border-0 p-0 flex flex-col w-full h-full max-w-full max-h-full rounded-none`} style={{ width: '100vw', height: '100vh', maxWidth: '100vw', maxHeight: '100vh' }}>
+            <DialogContent hideClose className={`${bg} border-0 p-0 flex flex-col w-full h-full max-w-full max-h-full rounded-none`} style={{ width: '100vw', height: '100vh', maxWidth: '100vw', maxHeight: '100vh' }}>
 
                 {/* Top bar */}
                 <div className={`flex items-center justify-between px-6 py-4 border-b ${divider} flex-shrink-0`}>
