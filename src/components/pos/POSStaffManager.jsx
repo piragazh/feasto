@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import POSConfirmDialog from './POSConfirmDialog';
 import {
     UserPlus, Edit2, Trash2, ToggleLeft, ToggleRight,
     TrendingUp, ShoppingCart, DollarSign, Search, X, Check
@@ -202,12 +203,25 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
         toast.success(staff.is_active ? 'Staff member deactivated' : 'Staff member activated');
     };
 
-    const deleteStaff = async (staff) => {
-        if (!confirm(`Delete ${staff.full_name}? This cannot be undone.`)) return;
-        await base44.entities.StaffMember.delete(staff.id);
-        qc.invalidateQueries({ queryKey: ['pos-staff', restaurantId] });
-        if (selectedStaff?.id === staff.id) setSelectedStaff(null);
-        toast.success('Staff member removed');
+    // Themed dialog rather than window.confirm() - native dialogs are tiny on a
+    // touch terminal and are suppressed outright in some kiosk/fullscreen browser
+    // setups, where confirm() returns false and the delete silently never runs.
+    const [pendingDelete, setPendingDelete] = useState(null);
+
+    const deleteStaff = (staff) => setPendingDelete(staff);
+
+    const confirmDeleteStaff = async () => {
+        const staff = pendingDelete;
+        setPendingDelete(null);
+        if (!staff) return;
+        try {
+            await base44.entities.StaffMember.delete(staff.id);
+            qc.invalidateQueries({ queryKey: ['pos-staff', restaurantId] });
+            if (selectedStaff?.id === staff.id) setSelectedStaff(null);
+            toast.success('Staff member removed');
+        } catch (e) {
+            toast.error('Could not remove staff member: ' + (e?.message || e));
+        }
     };
 
     // Stats for selected staff
