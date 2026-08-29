@@ -143,3 +143,33 @@ export function readCachedPalette(restaurantId) {
 export function writeCachedPalette(restaurantId, key) {
     try { localStorage.setItem(paletteStorageKey(restaurantId), key); } catch { /* storage unavailable */ }
 }
+
+/**
+ * Apply a palette to <html> for as long as the POS is mounted, and remove it on
+ * unmount.
+ *
+ * Setting the variables only on the POS root element is NOT enough: Radix
+ * dialogs, popovers, dropdowns and toasts render through React portals attached
+ * to document.body, which sits OUTSIDE the POS root. Those portals therefore
+ * never inherit the accent variables and fall back to the default orange - so
+ * the item-customization dialog kept its original colours while the rest of the
+ * POS followed the restaurant's palette.
+ *
+ * Scoping to documentElement covers portals while still being torn down when
+ * the operator leaves the POS, so the customer site and dashboards are unaffected.
+ *
+ * @returns {() => void} cleanup that removes the variables
+ */
+export function applyPaletteToDocument(key) {
+    if (typeof document === 'undefined') return () => {};
+    const root = document.documentElement;
+    const { ramp } = getPalette(key);
+    for (const [step, channels] of Object.entries(ramp)) {
+        root.style.setProperty(`--pos-accent-${step}`, channels);
+    }
+    return () => {
+        for (const step of Object.keys(ramp)) {
+            root.style.removeProperty(`--pos-accent-${step}`);
+        }
+    };
+}

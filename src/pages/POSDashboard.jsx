@@ -7,7 +7,7 @@ import { createPageUrl } from '@/utils';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import { useOfflineSyncState, formatCachedAt } from '@/components/pos/POSOfflineSyncBanner';
 import { getLastCachedAt } from '@/components/pos/POSOfflineDB';
-import { paletteStyle, DEFAULT_PALETTE, readCachedPalette, writeCachedPalette } from '@/lib/posThemes';
+import { paletteStyle, DEFAULT_PALETTE, readCachedPalette, writeCachedPalette, applyPaletteToDocument } from '@/lib/posThemes';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
@@ -193,6 +193,11 @@ export default function POSDashboard() {
         setActiveTab('order-entry');
     };
     const [discount, setDiscount] = useState(null);
+
+    // Apply the palette at document level as well as on the POS root. Portalled
+    // UI (dialogs, popovers, toasts) mounts to document.body and would otherwise
+    // miss the accent variables entirely - see applyPaletteToDocument.
+    useEffect(() => applyPaletteToDocument(posPalette), [posPalette]);
 
     // Menu-cache timestamp for the top bar readout. Re-read on a timer so the
     // relative label ("12m ago") stays honest without a page refresh.
