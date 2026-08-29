@@ -179,14 +179,30 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
         }
     };
 
+    // max_quantity caps how many options a 'multiple' group allows - see the same
+    // note in POSItemCustomization.jsx. Enforced here so all POS layouts, the
+    // kiosk and the deal modal behave identically.
+    const findGroup = (name, isMealSub) => {
+        if (isMealSub) {
+            const mealUpgrade = item?.customization_options?.find(o => o.type === 'meal_upgrade');
+            return mealUpgrade?.meal_customizations?.find(o => o.name === name);
+        }
+        return item?.customization_options?.find(o => o.name === name);
+    };
+
     const toggleMultiple = (optionName, label, isMealSub = false) => {
         const setter = isMealSub ? setMealCustomizations : setCustomizations;
+        const max = findGroup(optionName, isMealSub)?.max_quantity;
         setter(prev => {
             const current = prev[optionName] || [];
-            return {
-                ...prev,
-                [optionName]: current.includes(label) ? current.filter(v => v !== label) : [...current, label]
-            };
+            if (current.includes(label)) {
+                return { ...prev, [optionName]: current.filter(v => v !== label) };
+            }
+            if (max && current.length >= max) {
+                toast.error(`You can only select up to ${max} for ${optionName}`);
+                return prev;
+            }
+            return { ...prev, [optionName]: [...current, label] };
         });
     };
 
