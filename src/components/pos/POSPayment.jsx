@@ -142,6 +142,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
     const remaining = Math.max(0, effectiveTotal - totalPaid);
+    // Denominations recalculate as the amount owed changes (split payments, part-cash).
+    const quickCash = quickCashOptions(remaining);
     const change = totalPaid - effectiveTotal;
     const numericInput = rawValue === '' ? 0 : parseInt(rawValue, 10) / 100;
 
