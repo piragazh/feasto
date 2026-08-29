@@ -238,7 +238,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
     })).sort((a, b) => b.revenue - a.revenue);
 
     return (
-        <div className={`flex h-[calc(100vh-130px)] gap-3 ${t.bg}`}>
+        <div className={`flex h-full min-h-0 gap-3 ${t.bg}`}>
             {/* Left: Staff list */}
             <div className={`w-80 flex-shrink-0 ${t.panel} border rounded-2xl flex flex-col overflow-hidden`}>
                 {/* Header */}

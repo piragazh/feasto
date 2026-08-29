@@ -404,7 +404,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         // Takeaway
         if (!viewingTable) {
             return (
-                <div className={`flex flex-col h-[calc(100vh-200px)] ${t.bg}`}>
+                <div className={`flex flex-col h-full min-h-0 ${t.bg}`}>
                     <div className="flex items-center justify-between mb-4">
                         <h2 className={`${t.text} font-bold text-xl`}>Payment</h2>
                         <button onClick={() => setShowPayment(false)} className={`px-4 py-2 ${t.payBack} border text-sm font-semibold rounded-xl transition-colors`}>← Back</button>
@@ -418,7 +418,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable.id);
         const total = ordersForTable.reduce((s, o) => s + o.total, 0);
         return (
-            <div className={`flex flex-col h-[calc(100vh-200px)] ${t.bg}`}>
+            <div className={`flex flex-col h-full min-h-0 ${t.bg}`}>
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h2 className={`${t.text} font-bold text-xl`}>{viewingTable.table_number}</h2>
@@ -439,7 +439,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
     if (viewMode === 'floor-plan') {
         return (
-            <div className={`flex flex-col h-[calc(100vh-200px)] ${t.bg}`}>
+            <div className={`flex flex-col h-full min-h-0 ${t.bg}`}>
                 <div className="flex items-center justify-between mb-4">
                     <h2 className={`${t.text} font-bold text-xl`}>Floor Plan</h2>
                     <div className="flex gap-2">

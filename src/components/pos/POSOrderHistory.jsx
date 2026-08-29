@@ -198,7 +198,7 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
     const totalRevenue = filtered.filter(o => !['cancelled', 'refunded'].includes(o.status)).reduce((s, o) => s + (o.total || 0), 0);
 
     return (
-        <div className="flex flex-col h-[calc(100vh-130px)] gap-3">
+        <div className="flex flex-col h-full min-h-0 gap-3">
             {/* Filters */}
             <div className={`${t.panel} border rounded-2xl p-3 flex flex-wrap gap-2 items-center flex-shrink-0`}>
                 {/* Date presets */}
