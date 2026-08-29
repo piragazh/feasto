@@ -632,9 +632,12 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     <p className={`${t.owedAmt} text-2xl font-bold tabular-nums leading-none`}>£{remaining.toFixed(2)}</p>
                                 </div>
                             ) : (
-                                <div className={`${t.changeBox} p-2.5 rounded-xl`}>
-                                    <p className={`${t.changeTxt} text-xs`}>Change</p>
-                                    <p className={`${t.changeAmt} text-2xl font-bold`}>£{Math.max(0, totalPaid - effectiveTotal).toFixed(2)}</p>
+                                /* Change is the one figure a cashier must not miss -
+                                   it keeps green and a heavier border so it reads
+                                   differently from every other panel. */
+                                <div className={`${t.changeBox} px-4 py-3 rounded-xl flex items-baseline justify-between gap-3`}>
+                                    <p className={`${t.changeTxt} text-xs font-semibold uppercase tracking-wide`}>Change due</p>
+                                    <p className={`${t.changeAmt} text-3xl font-bold tabular-nums leading-none`}>£{Math.max(0, totalPaid - effectiveTotal).toFixed(2)}</p>
                                 </div>
                             )}
                         </>
