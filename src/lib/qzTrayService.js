@@ -156,7 +156,7 @@ class QZTrayService {
         this._notifyStatus();
         this._lastError = null;
 
-        return this._attemptConnect(true, 15000);
+        return this._attemptConnect(true, 25000);
     }
 
     /**
@@ -199,7 +199,19 @@ class QZTrayService {
                     // back to 127.0.0.1 catches that case. usingSurf stays off
                     // to avoid slow multi-port/qz.surf scanning.
                     usingSurf: false,
-                    host: ['localhost', '127.0.0.1'],
+                    // 'localhost.qz.io' MUST stay first. It is a public DNS name
+                    // that resolves to 127.0.0.1 but serves a real, publicly
+                    // trusted TLS certificate - which is the only way an HTTPS
+                    // page can open a wss:// socket to local QZ Tray without
+                    // hitting self-signed certificate rejection. Chrome will
+                    // complete the TCP connection to 'localhost' and then drop it
+                    // during the TLS handshake (visible as TIME_WAIT sockets with
+                    // no working connection), because a certificate exception
+                    // accepted for a browser tab is not honoured for a WebSocket
+                    // from a different origin. An earlier version of this file
+                    // hardcoded only ['localhost'], removing qz-tray's own
+                    // default and breaking every HTTPS deployment.
+                    host: ['localhost.qz.io', 'localhost', '127.0.0.1'],
                     // Try ALL of QZ Tray's default secure ports, not just 8181.
                     // QZ Tray binds 8181 by default but falls back to 8282/8383/
                     // 8484 when that port is already taken by another app - a
