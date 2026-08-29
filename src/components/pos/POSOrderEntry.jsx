@@ -36,7 +36,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         textMuted:      isDark ? 'text-gray-400'                                                              : 'text-gray-500',
         textSub:        isDark ? 'text-gray-500'                                                              : 'text-gray-400',
         catBtn:         isDark ? 'text-gray-400 hover:text-white hover:bg-white/5'                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
-        itemCard:       isDark ? 'bg-[#1a1d27] border-white/[0.06] hover:border-orange-500/50 hover:shadow-orange-500/10' : 'bg-white border-gray-200 hover:border-orange-400 hover:shadow-orange-100',
+        itemCard:       isDark ? 'bg-[#1a1d27] border-transparent hover:border-orange-500/60 hover:shadow-orange-500/10' : 'bg-white border-gray-200 hover:border-orange-400 hover:shadow-orange-100',
         itemImg:        isDark ? 'bg-[#0f1117]'                                                               : 'bg-gray-50',
         itemName:       isDark ? 'text-white group-hover:text-orange-300'                                     : 'text-gray-800 group-hover:text-orange-500',
         cartItem:       isDark ? 'bg-[#1a1d27] border-white/[0.05]'                                          : 'bg-gray-50 border-gray-100',

@@ -58,7 +58,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                         >
                             {/* Image. Fixed 50% of tile height so every tile lines up
                                 regardless of whether an item has a photo. */}
-                            <div className={`h-[46%] flex-shrink-0 w-full ${t.itemImg} overflow-hidden relative`}>
+                            <div className={`h-[55%] flex-shrink-0 w-full ${t.itemImg} overflow-hidden relative`}>
                                 {item.image_url ? (
                                     <img
                                         src={item.image_url}
@@ -87,8 +87,11 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                 )}
                             </div>
 
-                            <div className="p-2.5 flex flex-col flex-1 min-h-0">
-                                <h3 className={`font-semibold text-sm line-clamp-2 leading-snug transition-colors ${t.itemName}`}>
+                            <div className="px-2.5 py-2 flex flex-col flex-1 min-h-0">
+                                {/* Name is deliberately quieter than the price: staff
+                                    scan tiles by price and photo, and a bold name
+                                    competing with a bold price slows that down. */}
+                                <h3 className={`font-medium text-[13px] line-clamp-2 leading-tight transition-colors ${t.itemName}`}>
                                     {item.name}
                                 </h3>
                                 {/* Price pinned bottom-right: it is the value staff scan
@@ -100,7 +103,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                             £{item.price.toFixed(2)}
                                         </span>
                                     )}
-                                    <span className="text-orange-500 font-bold text-lg tabular-nums leading-none">
+                                    <span className="text-orange-500 font-bold text-xl tabular-nums leading-none">
                                         £{effectivePrice.toFixed(2)}
                                     </span>
                                 </div>
