@@ -245,10 +245,30 @@ class QZTrayService {
                 // mid-handshake before it could ever succeed. QZ Tray binds 8181
                 // by default; if a deployment ever needs another port, add it
                 // here rather than restoring the full scan.
+                // Host and port are pinned to what QZ Tray actually serves.
+                //
+                // QZ Tray's About page reports `socket domain: localhost` and
+                // BOTH of its certificates are issued to CN=localhost. Connecting
+                // via 'localhost.qz.io' therefore receives a certificate for the
+                // wrong hostname and Chrome rejects the handshake - so that host
+                // is deliberately NOT used here despite being a qz-tray default.
+                //
+                // For the wss:// handshake to succeed, QZ Tray's root CA (alias
+                // 'root-ca', downloadable from QZ Tray's About page) must be
+                // installed in the machine's Trusted Root Certification
+                // Authorities store. A certificate exception clicked through in a
+                // browser tab is NOT sufficient - it is not honoured for a
+                // WebSocket opened from a different origin. Without the trusted
+                // root, TCP connects and is then dropped during TLS (observed as
+                // TIME_WAIT sockets with no working connection).
+                //
+                // Only port 8181 is tried: QZ Tray reports securePort 8181, and
+                // each dead port costs ~5s, which previously exhausted the
+                // watchdog before the real host was reached.
                 connectPromise = qz.websocket.connect({
                     retries: 1,
                     delay: 1,
-                    host: ['localhost.qz.io', 'localhost'],
+                    host: ['localhost'],
                     port: { secure: [8181], insecure: [] },
                 });
             } catch (syncErr) {
