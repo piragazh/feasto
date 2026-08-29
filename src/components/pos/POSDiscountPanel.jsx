@@ -92,9 +92,16 @@ export default function POSDiscountPanel({
         ? 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/[0.08]'
         : 'bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-200';
 
+    // NOTE: the dark background MUST be opaque, not a translucent bg-white/5.
+    // Native <option> elements are drawn by the OS and inherit the select's
+    // computed background-color; a near-transparent one leaves the popup list
+    // with white text on a white system menu, making the reasons unreadable in
+    // dark mode (light mode was fine because the fallback happened to match).
+    const optionStyle = isDark ? { backgroundColor: '#1a1d27', color: '#ffffff' } : { backgroundColor: '#ffffff', color: '#111827' };
+
     const selectCls = `w-full px-3 py-2 rounded-xl border text-sm font-medium outline-none transition-colors appearance-none ${
         isDark
-            ? 'bg-white/5 border-white/[0.08] text-white focus:border-orange-500/50'
+            ? 'bg-[#1a1d27] border-white/[0.12] text-white focus:border-orange-500/50'
             : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400'
     }`;
 
@@ -235,9 +242,11 @@ export default function POSDiscountPanel({
                     onChange={e => setReasonCode(e.target.value)}
                     className={selectCls}
                 >
-                    <option value="">Select reason…</option>
+                    {/* Explicit colours on each option: without them Chrome falls
+                        back to system menu colours, which clash in dark mode. */}
+                    <option value="" style={optionStyle}>Select reason…</option>
                     {REASON_CODES.map(r => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
+                        <option key={r.value} value={r.value} style={optionStyle}>{r.label}</option>
                     ))}
                 </select>
             </div>
