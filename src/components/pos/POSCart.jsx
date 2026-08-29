@@ -31,7 +31,9 @@ export default function POSCart({
     onSelectTable, onAddToTable, onCharge,
     isAddingToTable,
     discount,
-    restaurant,, onEditItem }) {
+    restaurant,
+    onEditItem,
+}) {
     const [confirmAction, setConfirmAction] = useState(null); // { message, onConfirm }
 
     const ask = (message, onConfirm) => setConfirmAction({ message, onConfirm });
