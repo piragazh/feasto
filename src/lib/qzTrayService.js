@@ -201,14 +201,12 @@ class QZTrayService {
                 connectPromise = qz.websocket.connect({
                     retries: 1,
                     delay: 1,
-                    // Only try localhost — the default ["localhost", "localhost.qz.io"]
-                    // falls back to localhost.qz.io (public DNS → 127.0.0.1) when the
-                    // first host fails, but the TLS cert is issued for "localhost"
-                    // not "localhost.qz.io", so the fallback always fails with a cert
-                    // mismatch AND causes the confusing "wss://localhost.qz.io:8181"
-                    // error in the console.
                     host: ['localhost'],
                     usingSurf: false,
+                    // Only try port 8181 (the default QZ Tray secure port).
+                    // The library otherwise scans 8181→8282→8383→8484, each taking
+                    // ~5s to time out — 20s total wasted on ports nobody uses.
+                    ports: { secure: [8181], insecure: [] },
                 });
             } catch (syncErr) {
                 if (settled) return;
