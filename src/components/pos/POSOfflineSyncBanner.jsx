@@ -378,30 +378,11 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
 
     // Only show banner if offline, syncing, or there are pending items
     if (isOnline && pendingCount === 0 && !isSyncing) {
-        // Show a subtle "cached" indicator if we have cached data
-        if (lastCached && !dismissed) {
-            return (
-                <>
-                    {stuckBanner}
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium mb-2 bg-green-500/10 border border-green-500/20 text-green-400">
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                        <span className="flex-1">
-                            Menu cached locally · {formatCachedAt(lastCached)}
-                            {lastSynced && ` · last synced ${formatTime(lastSynced)}`}
-                        </span>
-                        {onForceRefresh && (
-                            <button onClick={onForceRefresh} className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
-                                <RefreshCw className="h-3 w-3" /> Refresh
-                            </button>
-                        )}
-                        <button onClick={() => setDismissed(true)} className="opacity-50 hover:opacity-100 transition-opacity ml-1">
-                            <X className="h-3 w-3" />
-                        </button>
-                    </div>
-                    {stuckDialog}
-                </>
-            );
-        }
+        // The "menu cached / last synced" indicator deliberately does NOT render
+        // here any more - it is a passive status readout, and a full-width strip
+        // above the menu grid cost real POS screen space on every order. It now
+        // sits in the top bar next to the clock (see POSDashboard). Only
+        // actionable states (offline, pending sync, stuck orders) get a banner.
         return <>{stuckBanner}{stuckDialog}</>;
     }
     if (dismissed && isOnline && pendingCount === 0) return <>{stuckBanner}{stuckDialog}</>;
