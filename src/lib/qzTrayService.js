@@ -211,17 +211,23 @@ class QZTrayService {
                 // retries: 0 — let this service's own capped exponential backoff
                 // handle reconnects with better backoff than the library's tight
                 // retry loop. keepAlive: 60s keeps the socket warm.
-                connectPromise = qz.websocket.connect({
-                    retries: 1,
-                    delay: 1,
-                    host: ['localhost'],
-                    usingSurf: false,
-                    // Only try port 8181 (the default QZ Tray secure port).
-                    // The library otherwise scans 8181→8282→8383→8484, each taking
-                    // ~5s to time out — 20s total wasted on ports nobody uses.
-                    // NOTE: property is `port` (singular), not `ports`.
-                    port: { secure: [8181], insecure: [] },
-                });
+                // DO NOT ADD host OR port OVERRIDES HERE.
+                //
+                // Passing `host: ['localhost']` silently drops qz-tray's default
+                // second host, 'localhost.qz.io' - a public DNS name that
+                // resolves to 127.0.0.1 but serves a genuinely CA-signed
+                // certificate. On an HTTPS page that is the ONLY host that
+                // reliably completes a wss:// TLS handshake, because a cert
+                // exception clicked through in a browser tab is NOT honoured for
+                // a WebSocket opened from a different origin. Overriding host
+                // here produces exactly the observed symptom: TCP connects and
+                // is immediately closed (TIME_WAIT sockets, no working link).
+                //
+                // Restricting `port` is likewise not worth it - failed ports are
+                // refused almost instantly, not 5s each.
+                //
+                // This matches a known-working QZ Tray integration. Keep it minimal.
+                connectPromise = qz.websocket.connect({ retries: 1, delay: 1 });
             } catch (syncErr) {
                 if (settled) return;
                 settled = true;
