@@ -47,11 +47,17 @@ class QZTrayService {
         // Callback-style promises (resolve/reject) — the classic QZ Tray API.
         // More compatible across QZ versions than async-function style.
         qz.security.setCertificatePromise((resolve, reject) => {
-            this._getCertificate().then(resolve).catch(reject);
+            console.log('[QZTray] Handshake: QZ requested certificate');
+            this._getCertificate()
+                .then((cert) => { console.log('[QZTray] Handshake: certificate resolved', cert?.substring(0, 40)); resolve(cert); })
+                .catch((e) => { console.error('[QZTray] Handshake: certificate FAILED', e?.message || e); reject(e); });
         });
 
         qz.security.setSignaturePromise((toSign) => (resolve, reject) => {
-            this._signChallenge(toSign).then(resolve).catch(reject);
+            console.log('[QZTray] Handshake: QZ sent signature challenge', toSign?.substring(0, 30));
+            this._signChallenge(toSign)
+                .then((sig) => { console.log('[QZTray] Handshake: signature resolved'); resolve(sig); })
+                .catch((e) => { console.error('[QZTray] Handshake: signature FAILED', e?.message || e); reject(e); });
         });
     }
 
@@ -139,7 +145,23 @@ class QZTrayService {
         this._notifyStatus();
         this._lastError = null;
 
-        return this._attemptConnect(true, 15000);
+        // Pre-fetch the certificate BEFORE calling qz.websocket.connect().
+        // This way: (1) the cert callback resolves instantly during the
+        // handshake (no network latency), and (2) if the cert fetch fails
+        // we can show a specific error immediately instead of a 15s timeout.
+        try {
+            console.log('[QZTray] Pre-fetching certificate before connect...');
+            await this._getCertificate();
+            console.log('[QZTray] Certificate pre-fetched OK, starting WebSocket...');
+        } catch (e) {
+            console.error('[QZTray] Certificate pre-fetch failed:', e?.message || e);
+            this._lastError = `Cannot fetch signing certificate: ${e?.message || e}. Make sure you are logged in and the backend is reachable.`;
+            this._connecting = false;
+            this._notifyStatus();
+            return false;
+        }
+
+        return this._attemptConnect(true, 20000);
     }
 
     /**
