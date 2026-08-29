@@ -73,7 +73,7 @@ export default function POSWaitlist({ posTheme = 'dark' }) {
     const seatedGuests = waitlist.filter(g => g.status === 'seated');
 
     return (
-        <div className="grid grid-cols-3 gap-4 h-[calc(100vh-200px)]">
+        <div className="grid grid-cols-3 gap-4 h-full min-h-0">
             {/* Add Guest Form */}
             <div className={`${t.panel} rounded-xl border p-4 h-fit`}>
                 <h2 className={`${t.text} font-bold text-lg mb-4`}>Add Guest</h2>

@@ -90,7 +90,7 @@ export default function POSTablesView({ restaurantId }) {
         const total = ordersForTable.reduce((sum, o) => sum + o.total, 0);
         const allItems = ordersForTable.flatMap(o => o.items);
         return (
-            <div className="flex flex-col h-[calc(100vh-200px)]">
+            <div className="flex flex-col h-full min-h-0">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-white font-bold text-2xl">{viewingTable.table_number} – Payment</h2>
                     <Button onClick={() => { setShowPayment(false); setViewingTable(null); }} variant="outline" className="text-white border-gray-600">Back</Button>
