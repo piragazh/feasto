@@ -169,6 +169,30 @@ export default function POSDashboard() {
         setActiveTab('order-entry');
     };
     const [discount, setDiscount] = useState(null);
+
+    // The restaurant record is loaded once on mount. Printer settings live on
+    // that record (printer_config.centralized_printers), and they are edited in
+    // the Settings tab of this same page - so without a refetch the payment
+    // screen keeps handing a STALE restaurant to printWithCentralizedConfig and
+    // receipts silently stop printing until the operator reloads the whole page.
+    // Refetch whenever the operator leaves Settings so saved printer changes
+    // take effect immediately.
+    const prevTabRef = React.useRef(activeTab);
+    useEffect(() => {
+        const leftSettings = prevTabRef.current === 'settings' && activeTab !== 'settings';
+        prevTabRef.current = activeTab;
+        if (!leftSettings || !restaurant?.id) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const [fresh] = await base44.entities.Restaurant.filter({ id: restaurant.id });
+                if (fresh && !cancelled) setRestaurant(fresh);
+            } catch (e) {
+                console.warn('[POS] Could not refresh restaurant after settings change:', e?.message || e);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [activeTab, restaurant?.id]);
     const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const cartTotal = discount ? Math.max(0, cartSubtotal - discount.amount) : cartSubtotal;
 
