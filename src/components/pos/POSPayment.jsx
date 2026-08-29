@@ -825,8 +825,13 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Cancel</AlertDialogCancel>
+                        {/* Confirm actions use the accent like every other primary
+                            button, so the dialog matches the restaurant palette.
+                            The terminal spinner below keeps its own blue - that is
+                            a distinct "card machine is working" state, not a
+                            primary action. */}
                         <AlertDialogAction onClick={processCard} disabled={isProcessing}
-                            className="bg-blue-600 hover:bg-blue-700 text-white">
+                            className="bg-orange-500 hover:bg-orange-400 text-white">
                             {hasConfiguredTerminal ? `Send £${(numericInput > 0 ? numericInput : remaining).toFixed(2)} to Terminal` : (isProcessing ? 'Processing...' : 'Confirm')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
