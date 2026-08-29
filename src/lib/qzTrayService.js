@@ -401,7 +401,7 @@ class QZTrayService {
         if (!this.isConnected()) throw new Error('QZ Tray is not connected. Make sure QZ Tray is running on this computer.');
 
         const resolvedName = await this.findPrinter(printerName) || printerName;
-        const config = qz.configs.create(resolvedName);
+        const config = qz.configs.create(resolvedName, { encoding: 'UTF-8' });
         let binary = '';
         for (let i = 0; i < escposBytes.length; i++) binary += String.fromCharCode(escposBytes[i]);
         const base64 = btoa(binary);
