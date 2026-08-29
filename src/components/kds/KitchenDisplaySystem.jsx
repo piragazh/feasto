@@ -242,19 +242,29 @@ export default function KitchenDisplaySystem({ restaurant }) {
                     emoji="🔵"
                     color="blue"
                     orders={preparingOrders}
-                    onAction={(id) => updateOrderStatus(id, 'ready_for_collection')}
+                    onAction={(id) => {
+                        const order = orders.find(o => o.id === id);
+                        updateOrderStatus(id, order?.order_type === 'delivery' ? 'out_for_delivery' : 'ready_for_collection');
+                    }}
                     actionLabel="Mark Ready"
                     actionColor="green"
                     tick={tick}
                 />
+                {/* Ready orders need a completion action, otherwise they accumulate
+                    in this column for the whole service and the board becomes
+                    unreadable. Delivery completes as 'delivered', everything else
+                    as 'collected' - both terminal, so the order leaves the KDS. */}
                 <KDSColumn
                     title="Ready"
                     emoji="🟢"
                     color="green"
                     orders={readyOrders}
-                    onAction={null}
-                    actionLabel={null}
-                    actionColor={null}
+                    onAction={(id) => {
+                        const order = orders.find(o => o.id === id);
+                        updateOrderStatus(id, order?.order_type === 'delivery' ? 'delivered' : 'collected');
+                    }}
+                    actionLabel="Complete"
+                    actionColor="green"
                     tick={tick}
                     isReady
                 />
