@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import { toast } from 'sonner';
 

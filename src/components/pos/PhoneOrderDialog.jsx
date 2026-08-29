@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, User, MapPin, StickyNote, Search, CheckCircle2, Trash2, UserPlus, X, Loader2, Wifi, ExternalLink, Star, ChevronRight } from 'lucide-react';
+import { Phone, User, MapPin, StickyNote, Search, CheckCircle2, Trash2, UserPlus, X, Loader2, ExternalLink, Star } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import CustomerProfileModal from './CustomerProfileModal';

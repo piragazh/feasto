@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Download, Calendar, TrendingUp, Clock, DollarSign, Printer, FileText, ChevronDown } from 'lucide-react';
+import { Download, TrendingUp, Clock, DollarSign, Printer, FileText } from 'lucide-react';
 import { generateReportPDF } from '@/lib/generatePDF';
 import { toast } from 'sonner';
 import moment from 'moment';

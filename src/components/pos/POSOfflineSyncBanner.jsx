@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { getAllPendingUnsynced, markOrderSynced, markOrderSyncFailed, getAllPendingStatusUpdates, markStatusUpdateSynced, getLastCachedAt, getAllPendingTableOrders, markTableOrderSynced, markTableOrderSyncFailed, getRetryablePendingOrders, getRetryableTableOrders, getStuckOrders, getStuckTableOrders, resetOrderSyncAttempts, resetTableOrderSyncAttempts, discardPendingOrder, discardPendingTableOrder, MAX_SYNC_ATTEMPTS } from './POSOfflineDB';
 import { checkBackendReachable } from '@/lib/networkStatus';
-import { WifiOff, RefreshCw, CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { WifiOff, RefreshCw, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import POSConfirmDialog from './POSConfirmDialog';
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { X, User, Phone, MapPin, Star, Plus, Trash2, Edit2, Check, Clock, ShoppingBag } from 'lucide-react';
+import { X, User, MapPin, Star, Plus, Trash2, Edit2, Check, Clock, ShoppingBag } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function CustomerProfileModal({ customer, onClose, onUpdated, isDark, restaurantId }) {

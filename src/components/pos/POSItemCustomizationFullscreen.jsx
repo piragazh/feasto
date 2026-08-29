@@ -29,7 +29,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
         setIsMeal(!!initialIsMeal);
         setShowKeyboard(false);
         setStep(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [item?.id, open]);
 
     const optPrice = (opt) => opt?.pos_price != null ? opt.pos_price : (opt?.price || 0);

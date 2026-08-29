@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Tag, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Tag, Loader2, XCircle, AlertCircle } from 'lucide-react';
 
 const MAX_COUPONS = 3;
 

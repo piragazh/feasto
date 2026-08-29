@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -27,7 +27,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
          setSpecialInstructions(initialSpecialInstructions || '');
          setIsMeal(!!initialIsMeal);
          setShowKeyboard(false);
-     // eslint-disable-next-line react-hooks/exhaustive-deps
+      
      }, [item?.id, open]);
 
      const optionCount = item?.customization_options?.length || 0;

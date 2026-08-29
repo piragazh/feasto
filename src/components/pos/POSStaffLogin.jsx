@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { UtensilsCrossed, Delete } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { toast } from 'sonner';
 import { cacheStaffPin, getCachedStaffPin } from './POSOfflineDB';
 
 async function computePinHash(staffId, pin, restaurantId) {

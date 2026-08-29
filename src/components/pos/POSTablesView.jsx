@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Users, Settings, Grid3x3, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import TableActionsDialog from './TableActionsDialog';

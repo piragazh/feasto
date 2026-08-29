@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import POSConfirmDialog from './POSConfirmDialog';
 import {
     UserPlus, Edit2, Trash2, ToggleLeft, ToggleRight,
-    TrendingUp, ShoppingCart, DollarSign, Search, X, Check
+    TrendingUp, ShoppingCart, DollarSign, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
