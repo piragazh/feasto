@@ -87,9 +87,30 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
         else setCustomizations(p => ({ ...p, [name]: label === p[name] ? undefined : label }));
     };
 
+    // max_quantity caps how many options a 'multiple' group allows. The kiosk and
+    // the deal modal already enforce it; the POS layouts did not, so a restaurant
+    // configuring "max 3 toppings" had it honoured on the kiosk while POS staff
+    // could add unlimited - inconsistent orders and under-charging.
+    const findGroup = (name, isMealSub) => {
+        if (isMealSub) {
+            const mealUpgrade = item?.customization_options?.find(o => o.type === 'meal_upgrade');
+            return mealUpgrade?.meal_customizations?.find(o => o.name === name);
+        }
+        return item?.customization_options?.find(o => o.name === name);
+    };
+
     const toggleMultiple = (name, label, isMealSub = false) => {
         const setter = isMealSub ? setMealCustomizations : setCustomizations;
-        setter(p => { const c = p[name] || []; return { ...p, [name]: c.includes(label) ? c.filter(v => v !== label) : [...c, label] }; });
+        const max = findGroup(name, isMealSub)?.max_quantity;
+        setter(p => {
+            const c = p[name] || [];
+            if (c.includes(label)) return { ...p, [name]: c.filter(v => v !== label) };
+            if (max && c.length >= max) {
+                toast.error(`You can only select up to ${max} for ${name}`);
+                return p;
+            }
+            return { ...p, [name]: [...c, label] };
+        });
     };
 
     const bg = isDark ? 'bg-[#151720]' : 'bg-white';

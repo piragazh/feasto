@@ -136,13 +136,24 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
         }));
     };
 
+    // max_quantity caps how many options a 'multiple' group allows. The kiosk and
+    // the deal modal already enforce it; the POS layouts did not, so a restaurant
+    // configuring "max 3 toppings" had it honoured on the kiosk while POS staff
+    // could add unlimited - inconsistent orders and under-charging.
     const handleMultipleSelect = (optionName, selectedValue) => {
-        setCustomizations(prev => ({
-            ...prev,
-            [optionName]: prev[optionName]?.includes(selectedValue)
-                ? prev[optionName].filter(v => v !== selectedValue)
-                : [...(prev[optionName] || []), selectedValue]
-        }));
+        const group = item?.customization_options?.find(o => o.name === optionName);
+        const max = group?.max_quantity;
+        setCustomizations(prev => {
+            const current = prev[optionName] || [];
+            if (current.includes(selectedValue)) {
+                return { ...prev, [optionName]: current.filter(v => v !== selectedValue) };
+            }
+            if (max && current.length >= max) {
+                toast.error(`You can only select up to ${max} for ${optionName}`);
+                return prev;
+            }
+            return { ...prev, [optionName]: [...current, selectedValue] };
+        });
     };
 
     if (!item?.customization_options?.length) {
