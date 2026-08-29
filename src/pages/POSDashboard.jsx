@@ -432,7 +432,7 @@ export default function POSDashboard() {
             </div>
 
             {/* ── Content ── */}
-            <main className={`flex-1 p-4 overflow-hidden ${t.bg}`}>
+            <main className={`flex-1 min-h-0 p-4 overflow-hidden ${t.bg}`}>
                 {activeTab === 'order-entry' && (
                     <POSOrderEntry
                         restaurantId={restaurant.id} cart={cart}

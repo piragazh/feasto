@@ -452,9 +452,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         category:   { cat: '',              menu: 'md:col-span-9', cart: 'md:col-span-3', showCat: false, quickActions: false, isCategoryGrid: true },
     }[posLayout] || { cat: 'md:col-span-2', menu: 'md:col-span-7', cart: 'md:col-span-3', showCat: true, quickActions: false };
 
-    // Main entry view
+    // Main entry view.
+    // Height note: use h-full (not calc(100vh-130px)) - <main> is flex-1 inside a
+    // min-h-screen flex column, so it already owns the remaining height. The old
+    // hardcoded 130px offset did not match the real header height and left dead
+    // white space at the bottom of the POS.
     return (
-        <div className={`flex flex-col h-[calc(100vh-130px)] ${t.bg}`}>
+        <div className={`flex flex-col h-full min-h-0 ${t.bg}`}>
             <POSOfflineSyncBanner restaurantId={restaurantId} onForceRefresh={() => { refetchMenuItems(); refetchTables(); }} />
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 overflow-hidden pb-3">
