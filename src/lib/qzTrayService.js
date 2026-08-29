@@ -179,11 +179,13 @@ class QZTrayService {
             await this._getCertificate();
             console.log('[QZTray] Certificate pre-fetched OK, starting WebSocket...');
         } catch (e) {
-            console.error('[QZTray] Certificate pre-fetch failed:', e?.message || e);
-            this._lastError = `Cannot fetch signing certificate: ${e?.message || e}. Make sure you are logged in and the backend is reachable.`;
-            this._connecting = false;
-            this._notifyStatus();
-            return false;
+            // Advisory only - NEVER block the connection on this. The signing
+            // certificate is optional: qz-tray's rejectOnCertFailure defaults to
+            // false, so without a cert QZ Tray simply falls back to its own
+            // prompt mode (an approval dialog on the desktop app) and printing
+            // still works. Returning false here would take the whole POS's
+            // printing offline over a backend hiccup that QZ can handle itself.
+            console.warn('[QZTray] Certificate pre-fetch failed - continuing unsigned (QZ Tray will prompt):', e?.message || e);
         }
 
         // DO NOT ADD A PRE-FLIGHT CHECK HERE.
