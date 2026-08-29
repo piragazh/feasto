@@ -4,6 +4,7 @@ import { getAllPendingUnsynced, markOrderSynced, markOrderSyncFailed, getAllPend
 import { checkBackendReachable } from '@/lib/networkStatus';
 import { WifiOff, RefreshCw, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
+import POSConfirmDialog from './POSConfirmDialog';
 
 // Shared sync state so header indicator and banner stay in sync
 const listeners = new Set();
@@ -222,6 +223,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
     const [dismissed, setDismissed] = useState(false);
     const [showStuck, setShowStuck] = useState(false);
     const [stuckOrders, setStuckOrders] = useState([]);
+    const [pendingDiscard, setPendingDiscard] = useState(null);
     const autoSyncRef = useRef(false);
     const lastCached = getLastCachedAt(restaurantId, 'menu_items');
 
@@ -356,12 +358,11 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
                                     </button>
                                     <button
                                         onClick={async () => {
-                                            if (!window.confirm(`Discard this £${Number(o.total || 0).toFixed(2)} order permanently? This cannot be undone.`)) return;
-                                            if (o._kind === 'table') await discardPendingTableOrder(o.offline_id);
-                                            else await discardPendingOrder(o.offline_id);
-                                            await refreshCount();
-                                            await openStuckReview();
-                                            toast.success('Order discarded');
+                                            // Themed dialog rather than window.confirm(): some kiosk /
+                                            // fullscreen browser setups suppress native dialogs, which
+                                            // would make confirm() return false and the discard appear
+                                            // to do nothing.
+                                            setPendingDiscard(o);
                                         }}
                                         className="bg-gray-700 hover:bg-red-600/40 border border-gray-600 text-gray-300 px-3 py-1 rounded-lg text-xs font-bold"
                                     >
@@ -376,6 +377,25 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
         </div>
     ) : null;
 
+    const discardDialog = pendingDiscard ? (
+        <POSConfirmDialog
+            title="Discard this order?"
+            message={`This £${Number(pendingDiscard.total || 0).toFixed(2)} order will be permanently deleted from this device and never synced. This cannot be undone.`}
+            confirmLabel="Discard"
+            onCancel={() => setPendingDiscard(null)}
+            onConfirm={async () => {
+                const o = pendingDiscard;
+                setPendingDiscard(null);
+                if (o._kind === 'table') await discardPendingTableOrder(o.offline_id);
+                else await discardPendingOrder(o.offline_id);
+                await refreshCount();
+                await openStuckReview();
+                toast.success('Order discarded');
+            }}
+            isDark
+        />
+    ) : null;
+
     // Only show banner if offline, syncing, or there are pending items
     if (isOnline && pendingCount === 0 && !isSyncing) {
         // The "menu cached / last synced" indicator deliberately does NOT render
@@ -383,9 +403,9 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
         // above the menu grid cost real POS screen space on every order. It now
         // sits in the top bar next to the clock (see POSDashboard). Only
         // actionable states (offline, pending sync, stuck orders) get a banner.
-        return <>{stuckBanner}{stuckDialog}</>;
+        return <>{stuckBanner}{stuckDialog}{discardDialog}</>;
     }
-    if (dismissed && isOnline && pendingCount === 0) return <>{stuckBanner}{stuckDialog}</>;
+    if (dismissed && isOnline && pendingCount === 0) return <>{stuckBanner}{stuckDialog}{discardDialog}</>;
 
     // Escalate visual urgency once the offline backlog gets large — during a rush
     // staff need to notice they're accumulating a big unsynced queue.
@@ -445,6 +465,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
             )}
         </div>
         {stuckDialog}
+        {discardDialog}
         </>
     );
 }
