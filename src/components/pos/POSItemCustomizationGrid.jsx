@@ -10,7 +10,7 @@ import { toast } from 'sonner';
  * Grid layout — options shown in a 2-column tile grid per group.
  * All groups are scrollable on one screen (no stepping).
  */
-export default function POSItemCustomizationGrid({ item, open, onClose, onConfirm, posTheme = 'dark' }) {
+export default function POSItemCustomizationGrid({ item, open, onClose, onConfirm, posTheme = 'dark', initialCustomizations = null, initialSpecialInstructions = '', initialIsMeal = false, initialMealCustomizations = null, isEditing = false }) {
     const isDark = posTheme === 'dark';
 
     const [customizations, setCustomizations] = useState({});
@@ -20,11 +20,14 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
     const [showKeyboard, setShowKeyboard] = useState(false);
 
     useEffect(() => {
-        setCustomizations({});
-        setMealCustomizations({});
-        setSpecialInstructions('');
-        setIsMeal(false);
+        // Seed from the cart line when editing an existing item, so changing one
+        // topping doesn't mean re-picking every option. Blank for a fresh add.
+        setCustomizations(initialCustomizations ? { ...initialCustomizations } : {});
+        setMealCustomizations(initialMealCustomizations ? { ...initialMealCustomizations } : {});
+        setSpecialInstructions(initialSpecialInstructions || '');
+        setIsMeal(!!initialIsMeal);
         setShowKeyboard(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item?.id, open]);
 
     const optPrice = (opt) => opt?.pos_price != null ? opt.pos_price : (opt?.price || 0);

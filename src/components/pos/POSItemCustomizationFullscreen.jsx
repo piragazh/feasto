@@ -10,7 +10,7 @@ import { toast } from 'sonner';
  * Fullscreen layout — one OPTION per screen (not per group).
  * Maximum tap target — great for kiosk-style touch terminals.
  */
-export default function POSItemCustomizationFullscreen({ item, open, onClose, onConfirm, posTheme = 'dark' }) {
+export default function POSItemCustomizationFullscreen({ item, open, onClose, onConfirm, posTheme = 'dark', initialCustomizations = null, initialSpecialInstructions = '', initialIsMeal = false, initialMealCustomizations = null, isEditing = false }) {
     const isDark = posTheme === 'dark';
 
     const [customizations, setCustomizations] = useState({});
@@ -21,12 +21,15 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
     const [step, setStep] = useState(0);
 
     useEffect(() => {
-        setCustomizations({});
-        setMealCustomizations({});
-        setSpecialInstructions('');
-        setIsMeal(false);
+        // Seed from the cart line when editing an existing item, so changing one
+        // topping doesn't mean re-picking every option. Blank for a fresh add.
+        setCustomizations(initialCustomizations ? { ...initialCustomizations } : {});
+        setMealCustomizations(initialMealCustomizations ? { ...initialMealCustomizations } : {});
+        setSpecialInstructions(initialSpecialInstructions || '');
+        setIsMeal(!!initialIsMeal);
         setShowKeyboard(false);
         setStep(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item?.id, open]);
 
     const optPrice = (opt) => opt?.pos_price != null ? opt.pos_price : (opt?.price || 0);

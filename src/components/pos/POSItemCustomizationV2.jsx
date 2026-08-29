@@ -12,7 +12,7 @@ import { toast } from 'sonner';
  * Each customization group gets its own "step" screen with large tap targets.
  * Business logic is identical to POSItemCustomization (same props/output).
  */
-export default function POSItemCustomizationV2({ item, open, onClose, onConfirm, posTheme = 'dark' }) {
+export default function POSItemCustomizationV2({ item, open, onClose, onConfirm, posTheme = 'dark', initialCustomizations = null, initialSpecialInstructions = '', initialIsMeal = false, initialMealCustomizations = null, isEditing = false }) {
     const isDark = posTheme === 'dark';
 
     const [customizations, setCustomizations] = useState({});
@@ -24,10 +24,12 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
     const autoAdvanceTimer = useRef(null);
 
     useEffect(() => {
-        setCustomizations({});
-        setMealCustomizations({});
-        setSpecialInstructions('');
-        setIsMeal(false);
+        // Seed from the cart line when editing an existing item, so changing one
+        // topping doesn't mean re-picking every option. Blank for a fresh add.
+        setCustomizations(initialCustomizations ? { ...initialCustomizations } : {});
+        setMealCustomizations(initialMealCustomizations ? { ...initialMealCustomizations } : {});
+        setSpecialInstructions(initialSpecialInstructions || '');
+        setIsMeal(!!initialIsMeal);
         setShowKeyboard(false);
         setStep(0);
         // Clear any pending auto-advance timer when item/dialog resets
