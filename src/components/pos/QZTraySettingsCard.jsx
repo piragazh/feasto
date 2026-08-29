@@ -51,7 +51,20 @@ export default function QZTraySettingsCard({ restaurantId }) {
         return () => document.removeEventListener('mousedown', handler);
     }, [showDropdown]);
 
+    // Read the saved QZ Tray printer name from the centralized_printers[]
+    // array (the single source of truth). Falls back to legacy
+    // qz_printer_name for restaurants that haven't migrated yet.
     useEffect(() => {
+        const printers = restaurant?.printer_config?.centralized_printers;
+        if (Array.isArray(printers)) {
+            const qzReceipt = printers.find(
+                (p) => (p.connection_type || 'qz_tray') === 'qz_tray' && p.role === 'receipt'
+            );
+            if (qzReceipt?.qz_printer_name) {
+                setPrinterName(qzReceipt.qz_printer_name);
+                return;
+            }
+        }
         if (restaurant?.printer_config?.qz_printer_name) {
             setPrinterName(restaurant.printer_config.qz_printer_name);
         }
@@ -87,7 +100,33 @@ export default function QZTraySettingsCard({ restaurantId }) {
 
     const handleSave = () => {
         const existingConfig = restaurant?.printer_config || {};
-        mutation.mutate({ printer_config: { ...existingConfig, qz_printer_name: printerName } });
+        const existingPrinters = Array.isArray(existingConfig.centralized_printers)
+            ? existingConfig.centralized_printers
+            : [];
+        // Upsert the QZ Tray receipt printer into centralized_printers[]
+        const idx = existingPrinters.findIndex(
+            (p) => (p.connection_type || 'qz_tray') === 'qz_tray' && p.role === 'receipt'
+        );
+        const updatedPrinters = [...existingPrinters];
+        const entry = {
+            connection_type: 'qz_tray',
+            role: 'receipt',
+            qz_printer_name: printerName,
+            assigned_channels: idx >= 0 ? (existingPrinters[idx].assigned_channels || ['pos_order']) : ['pos_order'],
+        };
+        if (idx >= 0) {
+            updatedPrinters[idx] = { ...existingPrinters[idx], ...entry };
+        } else {
+            updatedPrinters.push(entry);
+        }
+        // Also keep legacy field in sync for any code that still reads it
+        mutation.mutate({
+            printer_config: {
+                ...existingConfig,
+                centralized_printers: updatedPrinters,
+                qz_printer_name: printerName,
+            },
+        });
     };
 
     const handleTestPrint = async () => {

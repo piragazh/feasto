@@ -24,6 +24,8 @@ class QZTrayService {
     constructor() {
         this._connected = false;
         this._connecting = false;
+        this._preflightChecking = false;
+        this._preflightFailed = false;
         this._listeners = new Set();
         this._autoReconnectTimer = null;
         this._reconnectAttempts = 0;
@@ -143,20 +145,57 @@ class QZTrayService {
             this._reconnectAttempts = 0;
         }
 
-        // NOTE: we deliberately do NOT gate the connection on any pre-check.
-        // Two previous attempts to "fail fast" here (a preflight fetch to
-        // https://localhost:8181, then a navigator.permissions query for
-        // 'local-network-access') both produced false negatives and blocked
-        // working setups from ever reaching QZ Tray. Browser probes of local
-        // resources are unreliable and their semantics differ between Chrome
-        // versions. The real WebSocket connect is the only trustworthy signal,
-        // so always attempt it; diagnostics are used only to explain a failure
-        // after the fact, never to prevent the attempt.
         this._connecting = true;
+        this._preflightChecking = false;
+        this._preflightFailed = false;
         this._notifyStatus();
         this._lastError = null;
 
-        return this._attemptConnect(true, 25000);
+        // Hard gate: pre-flight certificate check. On an HTTPS page the browser
+        // will reject a wss:// socket to localhost:8181 unless the user has
+        // manually accepted QZ Tray's self-signed cert by visiting that URL.
+        // A no-cors fetch to https://localhost:8181 succeeds (opaque response)
+        // if the cert is trusted AND something is listening; it throws a
+        // TypeError otherwise. If it fails, the WebSocket will never connect,
+        // so we skip it entirely and surface an actionable error immediately —
+        // no 25-second hang.
+        // Skipped on http (local dev) where the cert is trusted implicitly.
+        if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+            this._preflightChecking = true;
+            this._notifyStatus();
+            const preflight = await this._preflightCheck();
+            this._preflightChecking = false;
+            if (!preflight.ok) {
+                this._preflightFailed = true;
+                this._lastError = 'Cannot reach QZ Tray at https://localhost:8181. Open that URL in a new tab, accept the certificate warning (Advanced \u2192 Proceed), then click Reconnect. Also ensure QZ Tray is running on this computer and the site has Local Network Access permission.';
+                this._connecting = false;
+                this._notifyStatus();
+                this._cooldownUntil = Date.now() + 2000;
+                return false;
+            }
+            this._notifyStatus();
+        }
+
+        return this._attemptConnect(true, 15000);
+    }
+
+    /**
+     * Pre-flight reachability check for https://localhost:8181.
+     * Uses no-cors (opaque response is enough to confirm the TLS cert is
+     * trusted and something is listening). 3-second AbortController timeout.
+     * Returns { ok: boolean }.
+     */
+    async _preflightCheck() {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        try {
+            await fetch('https://localhost:8181', { mode: 'no-cors', signal: controller.signal });
+            clearTimeout(timeoutId);
+            return { ok: true };
+        } catch (e) {
+            clearTimeout(timeoutId);
+            return { ok: false, error: e?.message || 'fetch failed' };
+        }
     }
 
     /**
@@ -187,19 +226,18 @@ class QZTrayService {
 
             let connectPromise;
             try {
-                // Deliberately minimal - this matches a known-working QZ Tray
-                // integration. We pass NO host or port overrides so qz-tray's
-                // own defaults apply: hosts ['localhost', 'localhost.qz.io']
-                // and secure ports [8181, 8282, 8383, 8484].
-                //
-                // 'localhost.qz.io' is the important one: it is a public DNS
-                // name resolving to 127.0.0.1 that serves a genuinely CA-signed
-                // certificate, which is how an HTTPS page opens a wss:// socket
-                // to local QZ Tray without the browser rejecting a self-signed
-                // cert. Earlier versions of this file overrode `host` and
-                // `port`, which silently dropped localhost.qz.io and broke every
-                // HTTPS deployment. Do not reintroduce those overrides.
-                connectPromise = qz.websocket.connect({ retries: 1, delay: 1 });
+                // Explicit host list: localhost first (self-signed cert accepted
+                // via pre-flight), localhost.qz.io as fallback (public DNS →
+                // 127.0.0.1, CA-signed cert on enterprise QZ Tray setups).
+                // retries: 0 — let this service's own capped exponential backoff
+                // handle reconnects with better backoff than the library's tight
+                // retry loop. keepAlive: 60s keeps the socket warm.
+                connectPromise = qz.websocket.connect({
+                    host: ['localhost', 'localhost.qz.io'],
+                    usingSecure: true,
+                    retries: 0,
+                    keepAlive: 60,
+                });
             } catch (syncErr) {
                 if (settled) return;
                 settled = true;
@@ -324,6 +362,8 @@ class QZTrayService {
         this._reconnectAttempts = 0;
         this._cooldownUntil = 0;
         this._lastError = null;
+        this._preflightChecking = false;
+        this._preflightFailed = false;
         try { qz.websocket.disconnect(); } catch {}
         this._connected = false;
         this._notifyStatus();
@@ -348,6 +388,8 @@ class QZTrayService {
         return {
             connected: this.isConnected(),
             connecting: this._connecting,
+            preflightChecking: this._preflightChecking || false,
+            preflightFailed: this._preflightFailed || false,
             lastError: this._lastError || null,
         };
     }

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { DollarSign, CreditCard, AlertCircle, Trash2, WifiOff, CheckCircle, XCircle, Loader2, Monitor, FileText, Tag } from 'lucide-react';
+import { DollarSign, CreditCard, AlertCircle, Trash2, WifiOff, CheckCircle, XCircle, Loader2, Monitor, FileText, Tag, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import NumericKeypad from './NumericKeypad';
 import POSDiscountPanel from './POSDiscountPanel';
@@ -87,6 +87,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const [showCashUnderConfirm, setShowCashUnderConfirm] = useState(false);
     const [showCardConfirm, setShowCardConfirm] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    // Success state — holds the last completed order data so the Reprint
+    // Receipt button can re-trigger printing without re-running createOrder.
+    const [completedOrder, setCompletedOrder] = useState(null);
+    const [reprinting, setReprinting] = useState(false);
 
     // Terminal payment flow
     const [terminalStep, setTerminalStep] = useState(null); // null | 'waiting' | 'success' | 'failed'
@@ -203,11 +207,32 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             const result = await printWithCentralizedConfig(printOrder, restaurant, 'pos_order');
             if (result.printed.length === 0) {
                 console.error('[POS-PRINT] Receipt auto-print failed after payment:', result.failed, { restaurantId, orderTotal: effectiveTotal });
-                toast.error('Receipt did not print — use Print Receipt button to retry', { duration: 6000 });
+                toast.error('Receipt did not print — use Reprint button to retry', { duration: 6000 });
             }
+            return result;
         } catch (e) {
             console.error('[POS-PRINT] Receipt auto-print failed after payment:', e?.message || e, { restaurantId, orderTotal: effectiveTotal });
-            toast.error('Receipt did not print — use Print Receipt button to retry', { duration: 6000 });
+            toast.error('Receipt did not print — use Reprint button to retry', { duration: 6000 });
+            return { printed: [], failed: [e?.message || 'error'] };
+        }
+    };
+
+    // Reprint the last completed order's receipt — one-tap retry from the
+    // payment success view. Reuses the same centralized print dispatch.
+    const handleReprintReceipt = async () => {
+        if (!completedOrder) return;
+        setReprinting(true);
+        try {
+            const result = await printWithCentralizedConfig(completedOrder, restaurant, 'pos_order');
+            if (result.printed.length > 0) {
+                toast.success('Receipt reprinted');
+            } else {
+                toast.error('Reprint failed — check printer connection', { duration: 6000 });
+            }
+        } catch (e) {
+            toast.error('Reprint failed: ' + (e?.message || 'unknown error'));
+        } finally {
+            setReprinting(false);
         }
     };
 
@@ -265,7 +290,14 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             if (hasCash) {
                 try { await openCashDrawer(restaurant); } catch (e) { console.warn('[POS] Cash drawer open failed:', e.message); }
             }
-            onPaymentComplete();
+            // Store the completed order so the success view can offer a Reprint
+            // button — staff can retry printing in one tap if the auto-print failed.
+            setCompletedOrder(orderDataForPrint);
+            // If no printer is configured, skip the success view and complete immediately
+            // (no reprint possible, so no point showing the button).
+            if (!hasPrinterForChannel(restaurant, 'pos_order')) {
+                onPaymentComplete();
+            }
         } catch (e) {
             playError();
             toast.error('Payment failed: ' + (e?.message || 'Unknown error'));
@@ -801,6 +833,42 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Payment success view — Reprint Receipt + New Order */}
+            {completedOrder && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className={`${t.dialog} border rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl`}>
+                        <div className="w-16 h-16 rounded-full bg-green-500/15 border-2 border-green-500/30 flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle className="h-9 w-9 text-green-500" />
+                        </div>
+                        <h3 className={`${t.text} text-xl font-bold mb-1`}>Payment Complete</h3>
+                        <p className={`${t.subtext} text-sm mb-6`}>
+                            £{effectiveTotal.toFixed(2)} — {completedOrder.payment_method || 'paid'}
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                onClick={handleReprintReceipt}
+                                disabled={reprinting}
+                                variant="outline"
+                                className={`w-full h-11 ${t.cancelDlg}`}
+                            >
+                                {reprinting ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Printer className="h-4 w-4 mr-2" />
+                                )}
+                                Reprint Receipt
+                            </Button>
+                            <Button
+                                onClick={() => { setCompletedOrder(null); onPaymentComplete(); }}
+                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white"
+                            >
+                                New Order
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
