@@ -59,7 +59,7 @@ export default function QZTrayStatusBadge({ restaurant, isDark }) {
         : { pill: 'bg-gray-100 border-gray-200', text: 'text-gray-600' };
 
     // Determine the display state
-    const showCertLink = status.preflightFailed && !status.connected;
+    const showCertLink = status.preflightFailed && !status.connected && !status.connecting;
     const showChecking = status.preflightChecking;
     const showConnecting = status.connecting && !status.preflightChecking;
     const showConnected = status.connected;

@@ -151,27 +151,24 @@ class QZTrayService {
         this._notifyStatus();
         this._lastError = null;
 
-        // Hard gate: pre-flight certificate check. On an HTTPS page the browser
-        // will reject a wss:// socket to localhost:8181 unless the user has
-        // manually accepted QZ Tray's self-signed cert by visiting that URL.
-        // A no-cors fetch to https://localhost:8181 succeeds (opaque response)
-        // if the cert is trusted AND something is listening; it throws a
-        // TypeError otherwise. If it fails, the WebSocket will never connect,
-        // so we skip it entirely and surface an actionable error immediately —
-        // no 25-second hang.
+        // Soft pre-flight: a no-cors fetch to https://localhost:8181 succeeds
+        // (opaque response) if the cert is trusted AND something is listening.
+        // It throws TypeError if not — but Chrome's Local Network Access
+        // permission can block the fetch even when QZ Tray IS running and the
+        // cert IS accepted (false negative). So we run it as a fast-path
+        // diagnostic only: success gives instant feedback, failure does NOT
+        // block the WebSocket attempt — the watchdog handles the real timeout.
         // Skipped on http (local dev) where the cert is trusted implicitly.
         if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
             this._preflightChecking = true;
             this._notifyStatus();
             const preflight = await this._preflightCheck();
             this._preflightChecking = false;
-            if (!preflight.ok) {
+            if (preflight.ok) {
+                this._preflightFailed = false;
+            } else {
+                console.warn('[QZTray] Pre-flight fetch failed (may be a false negative — LNA permission or browser policy). Proceeding to WebSocket attempt.', preflight.error);
                 this._preflightFailed = true;
-                this._lastError = 'Cannot reach QZ Tray at https://localhost:8181. Open that URL in a new tab, accept the certificate warning (Advanced \u2192 Proceed), then click Reconnect. Also ensure QZ Tray is running on this computer and the site has Local Network Access permission.';
-                this._connecting = false;
-                this._notifyStatus();
-                this._cooldownUntil = Date.now() + 2000;
-                return false;
             }
             this._notifyStatus();
         }
