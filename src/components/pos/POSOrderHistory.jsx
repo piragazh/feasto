@@ -160,20 +160,28 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
 
     const { from, to } = DATE_PRESETS.find(p => p.label === datePreset)?.getDates() || {};
 
+    // NOTE: do NOT add a server-side created_date range filter here.
+    // `created_date` is a platform-managed field and range operators ($gte/$lte)
+    // against it match NOTHING through the entity filter API - verified: even
+    // { created_date: { $gte: '2026-01-01' } } returns zero rows while the same
+    // query without it returns orders normally. A previous version filtered
+    // server-side and silently showed an empty History for every date preset.
+    // Fetch recent orders and narrow by date on the client instead.
     const { data: orders = [], isLoading } = useQuery({
-        queryKey: ['pos-order-history', restaurantId, datePreset, from?.toISOString(), to?.toISOString()],
-        queryFn: async () => {
-            const query = { restaurant_id: restaurantId };
-            if (from) query.created_date = { ...query.created_date, $gte: from.toISOString() };
-            if (to)   query.created_date = { ...query.created_date, $lte: to.toISOString() };
-            // Server-side date filter means we only fetch orders in range — no client-side date filtering needed
-            return await base44.entities.Order.filter(query, '-created_date', 200);
-        },
+        queryKey: ['pos-order-history', restaurantId],
+        queryFn: async () => base44.entities.Order.filter({ restaurant_id: restaurantId }, '-created_date', 500),
         enabled: !!restaurantId,
         refetchInterval: 30000,
     });
 
     const filtered = orders.filter(order => {
+        // Date range applied client-side (see note on the query above)
+        if (from || to) {
+            const created = order.created_date ? new Date(order.created_date) : null;
+            if (!created || isNaN(created)) return false;
+            if (from && created < from) return false;
+            if (to && created > to) return false;
+        }
         if (statusFilter !== 'all' && order.status !== statusFilter) return false;
         if (typeFilter !== 'all' && order.order_type !== typeFilter) return false;
         if (search) {
