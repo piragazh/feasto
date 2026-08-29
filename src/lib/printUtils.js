@@ -73,6 +73,7 @@ function buildPerPrinterConfig(globalCfg, printerConfig) {
         header_text: printerConfig.header_text !== undefined ? printerConfig.header_text : (legacy.header_text || ''),
         footer_text: printerConfig.footer_text !== undefined ? printerConfig.footer_text : (legacy.footer_text || ''),
         bluetooth_printer: printerConfig.bluetooth_printer || null,
+        show_cash_details: printerConfig.show_cash_details !== undefined ? printerConfig.show_cash_details : (globalCfg.show_cash_details !== false),
         role: printerConfig.role || 'receipt',
     };
 }
