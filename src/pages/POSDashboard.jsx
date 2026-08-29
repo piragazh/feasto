@@ -492,10 +492,17 @@ export default function POSDashboard() {
                 {activeTab === 'reports' && <POSReports restaurantId={restaurant.id} posTheme={posTheme} />}
                 {activeTab === 'eod' && <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />}
                 {activeTab === 'staff' && <POSStaffManager restaurantId={restaurant.id} posTheme={posTheme} currentUser={user} />}
+                {/* Settings is built on the shared light UI kit (Card, Label, Switch),
+                    not the POS dark tokens. Rather than half-theming it and getting
+                    an inconsistent mix, it renders on an explicit light surface so
+                    it reads as a deliberate settings sheet rather than a clash.
+                    Scrolls independently since it is much taller than a POS tab. */}
                 {activeTab === 'settings' && (
-                    <div className="space-y-6">
-                        <POSSoundSettings />
-                        <POSPrinterSettings restaurantId={restaurant.id} />
+                    <div className="h-full min-h-0 overflow-y-auto rounded-2xl bg-gray-50 border border-gray-200 p-4">
+                        <div className="space-y-6 max-w-5xl mx-auto">
+                            <POSSoundSettings />
+                            <POSPrinterSettings restaurantId={restaurant.id} />
+                        </div>
                     </div>
                 )}
             </main>
