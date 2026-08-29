@@ -27,7 +27,7 @@ import QuickItemLookupDialog from './QuickItemLookupDialog';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables, savePendingStatusUpdate, setCacheMeta, savePendingTableOrder } from './POSOfflineDB';
 import { isNetworkError } from '@/lib/networkStatus';
 
-export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
+export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, onReplaceItem, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
     const isDark = posTheme === 'dark';
     const t = {
         panel:          isDark ? 'bg-[#151720] border-white/[0.06]'                                          : 'bg-white border-gray-200',
@@ -56,6 +56,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [customizationOpen, setCustomizationOpen] = useState(false);
+    const [editingCartItem, setEditingCartItem] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
     const [selectedTable, setSelectedTable] = useState(null);
     const [showPayment, setShowPayment] = useState(false);
@@ -191,7 +192,32 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         else onAddItem({ ...posItem, quantity: 1, customizations: {} });
     };
 
-    const handleCustomizationConfirm = (item) => { onAddItem(item); setCustomizationOpen(false); setSelectedItem(null); };
+    // Editing an existing cart line: reopen the same customization dialog seeded
+    // with that line's current selections. Previously the only way to change a
+    // topping was to delete the item and rebuild it from scratch.
+    const handleEditCartItem = (cartItem) => {
+        const menuItem = menuItems.find(m => m.id === (cartItem.menu_item_id || cartItem.id));
+        if (!menuItem || !(menuItem.customization_options?.length > 0)) {
+            toast.error('This item has no options to edit');
+            return;
+        }
+        const posItem = menuItem.pos_price != null ? { ...menuItem, price: menuItem.pos_price } : menuItem;
+        setEditingCartItem(cartItem);
+        setSelectedItem(posItem);
+        setCustomizationOpen(true);
+    };
+
+    const handleCustomizationConfirm = (item) => {
+        if (editingCartItem) {
+            onReplaceItem?.(editingCartItem.id, { ...item, quantity: editingCartItem.quantity });
+            toast.success('Item updated');
+        } else {
+            onAddItem(item);
+        }
+        setCustomizationOpen(false);
+        setSelectedItem(null);
+        setEditingCartItem(null);
+    };
 
     const handleAddToTable = async (table) => {
         if (optimisticCart.length === 0) { toast.error('Cart is empty'); return; }
@@ -541,6 +567,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         optimisticCart={optimisticCart} cartTotal={cartTotal} orderType={orderType}
                         selectedTable={selectedTable} tables={tables}
                         onRemoveItem={onRemoveItem}
+                        onEditItem={handleEditCartItem}
                         onUpdateQuantity={handleQuantityChange}
                         onClearCart={onClearCart}
                         onSelectTable={(table) => table === null ? setSelectedTable(null) : setTableSelectionOpen(true)}
@@ -587,7 +614,18 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             </div>
 
             {selectedItem && (() => {
-                const props = { item: selectedItem, open: customizationOpen, onClose: () => { setCustomizationOpen(false); setSelectedItem(null); }, onConfirm: handleCustomizationConfirm, posTheme };
+                const props = {
+                    item: selectedItem,
+                    open: customizationOpen,
+                    onClose: () => { setCustomizationOpen(false); setSelectedItem(null); setEditingCartItem(null); },
+                    onConfirm: handleCustomizationConfirm,
+                    posTheme,
+                    isEditing: !!editingCartItem,
+                    initialCustomizations: editingCartItem?.customizations || null,
+                    initialSpecialInstructions: editingCartItem?.specialInstructions || '',
+                    initialIsMeal: !!editingCartItem?.isMeal,
+                    initialMealCustomizations: editingCartItem?.mealCustomizations || null,
+                };
                 if (posCustomizationLayout === 'stepped') return <POSItemCustomizationV2 {...props} />;
                 if (posCustomizationLayout === 'grid') return <POSItemCustomizationGrid {...props} />;
                 if (posCustomizationLayout === 'fullscreen') return <POSItemCustomizationFullscreen {...props} />;
