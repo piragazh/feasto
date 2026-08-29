@@ -19,34 +19,70 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[190px]">
-                {filteredItems.map(item => (
-                    <button
-                        key={item.id}
-                        onClick={() => onItemClick(item)}
-                        title={item.name}
-                        className={`${t.itemCard} border rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg active:scale-[0.97] flex flex-col h-full`}
-                    >
-                        <div className={`h-24 flex-shrink-0 w-full ${t.itemImg} overflow-hidden`}>
-                            {item.image_url ? (
-                                <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <ShoppingCart className={`h-8 w-8 ${t.textSub}`} />
+            <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[200px] content-start">
+                {filteredItems.map(item => {
+                    const effectivePrice = item.pos_price != null ? item.pos_price : item.price;
+                    const hasPosOverride = item.pos_price != null && item.pos_price !== item.price;
+                    const hasOptions = item.customization_options?.length > 0;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => onItemClick(item)}
+                            title={item.name}
+                            className={`${t.itemCard} border rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg active:scale-[0.97] flex flex-col h-full relative`}
+                        >
+                            {/* Image. Fixed 50% of tile height so every tile lines up
+                                regardless of whether an item has a photo. */}
+                            <div className={`h-[46%] flex-shrink-0 w-full ${t.itemImg} overflow-hidden relative`}>
+                                {item.image_url ? (
+                                    <img
+                                        src={item.image_url}
+                                        alt=""
+                                        loading="lazy"
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        // A broken URL otherwise renders the browser's
+                                        // broken-image glyph plus alt text, which looks
+                                        // like a bug mid-service. Fall back to the
+                                        // placeholder instead.
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                                    />
+                                ) : null}
+                                <div
+                                    className="w-full h-full items-center justify-center absolute inset-0"
+                                    style={{ display: item.image_url ? 'none' : 'flex' }}
+                                >
+                                    <ShoppingCart className={`h-8 w-8 ${t.textSub} opacity-40`} />
                                 </div>
-                            )}
-                        </div>
-                        <div className="p-2.5 flex flex-col flex-1 min-h-0">
-                            <h3 className={`font-semibold text-sm line-clamp-3 leading-snug mb-1 transition-colors ${t.itemName}`}>{item.name}</h3>
-                            <p className="text-orange-500 font-bold text-base mt-auto tabular-nums">
-                                £{(item.pos_price != null ? item.pos_price : item.price).toFixed(2)}
-                                {item.pos_price != null && item.pos_price !== item.price && (
-                                    <span className={`text-[11px] line-through ml-1.5 ${t.textMuted}`}>£{item.price.toFixed(2)}</span>
+                                {/* Flags an item that opens the options dialog, so staff
+                                    know a tap won't add straight to the cart. */}
+                                {hasOptions && (
+                                    <span className="absolute top-1.5 right-1.5 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                                        OPTIONS
+                                    </span>
                                 )}
-                            </p>
-                        </div>
-                    </button>
-                ))}
+                            </div>
+
+                            <div className="p-2.5 flex flex-col flex-1 min-h-0">
+                                <h3 className={`font-semibold text-sm line-clamp-2 leading-snug transition-colors ${t.itemName}`}>
+                                    {item.name}
+                                </h3>
+                                {/* Price pinned bottom-right: it is the value staff scan
+                                    for, and a consistent position across tiles makes it
+                                    findable without reading each card. */}
+                                <div className="mt-auto pt-1 flex items-baseline justify-end gap-1.5">
+                                    {hasPosOverride && (
+                                        <span className={`text-[11px] line-through ${t.textMuted}`}>
+                                            £{item.price.toFixed(2)}
+                                        </span>
+                                    )}
+                                    <span className="text-orange-500 font-bold text-lg tabular-nums leading-none">
+                                        £{effectivePrice.toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );
