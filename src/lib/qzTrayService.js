@@ -34,20 +34,25 @@ class QZTrayService {
         this._setupSecurity();
         // Backend signs challenges with SHA-256 (see signQzTrayRequest/entry.ts).
         // QZ Tray defaults to SHA1 — must override to match or signature verification fails.
-        qz.security.setSignatureAlgorithm('SHA256');
+        qz.security.setSignatureAlgorithm('SHA512');
     }
 
     // ── Security (certificate + signature) ────────────────────────────────────
 
     _setupSecurity() {
-        // TEMPORARILY DISABLED: certificate + signature validation.
-        // Both promises return empty strings → QZ Tray falls back to its
-        // built-in prompt mode, showing an "Allow [website] to connect?"
-        // dialog to the user. This bypasses the backend cert/signing flow
-        // entirely, which was causing connection hangs and false negatives.
-        // TODO: Re-enable signed mode once cert trust issues are resolved.
-        qz.security.setCertificatePromise(async () => '');
-        qz.security.setSignaturePromise(async () => '');
+        this._certCache = null;
+        this._certCacheTime = 0;
+        this._certTTL = 5 * 60 * 1000;
+
+        // Callback-style promises (resolve/reject) — the classic QZ Tray API.
+        // More compatible across QZ versions than async-function style.
+        qz.security.setCertificatePromise((resolve, reject) => {
+            this._getCertificate().then(resolve).catch(reject);
+        });
+
+        qz.security.setSignaturePromise((toSign) => (resolve, reject) => {
+            this._signChallenge(toSign).then(resolve).catch(reject);
+        });
     }
 
     async _getCertificate() {
@@ -128,48 +133,7 @@ class QZTrayService {
         this._notifyStatus();
         this._lastError = null;
 
-        // Soft pre-flight: a no-cors fetch to https://localhost:8181 succeeds
-        // (opaque response) if the cert is trusted AND something is listening.
-        // It throws TypeError if not — but Chrome's Local Network Access
-        // permission can block the fetch even when QZ Tray IS running and the
-        // cert IS accepted (false negative). So we run it as a fast-path
-        // diagnostic only: success gives instant feedback, failure does NOT
-        // block the WebSocket attempt — the watchdog handles the real timeout.
-        // Skipped on http (local dev) where the cert is trusted implicitly.
-        if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-            this._preflightChecking = true;
-            this._notifyStatus();
-            const preflight = await this._preflightCheck();
-            this._preflightChecking = false;
-            if (preflight.ok) {
-                this._preflightFailed = false;
-            } else {
-                console.warn('[QZTray] Pre-flight fetch failed (may be a false negative — LNA permission or browser policy). Proceeding to WebSocket attempt.', preflight.error);
-                this._preflightFailed = true;
-            }
-            this._notifyStatus();
-        }
-
         return this._attemptConnect(true, 15000);
-    }
-
-    /**
-     * Pre-flight reachability check for https://localhost:8181.
-     * Uses no-cors (opaque response is enough to confirm the TLS cert is
-     * trusted and something is listening). 3-second AbortController timeout.
-     * Returns { ok: boolean }.
-     */
-    async _preflightCheck() {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        try {
-            await fetch('https://localhost:8181', { mode: 'no-cors', signal: controller.signal });
-            clearTimeout(timeoutId);
-            return { ok: true };
-        } catch (e) {
-            clearTimeout(timeoutId);
-            return { ok: false, error: e?.message || 'fetch failed' };
-        }
     }
 
     /**
@@ -207,10 +171,8 @@ class QZTrayService {
                 // handle reconnects with better backoff than the library's tight
                 // retry loop. keepAlive: 60s keeps the socket warm.
                 connectPromise = qz.websocket.connect({
-                    host: ['localhost', 'localhost.qz.io'],
-                    usingSecure: true,
-                    retries: 0,
-                    keepAlive: 60,
+                    retries: 1,
+                    delay: 1,
                 });
             } catch (syncErr) {
                 if (settled) return;

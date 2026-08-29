@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
       const key = await crypto.subtle.importKey(
         "pkcs8",
         der,
-        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-512" },
         false,
         ["sign"]
       );
