@@ -295,6 +295,20 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
         if (!isMinimal) {
             const payLabel = (order.payment_method || 'N/A').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             add(`Payment: ${payLabel}\n`);
+
+            // Cash tendered / change. Printing these matters for cash trade: it
+            // lets the customer verify the change on the spot and gives staff a
+            // paper record when reconciling the till at end of day. Only shown
+            // when cash was actually handed over, so card-only receipts stay clean.
+            if (config.show_cash_details !== false && order.cash_tendered > 0) {
+                line('-');
+                const tendered = `\xA3${Number(order.cash_tendered).toFixed(2)}`;
+                add(`${rPad('Cash Tendered:', tendered, W)}\n`);
+                const change = `\xA3${Number(order.change_due || 0).toFixed(2)}`;
+                add(cmd.boldOn);
+                add(`${rPad('Change Due:', change, W)}\n`);
+                add(cmd.boldOff);
+            }
         }
     }
 
