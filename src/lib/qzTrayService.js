@@ -292,7 +292,7 @@ class QZTrayService {
                 // aren't stuck guessing (the browser doesn't expose the real
                 // reason to JS — see console for the actual network error).
                 this._lastError = /unable to establish connection/i.test(msg)
-                    ? `${msg}. If QZ Tray is running and its certificate is accepted, check this site's "Local Network Access" permission (site info icon → Site settings → Permissions → Local Network Access → Allow) — Chrome blocks local connections from this site until that's granted.`
+                    ? `${msg}. Check, in order: (1) QZ Tray is running on THIS computer - its icon should be in the system tray; (2) open https://localhost.qz.io:8181 in a new tab and accept any warning; (3) if you use an ad-blocker or security extension, try an Incognito window, as some block connections to local addresses.`
                     : msg;
                 this._connecting = false;
                 this._notifyStatus();
