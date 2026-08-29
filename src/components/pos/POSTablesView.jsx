@@ -233,6 +233,13 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark' }) {
             {/* ── Grid View ── */}
             {viewMode === 'grid' && (
                 <div className={`flex-1 ${t.panel} rounded-xl border p-4 overflow-y-auto`}>
+                    {tables.length === 0 && (
+                        <div className={`h-full flex flex-col items-center justify-center ${t.textMuted} text-center px-6 py-16`}>
+                            <Grid3x3 className="h-16 w-16 mb-3 opacity-20" />
+                            <p className="text-sm">No tables configured.</p>
+                            <p className="text-xs mt-1 opacity-70">Set them up in Restaurant Settings &rarr; POS Configuration &rarr; Table Layout.</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {tables.map(table => {
                             const orders = getTableOrders(table.id);

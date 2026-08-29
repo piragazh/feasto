@@ -480,7 +480,7 @@ export default function POSDashboard() {
                     />
                 )}
                 {activeTab === 'queue' && <POSOrderQueue restaurantId={restaurant.id} posTheme={posTheme} />}
-                {activeTab === 'tables' && <POSTablesView restaurantId={restaurant.id} />}
+                {activeTab === 'tables' && <POSTablesView restaurantId={restaurant.id} posTheme={posTheme} />}
                 {activeTab === 'waitlist' && <POSWaitlist posTheme={posTheme} />}
                 {activeTab === 'payment' && (
                     <POSPayment cart={cart} cartTotal={cartTotal} onPaymentComplete={clearCart}
