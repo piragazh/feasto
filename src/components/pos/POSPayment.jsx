@@ -640,7 +640,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             </div>
 
             {/* RIGHT: Payment */}
-            <div className={`${t.right} rounded-lg border p-4 flex flex-col overflow-y-auto`}>
+            <div className={`${t.right} rounded-lg border p-4 flex flex-col min-h-0 overflow-y-auto`}>
                 {/* Method buttons */}
                 {!activeMethod && (
                     <>
@@ -687,8 +687,12 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             Exact Cash (£{remaining.toFixed(2)})
                         </Button>
 
+                        {/* Pinned to the bottom of the panel: the right column is
+                            much taller than its content, and a primary action
+                            floating mid-screen left ~500px of dead space while
+                            putting the button out of natural thumb reach. */}
                         <Button onClick={() => setActiveMethod('cash')}
-                            className={`w-full h-12 text-base font-bold ${t.cashBtn}`}>
+                            className={`w-full h-16 text-lg font-bold mt-auto ${t.cashBtn}`}>
                             Other Amount &mdash; Enter on Keypad
                         </Button>
                         </>
@@ -700,7 +704,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                 setRawValue(String(Math.round(remaining * 100)));
                                 setActiveMethod('card');
                                 setShowCardConfirm(true);
-                            }} className={`w-full h-14 text-lg font-bold ${t.cardBtn}`}>
+                            }} className={`w-full h-16 text-xl font-bold mt-auto ${t.cardBtn}`}>
                                 Charge £{remaining.toFixed(2)} to Card
                             </Button>
                         )}
