@@ -7,7 +7,8 @@ import { LogOut, ShoppingCart, UtensilsCrossed, DollarSign, Monitor, Users, BarC
 import { publishCustomerDisplay } from '@/components/pos/CustomerDisplay';
 import { createPageUrl } from '@/utils';
 import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
-import { useOfflineSyncState } from '@/components/pos/POSOfflineSyncBanner';
+import { useOfflineSyncState, formatCachedAt } from '@/components/pos/POSOfflineSyncBanner';
+import { getLastCachedAt } from '@/components/pos/POSOfflineDB';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
@@ -169,6 +170,17 @@ export default function POSDashboard() {
         setActiveTab('order-entry');
     };
     const [discount, setDiscount] = useState(null);
+
+    // Menu-cache timestamp for the top bar readout. Re-read on a timer so the
+    // relative label ("12m ago") stays honest without a page refresh.
+    const [menuCachedAt, setMenuCachedAt] = useState(null);
+    useEffect(() => {
+        if (!restaurant?.id) return undefined;
+        const read = () => setMenuCachedAt(getLastCachedAt(restaurant.id, 'menu_items'));
+        read();
+        const timer = setInterval(read, 60000);
+        return () => clearInterval(timer);
+    }, [restaurant?.id]);
 
     // The restaurant record is loaded once on mount. Printer settings live on
     // that record (printer_config.centralized_printers), and they are edited in
@@ -341,6 +353,17 @@ export default function POSDashboard() {
                             <span className={`${t.text} text-sm font-mono font-semibold`}>
                                 {time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                             </span>
+                            {/* Menu-cache freshness. Lives here rather than as a banner above
+                                the menu grid, where it consumed full-width POS space on every
+                                order for what is only a passive status readout. */}
+                            {menuCachedAt && (
+                                <span
+                                    className={`${t.textSub} text-[11px] font-medium border-l ${t.border} pl-1.5 ml-0.5`}
+                                    title={`Menu last cached ${new Date(menuCachedAt).toLocaleString()}`}
+                                >
+                                    menu {formatCachedAt(menuCachedAt)}
+                                </span>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2">
