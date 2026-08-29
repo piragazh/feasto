@@ -148,7 +148,7 @@ class QZTrayService {
         // Pre-fetch the certificate BEFORE calling qz.websocket.connect().
         // This way: (1) the cert callback resolves instantly during the
         // handshake (no network latency), and (2) if the cert fetch fails
-        // we can show a specific error immediately instead of a 15s timeout.
+        // we can show a specific error immediately instead of a 20s timeout.
         try {
             console.log('[QZTray] Pre-fetching certificate before connect...');
             await this._getCertificate();
@@ -156,6 +156,32 @@ class QZTrayService {
         } catch (e) {
             console.error('[QZTray] Certificate pre-fetch failed:', e?.message || e);
             this._lastError = `Cannot fetch signing certificate: ${e?.message || e}. Make sure you are logged in and the backend is reachable.`;
+            this._connecting = false;
+            this._notifyStatus();
+            return false;
+        }
+
+        // Pre-flight: can the browser actually reach QZ Tray's HTTPS endpoint?
+        // On an https page the browser blocks wss://localhost:8181 unless (1) the
+        // self-signed TLS cert is trusted and (2) Chrome's Local Network Access
+        // permission is granted. This fetch detects the exact blocker so we can
+        // show a specific error instead of waiting 20s for the watchdog.
+        let timeoutId;
+        try {
+            console.log('[QZTray] Pre-flight: checking if browser can reach https://localhost:8181...');
+            const controller = new AbortController();
+            timeoutId = setTimeout(() => controller.abort(), 5000);
+            await fetch('https://localhost:8181', { signal: controller.signal, mode: 'no-cors' });
+            clearTimeout(timeoutId);
+            console.log('[QZTray] Pre-flight: QZ Tray HTTPS endpoint reachable');
+        } catch (preflightErr) {
+            if (timeoutId) clearTimeout(timeoutId);
+            const msg = preflightErr?.message || String(preflightErr);
+            console.warn('[QZTray] Pre-flight FAILED — browser cannot reach QZ Tray:', msg);
+            this._lastError = 'Your browser cannot reach QZ Tray. You need to do BOTH of these:\n\n' +
+                '1. ACCEPT THE CERTIFICATE: Open a new tab, go to https://localhost:8181, click "Advanced" → "Proceed to localhost (unsafe)".\n\n' +
+                '2. ALLOW LOCAL NETWORK ACCESS: Click the 🔒 (or tune) icon next to the address bar → Site settings → Permissions → "Local Network Access" → Allow.\n\n' +
+                'Then reload this page and click Reconnect.';
             this._connecting = false;
             this._notifyStatus();
             return false;
@@ -206,7 +232,8 @@ class QZTrayService {
                     // Only try port 8181 (the default QZ Tray secure port).
                     // The library otherwise scans 8181→8282→8383→8484, each taking
                     // ~5s to time out — 20s total wasted on ports nobody uses.
-                    ports: { secure: [8181], insecure: [] },
+                    // NOTE: property is `port` (singular), not `ports`.
+                    port: { secure: [8181], insecure: [] },
                 });
             } catch (syncErr) {
                 if (settled) return;
