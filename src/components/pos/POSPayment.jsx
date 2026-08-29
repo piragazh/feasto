@@ -637,7 +637,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
                         <p className={`${t.subtext} text-xs mb-2`}>Quick cash</p>
                         <div className="grid grid-cols-4 gap-2 mb-4">
-                            {QUICK_AMOUNTS.map(amt => (
+                            {quickCash.map(amt => (
                                 <Button key={amt} onClick={() => handleQuickCash(amt)} className={`h-10 text-base font-bold ${t.inactBtn}`}>
                                     £{amt}
                                 </Button>
@@ -668,7 +668,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     <div className="flex flex-col gap-2">
                         <p className="text-green-500 text-sm font-semibold">Cash payment — enter amount</p>
                         <div className="grid grid-cols-4 gap-1.5 mb-1">
-                            {QUICK_AMOUNTS.map(amt => (
+                            {quickCash.map(amt => (
                                 <Button key={amt} onClick={() => setRawValue(String(amt * 100))}
                                     className={`h-9 text-sm font-bold ${numericInput === amt ? 'bg-green-600 text-white border-green-600' : t.inactBtn}`}>
                                     £{amt}
