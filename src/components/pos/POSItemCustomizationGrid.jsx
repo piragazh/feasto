@@ -235,7 +235,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                     <Button onClick={onClose} className={`flex-1 h-14 font-bold text-base rounded-2xl ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'}`}>
                         Cancel
                     </Button>
-                    <Button onClick={handleConfirm} className="flex-[3] h-14 font-bold text-base rounded-2xl bg-green-600 hover:bg-green-500 text-white flex items-center justify-center gap-2">
+                    <Button onClick={handleConfirm} className="flex-[3] h-14 font-bold text-base rounded-2xl bg-orange-500 hover:bg-orange-400 text-white flex items-center justify-center gap-2">
                         <Check className="h-5 w-5" />
                         {isEditing ? 'Update Item' : 'Add to Cart'} — £{currentPrice.toFixed(2)}
                     </Button>

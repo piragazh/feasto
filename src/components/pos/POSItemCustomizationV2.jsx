@@ -342,7 +342,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                     )}
 
                     <Button onClick={handleNext}
-                        className={`flex-[3] h-14 font-bold text-base rounded-2xl flex items-center justify-center gap-2 ${isLastStep ? 'bg-green-600 hover:bg-green-500' : 'bg-orange-500 hover:bg-orange-400'} text-white`}
+                        className={`flex-[3] h-14 font-bold text-base rounded-2xl flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white`}
                     >
                         {isLastStep ? (
                             <>
