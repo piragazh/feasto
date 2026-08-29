@@ -461,6 +461,17 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                     isDark={isDark}
                 />
             )}
+
+            {pendingDelete && (
+                <POSConfirmDialog
+                    title="Remove staff member?"
+                    message={`${pendingDelete.full_name} will be permanently removed. This cannot be undone.`}
+                    confirmLabel="Remove"
+                    onConfirm={confirmDeleteStaff}
+                    onCancel={() => setPendingDelete(null)}
+                    isDark={isDark}
+                />
+            )}
         </div>
     );
 }
