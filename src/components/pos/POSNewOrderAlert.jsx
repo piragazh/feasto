@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Bell, X, ArrowRight } from 'lucide-react';
-import { playAlert } from '@/lib/posSound';
+import { playAlert, getSoundSettings } from '@/lib/posSound';
 
 /**
  * Alerts the cashier when a NEW online order arrives.
@@ -21,11 +21,39 @@ import { playAlert } from '@/lib/posSound';
 const POLL_MS = 10000;
 const REPEAT_TONE_MS = 8000;
 
+/**
+ * The restaurant's uploaded notification sound, if one is configured
+ * (SystemSettings.notification_sound_url - set via Notification Sound Manager).
+ * A real recorded tone cuts through kitchen noise far better than a synthesised
+ * beep, so it is preferred; the oscillator in posSound is the fallback for
+ * restaurants that never uploaded one, and for when the file fails to load.
+ */
+async function fetchAlertSoundUrl() {
+    try {
+        const rows = await base44.entities.SystemSettings.filter({ setting_key: 'notification_sound_url' });
+        return rows?.[0]?.setting_value || null;
+    } catch {
+        return null;
+    }
+}
+
 export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountChange }) {
     const [pendingOrders, setPendingOrders] = useState([]);
     const seenRef = useRef(null);          // null = first poll not done yet
     const dismissedRef = useRef(new Set()); // ids the cashier explicitly dismissed
     const toneTimerRef = useRef(null);
+    const audioRef = useRef(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        fetchAlertSoundUrl().then(url => {
+            if (cancelled || !url) return;
+            const a = new Audio(url);
+            a.preload = 'auto';
+            audioRef.current = a;
+        });
+        return () => { cancelled = true; };
+    }, []);
 
     const poll = useCallback(async () => {
         if (!restaurantId) return;
@@ -73,8 +101,23 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
             if (toneTimerRef.current) { clearInterval(toneTimerRef.current); toneTimerRef.current = null; }
             return undefined;
         }
-        playAlert();
-        toneTimerRef.current = setInterval(playAlert, REPEAT_TONE_MS);
+        const ring = () => {
+            const { enabled, volume } = getSoundSettings();
+            if (!enabled) return;
+            const a = audioRef.current;
+            if (a) {
+                a.currentTime = 0;
+                a.volume = Math.min(1, Math.max(0, volume));
+                // Autoplay can be refused until the page has had a user gesture;
+                // fall back to the oscillator, which is started from the same
+                // (already-interacted) page context.
+                a.play().catch(() => playAlert());
+            } else {
+                playAlert();
+            }
+        };
+        ring();
+        toneTimerRef.current = setInterval(ring, REPEAT_TONE_MS);
         return () => {
             if (toneTimerRef.current) { clearInterval(toneTimerRef.current); toneTimerRef.current = null; }
         };
