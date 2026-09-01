@@ -126,7 +126,10 @@ export default function TableOrder() {
             setOrderId(order.id);
             setStep('success');
         } catch (e) {
-            alert('Failed to place order. Please try again or ask staff.');
+            // Use the page's own error UI rather than a native alert(): on a
+            // customer's phone a browser dialog is jarring and, in some in-app
+            // browsers, suppressed entirely - leaving no feedback at all.
+            setErrorMsg('Could not place your order. Please try again or ask a member of staff.');
         } finally {
             setSubmitting(false);
         }
