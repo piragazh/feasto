@@ -38,6 +38,8 @@ export default function TableOrder() {
 
     const loadData = async () => {
         try {
+            // Also checked server-side in tableCreateOrder - this is only so a
+            // customer is told up front rather than after building a whole cart.
             const [restaurants, items, tables] = await Promise.all([
                 base44.entities.Restaurant.filter({ id: restaurantId }),
                 base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true }),
