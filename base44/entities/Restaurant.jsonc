@@ -446,6 +446,11 @@
       "type": "number",
       "default": 1
     },
+    "qr_ordering_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether customers can place orders by scanning a table QR code. Enforced server-side in tableCreateOrder; turning this off immediately stops new QR orders without needing to reprint or remove the codes."
+    },
     "pos_palette": {
       "type": "string",
       "description": "POS accent colour palette key (see src/lib/posThemes.js). Applies to every till at this restaurant.",
