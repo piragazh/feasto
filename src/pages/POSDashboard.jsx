@@ -22,6 +22,7 @@ import QZTrayStatusBadge from '@/components/pos/QZTrayStatusBadge.jsx';
 import POSPrinterSettings from '@/components/pos/POSPrinterSettings.jsx';
 import POSSoundSettings from '@/components/pos/POSSoundSettings.jsx';
 import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
+import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
 import { toast } from 'sonner';
 
@@ -325,6 +326,12 @@ export default function POSDashboard() {
             className={`h-full min-h-0 ${t.bg} flex flex-col overflow-hidden`}
             style={{ fontFamily: "'Inter', sans-serif", ...paletteStyle(posPalette) }}
         >
+            {/* Mounted at the POS root so an incoming order is caught whichever
+                tab the cashier is on, not only when Queue is already open. */}
+            <POSNewOrderAlert
+                restaurantId={restaurant.id}
+                onGoToQueue={() => setActiveTab('queue')}
+            />
             {/* ── Header ── */}
             <header className={`${t.header} border-b ${t.border} sticky top-0 z-20 shadow-sm`}>
                 <div className="px-5 py-0 flex items-center justify-between h-16">
