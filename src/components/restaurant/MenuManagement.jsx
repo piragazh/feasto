@@ -548,6 +548,7 @@ CRITICAL REQUIREMENTS:
 
     const resetForm = () => {
         setFormData({
+            menu_item_no: '',
             name: '',
             description: '',
             price: '',
