@@ -97,6 +97,7 @@ export default function TableOrder() {
         if (cart.length === 0) return;
         setSubmitting(true);
         try {
+            setErrorMsg('');
             const orderItems = cart.map(c => ({
                 menu_item_id: c.id,
                 name: c.name,
@@ -235,6 +236,14 @@ export default function TableOrder() {
 
             {/* Footer */}
             <div className="bg-white border-t p-4 safe-area-bottom">
+                {/* Inline failure message. Switching to the full error screen
+                    would discard the customer's cart, so problems are surfaced
+                    here where they can simply retry. */}
+                {errorMsg && (
+                    <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                        {errorMsg}
+                    </div>
+                )}
                 <div className="flex justify-between mb-3">
                     <span className="text-gray-600">Total</span>
                     <span className="text-xl font-bold text-gray-900">£{cartTotal.toFixed(2)}</span>
