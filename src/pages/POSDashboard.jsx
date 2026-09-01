@@ -203,6 +203,8 @@ export default function POSDashboard() {
     // Menu-cache timestamp for the top bar readout. Re-read on a timer so the
     // relative label ("12m ago") stays honest without a page refresh.
     const [menuCachedAt, setMenuCachedAt] = useState(null);
+    // Waiting online orders - drives the Queue tab badge.
+    const [pendingOnlineCount, setPendingOnlineCount] = useState(0);
     useEffect(() => {
         if (!restaurant?.id) return undefined;
         const read = () => setMenuCachedAt(getLastCachedAt(restaurant.id, 'menu_items'));
@@ -331,6 +333,7 @@ export default function POSDashboard() {
             <POSNewOrderAlert
                 restaurantId={restaurant.id}
                 onGoToQueue={() => setActiveTab('queue')}
+                onCountChange={setPendingOnlineCount}
             />
             {/* ── Header ── */}
             <header className={`${t.header} border-b ${t.border} sticky top-0 z-20 shadow-sm`}>
@@ -486,6 +489,14 @@ export default function POSDashboard() {
                                 }`}>
                                 <Icon className="h-4 w-4" />
                                 {tab.label}
+                                {/* Persistent count on Queue: the banner can be
+                                    dismissed, but waiting orders must stay visible
+                                    until someone actually accepts them. */}
+                                {tab.id === 'queue' && pendingOnlineCount > 0 && (
+                                    <span className="ml-0.5 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center animate-pulse">
+                                        {pendingOnlineCount}
+                                    </span>
+                                )}
                             </button>
                         );
                     })}

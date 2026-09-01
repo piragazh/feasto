@@ -21,7 +21,7 @@ import { playAlert } from '@/lib/posSound';
 const POLL_MS = 10000;
 const REPEAT_TONE_MS = 8000;
 
-export default function POSNewOrderAlert({ restaurantId, onGoToQueue }) {
+export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountChange }) {
     const [pendingOrders, setPendingOrders] = useState([]);
     const seenRef = useRef(null);          // null = first poll not done yet
     const dismissedRef = useRef(new Set()); // ids the cashier explicitly dismissed
@@ -53,6 +53,9 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue }) {
             }
             // Anything still pending and not dismissed keeps the alert up.
             setPendingOrders(inbound.filter(o => !dismissedRef.current.has(o.id)));
+            // The badge reflects ALL waiting orders, including dismissed ones -
+            // dismissing silences the noise, it does not mean the order is dealt with.
+            onCountChange?.(inbound.length);
         } catch {
             // Polling failure is non-fatal - offline handling lives elsewhere.
         }
