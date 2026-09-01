@@ -104,26 +104,24 @@ export default function TableOrder() {
                 quantity: c.qty,
             }));
 
-            const order = await base44.entities.Order.create({
+            // SECURITY: No direct entity write. This page is public and
+            // unauthenticated, so client-supplied prices cannot be trusted -
+            // tableCreateOrder recomputes every price from the live menu,
+            // verifies the table belongs to this restaurant, and refuses to
+            // mark anything as paid. See base44/functions/tableCreateOrder.
+            const response = await base44.functions.invoke('tableCreateOrder', {
                 restaurant_id: restaurantId,
-                restaurant_name: restaurant.name,
-                items: orderItems,
-                subtotal: cartTotal,
-                total: cartTotal,
-                delivery_fee: 0,
-                order_type: 'dine_in',
                 table_id: tableId,
-                table_number: table.table_number,
-                payment_method: 'cash',
-                status: 'pending',
+                items: orderItems,
                 notes,
             });
-
-            // Mark table as occupied
-            await base44.entities.RestaurantTable.update(tableId, {
-                status: 'occupied',
-                current_order_id: order.id,
-            });
+            const result = response?.data ?? response;
+            if (!result?.success) {
+                setErrorMsg(result?.error || 'Could not place your order. Please ask a member of staff.');
+                setSubmitting(false);
+                return;
+            }
+            const order = result.order;
 
             setOrderId(order.id);
             setStep('success');
