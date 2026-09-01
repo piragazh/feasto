@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Bell, X, ArrowRight } from 'lucide-react';
-import { playAlert, getSoundSettings } from '@/lib/posSound';
+import { playAlert, getSoundSettings, primeAudioOnFirstGesture } from '@/lib/posSound';
 
 /**
  * Alerts the cashier when a NEW online order arrives.
@@ -51,8 +51,12 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
             const a = new Audio(url);
             a.preload = 'auto';
             audioRef.current = a;
+            // Unlock playback on the first tap so a later timer-driven alert
+            // isn't blocked by the browser's autoplay policy.
+            primeAudioOnFirstGesture(a);
         });
-        return () => { cancelled = true; };
+        const stopPriming = primeAudioOnFirstGesture(null);
+        return () => { cancelled = true; stopPriming(); };
     }, []);
 
     const poll = useCallback(async () => {

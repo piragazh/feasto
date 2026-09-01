@@ -161,3 +161,50 @@ export function playPreview() {
         // ignore
     }
 }
+
+/**
+ * Prime audio playback on the first user gesture.
+ *
+ * Browsers refuse to start audio until the page has been interacted with. That
+ * matters here because POS alerts fire on a TIMER, not on a click - so without
+ * priming, the very first "new online order" alert of a shift is silently
+ * blocked, which is exactly the one you cannot afford to miss.
+ *
+ * Called once at POS start-up; it resumes the AudioContext and plays a silent
+ * buffer through it, plus optionally primes an <audio> element, so later
+ * timer-driven playback is permitted. Self-removes after the first gesture.
+ */
+export function primeAudioOnFirstGesture(audioEl) {
+    if (typeof window === 'undefined') return () => {};
+    let done = false;
+    const unlock = () => {
+        if (done) return;
+        done = true;
+        try {
+            const audio = getCtx();
+            if (audio) {
+                const buf = audio.createBuffer(1, 1, 22050);
+                const src = audio.createBufferSource();
+                src.buffer = buf;
+                src.connect(audio.destination);
+                src.start(0);
+            }
+        } catch { /* ignore */ }
+        try {
+            if (audioEl) {
+                const prevVolume = audioEl.volume;
+                audioEl.volume = 0;
+                audioEl.play().then(() => {
+                    audioEl.pause();
+                    audioEl.currentTime = 0;
+                    audioEl.volume = prevVolume;
+                }).catch(() => { audioEl.volume = prevVolume; });
+            }
+        } catch { /* ignore */ }
+        remove();
+    };
+    const events = ['pointerdown', 'keydown', 'touchstart'];
+    const remove = () => events.forEach(e => window.removeEventListener(e, unlock));
+    events.forEach(e => window.addEventListener(e, unlock, { once: false, passive: true }));
+    return remove;
+}
