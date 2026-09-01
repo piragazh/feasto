@@ -50,7 +50,11 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                             value={label}
                             onChange={(e) => setLabel(e.target.value)}
                             placeholder="e.g., Table 5, John Doe"
-                            className={`${isDark ? 'bg-[#0f1117] border-white/[0.08]' : 'bg-gray-50 border-gray-200'} text-sm`}
+                            // Same contrast bug as QuickItemLookupDialog: a dark background
+                            // with no text colour leaves typed text unreadable.
+                            className={`${isDark
+                                ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder:text-gray-500'
+                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400'} text-sm`}
                         />
                     </div>
 
