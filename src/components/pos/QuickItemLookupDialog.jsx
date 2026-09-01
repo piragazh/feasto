@@ -86,7 +86,13 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                                         }}
                                         onKeyDown={handleKeyDown}
                                         placeholder="e.g., 43, 101, A5"
-                                        className={`${isDark ? 'bg-[#0f1117] border-white/[0.08]' : 'bg-gray-50 border-gray-200'} text-lg font-bold`}
+                                        // The dark variant set a background but no text colour, so the
+                                        // typed number inherited the default dark text and was effectively
+                                        // invisible on the dark field. Set both explicitly, including the
+                                        // placeholder, which had the same problem.
+                                        className={`${isDark
+                                            ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder:text-gray-500'
+                                            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400'} text-lg font-bold`}
                                     />
                                     <Button
                                         onClick={handleSearch}
