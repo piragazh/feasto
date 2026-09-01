@@ -51,6 +51,11 @@ export default function TableOrder() {
 
             if (!r) { setErrorMsg('Restaurant not found.'); setStep('error'); return; }
             if (!t) { setErrorMsg('Table not found. Please ask staff for assistance.'); setStep('error'); return; }
+            if (r.qr_ordering_enabled === false) {
+                setErrorMsg('Table ordering isn\u2019t available right now. Please order with a member of staff.');
+                setStep('error');
+                return;
+            }
 
             setRestaurant(r);
             setTable(t);
