@@ -299,6 +299,12 @@ Deno.serve(async (req) => {
 
         const order = await base44.asServiceRole.entities.Order.create({
             ...safeOrderData,
+            // Stamp the channel server-side. The Order entity defaults
+            // order_source to 'online', and neither the POS client nor this
+            // function was setting it - so every till sale was recorded as an
+            // online order. That corrupts channel reporting and would make the
+            // POS raise a "new online order" alert for its own sales.
+            order_source: 'pos',
             items: verifiedItems,
             subtotal: serverSubtotal,
             discount: totalDiscount,
