@@ -47,6 +47,11 @@ export default function MenuManagement({ restaurantId }) {
     const [copiedCustomizations, setCopiedCustomizations] = useState(null);
     const [aiImagePrompt, setAiImagePrompt] = useState('');
     const [formData, setFormData] = useState({
+        // Menu board number for POS quick lookup (the "Item #" button on the
+        // till). The field existed on the MenuItem entity and the lookup dialog
+        // searched it, but this - the menu editor actually in use - had no input
+        // for it, so it was always empty and lookup could never match anything.
+        menu_item_no: '',
         name: '',
         description: '',
         price: '',
@@ -733,7 +738,18 @@ CRITICAL REQUIREMENTS:
                         </DialogHeader>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2">
+                                <div>
+                                    <Label>Item Number</Label>
+                                    <Input
+                                        value={formData.menu_item_no}
+                                        onChange={(e) => setFormData({ ...formData, menu_item_no: e.target.value })}
+                                        placeholder="e.g. 43, 101, A5"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Your menu board number. Staff can type it into <strong>Item #</strong> on the POS to add this item instantly.
+                                    </p>
+                                </div>
+                                <div>
                                     <Label>Item Name *</Label>
                                     <Input
                                         value={formData.name}
