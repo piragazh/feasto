@@ -141,6 +141,29 @@ export default function KitchenDisplaySystem({ restaurant }) {
             // Legacy orders use status field
             await base44.entities.Order.update(orderId, { status: newStatus });
         }
+
+        // Free the table when a dine-in order finishes here. Completing an order
+        // from the KDS otherwise leaves the table 'occupied' with a stale
+        // current_order_id, so the floor plan shows a full restaurant. The table
+        // goes to 'needs_cleaning' (matching POSTablesView) rather than straight
+        // to available, so staff still confirm it has been reset.
+        const TERMINAL = ['collected', 'delivered'];
+        if (order.table_id && order.order_type === 'dine_in' && TERMINAL.includes(newStatus)) {
+            try {
+                const tables = await base44.entities.RestaurantTable.filter({ id: order.table_id });
+                const table = tables?.[0];
+                // Only release if this order still owns the table - another order
+                // may have been started on it since.
+                if (table && (!table.current_order_id || table.current_order_id === order.id)) {
+                    await base44.entities.RestaurantTable.update(table.id, {
+                        status: 'needs_cleaning',
+                        current_order_id: null,
+                    });
+                }
+            } catch (e) {
+                console.warn('[KDS] Could not release table:', e?.message || e);
+            }
+        }
         // Real-time subscription handles the UI update
     };
 
