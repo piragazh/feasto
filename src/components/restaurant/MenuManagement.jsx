@@ -578,6 +578,7 @@ CRITICAL REQUIREMENTS:
             meal_customizations: opt.meal_customizations || []
         }));
         setFormData({
+            menu_item_no: item.menu_item_no || '',
             name: item.name,
             description: item.description || '',
             price: item.price.toString(),
