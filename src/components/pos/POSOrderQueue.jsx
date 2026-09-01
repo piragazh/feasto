@@ -47,6 +47,42 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
         out_for_delivery: orders.filter(o => o.status === 'out_for_delivery'),
     };
 
+    /**
+     * Free the table when a DINE-IN order reaches a terminal state.
+     *
+     * Without this a table stays 'occupied' with a stale current_order_id
+     * forever if staff complete the order from the Queue or KDS rather than
+     * through the Tables payment screen - which is the normal flow for a table
+     * that paid at the counter. The floor plan then shows a full restaurant
+     * with no way to seat anyone.
+     *
+     * Mirrors POSTablesView: the table goes to 'needs_cleaning', not straight
+     * to 'available', so staff still confirm it has been reset.
+     */
+    const releaseTableIfFinished = async (order, newStatus) => {
+        const TERMINAL = ['collected', 'delivered', 'cancelled'];
+        if (!order?.table_id || order.order_type !== 'dine_in') return;
+        if (!TERMINAL.includes(newStatus)) return;
+        try {
+            const tables = await base44.entities.RestaurantTable.filter({ id: order.table_id });
+            const table = tables?.[0];
+            if (!table) return;
+            // Only release if this order is the one holding the table - another
+            // order may have been started on it in the meantime.
+            const patch = { status: 'needs_cleaning' };
+            if (!table.current_order_id || table.current_order_id === order.id) {
+                patch.current_order_id = null;
+            } else {
+                return; // a different live order owns this table; leave it alone
+            }
+            await base44.entities.RestaurantTable.update(table.id, patch);
+        } catch (e) {
+            // Non-blocking: the order status change is what matters, and staff
+            // can always reset a table manually from the floor plan.
+            console.warn('[POS-QUEUE] Could not release table:', e?.message || e);
+        }
+    };
+
     const updateOrderStatus = async (orderId, newStatus) => {
         try {
             // SECURITY: Route card order cancellations through rejectOrderWithRefund
@@ -68,6 +104,7 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
             } else {
                 // Non-card or non-cancelled: use regular status update
                 await base44.entities.Order.update(orderId, { status: newStatus });
+                await releaseTableIfFinished(order, newStatus);
                 toast.success('Order status updated');
             }
             refetch();
