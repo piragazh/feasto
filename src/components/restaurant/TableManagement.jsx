@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Plus, Trash2, Save, Grid3x3, LayoutGrid, Info, ChevronRight, QrCode } from 'lucide-react';
 import { Dialog as QRDialog, DialogContent as QRDialogContent, DialogHeader as QRDialogHeader, DialogTitle as QRDialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
 
 const GRID_SIZE = 20; // snap to 20px grid
 const TABLE_W = 90;
@@ -165,6 +166,31 @@ export default function TableManagement({ restaurantId }) {
                         <Plus className="h-4 w-4 mr-1.5" /> Add Table
                     </Button>
                 </div>
+            </div>
+
+            {/* QR ordering switch */}
+            <div className={`flex items-center justify-between gap-4 p-3 rounded-xl border ${
+                qrEnabled ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+            }`}>
+                <div className="flex items-start gap-2.5 min-w-0">
+                    <QrCode className={`h-5 w-5 mt-0.5 flex-shrink-0 ${qrEnabled ? 'text-green-600' : 'text-gray-400'}`} />
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">
+                            QR Table Ordering {qrEnabled ? 'Enabled' : 'Disabled'}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                            {qrEnabled
+                                ? 'Customers can scan a table QR code and order from their phone. Orders arrive in the POS queue for staff to accept.'
+                                : 'Scanning a table QR code will not place orders. Printed codes can stay on the tables — they simply stop working until you switch this back on.'}
+                        </p>
+                    </div>
+                </div>
+                <Switch
+                    checked={qrEnabled}
+                    disabled={qrToggleMutation.isPending}
+                    onCheckedChange={(v) => qrToggleMutation.mutate(v)}
+                    aria-label="Toggle QR table ordering"
+                />
             </div>
 
             {/* Legend */}
