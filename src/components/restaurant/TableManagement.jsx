@@ -39,6 +39,27 @@ export default function TableManagement({ restaurantId }) {
         queryFn: () => base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId }),
     });
 
+    // QR ordering kill switch. Lives here because this is where QR codes are
+    // generated and printed, so it's the screen an operator reaches for when
+    // they want to stop table ordering.
+    const { data: restaurant } = useQuery({
+        queryKey: ['restaurant', restaurantId],
+        queryFn: async () => (await base44.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null,
+        enabled: !!restaurantId,
+    });
+    const qrEnabled = restaurant?.qr_ordering_enabled !== false; // default on
+
+    const qrToggleMutation = useMutation({
+        mutationFn: (enabled) => base44.entities.Restaurant.update(restaurantId, { qr_ordering_enabled: enabled }),
+        onSuccess: (_d, enabled) => {
+            queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
+            toast.success(enabled
+                ? 'QR table ordering is now ON'
+                : 'QR table ordering is now OFF — existing codes will stop accepting orders');
+        },
+        onError: (e) => toast.error('Could not update QR ordering: ' + (e?.message || 'unknown error')),
+    });
+
     const updateMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.RestaurantTable.update(id, data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['restaurant-tables', restaurantId] }),
