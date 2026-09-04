@@ -147,13 +147,25 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         enabled: !!restaurantId,
     });
 
+    // Dine-in order polling.
+    //
+    // This is only meaningful while the operator is actually working in dine-in
+    // mode - a takeaway-only till was polling every 3 seconds (1,200 requests an
+    // hour) for data it never displayed. Gating on order type removes that load
+    // entirely for takeaway and phone tills.
+    //
+    // 3s is kept for dine-in because table state must feel live when several
+    // staff are working the same floor; 5s is used for the table view itself.
+    const dineInActive = orderType === 'dine_in';
     const { data: tableOrders = [], refetch: refetchTableOrders } = useQuery({
         queryKey: ['pos-table-orders', restaurantId],
         queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId, order_type: 'dine_in', status: { $in: ['preparing', 'confirmed', 'pending'] } }),
-        enabled: !!restaurantId,
-        refetchInterval: 3000,
-        staleTime: 0,
-        gcTime: 0,
+        enabled: !!restaurantId && dineInActive,
+        refetchInterval: dineInActive ? 3000 : false,
+        // Don't burn a request re-fetching data we just received when the
+        // component remounts (e.g. switching tabs and back).
+        staleTime: 2000,
+        gcTime: 30000,
     });
 
     // ── Menu helpers ───────────────────────────────────────────────────────────
