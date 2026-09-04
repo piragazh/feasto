@@ -36,6 +36,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         textMuted:      isDark ? 'text-gray-400'                                                              : 'text-gray-500',
         textSub:        isDark ? 'text-gray-500'                                                              : 'text-gray-400',
         catBtn:         isDark ? 'text-gray-400 hover:text-white hover:bg-white/5'                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
+        catCount:       isDark ? 'bg-white/[0.07] text-gray-400'                                              : 'bg-gray-100 text-gray-500',
         itemCard:       isDark ? 'bg-[#1a1d27] border-transparent hover:border-orange-500/60 hover:shadow-orange-500/10' : 'bg-white border-gray-200 hover:border-orange-400 hover:shadow-orange-100',
         itemImg:        isDark ? 'bg-[#0f1117]'                                                               : 'bg-gray-50',
         itemName:       isDark ? 'text-white group-hover:text-orange-300'                                     : 'text-gray-800 group-hover:text-orange-500',
@@ -184,6 +185,18 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     };
 
     const categories = getOrderedCategories();
+
+    // Item count per category for the rail. Memoised so it isn't recomputed on
+    // every keystroke in the search box.
+    const categoryCounts = useMemo(() => {
+        const counts = { __all: 0 };
+        for (const i of menuItems) {
+            if (i.is_available === false) continue;
+            counts.__all += 1;
+            if (i.category) counts[i.category] = (counts[i.category] || 0) + 1;
+        }
+        return counts;
+    }, [menuItems]);
 
     const filteredItems = (() => {
         const base = selectedCategory ? getOrderedItems(selectedCategory) : menuItems.filter(i => i.is_available !== false);
@@ -541,7 +554,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     <>
                         {layoutCols.showCat && (
                             <div className={`${layoutCols.cat} overflow-hidden`}>
-                                <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} />
+                                <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} itemCounts={categoryCounts} />
                             </div>
                         )}
                         <div className={`${layoutCols.menu} overflow-hidden`}>
