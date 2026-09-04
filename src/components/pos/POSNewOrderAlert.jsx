@@ -96,7 +96,19 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
     useEffect(() => {
         poll();
         const id = setInterval(poll, POLL_MS);
-        return () => clearInterval(id);
+        // Poll immediately when the terminal wakes or is brought back to the
+        // foreground. Timers are throttled or suspended while a tab is hidden or
+        // a device is asleep, so without this the first thing a returning
+        // cashier sees is up to POLL_MS of staleness - on the one screen where
+        // "an order arrived while you were away" is the entire point.
+        const onVisible = () => { if (!document.hidden) poll(); };
+        document.addEventListener('visibilitychange', onVisible);
+        window.addEventListener('focus', onVisible);
+        return () => {
+            clearInterval(id);
+            document.removeEventListener('visibilitychange', onVisible);
+            window.removeEventListener('focus', onVisible);
+        };
     }, [poll]);
 
     // Repeating tone while at least one order is waiting.
