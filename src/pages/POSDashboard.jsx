@@ -26,14 +26,39 @@ import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
 import { toast } from 'sonner';
 
-function useTime() {
+/**
+ * Isolated clock.
+ *
+ * This used to be a useTime() hook called inside POSDashboard, which meant a
+ * setState every SECOND re-rendered the entire POS tree - menu grid, cart,
+ * whichever tab was open - purely to repaint HH:MM. On a till that runs all day
+ * that is 86,400 full-tree renders per shift for a display that changes 1,440
+ * times.
+ *
+ * Now: its own memoised component, so React re-renders only this <span>, and it
+ * ticks once a MINUTE aligned to the next minute boundary rather than every
+ * second, because the display has no seconds.
+ */
+const POSClock = React.memo(function POSClock({ className }) {
     const [time, setTime] = useState(new Date());
     useEffect(() => {
-        const t = setInterval(() => setTime(new Date()), 1000);
-        return () => clearInterval(t);
+        let timeoutId;
+        let intervalId;
+        // Align the first tick to the next minute so the clock changes exactly
+        // when the minute does, instead of drifting by up to 59s.
+        const msToNextMinute = 60000 - (Date.now() % 60000);
+        timeoutId = setTimeout(() => {
+            setTime(new Date());
+            intervalId = setInterval(() => setTime(new Date()), 60000);
+        }, msToNextMinute);
+        return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
     }, []);
-    return time;
-}
+    return (
+        <span className={className}>
+            {time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+    );
+});
 
 export default function POSDashboard() {
     const [user, setUser] = useState(null);
@@ -54,7 +79,6 @@ export default function POSDashboard() {
     const [activeStaffMember, setActiveStaffMember] = useState(null);
     const [staffList, setStaffList] = useState([]);
     const [showStaffLogin, setShowStaffLogin] = useState(false);
-    const time = useTime();
 
     const toggleTheme = () => {
         const next = posTheme === 'dark' ? 'light' : 'dark';
@@ -391,9 +415,7 @@ export default function POSDashboard() {
                         )}
                         <div className={`flex items-center gap-1.5 ${t.pill} border ${t.border} rounded-xl px-3 py-2`}>
                             <Clock className={`h-3.5 w-3.5 ${t.textSub}`} />
-                            <span className={`${t.text} text-sm font-mono font-semibold`}>
-                                {time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                            <POSClock className={`${t.text} text-sm font-mono font-semibold`} />
                             {/* Menu-cache freshness. Lives here rather than as a banner above
                                 the menu grid, where it consumed full-width POS space on every
                                 order for what is only a passive status readout. */}
