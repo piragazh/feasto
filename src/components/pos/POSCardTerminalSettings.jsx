@@ -96,8 +96,8 @@ export default function POSCardTerminalSettings({ restaurantId }) {
                             <p className="text-xs text-green-600 flex items-center gap-2">
                                 {saved.provider} · {saved.connection_type || 'WiFi'} ·{' '}
                                 {saved.test_mode
-                                    ? <Badge variant="outline" className="text-yellow-600 border-yellow-400 text-[10px] py-0">Test Mode</Badge>
-                                    : <Badge variant="outline" className="text-green-600 border-green-400 text-[10px] py-0">Live</Badge>
+                                    ? <Badge variant="outline" className="text-yellow-600 border-yellow-400 text-[11px] py-0">Test Mode</Badge>
+                                    : <Badge variant="outline" className="text-green-600 border-green-400 text-[11px] py-0">Live</Badge>
                                 }
                             </p>
                         </div>

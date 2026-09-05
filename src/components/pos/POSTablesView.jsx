@@ -210,19 +210,19 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark' }) {
 
                                 <p className={`${t.text} font-bold text-sm text-center leading-tight px-1`}>{table.table_number}</p>
                                 {table.assigned_server && (
-                                    <div className="flex items-center gap-0.5 text-indigo-300 text-[10px] mt-0.5">
+                                    <div className="flex items-center gap-0.5 text-indigo-300 text-[11px] mt-0.5">
                                         <Users className="h-2.5 w-2.5" /><span className="truncate max-w-[70px]">{table.assigned_server}</span>
                                     </div>
                                 )}
                                 {hasOrders ? (
                                     <>
-                                        <p className="text-orange-300 text-[10px] mt-0.5">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                        <p className="text-orange-300 text-[11px] mt-0.5">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
                                         <p className={`${t.text} font-bold text-sm`}>£{total.toFixed(2)}</p>
                                     </>
                                 ) : (
-                                    <p className={`${t.textSub} text-[10px] capitalize mt-0.5`}>{table.status?.replace('_', ' ')}</p>
+                                    <p className={`${t.textSub} text-[11px] capitalize mt-0.5`}>{table.status?.replace('_', ' ')}</p>
                                 )}
-                                <p className={`${t.textMuted} text-[9px]`}>{table.capacity} seats</p>
+                                <p className={`${t.textMuted} text-[11px]`}>{table.capacity} seats</p>
                             </div>
                         );
                     })}
@@ -263,17 +263,17 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark' }) {
                                     <div className="flex-1 flex flex-col items-center justify-center">
                                         <p className={`${t.text} font-bold text-sm text-center leading-tight`}>{table.table_number}</p>
                                         {table.assigned_server && (
-                                            <div className="flex items-center gap-0.5 text-indigo-400 text-[10px]">
+                                            <div className="flex items-center gap-0.5 text-indigo-400 text-[11px]">
                                                 <Users className="h-2.5 w-2.5" /><span className="truncate max-w-[60px]">{table.assigned_server}</span>
                                             </div>
                                         )}
                                         {hasOrders ? (
                                             <>
-                                                <p className="text-orange-400 text-[10px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                                <p className="text-orange-400 text-[11px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
                                                 <p className={`${t.text} font-bold text-sm`}>£{total.toFixed(2)}</p>
                                             </>
                                         ) : (
-                                            <p className={`${t.textSub} text-[10px] capitalize`}>{table.status?.replace('_', ' ')}</p>
+                                            <p className={`${t.textSub} text-[11px] capitalize`}>{table.status?.replace('_', ' ')}</p>
                                         )}
                                     </div>
                                 </div>

@@ -119,7 +119,7 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold text-gray-800">{palette.label}</p>
-                                        <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{palette.description}</p>
+                                        <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{palette.description}</p>
                                     </div>
                                 </button>
                             );

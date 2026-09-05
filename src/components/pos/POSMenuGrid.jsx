@@ -81,7 +81,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                 {/* Flags an item that opens the options dialog, so staff
                                     know a tap won't add straight to the cart. */}
                                 {hasOptions && (
-                                    <span className="absolute top-1.5 right-1.5 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                                    <span className="absolute top-1.5 right-1.5 bg-black/60 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm">
                                         OPTIONS
                                     </span>
                                 )}

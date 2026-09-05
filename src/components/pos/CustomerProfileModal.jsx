@@ -180,7 +180,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                             <MapPin className={`h-3.5 w-3.5 ${addr.is_default ? 'text-orange-500' : textSub}`} />
                                             <span className={`text-xs font-semibold ${addr.is_default ? 'text-orange-500' : text}`}>{addr.label}</span>
                                             {addr.is_default && (
-                                                <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-semibold">Default</span>
+                                                <span className="text-[11px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-semibold">Default</span>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-1">
@@ -234,7 +234,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <span className={`text-xs font-bold ${text}`}>#{order.order_number || order.id.slice(-6).toUpperCase()}</span>
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize ${
+                                                <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold capitalize ${
                                                     order.status === 'delivered' || order.status === 'collected' ? 'bg-green-500/10 text-green-500' :
                                                     order.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
                                                     'bg-orange-500/10 text-orange-500'
@@ -248,7 +248,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                             ))}
                                             {order.items?.length > 3 && <span> +{order.items.length - 3} more</span>}
                                         </div>
-                                        <div className={`flex items-center gap-2 text-[10px] ${textSub}`}>
+                                        <div className={`flex items-center gap-2 text-[11px] ${textSub}`}>
                                             <Clock className="h-3 w-3" />
                                             {format(new Date(order.created_date), 'd MMM yyyy, HH:mm')}
                                             {order.order_type && <span className="capitalize">· {order.order_type.replace(/_/g, ' ')}</span>}

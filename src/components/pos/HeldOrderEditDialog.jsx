@@ -68,7 +68,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                                 <div key={idx} className={`flex items-center justify-between p-2 rounded-lg ${isDark ? 'bg-[#0f1117] border-white/[0.06] border' : 'bg-gray-50 border border-gray-200'}`}>
                                     <div className="flex-1 min-w-0">
                                         <p className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>{item.name}</p>
-                                        <p className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                                        <p className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
                                             £{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}
                                         </p>
                                     </div>

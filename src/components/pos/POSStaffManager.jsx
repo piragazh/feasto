@@ -31,7 +31,7 @@ const DATE_PRESETS = [
 function RoleBadge({ role }) {
     const r = ROLES.find(x => x.value === role) || { label: role, color: 'bg-gray-500/10 text-gray-400 border-gray-500/30' };
     return (
-        <span className={`text-[10px] font-semibold border px-2 py-0.5 rounded-full ${r.color}`}>{r.label}</span>
+        <span className={`text-[11px] font-semibold border px-2 py-0.5 rounded-full ${r.color}`}>{r.label}</span>
     );
 }
 
@@ -262,7 +262,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                     <div className="flex gap-1 flex-wrap">
                         {['all', ...ROLES.map(r => r.value)].map(r => (
                             <button key={r} onClick={() => setRoleFilter(r)}
-                                className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all ${roleFilter === r ? t.pillActive : t.pill}`}>
+                                className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${roleFilter === r ? t.pillActive : t.pill}`}>
                                 {r === 'all' ? 'All' : ROLES.find(x => x.value === r)?.label || r}
                             </button>
                         ))}
@@ -287,22 +287,22 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                 } ${!s.is_active ? 'opacity-50' : ''}`}>
                                 <div className="flex items-center justify-between mb-1">
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${
+                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 ${
                                             s.is_active ? 'bg-orange-500' : 'bg-gray-500'
                                         }`}>
                                             {s.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                         </div>
                                         <div className="min-w-0">
                                             <p className={`${t.text} text-xs font-semibold truncate`}>{s.full_name}</p>
-                                            <p className={`${t.textSub} text-[10px] truncate`}>{s.email}</p>
+                                            <p className={`${t.textSub} text-[11px] truncate`}>{s.email}</p>
                                         </div>
                                     </div>
                                     <RoleBadge role={s.role} />
                                 </div>
                                 <div className="flex items-center gap-3 mt-1.5 ml-9">
-                                    <span className={`${t.textSub} text-[10px]`}>{stat?.orderCount || 0} orders</span>
-                                    <span className="text-green-400 text-[10px] font-semibold">£{(stat?.revenue || 0).toFixed(2)}</span>
-                                    {!s.is_active && <span className="text-[10px] text-red-400">Inactive</span>}
+                                    <span className={`${t.textSub} text-[11px]`}>{stat?.orderCount || 0} orders</span>
+                                    <span className="text-green-400 text-[11px] font-semibold">£{(stat?.revenue || 0).toFixed(2)}</span>
+                                    {!s.is_active && <span className="text-[11px] text-red-400">Inactive</span>}
                                 </div>
                             </button>
                         );
@@ -338,7 +338,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                         <p className={`${t.textSub} text-sm`}>{selectedStaff.email}</p>
                                         <div className="flex items-center gap-2 mt-1">
                                             <RoleBadge role={selectedStaff.role} />
-                                            <span className={`text-[10px] font-semibold ${selectedStaff.is_active ? 'text-green-400' : 'text-red-400'}`}>
+                                            <span className={`text-[11px] font-semibold ${selectedStaff.is_active ? 'text-green-400' : 'text-red-400'}`}>
                                                 {selectedStaff.is_active ? '● Active' : '● Inactive'}
                                             </span>
                                         </div>
@@ -402,7 +402,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                             <p className={`${t.text} text-xs font-semibold`}>
                                                 {order.order_number || `#${order.id.slice(-6).toUpperCase()}`}
                                             </p>
-                                            <p className={`${t.textSub} text-[10px]`}>
+                                            <p className={`${t.textSub} text-[11px]`}>
                                                 {format(new Date(order.created_date), 'dd MMM, HH:mm')} · {order.order_type?.replace('_', ' ')}
                                             </p>
                                         </div>
@@ -435,7 +435,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                         </div>
                                         <div className="text-right">
                                             <p className="text-green-400 font-bold text-sm">£{s.revenue.toFixed(2)}</p>
-                                            <p className={`${t.textSub} text-[10px]`}>{s.orderCount} orders</p>
+                                            <p className={`${t.textSub} text-[11px]`}>{s.orderCount} orders</p>
                                         </div>
                                     </div>
                                 ))}

@@ -87,7 +87,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                                         </p>
                                         <div className="flex items-center gap-1 mt-0.5">
                                             <Clock className={`h-3 w-3 ${t.textSub}`} />
-                                            <p className={`${t.textSub} text-[10px]`}>{formatTime(held.heldAt)}</p>
+                                            <p className={`${t.textSub} text-[11px]`}>{formatTime(held.heldAt)}</p>
                                         </div>
                                     </div>
                                     <span className={`text-xs font-bold text-orange-500 ml-2 flex-shrink-0`}>
@@ -96,7 +96,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                                 </div>
 
                                 {/* Items preview */}
-                                <div className={`${t.textMuted} text-[10px] mb-3 space-y-0.5`}>
+                                <div className={`${t.textMuted} text-[11px] mb-3 space-y-0.5`}>
                                     {held.items.slice(0, 3).map((item, idx) => (
                                         <p key={idx} className="truncate">
                                             {item.quantity}× {item.name}

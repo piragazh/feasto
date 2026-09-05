@@ -643,7 +643,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 >
                     <PauseCircle className="h-4 w-4" /> Held Orders
                     {heldOrders.length > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center">
                             {heldOrders.length}
                         </span>
                     )}

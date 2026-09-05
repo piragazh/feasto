@@ -213,9 +213,9 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
                                         <div className="text-center">
                                             <p className="font-semibold text-sm leading-tight">{s.full_name.split(' ')[0]}</p>
                                             {s.staff_number && (
-                                                <p className={`${t.sub} text-[10px] font-mono mt-0.5`}>{s.staff_number}</p>
+                                                <p className={`${t.sub} text-[11px] font-mono mt-0.5`}>{s.staff_number}</p>
                                             )}
-                                            <p className={`text-[10px] mt-1 ${t.sub}`}>{roleInfo.label}</p>
+                                            <p className={`text-[11px] mt-1 ${t.sub}`}>{roleInfo.label}</p>
                                         </div>
                                     </button>
                                 );

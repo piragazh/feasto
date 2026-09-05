@@ -54,10 +54,10 @@ function OrderRow({ order, t, isDark }) {
                             {format(new Date(order.created_date), 'dd MMM yyyy, HH:mm')}
                         </p>
                     </div>
-                    <span className={`text-[10px] font-semibold border px-2 py-0.5 rounded-full ${statusClass}`}>
+                    <span className={`text-[11px] font-semibold border px-2 py-0.5 rounded-full ${statusClass}`}>
                         {STATUS_LABELS[order.status] || order.status}
                     </span>
-                    <span className={`text-[10px] font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'} capitalize hidden sm:block`}>
+                    <span className={`text-[11px] font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'} capitalize hidden sm:block`}>
                         {ORDER_TYPE_LABELS[order.order_type] || order.order_type}
                     </span>
                 </div>
@@ -77,7 +77,7 @@ function OrderRow({ order, t, isDark }) {
                     {/* Customer info */}
                     {(order.guest_name || order.delivery_address || order.phone || order.table_number) && (
                         <div className={`${isDark ? 'bg-white/[0.03]' : 'bg-gray-50'} rounded-xl p-3 space-y-1`}>
-                            <p className={`${t.textMuted} text-[10px] font-semibold uppercase tracking-wider mb-1`}>Customer</p>
+                            <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider mb-1`}>Customer</p>
                             {order.guest_name && <p className={`${t.text} text-xs font-medium`}>{order.guest_name}</p>}
                             {order.phone && <p className={`${t.textSub} text-xs`}>{order.phone}</p>}
                             {order.delivery_address && <p className={`${t.textSub} text-xs`}>{order.delivery_address}</p>}
@@ -87,14 +87,14 @@ function OrderRow({ order, t, isDark }) {
 
                     {/* Items */}
                     <div>
-                        <p className={`${t.textMuted} text-[10px] font-semibold uppercase tracking-wider mb-2`}>Items</p>
+                        <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider mb-2`}>Items</p>
                         <div className="space-y-1.5">
                             {(order.items || []).map((item, i) => (
                                 <div key={i} className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
                                         <p className={`${t.text} text-xs font-medium`}>{item.quantity}× {item.name}</p>
                                         {item.customizations && Object.keys(item.customizations).length > 0 && (
-                                            <p className={`${t.textSub} text-[10px] truncate`}>
+                                            <p className={`${t.textSub} text-[11px] truncate`}>
                                                 {Object.entries(item.customizations).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' · ')}
                                             </p>
                                         )}
@@ -124,7 +124,7 @@ function OrderRow({ order, t, isDark }) {
                             <span className="text-orange-500">£{order.total?.toFixed(2)}</span>
                         </div>
                         {order.payment_method && (
-                            <p className={`${t.textSub} text-[10px] text-right capitalize`}>Paid by {order.payment_method.replace('_', ' ')}</p>
+                            <p className={`${t.textSub} text-[11px] text-right capitalize`}>Paid by {order.payment_method.replace('_', ' ')}</p>
                         )}
                     </div>
 
@@ -238,15 +238,15 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
             {/* Summary bar */}
             <div className={`${t.panel} border rounded-2xl px-4 py-2.5 flex items-center gap-6 flex-shrink-0`}>
                 <div>
-                    <p className={`${t.textMuted} text-[10px] font-semibold uppercase tracking-wider`}>Orders</p>
+                    <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider`}>Orders</p>
                     <p className={`${t.text} font-bold text-lg`}>{filtered.length}</p>
                 </div>
                 <div>
-                    <p className={`${t.textMuted} text-[10px] font-semibold uppercase tracking-wider`}>Revenue</p>
+                    <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider`}>Revenue</p>
                     <p className="text-orange-500 font-bold text-lg">£{totalRevenue.toFixed(2)}</p>
                 </div>
                 <div>
-                    <p className={`${t.textMuted} text-[10px] font-semibold uppercase tracking-wider`}>Avg. Order</p>
+                    <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider`}>Avg. Order</p>
                     <p className={`${t.text} font-bold text-lg`}>£{filtered.length ? (totalRevenue / filtered.filter(o => !['cancelled','refunded'].includes(o.status)).length || 0).toFixed(2) : '0.00'}</p>
                 </div>
             </div>

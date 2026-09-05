@@ -63,18 +63,18 @@ export default function POSTablesGrid({
                                 >
                                     <h3 className={`${t.text} font-bold text-sm text-center leading-tight mb-1`}>{table.table_number}</h3>
                                     {table.assigned_server && (
-                                        <div className="flex items-center gap-0.5 text-indigo-400 text-[9px] mb-1">
+                                        <div className="flex items-center gap-0.5 text-indigo-400 text-[11px] mb-1">
                                             <Users className="h-2.5 w-2.5" />
                                             <span className="truncate max-w-[60px]">{table.assigned_server}</span>
                                         </div>
                                     )}
                                     {hasOrders ? (
                                         <>
-                                            <p className="text-orange-400 text-[9px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                            <p className="text-orange-400 text-[11px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
                                             <p className={`${isDark ? 'text-white' : 'text-gray-900'} font-bold text-sm`}>£{total.toFixed(2)}</p>
                                         </>
                                     ) : (
-                                        <p className={`text-[9px] font-medium capitalize ${s.label}`}>{table.status.replace('_', ' ')}</p>
+                                        <p className={`text-[11px] font-medium capitalize ${s.label}`}>{table.status.replace('_', ' ')}</p>
                                     )}
                                 </div>
                             </div>
