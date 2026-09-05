@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, Minus, ShoppingCart, X, Users, AlertTriangle, Pencil } from 'lucide-react';
+import { POS_RADIUS, POS_TEXT, POS_TOUCH, POS_FOCUS, POS_TRANSITION } from '@/lib/posDesign';
 import POSNoSaleButton from './POSNoSaleButton';
 
 // Inline mini confirm dialog
@@ -159,7 +160,7 @@ export default function POSCart({
                             <button
                                 onClick={onSelectTable}
                                 disabled={tables.length === 0}
-                                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold h-12 rounded-xl text-sm transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
+                                className={`w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white font-bold ${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-sm ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2`}
                             >
                                 <Users className="h-4 w-4" />
                                 Select Table ({tables.length})
@@ -167,13 +168,13 @@ export default function POSCart({
                         ) : (
                             <>
                                 <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-2.5 text-center">
-                                    <p className="text-orange-400 text-[10px] font-medium uppercase tracking-wide">Selected</p>
+                                    <p className={`text-orange-400 ${POS_TEXT.micro} uppercase tracking-wide`}>Selected</p>
                                     <p className={`${t.text} font-bold text-base`}>{selectedTable.table_number}</p>
                                 </div>
                                 <button
                                     onClick={onAddToTable}
                                     disabled={optimisticCart.length === 0 || isAddingToTable}
-                                    className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-bold h-12 rounded-xl text-sm transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
+                                    className={`w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-40 disabled:shadow-none text-white font-bold ${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-sm ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2`}
                                 >
                                     <ShoppingCart className="h-4 w-4" />
                                     {isAddingToTable ? 'Adding...' : 'Send to Table'}
@@ -190,7 +191,7 @@ export default function POSCart({
                             <button
                                 onClick={handleClear}
                                 disabled={optimisticCart.length === 0}
-                                className="bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-10 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                                className={`bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 disabled:opacity-40 text-red-400 font-semibold ${POS_TOUCH.control} ${POS_RADIUS.control} text-xs ${POS_TRANSITION} ${POS_FOCUS} flex items-center justify-center gap-1.5`}
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
                                 Clear
@@ -200,13 +201,17 @@ export default function POSCart({
                     </>
                 ) : (
                     <>
+                        {/* The most-tapped control in the POS. It was previously the
+                            same height and text size as the secondary buttons below
+                            it, so nothing signalled which one completes the sale. */}
                         <button
                             onClick={onCharge}
                             disabled={optimisticCart.length === 0}
-                            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-bold h-12 rounded-xl text-sm transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
+                            className={`w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-40 disabled:shadow-none text-white ${POS_RADIUS.control} ${POS_TOUCH.primary} ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2.5 active:scale-[0.99]`}
                         >
-                            <ShoppingCart className="h-4 w-4" />
-                            Charge · £{discountedTotal.toFixed(2)}
+                            <ShoppingCart className="h-5 w-5" />
+                            <span>Charge</span>
+                            <span className="tabular-nums">£{discountedTotal.toFixed(2)}</span>
                         </button>
                         {/* Secondary actions share one row: stacked full-width they
                             ate ~40px of height that the cart list needs more. */}
@@ -214,7 +219,7 @@ export default function POSCart({
                             <button
                                 onClick={handleClear}
                                 disabled={optimisticCart.length === 0}
-                                className="bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 font-semibold h-10 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                                className={`bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 disabled:opacity-40 text-red-400 font-semibold ${POS_TOUCH.control} ${POS_RADIUS.control} text-xs ${POS_TRANSITION} ${POS_FOCUS} flex items-center justify-center gap-1.5`}
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
                                 Clear
