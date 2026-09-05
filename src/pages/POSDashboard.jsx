@@ -8,6 +8,7 @@ import POSOrderEntry from '@/components/pos/POSOrderEntry.jsx';
 import { useOfflineSyncState, formatCachedAt } from '@/components/pos/POSOfflineSyncBanner';
 import { getLastCachedAt } from '@/components/pos/POSOfflineDB';
 import { paletteStyle, DEFAULT_PALETTE, readCachedPalette, writeCachedPalette, applyPaletteToDocument } from '@/lib/posThemes';
+import { POS_RADIUS, POS_TEXT, POS_FOCUS, POS_TRANSITION } from '@/lib/posDesign';
 import POSOrderQueue from '@/components/pos/POSOrderQueue.jsx';
 import POSPayment from '@/components/pos/POSPayment.jsx';
 import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
@@ -383,7 +384,7 @@ export default function POSDashboard() {
                                     {isSyncing ? 'Syncing...' : isOnline ? 'Online' : 'Offline'}
                                 </span>
                                 {!isOnline && pendingCount > 0 && (
-                                    <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                                    <span className={`${POS_TEXT.micro} bg-red-500/20 text-red-300 border border-red-500/30 px-1.5 py-1 rounded-full`}>
                                         {pendingCount}
                                     </span>
                                 )}
@@ -393,12 +394,17 @@ export default function POSDashboard() {
 
                     {/* Center: Order type switcher */}
                     <div className={`flex items-center ${t.pill} rounded-xl p-1 border ${t.border}`}>
+                        {/* Mode switch - the highest-consequence control in the top
+                            bar, since it changes what a sale becomes. Given real
+                            segmented-control treatment (44px, pressed state,
+                            aria-pressed) rather than three loose text buttons. */}
                         {ORDER_TYPES.map(ot => (
                             <button key={ot.id} onClick={() => setOrderType(ot.id)}
-                                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                aria-pressed={orderType === ot.id}
+                                className={`px-5 h-11 ${POS_RADIUS.control} text-sm font-semibold ${POS_TRANSITION} ${POS_FOCUS} ${
                                     orderType === ot.id
                                         ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25'
-                                        : `${t.textMuted} hover:${isDark ? 'text-white' : 'text-gray-900'}`
+                                        : `${t.textMuted} hover:${isDark ? 'text-white' : 'text-gray-900'} active:scale-[0.98]`
                                 }`}>
                                 {ot.label}
                             </button>
