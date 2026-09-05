@@ -111,7 +111,7 @@ export default function POSCart({
                                     {item.specialInstructions && (
                                         <p className={`${t.textSub} text-[11px] italic mt-0.5`}>"{item.specialInstructions}"</p>
                                     )}
-                                    <p className="text-orange-500 text-sm mt-1 font-bold">£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
+                                    <p className={`text-orange-500 mt-1 ${POS_TEXT.moneySmall}`}>£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
                                 </button>
                                 <button
                                     onClick={() => handleRemove(item.id, item.name)}
@@ -125,7 +125,7 @@ export default function POSCart({
                                 <button
                                     onClick={() => handleDecrement(item)}
                                     aria-label={`Decrease quantity of ${item.name}`}
-                                    className={`h-11 w-11 rounded-lg flex items-center justify-center transition-colors active:scale-95 ${t.qtyMinus}`}
+                                    className={`h-11 w-11 ${POS_RADIUS.control} flex items-center justify-center ${POS_TRANSITION} ${POS_FOCUS} active:scale-95 ${t.qtyMinus}`}
                                 >
                                     <Minus className="h-5 w-5" />
                                 </button>
@@ -133,7 +133,7 @@ export default function POSCart({
                                 <button
                                     onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
                                     aria-label={`Increase quantity of ${item.name}`}
-                                    className={`h-11 w-11 rounded-lg flex items-center justify-center transition-colors active:scale-95 ${t.qtyPlus}`}
+                                    className={`h-11 w-11 ${POS_RADIUS.control} flex items-center justify-center ${POS_TRANSITION} ${POS_FOCUS} active:scale-95 ${t.qtyPlus}`}
                                 >
                                     <Plus className="h-5 w-5" />
                                 </button>
@@ -145,12 +145,12 @@ export default function POSCart({
 
             <div className={`border-t ${t.panelHead} p-3 space-y-2`}>
                 <div className="flex items-center justify-between px-1">
-                    <span className={`${t.textMuted} text-sm font-medium`}>Total</span>
+                    <span className={`${t.textMuted} text-xs font-semibold uppercase tracking-wide`}>Total</span>
                     <div className="text-right">
                         {discount && (
                             <p className={`${t.textMuted} text-xs line-through`}>£{cartSubtotal.toFixed(2)}</p>
                         )}
-                        <span className={`${t.text} text-2xl font-bold`}>£{discountedTotal.toFixed(2)}</span>
+                        <span className={`${t.text} ${POS_TEXT.moneyLarge}`}>£{discountedTotal.toFixed(2)}</span>
                     </div>
                 </div>
 
