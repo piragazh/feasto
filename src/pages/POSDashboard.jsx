@@ -484,8 +484,8 @@ export default function POSDashboard() {
                             <button 
                                 onClick={() => setShowStaffLogin(true)}
                                 aria-label={`Switch staff member. Currently: ${activeStaffMember.full_name}`}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${t.iconBtn}`}>
-                                <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" aria-hidden="true">
+                                className={`flex items-center gap-2 px-3 h-11 ${POS_RADIUS.control} border ${POS_TRANSITION} ${POS_FOCUS} ${t.iconBtn}`}>
+                                <div className={`w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-white ${POS_TEXT.micro} flex-shrink-0`} aria-hidden="true">
                                     {activeStaffMember.full_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                                 </div>
                                 <span className={`text-xs font-semibold ${t.textMuted} hidden sm:block`}>
