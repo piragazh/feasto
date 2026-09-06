@@ -1,0 +1,37 @@
+{
+  "name": "Auto-Award Loyalty Points on Order Complete",
+  "description": "Awards loyalty points (supports both registered users and guests via phone) when an order is delivered or collected",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Order"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auto_award_loyalty_points_on_order_complete",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "awardLoyaltyPoints",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "awardLoyaltyPoints"
+  }
+}
