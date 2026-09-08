@@ -232,40 +232,44 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
 
                                         <p className="text-orange-500 font-bold mb-3">£{order.total.toFixed(2)}</p>
 
+                                        {/* Order actions.
+                                            - 28px buttons were well under the touch floor, which is
+                                              why these felt unresponsive rather than broken; the
+                                              dialogs behind them were wired correctly all along.
+                                            - Hidden once an order is finished: posUpdateOrder has no
+                                              status guard, so editing a delivered order silently
+                                              succeeded and rewrote a completed bill. */}
+                                        {!isFinished(order) && (
                                         <div className="space-y-2 flex flex-col gap-1 mb-3">
-                                            <div className="grid grid-cols-3 gap-1">
+                                            <div className="grid grid-cols-3 gap-1.5">
                                                 <Button
                                                     onClick={() => setEditingOrder(order)}
-                                                    size="sm"
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7"
+                                                    className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs h-11 rounded-xl flex-col gap-0.5"
                                                     title="Edit items, add/remove, change quantities"
                                                 >
-                                                    <Edit2 className="h-3 w-3 mr-1" />
+                                                    <Edit2 className="h-4 w-4" />
                                                     Edit
                                                 </Button>
                                                 <Button
                                                     onClick={() => setSplittingOrder(order)}
-                                                    size="sm"
-                                                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs h-7"
+                                                    className="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs h-11 rounded-xl flex-col gap-0.5"
                                                     title="Split bill between customers"
                                                 >
-                                                    <Split className="h-3 w-3 mr-1" />
+                                                    <Split className="h-4 w-4" />
                                                     Split
                                                 </Button>
                                                 <Button
                                                     onClick={() => setApplyingPromo(order)}
-                                                    size="sm"
-                                                    className="bg-green-600 hover:bg-green-700 text-white text-xs h-7"
+                                                    className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-xs h-11 rounded-xl flex-col gap-0.5"
                                                     title="Apply discount or promotion"
                                                 >
-                                                    <Percent className="h-3 w-3 mr-1" />
+                                                    <Percent className="h-4 w-4" />
                                                     Promo
                                                 </Button>
                                             </div>
                                             <Button
                                                 onClick={() => setVoidingOrder(order)}
-                                                size="sm"
-                                                className="w-full bg-red-600/90 hover:bg-red-600 text-white text-xs h-7"
+                                                className="w-full bg-red-600/90 hover:bg-red-600 active:bg-red-700 text-white text-xs h-11 rounded-xl"
                                                 title="Void / cancel this order"
                                             >
                                                 <Ban className="h-3 w-3 mr-1" />
