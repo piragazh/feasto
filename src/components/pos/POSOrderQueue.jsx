@@ -27,6 +27,10 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
     };
 
     const [searchResults, setSearchResults] = useState(null);
+    // Terminal states - an order here is done and must not be re-edited.
+    const FINISHED = ['collected', 'delivered', 'cancelled', 'refunded'];
+    const isFinished = (o) => FINISHED.includes(o?.status);
+
     const [editingOrder, setEditingOrder] = useState(null);
     const [splittingOrder, setSplittingOrder] = useState(null);
     const [applyingPromo, setApplyingPromo] = useState(null);
@@ -272,10 +276,11 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                                                 className="w-full bg-red-600/90 hover:bg-red-600 active:bg-red-700 text-white text-xs h-11 rounded-xl"
                                                 title="Void / cancel this order"
                                             >
-                                                <Ban className="h-3 w-3 mr-1" />
+                                                <Ban className="h-4 w-4 mr-1.5" />
                                                 Void
                                             </Button>
                                         </div>
+                                        )}
 
                                         <div className="space-y-1 flex flex-col gap-1">
                                             {status === 'pending' && (
