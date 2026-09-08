@@ -43,8 +43,20 @@ Deno.serve(async (req) => {
 
         const orderData = await req.json();
 
-        if (!orderData.restaurant_id || !orderData.items || !orderData.total) {
-            return Response.json({ error: 'Missing required fields' }, { status: 400 });
+        // NOTE: `total` is deliberately NOT required.
+        //
+        // Two bugs lived in the old check `!orderData.total`:
+        //  1. Sending a cart to a table (POSOrderEntry) submits no total at all -
+        //     the bill is settled later - so every dine-in send failed with a
+        //     400 "Missing required fields".
+        //  2. `!total` is truthiness, so a legitimate £0.00 order (fully
+        //     discounted, comp, staff meal) was rejected too.
+        //
+        // The client total is untrusted anyway: serverSubtotal/serverTotal are
+        // recomputed from the live menu further down, so requiring it added no
+        // safety - it only rejected valid orders.
+        if (!orderData.restaurant_id || !Array.isArray(orderData.items) || orderData.items.length === 0) {
+            return Response.json({ error: 'Missing required fields: restaurant and at least one item' }, { status: 400 });
         }
 
         // ── IDEMPOTENCY ───────────────────────────────────────────────────────
