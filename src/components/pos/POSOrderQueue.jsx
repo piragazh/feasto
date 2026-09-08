@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit2, Split, Percent, Ban } from 'lucide-react';
+import { Edit2, Split, Percent, Ban, Globe, Store, Monitor, QrCode, Truck, UtensilsCrossed, Bike, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import OrderSearch from './OrderSearch';
 import OrderEditDialog from './OrderEditDialog';
@@ -27,6 +27,46 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
     };
 
     const [searchResults, setSearchResults] = useState(null);
+/**
+ * Where an order came from, at a glance.
+ *
+ * During service a cashier needs to know instantly whether a ticket is a walk-in,
+ * a phone order, an online delivery or a table QR order - each has a different
+ * urgency and a different person waiting. Reading the order type as text is too
+ * slow, so this is an icon with a colour, and a tooltip for the full label.
+ */
+function SourceBadge({ order }) {
+    const src = order.order_source;
+    const type = order.order_type;
+
+    let Icon = Globe, label = 'Online order', cls = 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+    if (src === 'pos') {
+        Icon = Store; label = 'Walk-in (POS)'; cls = 'bg-gray-500/15 text-gray-300 border-gray-500/30';
+    } else if (src === 'kiosk') {
+        Icon = Monitor; label = 'Self-service kiosk'; cls = 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+    } else if (src === 'qr') {
+        Icon = QrCode; label = 'Table QR order'; cls = 'bg-teal-500/15 text-teal-300 border-teal-500/30';
+    } else if (src === 'third_party') {
+        Icon = Truck; label = 'Third-party platform'; cls = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+    } else if (type === 'dine_in') {
+        Icon = UtensilsCrossed; label = 'Dine in'; cls = 'bg-teal-500/15 text-teal-300 border-teal-500/30';
+    } else if (type === 'delivery') {
+        Icon = Bike; label = 'Online delivery'; cls = 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+    } else if (type === 'phone') {
+        Icon = Phone; label = 'Phone order'; cls = 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30';
+    }
+
+    return (
+        <span
+            title={label}
+            aria-label={label}
+            className={`inline-flex items-center justify-center h-6 w-6 rounded-lg border flex-shrink-0 ${cls}`}
+        >
+            <Icon className="h-3.5 w-3.5" />
+        </span>
+    );
+}
+
     // Terminal states - an order here is done and must not be re-edited.
     const FINISHED = ['collected', 'delivered', 'cancelled', 'refunded'];
     const isFinished = (o) => FINISHED.includes(o?.status);
@@ -219,9 +259,17 @@ export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
                                 <Card key={order.id} className={`${t.card} border`}>
                                     <CardContent className="p-3">
                                         <div className="flex justify-between items-start mb-2">
-                                            <div>
-                                                <p className={`${t.text} font-bold`}>#{order.id.slice(0, 8)}</p>
-                                                <p className={`${t.textMuted} text-xs`}>{new Date(order.created_date).toLocaleTimeString()}</p>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-1.5">
+                                                    <SourceBadge order={order} />
+                                                    <p className={`${t.text} font-bold truncate`}>
+                                                        {order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`}
+                                                    </p>
+                                                </div>
+                                                <p className={`${t.textMuted} text-xs mt-0.5`}>
+                                                    {new Date(order.created_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {order.table_number ? ` · Table ${order.table_number}` : ''}
+                                                </p>
                                             </div>
                                             <StatusBadge status={order.status} />
                                         </div>
