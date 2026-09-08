@@ -498,7 +498,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 <div className="flex justify-between items-center mb-3">
                     <h2 className={`${t.text} font-bold text-lg`}>Order Summary</h2>
                     {onBackToCart && (
-                        <Button onClick={onBackToCart} size="sm" className={`${t.backBtn} h-8 px-3 text-sm`}>
+                        <Button onClick={onBackToCart} size="sm" className={`${t.backBtn} ${POS_TOUCH.control} px-4 text-sm ${POS_RADIUS.control} ${POS_FOCUS}`}>
                             ← Back
                         </Button>
                     )}
@@ -542,7 +542,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     toast.error('Print failed: ' + e.message);
                                 }
                             }}
-                            className={`w-full h-9 text-xs font-semibold ${t.inactBtn}`}
+                            className={`w-full ${POS_TOUCH.control} text-xs font-semibold ${POS_RADIUS.control} ${POS_FOCUS} ${t.inactBtn}`}
                         >
                             <FileText className="h-3.5 w-3.5 mr-1.5" /> Print Receipt
                         </Button>
@@ -592,7 +592,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     ) : (
                         <button
                             onClick={() => setCouponDialogOpen(true)}
-                            className={`w-full flex items-center justify-center gap-2 h-9 rounded-xl text-xs font-semibold border transition-colors ${
+                            className={`w-full flex items-center justify-center gap-2 ${POS_TOUCH.control} rounded-xl text-xs font-semibold border transition-colors ${
                                 isDark
                                     ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-400 hover:text-orange-400'
                                     : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-orange-500'
@@ -725,13 +725,13 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <div className="grid grid-cols-4 gap-1.5 mb-1">
                             {quickCash.map(amt => (
                                 <Button key={amt} onClick={() => setRawValue(String(amt * 100))}
-                                    className={`h-9 text-sm font-bold ${numericInput === amt ? 'bg-green-600 text-white border-green-600' : t.inactBtn}`}>
+                                    className={`${POS_TOUCH.control} ${POS_RADIUS.control} text-sm font-bold ${numericInput === amt ? 'bg-green-600 text-white border-green-600' : t.inactBtn}`}>
                                     £{amt}
                                 </Button>
                             ))}
                         </div>
                         <NumericKeypad rawValue={rawValue} onRawChange={setRawValue} onComplete={handleCashConfirm} />
-                        <Button onClick={() => { setActiveMethod(null); setRawValue(''); }} className={`w-full h-9 text-sm ${t.cancelBtn} mt-1`}>
+                        <Button onClick={() => { setActiveMethod(null); setRawValue(''); }} className={`w-full ${POS_TOUCH.control} ${POS_RADIUS.control} text-sm ${t.cancelBtn} mt-1`}>
                             Cancel
                         </Button>
                     </div>
@@ -752,7 +752,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             </Button>
                         </div>
                         <NumericKeypad rawValue={rawValue} onRawChange={setRawValue} onComplete={() => setShowCardConfirm(true)} />
-                        <Button onClick={() => { setActiveMethod(null); setRawValue(''); }} className={`w-full h-9 text-sm ${t.cancelBtn}`}>
+                        <Button onClick={() => { setActiveMethod(null); setRawValue(''); }} className={`w-full ${POS_TOUCH.control} ${POS_RADIUS.control} text-sm ${t.cancelBtn}`}>
                             Cancel
                         </Button>
                     </div>
