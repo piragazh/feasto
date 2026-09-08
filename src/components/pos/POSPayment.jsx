@@ -10,6 +10,7 @@ import { savePendingOrder } from './POSOfflineDB';
 import { publishCustomerDisplay } from './CustomerDisplay';
 import { printWithCentralizedConfig, hasPrinterForChannel, openCashDrawer } from '@/lib/printUtils';
 import { isNetworkError } from '@/lib/networkStatus';
+import { POS_RADIUS, POS_TEXT, POS_TOUCH, POS_FOCUS, POS_TRANSITION } from '@/lib/posDesign';
 import { playSuccess, playError, playAlert } from '@/lib/posSound';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -484,7 +485,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
     if (cart.length === 0) {
         return (
-            <div className={`flex items-center justify-center h-64 ${t.panel} rounded-lg border`}>
+            <div className={`flex items-center justify-center h-64 ${t.panel} rounded-2xl border`}>
                 <p className={`${t.subtext} text-lg`}>No items to pay for</p>
             </div>
         );
@@ -493,7 +494,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     return (
         <div className={`grid grid-cols-2 gap-4 h-full ${t.bg}`}>
             {/* LEFT: Summary */}
-            <div className={`${t.panel} rounded-lg border p-4 flex flex-col`}>
+            <div className={`${t.panel} ${POS_RADIUS.panel} border p-4 flex flex-col`}>
                 <div className="flex justify-between items-center mb-3">
                     <h2 className={`${t.text} font-bold text-lg`}>Order Summary</h2>
                     {onBackToCart && (
@@ -629,7 +630,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             {remaining > 0 ? (
                                 <div className={`${t.owedBox} px-4 py-2.5 rounded-xl flex items-baseline justify-between gap-3`}>
                                     <p className={`${t.owedTxt} text-xs font-semibold uppercase tracking-wide`}>Still owed</p>
-                                    <p className={`${t.owedAmt} text-2xl font-bold tabular-nums leading-none`}>£{remaining.toFixed(2)}</p>
+                                    <p className={`${t.owedAmt} ${POS_TEXT.money}`}>£{remaining.toFixed(2)}</p>
                                 </div>
                             ) : (
                                 /* Change is the one figure a cashier must not miss -
@@ -637,7 +638,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                    differently from every other panel. */
                                 <div className={`${t.changeBox} px-4 py-3 rounded-xl flex items-baseline justify-between gap-3`}>
                                     <p className={`${t.changeTxt} text-xs font-semibold uppercase tracking-wide`}>Change due</p>
-                                    <p className={`${t.changeAmt} text-3xl font-bold tabular-nums leading-none`}>£{Math.max(0, totalPaid - effectiveTotal).toFixed(2)}</p>
+                                    <p className={`${t.changeAmt} ${POS_TEXT.moneyLarge}`}>£{Math.max(0, totalPaid - effectiveTotal).toFixed(2)}</p>
                                 </div>
                             )}
                         </>
@@ -646,7 +647,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             </div>
 
             {/* RIGHT: Payment */}
-            <div className={`${t.right} rounded-lg border p-4 flex flex-col min-h-0 overflow-y-auto`}>
+            <div className={`${t.right} ${POS_RADIUS.panel} border p-4 flex flex-col min-h-0 overflow-y-auto`}>
                 {/* Method buttons */}
                 {!activeMethod && (
                     <>
@@ -664,7 +665,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     type="button"
                                     aria-pressed={tenderType === key}
                                     onClick={() => setTenderType(key)}
-                                    className={`h-12 rounded-lg text-base font-bold flex items-center justify-center gap-2 transition-all ${
+                                    className={`${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-base font-bold flex items-center justify-center gap-2 ${POS_TRANSITION} ${POS_FOCUS} ${
                                         tenderType === key ? t.segActive : t.segIdle
                                     }`}
                                 >
@@ -678,7 +679,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <p className={`${t.subtext} text-xs mb-2`}>Quick cash</p>
                         <div className="grid grid-cols-4 gap-2 mb-4">
                             {quickCash.map(amt => (
-                                <Button key={amt} onClick={() => handleQuickCash(amt)} className={`h-10 text-base font-bold ${t.inactBtn}`}>
+                                <Button key={amt} onClick={() => handleQuickCash(amt)} className={`${POS_TOUCH.control} ${POS_RADIUS.control} text-base font-bold ${POS_TRANSITION} ${POS_FOCUS} ${t.inactBtn}`}>
                                     £{amt}
                                 </Button>
                             ))}
@@ -689,7 +690,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             setRawValue(pence > 0 ? String(pence) : '');
                             setActiveMethod('cash');
                             setShowCashConfirm(true);
-                        }} className={`w-full h-10 text-sm font-bold ${t.inactBtn} mb-3`}>
+                        }} className={`w-full ${POS_TOUCH.control} ${POS_RADIUS.control} text-sm font-bold ${POS_TRANSITION} ${POS_FOCUS} ${t.inactBtn} mb-3`}>
                             Exact Cash (£{remaining.toFixed(2)})
                         </Button>
 
@@ -856,7 +857,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                         <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
                                     </div>
                                     <div className="text-center">
-                                        <p className={`text-2xl font-bold ${t.text}`}>£{terminalAmount.toFixed(2)}</p>
+                                        <p className={`${POS_TEXT.moneyLarge} ${t.text}`}>£{terminalAmount.toFixed(2)}</p>
                                         <p className={`${t.subtext} text-sm mt-1`}>
                                             Processing on <strong>{cardTerminal?.reader_label || 'the terminal'}</strong>
                                         </p>
@@ -896,7 +897,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <AlertDialogDescription className={t.dialogDesc} asChild>
                             <div className="space-y-3">
                                 <div className="text-center py-4">
-                                    <p className={`text-3xl font-bold text-green-500`}>£{terminalAmount.toFixed(2)}</p>
+                                    <p className={`${POS_TEXT.moneyLarge} text-green-500`}>£{terminalAmount.toFixed(2)}</p>
                                     <p className={`${t.subtext} text-sm mt-2`}>Transaction approved</p>
                                     <p className={`${t.subtext} text-xs mt-1 font-mono`}>{terminalTransactionRef}</p>
                                 </div>
@@ -931,7 +932,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         </AlertDialogTitle>
                         <AlertDialogDescription className={t.dialogDesc} asChild>
                             <div className="space-y-4">
-                                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
                                     <p className="text-red-400 text-sm font-medium">{terminalError || 'Card was declined'}</p>
                                 </div>
                                 <p className={`${t.subtext} text-xs`}>Try another payment method or card.</p>
