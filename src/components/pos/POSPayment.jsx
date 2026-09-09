@@ -61,7 +61,7 @@ export function quickCashOptions(owed) {
     return [...new Set(opts)].filter(v => v > owed).sort((a, b) => a - b).slice(0, 4);
 }
 
-export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {, quickSale = false } }) {
+export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {}, quickSale = false }) {
     const isDark = posTheme === 'dark';
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
