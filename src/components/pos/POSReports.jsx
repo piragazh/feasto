@@ -75,8 +75,17 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
         enabled: !!restaurantId,
     });
 
+    // Revenue must exclude cancelled and refunded orders.
+    //
+    // These figures previously summed EVERY order in the range, so a cancelled
+    // £50 order still counted as £50 of takings. End of Day already filtered
+    // correctly, which meant the two screens reported different totals for the
+    // same day - and Reports was the optimistic one. Same status list as
+    // POSEndOfDay so they now agree.
+    const REVENUE_STATUSES = ['confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery', 'delivered', 'collected'];
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
+            if (!REVENUE_STATUSES.includes(order.status)) return false;
             const d = moment(order.created_date);
             return d.isBetween(effectiveStart, effectiveEnd, null, '[]');
         });
