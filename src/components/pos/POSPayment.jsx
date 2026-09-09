@@ -239,7 +239,19 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         // failure therefore falls back to the offline queue rather than losing
         // the sale; it will sync (idempotently, via offline_id) on reconnect.
         try {
-            await base44.functions.invoke('posCreateOrder', orderData);
+            const res = await base44.functions.invoke('posCreateOrder', orderData);
+            // invoke() does NOT throw on a 4xx - it resolves with the error body.
+            // Ignoring the response meant a server rejection (discount over the
+            // manager limit, invalid coupon, failed validation) completed the
+            // payment flow with NO ORDER CREATED and nothing shown on screen:
+            // money taken, order lost. Surface it so staff can fix and retry.
+            const payload = res?.data ?? res;
+            if (payload?.error) {
+                throw new Error(payload.error);
+            }
+            if (!payload?.order && !payload?.id) {
+                throw new Error('The order was not created. Please try again.');
+            }
             return { offline: false };
         } catch (err) {
             if (isNetworkError(err)) {
