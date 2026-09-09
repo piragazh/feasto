@@ -6,18 +6,26 @@ import CustomerProfileModal from './CustomerProfileModal';
 
 const COLLECTION_TIMES = ['ASAP', '10 min', '15 min', '20 min', '25 min', '30 min', '45 min', '1 hour'];
 
-async function lookupPostcode(postcode) {
+/**
+ * Postcode lookup via postcodes.io - free, open, no API key.
+ *
+ * Both calls take an AbortSignal. Without one, a cashier typing quickly fires a
+ * request per keystroke and the responses race: an earlier, shorter query can
+ * land after a later one and overwrite the suggestions with stale results. That
+ * shows up as the dropdown "fighting" the user.
+ */
+async function lookupPostcode(postcode, signal) {
     const clean = postcode.replace(/\s/g, '').toUpperCase();
-    const res = await fetch(`https://api.postcodes.io/postcodes/${clean}`);
+    const res = await fetch(`https://api.postcodes.io/postcodes/${clean}`, { signal });
     if (!res.ok) throw new Error('Postcode not found');
     const data = await res.json();
     return data.result;
 }
 
-async function autocompletePostcode(partial) {
+async function autocompletePostcode(partial, signal) {
     const clean = partial.replace(/\s/g, '').toUpperCase();
     if (clean.length < 3) return [];
-    const res = await fetch(`https://api.postcodes.io/postcodes/${clean}/autocomplete`);
+    const res = await fetch(`https://api.postcodes.io/postcodes/${clean}/autocomplete`, { signal });
     if (!res.ok) return [];
     const data = await res.json();
     return data.result || [];
@@ -45,6 +53,15 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
     const [newPostcodeAuto, setNewPostcodeAuto] = useState([]);
     const [showNewPostcodeDropdown, setShowNewPostcodeDropdown] = useState(false);
     const [postcodeInfo, setPostcodeInfo] = useState(null);
+    const autocompleteTimer = React.useRef(null);
+    const autocompleteAbort = React.useRef(null);
+
+    // Cancel any in-flight lookup when the dialog closes, so a late response
+    // cannot repopulate a dropdown for an order that has already been sent.
+    useEffect(() => () => {
+        if (autocompleteTimer.current) clearTimeout(autocompleteTimer.current);
+        if (autocompleteAbort.current) autocompleteAbort.current.abort();
+    }, []);
 
     // Sync phone order details to parent via callback (replaces window.__phoneOrderDetails global)
     useEffect(() => {
@@ -99,16 +116,33 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
         }
     };
 
-    const handlePostcodeInputChange = async (val) => {
+    const handlePostcodeInputChange = (val) => {
         setPostcode(val);
-        if (val.length >= 3) {
-            const suggestions = await autocompletePostcode(val);
-            setPostcodeAutocomplete(suggestions);
-            setShowPostcodeDropdown(suggestions.length > 0);
-        } else {
+        if (val.length < 3) {
             setPostcodeAutocomplete([]);
             setShowPostcodeDropdown(false);
+            return;
         }
+        // Debounce: one request per pause in typing rather than one per
+        // keystroke. postcodes.io is a free community service and asks for
+        // reasonable use; this also removes the response race described above.
+        if (autocompleteTimer.current) clearTimeout(autocompleteTimer.current);
+        autocompleteTimer.current = setTimeout(async () => {
+            if (autocompleteAbort.current) autocompleteAbort.current.abort();
+            const controller = new AbortController();
+            autocompleteAbort.current = controller;
+            try {
+                const suggestions = await autocompletePostcode(val, controller.signal);
+                setPostcodeAutocomplete(suggestions);
+                setShowPostcodeDropdown(suggestions.length > 0);
+            } catch (e) {
+                if (e?.name === 'AbortError') return;   // superseded by a newer keystroke
+                // Lookup is a convenience, not a requirement - the POS works
+                // offline and the address can always be typed by hand.
+                setPostcodeAutocomplete([]);
+                setShowPostcodeDropdown(false);
+            }
+        }, 300);
     };
 
     const selectPostcodeResult = async (pc) => {
