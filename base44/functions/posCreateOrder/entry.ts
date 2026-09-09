@@ -111,20 +111,35 @@ Deno.serve(async (req) => {
         const clientDiscount = typeof orderData.discount === 'number' ? orderData.discount : 0;
         const discountReasonCode = orderData.discount_reason_code || null;
 
+        // An invalid discount REJECTS the order rather than being silently zeroed.
+        //
+        // Zeroing looks safe for the business but is worse in practice: the
+        // cashier has already quoted the discounted price to the customer, and
+        // the order would be created - and the card charged - at full price with
+        // nothing shown on screen. The customer is overcharged relative to what
+        // they were told, and staff only find out if someone checks the receipt.
+        //
+        // Failing loudly lets staff get manager approval and retry, which is the
+        // outcome everyone actually wants.
         if (clientDiscount > 0) {
             if (!discountReasonCode) {
                 console.warn(`[POS] discount ${clientDiscount} rejected — no reason_code. restaurant=${orderData.restaurant_id} user=${user.email}`);
-                approvedDiscount = 0;
-            } else if (user.role === 'admin') {
+                return Response.json({
+                    error: 'A reason must be selected for a discount. Please re-apply the discount with a reason.',
+                }, { status: 400 });
+            }
+            if (user.role === 'admin') {
                 approvedDiscount = clientDiscount;
             } else {
                 const pct = serverSubtotal > 0 ? (clientDiscount / serverSubtotal) * 100 : 0;
                 if (pct > MANAGER_MAX_PCT || clientDiscount > MANAGER_MAX_FIXED) {
-                    console.warn(`[POS] discount ${clientDiscount} exceeds manager threshold (${pct.toFixed(1)}%). Zeroed. restaurant=${orderData.restaurant_id} user=${user.email}`);
-                    approvedDiscount = 0;
-                } else {
-                    approvedDiscount = clientDiscount;
+                    console.warn(`[POS] discount ${clientDiscount} exceeds manager threshold (${pct.toFixed(1)}%). Rejected. restaurant=${orderData.restaurant_id} user=${user.email}`);
+                    return Response.json({
+                        error: `This discount exceeds the manager limit (${MANAGER_MAX_PCT}% or £${MANAGER_MAX_FIXED}) and needs admin approval. The order has not been placed.`,
+                        requires_admin: true,
+                    }, { status: 403 });
                 }
+                approvedDiscount = clientDiscount;
             }
         }
 
