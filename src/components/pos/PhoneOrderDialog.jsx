@@ -101,6 +101,11 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
         if (!postcode || postcode.length < 3) return;
         setPostcodeSearching(true);
         try {
+            // Fetches a capped page and filters client-side. The entity API has
+            // no substring/partial match, so an address search cannot be pushed
+            // to the server - meaning this only ever searches the most recent
+            // 500 customers. Acceptable for a single site; if a restaurant grows
+            // past that, a dedicated search function would be needed.
             const customers = await base44.entities.Customer.filter({ restaurant_id: restaurantId }, '-created_date', 500);
             const matches = customers.filter(c =>
                 c.delivery_address?.toLowerCase().includes(postcode.toLowerCase().replace(/\s/g, ''))
