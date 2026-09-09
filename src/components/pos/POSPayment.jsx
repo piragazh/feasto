@@ -61,7 +61,7 @@ export function quickCashOptions(owed) {
     return [...new Set(opts)].filter(v => v > owed).sort((a, b) => a - b).slice(0, 4);
 }
 
-export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {} }) {
+export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {, quickSale = false } }) {
     const isDark = posTheme === 'dark';
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
@@ -163,6 +163,20 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     const remaining = Math.max(0, effectiveTotal - totalPaid);
     // Denominations recalculate as the amount owed changes (split payments, part-cash).
     const quickCash = quickCashOptions(remaining);
+
+    // Quick sale: land ready to confirm exact cash. The cashier's second tap is
+    // the confirmation - we deliberately do NOT auto-complete, so an accidental
+    // quick-sale tap can still be backed out of without ringing a sale or
+    // kicking the drawer.
+    const quickSalePrimed = React.useRef(false);
+    useEffect(() => {
+        if (!quickSale || quickSalePrimed.current || remaining <= 0) return;
+        quickSalePrimed.current = true;
+        setTenderType('cash');
+        setRawValue(String(Math.round(remaining * 100)));
+        setActiveMethod('cash');
+        setShowCashConfirm(true);
+    }, [quickSale, remaining]);
     const change = totalPaid - effectiveTotal;
     const numericInput = rawValue === '' ? 0 : parseInt(rawValue, 10) / 100;
 
