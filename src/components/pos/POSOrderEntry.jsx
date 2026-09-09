@@ -61,6 +61,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const [selectedItem, setSelectedItem] = useState(null);
     const [selectedTable, setSelectedTable] = useState(null);
     const [showPayment, setShowPayment] = useState(false);
+    // Set when payment was reached via a quick-sale button, so it can open
+    // pre-set to exact cash rather than making the cashier choose.
+    const [quickSaleMode, setQuickSaleMode] = useState(false);
     const [optimisticCart, setOptimisticCart] = useState(cart);
     const [viewMode, setViewMode] = useState('entry'); // 'entry' | 'tables' | 'floor-plan'
     const [viewingTable, setViewingTable] = useState(null);
@@ -434,7 +437,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <h2 className={`${t.text} font-bold text-xl`}>Payment</h2>
                         <button onClick={() => setShowPayment(false)} className={`px-4 py-2 ${t.payBack} border text-sm font-semibold rounded-xl transition-colors`}>← Back</button>
                     </div>
-                    <POSPayment cart={optimisticCart} cartTotal={cartTotal} onPaymentComplete={() => { toast.success('Payment completed!'); setShowPayment(false); onClearCart(); }} onBackToCart={() => setShowPayment(false)} restaurantId={restaurantId} restaurantName={restaurant?.name} orderType={orderType} posTheme={posTheme} discount={discount} onApplyDiscount={onApplyDiscount} onRemoveDiscount={onRemoveDiscount} restaurant={restaurant} phoneDetails={phoneDetails} />
+                    <POSPayment cart={optimisticCart} cartTotal={cartTotal} quickSale={quickSaleMode} onPaymentComplete={() => { toast.success('Payment completed!'); setShowPayment(false); setQuickSaleMode(false); onClearCart(); }} onBackToCart={() => { setShowPayment(false); setQuickSaleMode(false); }} restaurantId={restaurantId} restaurantName={restaurant?.name} orderType={orderType} posTheme={posTheme} discount={discount} onApplyDiscount={onApplyDiscount} onRemoveDiscount={onRemoveDiscount} restaurant={restaurant} phoneDetails={phoneDetails} />
                 </div>
             );
         }
@@ -512,6 +515,36 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const barSpanClass = {
         2: 'md:col-span-10', 3: 'md:col-span-9', 5: 'md:col-span-7',
     }[cartSpan] || 'md:col-span-9';
+
+    /**
+     * Quick sale: one tap to add the item, a second tap in payment to confirm.
+     *
+     * Deliberately NOT one-tap-completes-the-sale. A button on the bottom bar
+     * that instantly rings a sale and kicks the drawer will get hit by accident,
+     * and every mis-tap becomes a phantom order plus a drawer opening with no
+     * cash going in - so the till reconciles short with no way to trace why.
+     * It also gives no change calculation when a customer hands over more than
+     * the exact amount, which is the common case.
+     *
+     * Landing on the payment screen pre-set to cash keeps almost all the speed
+     * (2 taps instead of ~5) while making an accidental tap harmless: the
+     * cashier just backs out.
+     */
+    const handleQuickSale = (quickItem) => {
+        const menuItem = menuItems.find(m => m.id === quickItem.menu_item_id);
+        if (!menuItem) {
+            toast.error('That quick-sale item is no longer on the menu');
+            return;
+        }
+        if (menuItem.is_available === false) {
+            toast.error(`${menuItem.name} is marked unavailable`);
+            return;
+        }
+        const posItem = menuItem.pos_price != null ? { ...menuItem, price: menuItem.pos_price } : menuItem;
+        onAddItem({ ...posItem, quantity: 1, customizations: {}, specialInstructions: '' });
+        setQuickSaleMode(true);
+        setShowPayment(true);
+    };
 
     // Main entry view.
     // Height note: use h-full (not calc(100vh-130px)) - <main> is flex-1 inside a
