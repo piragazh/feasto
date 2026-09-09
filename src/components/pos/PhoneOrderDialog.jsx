@@ -148,6 +148,12 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
     const selectPostcodeResult = async (pc) => {
         setShowPostcodeDropdown(false);
         setPostcode(pc);
+        if (!navigator.onLine) {
+            // Address lookup needs the internet, but taking the order does not.
+            // Say so plainly rather than failing silently.
+            toast.info('Offline — type the address manually, it will still save with the order');
+            return;
+        }
         try {
             const info = await lookupPostcode(pc);
             setDeliveryAddress(prev => {
