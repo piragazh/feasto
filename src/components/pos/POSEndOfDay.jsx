@@ -37,8 +37,12 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
             return d >= selectedStart && d <= selectedEnd;
         });
 
+        // Must match REVENUE_STATUSES in POSReports so the Z-report and the
+        // Reports screen never disagree on the same day's takings.
+        // 'out_for_delivery' is included: a delivery in flight is a real sale
+        // that has been paid for, and omitting it under-reported the day.
         const completed = dayOrders.filter(o =>
-            ['confirmed', 'preparing', 'ready_for_collection', 'delivered', 'collected'].includes(o.status)
+            ['confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery', 'delivered', 'collected'].includes(o.status)
         );
         const cancelled = dayOrders.filter(o => o.status === 'cancelled');
         const refunded = dayOrders.filter(o => ['refunded', 'refund_requested'].includes(o.status));
