@@ -22,6 +22,7 @@ import POSEndOfDay from '@/components/pos/POSEndOfDay.jsx';
 import QZTrayStatusBadge from '@/components/pos/QZTrayStatusBadge.jsx';
 import POSPrinterSettings from '@/components/pos/POSPrinterSettings.jsx';
 import POSSoundSettings from '@/components/pos/POSSoundSettings.jsx';
+import POSQuickSaleSettings from '@/components/pos/POSQuickSaleSettings.jsx';
 import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
 import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
@@ -574,6 +575,7 @@ export default function POSDashboard() {
                                 onPaletteChange={setPosPalette}
                             />
                             <POSSoundSettings />
+                            <POSQuickSaleSettings restaurantId={restaurant.id} restaurant={restaurant} />
                             <POSPrinterSettings restaurantId={restaurant.id} />
                         </div>
                     </div>
