@@ -446,6 +446,17 @@
       "type": "number",
       "default": 1
     },
+    "quick_sale_items": {
+      "type": "array",
+      "description": "Menu items shown as one-tap quick-sale buttons on the POS bottom bar. Tapping adds the item and opens payment pre-set to exact cash; the cashier confirms with a second tap. Intended for low-value counter sales (a bag of wings, a can of drink) where the full ordering flow is overkill.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "menu_item_id": { "type": "string", "description": "MenuItem this button sells." },
+          "label": { "type": "string", "description": "Short button label. Defaults to the item name." }
+        }
+      }
+    },
     "qr_ordering_enabled": {
       "type": "boolean",
       "default": true,
