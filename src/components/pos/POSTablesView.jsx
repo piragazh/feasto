@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Users, Settings, Grid3x3, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import TableActionsDialog from './TableActionsDialog';
+import OrderEditDialog from './OrderEditDialog';
+import VoidOrderDialog from './VoidOrderDialog';
 import POSPayment from './POSPayment';
 
 const TABLE_W = 90;
@@ -54,6 +56,8 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
     });
 
     const [movingOrder, setMovingOrder] = useState(null);   // order being moved to another table
+    const [editingOrder, setEditingOrder] = useState(null);  // order being edited on the table
+    const [voidingOrder, setVoidingOrder] = useState(null);  // order being voided from the table
     const [moving, setMoving] = useState(false);
 
     /**
@@ -234,13 +238,35 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                     </div>
                                 ))}
                             </div>
-                            <Button
-                                onClick={() => setMovingOrder(order)}
-                                variant="outline"
-                                className={`h-11 px-4 text-xs ${t.backBtn}`}
-                            >
-                                Move to another table
-                            </Button>
+                            {/* Correct a table order in place: change what was rung
+                                in, move it to the right table, or void it entirely.
+                                Both dialogs route through the hardened backend -
+                                posUpdateOrder re-prices from the live menu, and
+                                posVoidOrder requires a reason code and refuses a
+                                double void. */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <Button
+                                    onClick={() => setEditingOrder(order)}
+                                    variant="outline"
+                                    className={`h-11 text-xs ${t.backBtn}`}
+                                >
+                                    Edit items
+                                </Button>
+                                <Button
+                                    onClick={() => setMovingOrder(order)}
+                                    variant="outline"
+                                    className={`h-11 text-xs ${t.backBtn}`}
+                                >
+                                    Move table
+                                </Button>
+                                <Button
+                                    onClick={() => setVoidingOrder(order)}
+                                    variant="outline"
+                                    className="h-11 text-xs text-red-400 border-red-500/40 hover:bg-red-500/10"
+                                >
+                                    Void
+                                </Button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -258,6 +284,41 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                         Take Payment
                     </Button>
                 </div>
+
+                {editingOrder && (
+                    <OrderEditDialog
+                        order={editingOrder}
+                        open={!!editingOrder}
+                        onClose={() => setEditingOrder(null)}
+                        onUpdate={async () => { await refetchTableOrders(); await refetchTables(); }}
+                        restaurantId={restaurantId}
+                    />
+                )}
+
+                {voidingOrder && (
+                    <VoidOrderDialog
+                        order={voidingOrder}
+                        open={!!voidingOrder}
+                        onClose={() => setVoidingOrder(null)}
+                        onUpdate={async () => {
+                            setVoidingOrder(null);
+                            await refetchTableOrders();
+                            await refetchTables();
+                            // If that was the last order, the table is free again.
+                            const left = getTableOrders(viewingTable.id).filter(o => o.id !== voidingOrder.id);
+                            if (left.length === 0) {
+                                try {
+                                    await base44.entities.RestaurantTable.update(viewingTable.id, {
+                                        status: 'available',
+                                        current_order_id: null,
+                                    });
+                                } catch { /* non-blocking - can be reset from the floor plan */ }
+                                setViewingTable(null);
+                            }
+                        }}
+                        isDark={isDark}
+                    />
+                )}
 
                 {/* Destination picker for a mis-keyed table */}
                 {movingOrder && (
