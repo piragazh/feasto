@@ -63,6 +63,25 @@ Deno.serve(async (req) => {
         }
         const order = orders[0];
 
+        // ── Already-terminal guard ────────────────────────────────────────────────
+        //
+        // There was no check for this, so an order could be voided repeatedly.
+        // On a card order each void re-set refund_request_type/amount, producing
+        // duplicate refund requests for the same money; on any order it wrote
+        // repeated audit entries and could re-cancel an order that had already
+        // been settled or refunded.
+        if (order.status === 'cancelled') {
+            return Response.json({
+                error: 'This order has already been voided.',
+                already_voided: true,
+            }, { status: 409 });
+        }
+        if (['refunded', 'refund_requested'].includes(order.status)) {
+            return Response.json({
+                error: 'This order is already in the refund process and cannot be voided.',
+            }, { status: 409 });
+        }
+
         // ── Tenant check ──────────────────────────────────────────────────────────
         const isAdmin = user.role === 'admin';
 
