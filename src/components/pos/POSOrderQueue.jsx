@@ -127,10 +127,36 @@ function SourceBadge({ order }) {
         }
     };
 
+    /**
+     * An unpaid dine-in order must not be completable from the queue.
+     *
+     * The Complete/Mark Collected buttons here (and on the KDS) set a terminal
+     * status directly. For a table order the bill is settled later via
+     * Tables > pay, so completing from the queue closed the order, freed the
+     * table and left the food paid for by nobody - with no warning and nothing
+     * in the figures to show it.
+     *
+     * Takeaway and online orders are already paid at creation, so they are
+     * unaffected.
+     */
+    const TERMINAL_STATUSES = ['collected', 'delivered'];
+    const isUnpaidDineIn = (order) =>
+        order?.order_type === 'dine_in'
+        && (!order.payment_status || order.payment_status === 'pending_payment');
+
     const updateOrderStatus = async (orderId, newStatus) => {
         try {
             // SECURITY: Route card order cancellations through rejectOrderWithRefund
             const order = orders.find(o => o.id === orderId);
+
+            if (TERMINAL_STATUSES.includes(newStatus) && isUnpaidDineIn(order)) {
+                toast.error(
+                    `Table ${order.table_number || ''} hasn't paid yet — take payment from the Tables tab first`.replace('  ', ' '),
+                    { duration: 6000 }
+                );
+                return;
+            }
+
             if (newStatus === 'cancelled' && order?.payment_method === 'card' && order?.payment_intent_id) {
                 // Use refund workflow for card payments
                 const result = await base44.functions.invoke('rejectOrderWithRefund', {
