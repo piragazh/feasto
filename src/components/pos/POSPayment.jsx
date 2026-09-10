@@ -677,6 +677,16 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 {/* Method buttons */}
                 {!activeMethod && (
                     <>
+                        {blockedForPhoneDetails && (
+                            <div className="mb-4 p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-sm">
+                                <p className="font-bold mb-0.5">Customer details required</p>
+                                <p className="text-xs opacity-90">
+                                    Add the {phoneOrderMissing.join(' and ')} before taking payment &mdash;
+                                    tap <strong>Phone Order</strong> at the top of the POS.
+                                </p>
+                            </div>
+                        )}
+
                         {/* Segmented control rather than two competing solid buttons.
                             Both being equally prominent gave no sense of which tender
                             was selected, and the primary action below could contradict
@@ -705,7 +715,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <p className={`${t.subtext} text-xs mb-2`}>Quick cash</p>
                         <div className="grid grid-cols-4 gap-2 mb-4">
                             {quickCash.map(amt => (
-                                <Button key={amt} onClick={() => handleQuickCash(amt)} className={`${POS_TOUCH.control} ${POS_RADIUS.control} text-base font-bold ${POS_TRANSITION} ${POS_FOCUS} ${t.inactBtn}`}>
+                                <Button key={amt} disabled={blockedForPhoneDetails} onClick={() => handleQuickCash(amt)} className={`${POS_TOUCH.control} disabled:opacity-40 ${POS_RADIUS.control} text-base font-bold ${POS_TRANSITION} ${POS_FOCUS} ${t.inactBtn}`}>
                                     £{amt}
                                 </Button>
                             ))}
@@ -725,7 +735,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             floating mid-screen left ~500px of dead space while
                             putting the button out of natural thumb reach. */}
                         <Button onClick={() => setActiveMethod('cash')}
-                            className={`w-full h-16 text-lg font-bold mt-auto ${t.cashBtn}`}>
+                            disabled={blockedForPhoneDetails}
+                            className={`w-full h-16 text-lg font-bold mt-auto disabled:opacity-40 ${t.cashBtn}`}>
                             Other Amount &mdash; Enter on Keypad
                         </Button>
                         </>
@@ -737,7 +748,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                 setRawValue(String(Math.round(remaining * 100)));
                                 setActiveMethod('card');
                                 setShowCardConfirm(true);
-                            }} className={`w-full h-16 text-xl font-bold mt-auto ${t.cardBtn}`}>
+                            }} disabled={blockedForPhoneDetails} className={`w-full h-16 text-xl font-bold mt-auto disabled:opacity-40 ${t.cardBtn}`}>
                                 Charge £{remaining.toFixed(2)} to Card
                             </Button>
                         )}
