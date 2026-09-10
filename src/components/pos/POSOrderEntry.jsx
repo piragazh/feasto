@@ -191,6 +191,17 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
 
     // Item count per category for the rail. Memoised so it isn't recomputed on
     // every keystroke in the search box.
+    // Quick-sale buttons configured for this restaurant. Filtered to items that
+    // still exist and are available, so a deleted or 86'd item silently drops
+    // off the bar rather than leaving a button that errors on tap.
+    const quickSaleItems = useMemo(() => {
+        const configured = restaurant?.quick_sale_items || [];
+        return configured.filter(qs => {
+            const m = menuItems.find(i => i.id === qs.menu_item_id);
+            return m && m.is_available !== false;
+        });
+    }, [restaurant, menuItems]);
+
     const categoryCounts = useMemo(() => {
         const counts = { __all: 0 };
         for (const i of menuItems) {
@@ -681,6 +692,31 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         </span>
                     )}
                 </button>
+
+                {/* Quick sale buttons. Separated from the utilities to their left,
+                    because these ring a sale rather than manipulate the current
+                    order - a mis-tap here costs more than a mis-tap on 'Hold'. */}
+                {quickSaleItems.length > 0 && (
+                    <>
+                        <div className={`w-px h-8 mx-1 ${isDark ? 'bg-white/10' : 'bg-gray-200'}`} aria-hidden="true" />
+                        {quickSaleItems.map(qs => {
+                            const menuItem = menuItems.find(m => m.id === qs.menu_item_id);
+                            const price = menuItem.pos_price != null ? menuItem.pos_price : menuItem.price;
+                            return (
+                                <button
+                                    key={qs.menu_item_id}
+                                    onClick={() => handleQuickSale(qs)}
+                                    title={`Quick sale: ${menuItem.name} — adds the item and opens payment`}
+                                    className="h-10 px-3 bg-emerald-600/90 hover:bg-emerald-600 active:bg-emerald-700 text-white border border-emerald-500/40 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
+                                >
+                                    <Zap className="h-3.5 w-3.5" />
+                                    <span className="max-w-[90px] truncate">{qs.label || menuItem.name}</span>
+                                    <span className="tabular-nums opacity-90">£{Number(price).toFixed(2)}</span>
+                                </button>
+                            );
+                        })}
+                    </>
+                )}
                 </div>
             </div>
 
