@@ -53,6 +53,60 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
         staleTime: 0,
     });
 
+    const [movingOrder, setMovingOrder] = useState(null);   // order being moved to another table
+    const [moving, setMoving] = useState(false);
+
+    /**
+     * Move an order to a different table.
+     *
+     * Sending a cart to the wrong table was previously unrecoverable from this
+     * screen: tapping the table went straight to payment, so there was no way to
+     * see what was on it, correct the table, or take anything off. Staff had to
+     * either serve the wrong table or void and re-key the whole order.
+     *
+     * Frees the source table only if no other orders remain on it, and claims
+     * the destination only if it is not already holding a different order.
+     */
+    const moveOrderToTable = async (order, destTable) => {
+        setMoving(true);
+        try {
+            await base44.entities.Order.update(order.id, {
+                table_id: destTable.id,
+                table_number: destTable.table_number,
+            });
+
+            const remainingOnSource = getTableOrders(order.table_id).filter(o => o.id !== order.id);
+            if (remainingOnSource.length === 0) {
+                await base44.entities.RestaurantTable.update(order.table_id, {
+                    status: 'available',
+                    current_order_id: null,
+                });
+            } else if (movingOrder?.table_id && order.table_id) {
+                // Source still has orders - keep it occupied but drop a stale pointer.
+                const src = tables.find(t => t.id === order.table_id);
+                if (src?.current_order_id === order.id) {
+                    await base44.entities.RestaurantTable.update(order.table_id, {
+                        current_order_id: remainingOnSource[0].id,
+                    });
+                }
+            }
+
+            const destPatch = { status: 'occupied' };
+            if (!destTable.current_order_id) destPatch.current_order_id = order.id;
+            await base44.entities.RestaurantTable.update(destTable.id, destPatch);
+
+            toast.success(`Moved to ${destTable.table_number}`);
+            setMovingOrder(null);
+            setViewingTable(null);
+            await refetchTableOrders();
+            await refetchTables();
+        } catch (e) {
+            toast.error('Could not move the order: ' + (e?.message || 'unknown error'));
+        } finally {
+            setMoving(false);
+        }
+    };
+
     const getTableOrders = (tableId) => tableOrders.filter(o => o.table_id === tableId);
     const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, o) => sum + o.total, 0);
 
@@ -215,7 +269,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                 key={table.id}
                                 className={`absolute flex flex-col items-center justify-center border-2 select-none transition-all ${shapeClass(table.shape || 'square')} ${floorPlanStatusColor(table.status, hasOrders)} ${hasOrders ? 'cursor-pointer hover:scale-105' : 'cursor-default'}`}
                                 style={{ left: `${pos.x}px`, top: `${pos.y}px`, width: `${w}px`, height: `${TABLE_H}px` }}
-                                onClick={() => { if (hasOrders) { setViewingTable(table); setShowPayment(true); } }}
+                                onClick={() => { if (hasOrders) { setViewingTable(table); setShowPayment(false); } }}
                             >
                                 {/* Status dot */}
                                 <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${statusBadgeColor(table.status)}`} />
@@ -276,7 +330,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                 <div
                                     key={table.id}
                                     className={`aspect-square rounded-xl p-2 flex flex-col relative border-2 transition-all ${statusColor(table.status)} ${hasOrders ? 'cursor-pointer hover:opacity-90' : ''}`}
-                                    onClick={() => { if (hasOrders) { setViewingTable(table); setShowPayment(true); } }}
+                                    onClick={() => { if (hasOrders) { setViewingTable(table); setShowPayment(false); } }}
                                 >
                                     <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${statusBadgeColor(table.status)}`} />
                                     <Button
