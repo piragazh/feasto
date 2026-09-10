@@ -197,6 +197,101 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
         );
     }
 
+    // ── Table Detail ─────────────────────────────────────────────────────────
+    // Shows exactly what is on the table before any money is taken, so a wrong
+    // table can be spotted and corrected rather than served or voided.
+    if (viewingTable && !showPayment) {
+        const ordersForTable = getTableOrders(viewingTable.id);
+        const total = getTableTotal(viewingTable.id);
+        const otherTables = tables.filter(tb => tb.id !== viewingTable.id && tb.is_active !== false);
+
+        return (
+            <div className="flex flex-col h-full min-h-0 gap-3">
+                <div className="flex items-center justify-between flex-shrink-0">
+                    <div>
+                        <h2 className={`${t.text} font-bold text-2xl`}>{viewingTable.table_number}</h2>
+                        <p className={`${t.textSub} text-xs`}>
+                            {ordersForTable.length} order{ordersForTable.length !== 1 ? 's' : ''} · {viewingTable.capacity} seats
+                        </p>
+                    </div>
+                    <Button onClick={() => setViewingTable(null)} variant="outline" className={`${t.backBtn} h-11 px-4`}>Back</Button>
+                </div>
+
+                <div className={`flex-1 min-h-0 overflow-y-auto ${t.panel} border rounded-2xl p-3 space-y-3`}>
+                    {ordersForTable.map(order => (
+                        <div key={order.id} className={`border ${isDark ? 'border-white/10' : 'border-gray-200'} rounded-xl p-3`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className={`${t.text} font-semibold text-sm`}>
+                                    {order.order_number ? `#${order.order_number}` : `#${order.id.slice(-6)}`}
+                                </span>
+                                <span className={`${t.text} font-bold tabular-nums`}>£{Number(order.total || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="space-y-1 mb-3">
+                                {(order.items || []).map((it, i) => (
+                                    <div key={i} className={`flex justify-between ${t.textSub} text-xs`}>
+                                        <span className="truncate pr-2">{it.quantity}x {it.name}</span>
+                                        <span className="tabular-nums flex-shrink-0">£{(Number(it.price || 0) * (it.quantity || 1)).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <Button
+                                onClick={() => setMovingOrder(order)}
+                                variant="outline"
+                                className={`h-11 px-4 text-xs ${t.backBtn}`}
+                            >
+                                Move to another table
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+
+                <div className={`flex items-center justify-between gap-3 flex-shrink-0 ${t.panel} border rounded-2xl p-3`}>
+                    <div>
+                        <p className={`${t.textSub} text-xs font-semibold uppercase tracking-wide`}>Table total</p>
+                        <p className={`${t.text} text-3xl font-bold tabular-nums leading-none`}>£{total.toFixed(2)}</p>
+                    </div>
+                    <Button
+                        onClick={() => setShowPayment(true)}
+                        disabled={ordersForTable.length === 0}
+                        className="h-14 px-8 text-base font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
+                    >
+                        Take Payment
+                    </Button>
+                </div>
+
+                {/* Destination picker for a mis-keyed table */}
+                {movingOrder && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4" onClick={() => setMovingOrder(null)}>
+                        <div className={`${t.panel} border rounded-2xl w-full max-w-md p-5 max-h-[80vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
+                            <h3 className={`${t.text} font-bold text-lg mb-1`}>Move to which table?</h3>
+                            <p className={`${t.textSub} text-xs mb-4`}>
+                                Moving {movingOrder.items?.length || 0} item{(movingOrder.items?.length || 0) !== 1 ? 's' : ''} from {viewingTable.table_number}
+                            </p>
+                            <div className="grid grid-cols-3 gap-2">
+                                {otherTables.map(tb => (
+                                    <button
+                                        key={tb.id}
+                                        disabled={moving}
+                                        onClick={() => moveOrderToTable(movingOrder, tb)}
+                                        className={`h-16 rounded-xl border-2 font-bold text-sm ${statusColor(tb.status)} disabled:opacity-50`}
+                                    >
+                                        {tb.table_number}
+                                        <span className="block text-[11px] font-normal opacity-70 capitalize">
+                                            {tb.status?.replace('_', ' ')}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                            <Button onClick={() => setMovingOrder(null)} variant="outline" className={`w-full mt-4 h-11 ${t.backBtn}`}>
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     const hasPositions = tables.some(t => t.position);
 
     // ── Tables View ──────────────────────────────────────────────────────────
