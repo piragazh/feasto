@@ -10,7 +10,7 @@ import POSPayment from './POSPayment';
 const TABLE_W = 90;
 const TABLE_H = 90;
 
-export default function POSTablesView({ restaurantId, posTheme = 'dark' }) {
+export default function POSTablesView({ restaurantId, posTheme = 'dark', restaurant = null }) {
     // This view was hardcoded dark (text-white / bg-gray-800), so the whole
     // Tables tab stayed dark when the operator switched the POS to light mode.
     const isDark = posTheme === 'dark';
@@ -116,12 +116,24 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark' }) {
                     <h2 className={`${t.text} font-bold text-2xl`}>{viewingTable.table_number} – Payment</h2>
                     <Button onClick={() => { setShowPayment(false); setViewingTable(null); }} variant="outline" className={t.backBtn}>Back</Button>
                 </div>
+                {/* skipOrderCreation is ESSENTIAL here.
+                    The orders already exist - they were created when the cart was
+                    sent to the table. Without this flag POSPayment created a
+                    SECOND order for the same items, while handlePaymentComplete
+                    separately marked the originals delivered: every table payment
+                    produced a duplicate and double-counted the revenue.
+                    existingOrderIds lets the receipt and cash-drawer path
+                    reference the real orders. */}
                 <POSPayment
                     cart={allItems}
                     cartTotal={total}
+                    skipOrderCreation
+                    existingOrderIds={ordersForTable.map(o => o.id)}
                     onPaymentComplete={handlePaymentComplete}
                     onBackToCart={() => { setShowPayment(false); setViewingTable(null); }}
                     restaurantId={restaurantId}
+                    restaurant={restaurant}
+                    orderType="dine_in"
                     posTheme={posTheme}
                 />
             </div>
