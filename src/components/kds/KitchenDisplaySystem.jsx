@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 import KDSColumn from '@/components/kds/KDSColumn';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -129,6 +130,16 @@ export default function KitchenDisplaySystem({ restaurant }) {
     const updateOrderStatus = async (orderId, newStatus) => {
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
+
+        // A dine-in bill is settled at the table, not here. Completing an unpaid
+        // table order from the KDS would close it, free the table and leave the
+        // food paid for by nobody - see the same guard in POSOrderQueue.
+        const unpaidDineIn = order.order_type === 'dine_in'
+            && (!order.payment_status || order.payment_status === 'pending_payment');
+        if (['collected', 'delivered'].includes(newStatus) && unpaidDineIn) {
+            toast.error(`Table ${order.table_number || ''} hasn't paid yet — settle the bill on the POS first`.replace('  ', ' '));
+            return;
+        }
 
         // Kiosk orders use order_status field
         if (order.order_source === 'kiosk') {
