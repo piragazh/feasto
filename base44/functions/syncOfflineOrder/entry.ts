@@ -266,6 +266,10 @@ Deno.serve(async (req) => {
             // online order. That corrupts channel reporting and would make the
             // POS raise a "new online order" alert for its own sales.
             order_source: 'pos',
+            // Offline orders were paid at the till before being queued, so they
+            // must not sync as unpaid - see the same reasoning in posCreateOrder.
+            payment_status: offlineOrderData.payment_status
+                || (offlineOrderData.payment_method === 'card' ? 'paid_card' : 'payment_confirmed'),
             items: verifiedItems,
             subtotal: serverSubtotal,
             discount: totalDiscount,
