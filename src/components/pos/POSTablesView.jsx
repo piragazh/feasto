@@ -82,7 +82,14 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark' }) {
     const handlePaymentComplete = async () => {
         const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable.id);
         for (const order of ordersForTable) {
-            await base44.entities.Order.update(order.id, { status: 'delivered' });
+            // Record the payment, not just the fulfilment. Setting only `status`
+            // left the order at payment_status 'pending_payment' forever, so a
+            // settled table was indistinguishable from an open tab and nothing
+            // could detect an order completed without being paid for.
+            await base44.entities.Order.update(order.id, {
+                status: 'delivered',
+                payment_status: 'payment_confirmed',
+            });
         }
         // Free the table — mark as needs_cleaning so staff can reset it
         try {
