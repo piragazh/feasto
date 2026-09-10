@@ -74,8 +74,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const [tableSelectionOpen, setTableSelectionOpen] = useState(false);
     const [customItemOpen, setCustomItemOpen] = useState(false);
     const [showKeyboard, setShowKeyboard] = useState(false);
+    // Held orders are scoped PER RESTAURANT. A single global 'pos_held_orders'
+    // key leaked one restaurant's parked orders onto another's till whenever an
+    // operator ran more than one site from the same device - and recalling one
+    // would have added another restaurant's items to this restaurant's sale.
+    const heldKey = `pos_held_orders:${restaurantId || 'unknown'}`;
     const [heldOrders, setHeldOrders] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('pos_held_orders') || '[]'); } catch { return []; }
+        try { return JSON.parse(localStorage.getItem(heldKey) || '[]'); } catch { return []; }
     });
     const [heldDrawerOpen, setHeldDrawerOpen] = useState(false);
     const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
@@ -380,7 +385,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         };
         const updated = [...heldOrders, held];
         setHeldOrders(updated);
-        localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+        localStorage.setItem(heldKey, JSON.stringify(updated));
         onClearCart();
         toast.success('Order held — tap "Held Orders" to recall');
     };
@@ -406,7 +411,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         }
 
         setHeldOrders(finalHeld);
-        localStorage.setItem('pos_held_orders', JSON.stringify(finalHeld));
+        localStorage.setItem(heldKey, JSON.stringify(finalHeld));
 
         // Clear current cart first, then restore recalled items one tick later
         // to avoid addToCart merging with stale existing entries
@@ -425,7 +430,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const deleteHeldOrder = (id) => {
         setHeldOrders(prev => {
             const updated = prev.filter(h => h.id !== id);
-            localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+            localStorage.setItem(heldKey, JSON.stringify(updated));
             return updated;
         });
     };
@@ -433,7 +438,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     const updateHeldOrder = (updatedHeld) => {
         setHeldOrders(prev => {
             const updated = prev.map(h => h.id === updatedHeld.id ? updatedHeld : h);
-            localStorage.setItem('pos_held_orders', JSON.stringify(updated));
+            localStorage.setItem(heldKey, JSON.stringify(updated));
             return updated;
         });
     };
