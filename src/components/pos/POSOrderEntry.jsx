@@ -482,7 +482,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     </div>
                 </div>
                 <POSPayment cart={ordersForTable.flatMap(o => o.items)} cartTotal={total} onPaymentComplete={handlePaymentComplete} onBackToCart={() => { setShowPayment(false); setViewMode('tables'); }} posTheme={posTheme} restaurant={restaurant} restaurantId={restaurantId} restaurantName={restaurant?.name} skipOrderCreation={true} existingOrderIds={ordersForTable.map(o => o.id)} />
-                {splitBillOpen && <SplitBillDialog open={splitBillOpen} onClose={() => setSplitBillOpen(false)} orders={ordersForTable} table={viewingTable} onPaymentComplete={() => { setSplitBillOpen(false); handlePaymentComplete(); }} />}
+                {splitBillOpen && <SplitBillDialog open={splitBillOpen} onClose={() => setSplitBillOpen(false)} orders={ordersForTable} table={viewingTable} onSplitCalculated={() => {
+                    setSplitBillOpen(false);
+                    // Deliberately does NOT complete the payment - the split is a
+                    // calculation. Staff take the money on the payment screen.
+                    toast.info('Split calculated — now take payment to close the table');
+                }} />}
             </div>
         );
     }

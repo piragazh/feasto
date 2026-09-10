@@ -78,7 +78,11 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
         // a single payment being collected. Payment must go through the payment
         // screen, which records the tender, opens the drawer and prints.
         onClose();
-        onSplitCalculated?.(splitMethod === 'equal' ? perPerson : customSplits);
+        onSplitCalculated?.(
+            splitMethod === 'equal'
+                ? Array.from({ length: numberOfPeople }, () => ({ amount: totalAmount / numberOfPeople }))
+                : customSplits
+        );
     };
 
     return (
