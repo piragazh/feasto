@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Users, Scissors } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
 
-export default function SplitBillDialog({ open, onClose, orders, table, onPaymentComplete }) {
+export default function SplitBillDialog({ open, onClose, orders, table, onSplitCalculated }) {
     const [splitMethod, setSplitMethod] = useState('equal'); // 'equal' or 'custom'
     const [numberOfPeople, setNumberOfPeople] = useState(2);
     const [customSplits, setCustomSplits] = useState([]);
@@ -68,10 +68,17 @@ export default function SplitBillDialog({ open, onClose, orders, table, onPaymen
                 toast.error('Split amounts do not match total bill');
                 return;
             }
-            toast.success('Bill split successfully!');
+            toast.success('Bill split calculated');
         }
+        // IMPORTANT: this dialog is a CALCULATOR. It works out how to divide the
+        // bill; it does not take any money.
+        //
+        // It previously called onPaymentComplete(), which marks every order on
+        // the table as delivered - so splitting a bill closed it as paid without
+        // a single payment being collected. Payment must go through the payment
+        // screen, which records the tender, opens the drawer and prints.
         onClose();
-        onPaymentComplete?.();
+        onSplitCalculated?.(splitMethod === 'equal' ? perPerson : customSplits);
     };
 
     return (

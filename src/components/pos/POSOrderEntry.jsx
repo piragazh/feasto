@@ -353,7 +353,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 // Fall back to queueing if the backend is unreachable mid-update, so a
                 // completed payment is never silently lost.
                 try {
-                    for (const order of ordersForTable) await base44.entities.Order.update(order.id, { status: 'delivered' });
+                    // Record the payment, not just fulfilment - see POSTablesView.
+                    for (const order of ordersForTable) {
+                        await base44.entities.Order.update(order.id, {
+                            status: 'delivered',
+                            payment_status: 'payment_confirmed',
+                        });
+                    }
                     toast.success('Payment completed!');
                 } catch (err) {
                     if (isNetworkError(err)) {
