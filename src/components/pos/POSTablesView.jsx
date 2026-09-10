@@ -24,6 +24,9 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
         iconBtn:  isDark ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-900',
         grid:     isDark ? '#374151' : '#d1d5db',
         backBtn:  isDark ? 'text-white border-gray-600' : 'text-gray-700 border-gray-300',
+        tileAction: isDark
+            ? 'bg-gray-900/90 border border-white/20 text-gray-300 hover:text-white hover:bg-gray-800 shadow-lg'
+            : 'bg-white border border-gray-300 text-gray-500 hover:text-gray-900 shadow-lg',
     };
 
     const [showPayment, setShowPayment] = useState(false);
@@ -218,19 +221,24 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                 <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${statusBadgeColor(table.status)}`} />
 
                                 {/* Actions button */}
+                                {/* 24px was far below the touch floor and sat inside the
+                                    tile's own tap zone, so on a touchscreen this and
+                                    "open table" competed for the same finger. Now a
+                                    proper 44px target pinned to the corner. */}
                                 <Button
                                     size="sm"
                                     variant="ghost"
+                                    aria-label={`Actions for ${table.table_number}`}
                                     onClick={(e) => { e.stopPropagation(); setSelectedTableForActions(table); setTableActionsOpen(true); }}
-                                    className={`absolute top-1 left-1 h-6 w-6 p-0 ${t.iconBtn}`}
+                                    className={`absolute -top-2 -left-2 h-11 w-11 p-0 rounded-full z-10 ${t.tileAction}`}
                                 >
-                                    <Settings className="h-3.5 w-3.5" />
+                                    <Settings className="h-4 w-4" />
                                 </Button>
 
                                 <p className={`${t.text} font-bold text-sm text-center leading-tight px-1`}>{table.table_number}</p>
                                 {table.assigned_server && (
                                     <div className="flex items-center gap-0.5 text-indigo-300 text-[11px] mt-0.5">
-                                        <Users className="h-2.5 w-2.5" /><span className="truncate max-w-[70px]">{table.assigned_server}</span>
+                                        <Users className="h-3 w-3" /><span className="truncate max-w-[70px]">{table.assigned_server}</span>
                                     </div>
                                 )}
                                 {hasOrders ? (
@@ -275,7 +283,8 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                         size="sm"
                                         variant="ghost"
                                         onClick={(e) => { e.stopPropagation(); setSelectedTableForActions(table); setTableActionsOpen(true); }}
-                                        className={`absolute top-1 left-1 h-5 w-5 p-0 ${t.iconBtn}`}
+                                        aria-label={`Actions for ${table.table_number}`}
+                                        className={`absolute -top-2 -left-2 h-11 w-11 p-0 rounded-full z-10 ${t.tileAction}`}
                                     >
                                         <Settings className="h-3 w-3" />
                                     </Button>
@@ -283,7 +292,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                         <p className={`${t.text} font-bold text-sm text-center leading-tight`}>{table.table_number}</p>
                                         {table.assigned_server && (
                                             <div className="flex items-center gap-0.5 text-indigo-400 text-[11px]">
-                                                <Users className="h-2.5 w-2.5" /><span className="truncate max-w-[60px]">{table.assigned_server}</span>
+                                                <Users className="h-3 w-3" /><span className="truncate max-w-[60px]">{table.assigned_server}</span>
                                             </div>
                                         )}
                                         {hasOrders ? (
