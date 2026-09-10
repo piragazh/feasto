@@ -332,6 +332,19 @@ Deno.serve(async (req) => {
             // online order. That corrupts channel reporting and would make the
             // POS raise a "new online order" alert for its own sales.
             order_source: 'pos',
+            // Record whether money has actually been taken.
+            //
+            // payment_status defaults to 'pending_payment' and nothing was ever
+            // setting it, so EVERY POS order - including completed cash sales -
+            // sat as unpaid forever. That made it impossible to tell a paid
+            // takeaway from an open table tab, and meant a dine-in order could be
+            // marked collected with no payment and nothing to flag it.
+            //
+            // A cart sent to a table is genuinely unpaid (the bill is settled
+            // later), so it stays pending. Anything created with a payment method
+            // has been paid at the counter.
+            payment_status: orderData.payment_status
+                || (orderData.payment_method ? (orderData.payment_method === 'card' ? 'paid_card' : 'payment_confirmed') : 'pending_payment'),
             items: verifiedItems,
             subtotal: serverSubtotal,
             discount: totalDiscount,
