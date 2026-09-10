@@ -6,7 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Clock, Users, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function POSWaitlist({ posTheme = 'dark' }) {
+export default function POSWaitlist({ posTheme = 'dark', restaurantId = null }) {
+    // Scoped per restaurant: a single global 'pos_waitlist' key showed one
+    // site's waiting customers on another site's till when an operator runs
+    // more than one restaurant from the same device.
+    const waitlistKey = `pos_waitlist:${restaurantId || 'unknown'}`;
     const isDark = posTheme === 'dark';
     const t = {
         panel:      isDark ? 'bg-[#151720] border-gray-700'   : 'bg-white border-gray-200',
@@ -21,12 +25,12 @@ export default function POSWaitlist({ posTheme = 'dark' }) {
         emptyText:  isDark ? 'text-gray-400'                   : 'text-gray-400',
     };
     const [waitlist, setWaitlist] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('pos_waitlist') || '[]'); } catch { return []; }
+        try { return JSON.parse(localStorage.getItem(waitlistKey) || '[]'); } catch { return []; }
     });
 
     // Persist waitlist to localStorage so it survives reloads
     useEffect(() => {
-        try { localStorage.setItem('pos_waitlist', JSON.stringify(waitlist)); } catch { /* quota */ }
+        try { localStorage.setItem(waitlistKey, JSON.stringify(waitlist)); } catch { /* quota */ }
     }, [waitlist]);
     const [guestName, setGuestName] = useState('');
     const [partySize, setPartySize] = useState('2');
