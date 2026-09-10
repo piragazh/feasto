@@ -164,6 +164,27 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     // Denominations recalculate as the amount owed changes (split payments, part-cash).
     const quickCash = quickCashOptions(remaining);
 
+    /**
+     * Phone orders need a contactable customer.
+     *
+     * phoneDetails defaults to {} and every field was spread conditionally, so a
+     * phone order could be completed with no name, no number and - for delivery -
+     * no address. A collection order with no name cannot be handed to the right
+     * person; a delivery with no address cannot be delivered at all.
+     *
+     * Collection: name + phone. Delivery: name + phone + address.
+     */
+    const phoneOrderMissing = (() => {
+        const isPhone = orderType === 'phone_collection' || orderType === 'phone_delivery';
+        if (!isPhone) return [];
+        const missing = [];
+        if (!phoneDetails?.name?.trim()) missing.push('customer name');
+        if (!phoneDetails?.phone?.trim()) missing.push('phone number');
+        if (orderType === 'phone_delivery' && !phoneDetails?.address?.trim()) missing.push('delivery address');
+        return missing;
+    })();
+    const blockedForPhoneDetails = phoneOrderMissing.length > 0;
+
     // Quick sale: land ready to confirm exact cash. The cashier's second tap is
     // the confirmation - we deliberately do NOT auto-complete, so an accidental
     // quick-sale tap can still be backed out of without ringing a sale or
@@ -198,6 +219,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     }, [cart, discount, coupon, effectiveTotal, remaining, activeMethod]);
 
     const createOrder = async (paymentSummary) => {
+        if (blockedForPhoneDetails) {
+            throw new Error(`Add the ${phoneOrderMissing.join(' and ')} before taking payment`);
+        }
         if (!restaurantId || skipOrderCreation) return { offline: false, skipped: true };
         const dominantMethod = paymentSummary.length === 1 ? paymentSummary[0].method : 'cash';
         const isPhoneOrder = orderType === 'phone_collection' || orderType === 'phone_delivery';
