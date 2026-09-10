@@ -126,6 +126,45 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ── Re-price items from the live menu before recomputing ─────────────
+        //
+        // `total` and `subtotal` are stripped above, but the recompute below used
+        // the CLIENT's item.price values - so an edited order could be repriced to
+        // anything by sending items with altered prices. posCreateOrder and
+        // kioskCreateOrder both verify against the live menu; this path did not.
+        //
+        // Prices are taken from the MenuItem record (pos_price preferred, matching
+        // how the POS prices items). Option surcharges are preserved by keeping any
+        // amount the client claims ABOVE the base price only when the item carries
+        // customizations - otherwise the base price is used outright.
+        if (hasItemsUpdate && Array.isArray(safeUpdates.items)) {
+            const menuItems = await base44.asServiceRole.entities.MenuItem.filter({
+                restaurant_id: existingOrder.restaurant_id,
+            });
+            const menuMap = new Map(menuItems.map(m => [m.id, m]));
+
+            for (const item of safeUpdates.items) {
+                const menuItem = item.menu_item_id ? menuMap.get(item.menu_item_id) : null;
+                if (!menuItem) {
+                    // Custom / manually-priced line: keep as-is but bound it so a
+                    // negative or absurd value cannot pass through.
+                    const p = Number(item.price);
+                    item.price = Number.isFinite(p) && p >= 0 ? p : 0;
+                    continue;
+                }
+                const basePrice = menuItem.pos_price != null ? menuItem.pos_price : menuItem.price;
+                const claimed = Number(item.price);
+                const hasCustomisations = item.customizations && Object.keys(item.customizations).length > 0;
+                // Allow a surcharge above base only for customised lines, never a
+                // reduction below the menu price.
+                item.price = (hasCustomisations && Number.isFinite(claimed) && claimed > basePrice)
+                    ? claimed
+                    : basePrice;
+                const qty = Number(item.quantity);
+                item.quantity = Number.isInteger(qty) && qty > 0 && qty <= 99 ? qty : 1;
+            }
+        }
+
         // ── Server-side total recompute when items or discount change ─────────────
         if (hasItemsUpdate || hasDiscountUpdate) {
             const finalItems = hasItemsUpdate ? safeUpdates.items : (existingOrder.items || []);
