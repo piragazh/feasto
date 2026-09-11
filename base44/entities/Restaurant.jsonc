@@ -446,6 +446,10 @@
       "type": "number",
       "default": 1
     },
+    "role_permissions": {
+      "type": "object",
+      "description": "Which POS permissions each staff role holds, e.g. { \"waiter\": [\"order.create\"], \"manager\": [...] }. Keys come from the fixed catalogue in src/lib/posPermissions.js. When absent, DEFAULT_ROLE_PERMISSIONS applies. Enforced server-side from the staff session; the UI only hides what a role lacks."
+    },
     "quick_sale_items": {
       "type": "array",
       "description": "Menu items shown as one-tap quick-sale buttons on the POS bottom bar. Tapping adds the item and opens payment pre-set to exact cash; the cashier confirms with a second tap. Intended for low-value counter sales (a bag of wings, a can of drink) where the full ordering flow is overkill.",
