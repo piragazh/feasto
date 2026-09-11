@@ -1,0 +1,69 @@
+{
+  "name": "PosAuditLog",
+  "type": "object",
+  "description": "Durable audit trail for POS actions that move money or change orders. Console logs are ephemeral and cannot be reviewed after the fact; this is the record an owner checks when the till is short or an order was voided. Written server-side only.",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant the action took place in."
+    },
+    "action": {
+      "type": "string",
+      "description": "Permission key or action name, e.g. order.void, discount.over_limit, staff.login_failed."
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "allowed",
+        "denied",
+        "overridden"
+      ],
+      "description": "allowed = the actor held the permission. denied = refused. overridden = the actor lacked it and another staff member authorised."
+    },
+    "staff_id": {
+      "type": "string",
+      "description": "Staff member who performed the action."
+    },
+    "staff_name": {
+      "type": "string",
+      "description": "Name captured at the time, so the log stays readable if the staff record is later deleted."
+    },
+    "staff_role": {
+      "type": "string",
+      "description": "Role held at the time of the action."
+    },
+    "authorised_by_staff_id": {
+      "type": "string",
+      "description": "Staff member who approved an override, when outcome is overridden."
+    },
+    "authorised_by_name": {
+      "type": "string",
+      "description": "Name of the authorising staff member, captured at the time."
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Order the action related to, where applicable."
+    },
+    "amount": {
+      "type": "number",
+      "description": "Money involved, where applicable - discount value, void total, refund amount."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason code or free-text reason supplied by the operator."
+    },
+    "detail": {
+      "type": "string",
+      "description": "Additional context for review, e.g. what changed on an edit."
+    },
+    "terminal": {
+      "type": "string",
+      "description": "Which till the action came from."
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "action",
+    "outcome"
+  ]
+}
