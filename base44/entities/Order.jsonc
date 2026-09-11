@@ -17,6 +17,18 @@
       "default": "online",
       "description": "Channel through which the order was placed."
     },
+    "staff_id": {
+      "type": "string",
+      "description": "Staff member who rang in this order. Set SERVER-SIDE from the verified staff session token, never from the client - a client-supplied value could be forged, which would make performance figures and audit trails meaningless. POSStaffManager already reports against this field."
+    },
+    "staff_name": {
+      "type": "string",
+      "description": "Staff name captured at the time of sale, so reports stay readable if the staff record is later edited or deleted."
+    },
+    "staff_role": {
+      "type": "string",
+      "description": "Role held by the staff member when the order was placed."
+    },
     "idempotency_key": {
       "type": "string",
       "description": "Client-supplied key to prevent duplicate order creation on double-submit"
