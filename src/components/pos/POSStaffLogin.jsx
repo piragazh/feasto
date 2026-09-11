@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UtensilsCrossed, Delete } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cacheStaffPin, getCachedStaffPin } from './POSOfflineDB';
+import { saveStaffSession } from '@/lib/posStaffSession';
 
 async function computePinHash(staffId, pin, restaurantId) {
     const data = new TextEncoder().encode(`${staffId}:${pin}:${restaurantId}`);
@@ -136,6 +137,14 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
                 if (result.data.pin_hash) {
                     await cacheStaffPin(selected.id, selected.restaurant_id, result.data.pin_hash, result.data.staff);
                 }
+                // Keep the signed session so privileged actions can prove who is
+                // acting without re-prompting for a PIN every time.
+                saveStaffSession(
+                    result.data.staff?.restaurant_id || selected.restaurant_id,
+                    result.data.session,
+                    result.data.session_expires,
+                    result.data.staff,
+                );
                 onLogin(result.data.staff);
             } else {
                 setError(result?.data?.error || 'Incorrect PIN. Try again.');
