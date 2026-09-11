@@ -34,6 +34,48 @@ function _normalizeEmail(email) {
     return email.trim().toLowerCase() || null;
 }
 
+/**
+ * Verify a staff session token issued by posVerifyStaffPin.
+ *
+ * The acting staff member is read from this token, NEVER from the request body.
+ * A client-supplied staff_id can be forged, which would make performance
+ * reporting and the audit trail worthless - anyone could attribute their sales,
+ * voids or discounts to somebody else.
+ *
+ * Returns the session payload, or null if absent, malformed, tampered with,
+ * expired, or for a different restaurant.
+ */
+async function verifyStaffSession(token, restaurantId) {
+    try {
+        if (!token || typeof token !== 'string') return null;
+        const secret = Deno.env.get('STAFF_SESSION_SECRET');
+        if (!secret) return null;          // unsigned tokens are never trusted
+
+        const [body, sig] = token.split('.');
+        if (!body || !sig) return null;
+
+        const key = await crypto.subtle.importKey(
+            'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+        );
+        const expected = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+        const expectedHex = Array.from(new Uint8Array(expected))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+
+        // Constant-time comparison
+        if (expectedHex.length !== sig.length) return null;
+        let diff = 0;
+        for (let i = 0; i < expectedHex.length; i++) diff |= expectedHex.charCodeAt(i) ^ sig.charCodeAt(i);
+        if (diff !== 0) return null;
+
+        const payload = JSON.parse(atob(body));
+        if (payload.exp && new Date(payload.exp) < new Date()) return null;
+        if (restaurantId && payload.restaurant_id !== restaurantId) return null;
+        return payload;
+    } catch {
+        return null;
+    }
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -332,6 +374,13 @@ Deno.serve(async (req) => {
             // online order. That corrupts channel reporting and would make the
             // POS raise a "new online order" alert for its own sales.
             order_source: 'pos',
+            // Staff attribution, taken from the VERIFIED session only. If the
+            // session is missing or invalid the order still completes - refusing
+            // a sale because a token expired would stop the restaurant trading -
+            // but it is recorded as unattributed rather than trusting the client.
+            staff_id: staffSession?.staff_id || undefined,
+            staff_name: staffSession?.staff_name || undefined,
+            staff_role: staffSession?.role || undefined,
             // Record whether money has actually been taken.
             //
             // payment_status defaults to 'pending_payment' and nothing was ever
