@@ -85,6 +85,10 @@ Deno.serve(async (req) => {
 
         const orderData = await req.json();
 
+        // Who is actually operating the till. Verified from the signed session
+        // token; the request body's own staff fields are ignored entirely.
+        const staffSession = await verifyStaffSession(orderData.staff_session, orderData.restaurant_id);
+
         // NOTE: `total` is deliberately NOT required.
         //
         // Two bugs lived in the old check `!orderData.total`:
