@@ -26,6 +26,7 @@ import PhoneOrderDialog from './PhoneOrderDialog';
 import QuickItemLookupDialog from './QuickItemLookupDialog';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables, savePendingStatusUpdate, setCacheMeta, savePendingTableOrder } from './POSOfflineDB';
 import { isNetworkError } from '@/lib/networkStatus';
+import { getStaffSessionToken } from '@/lib/posStaffSession';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, onReplaceItem, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
     const isDark = posTheme === 'dark';
@@ -304,7 +305,11 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             // queue instead of losing the order — see src/lib/networkStatus.js.
             let created;
             try {
-                const res = await base44.functions.invoke('posCreateOrder', orderData);
+                // Staff attribution for table sends - same verified-session rule.
+                const res = await base44.functions.invoke('posCreateOrder', {
+                    ...orderData,
+                    staff_session: getStaffSessionToken(restaurantId),
+                });
                 if (res?.data?.error) throw new Error(res.data.error);
                 created = res?.data?.order;
                 if (!created) throw new Error('Order creation returned no order object');

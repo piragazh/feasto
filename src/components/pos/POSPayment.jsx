@@ -10,6 +10,7 @@ import { savePendingOrder } from './POSOfflineDB';
 import { publishCustomerDisplay } from './CustomerDisplay';
 import { printWithCentralizedConfig, hasPrinterForChannel, openCashDrawer } from '@/lib/printUtils';
 import { isNetworkError } from '@/lib/networkStatus';
+import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { POS_RADIUS, POS_TEXT, POS_TOUCH, POS_FOCUS, POS_TRANSITION } from '@/lib/posDesign';
 import { playSuccess, playError, playAlert } from '@/lib/posSound';
 import {
@@ -277,7 +278,13 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         // failure therefore falls back to the offline queue rather than losing
         // the sale; it will sync (idempotently, via offline_id) on reconnect.
         try {
-            const res = await base44.functions.invoke('posCreateOrder', orderData);
+            // Send the signed staff session so the server can attribute the sale.
+            // The server ignores any staff fields in the body and reads identity
+            // from this token only.
+            const res = await base44.functions.invoke('posCreateOrder', {
+                ...orderData,
+                staff_session: getStaffSessionToken(restaurantId),
+            });
             // invoke() does NOT throw on a 4xx - it resolves with the error body.
             // Ignoring the response meant a server rejection (discount over the
             // manager limit, invalid coupon, failed validation) completed the
