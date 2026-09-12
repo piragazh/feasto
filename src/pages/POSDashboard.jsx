@@ -24,6 +24,7 @@ import POSPrinterSettings from '@/components/pos/POSPrinterSettings.jsx';
 import POSSoundSettings from '@/components/pos/POSSoundSettings.jsx';
 import POSQuickSaleSettings from '@/components/pos/POSQuickSaleSettings.jsx';
 import POSPermissionSettings from '@/components/pos/POSPermissionSettings.jsx';
+import POSStaffMaintenance from '@/components/pos/POSStaffMaintenance.jsx';
 import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
 import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
@@ -578,6 +579,7 @@ export default function POSDashboard() {
                             <POSSoundSettings />
                             <POSQuickSaleSettings restaurantId={restaurant.id} restaurant={restaurant} />
                             <POSPermissionSettings restaurantId={restaurant.id} restaurant={restaurant} />
+                            <POSStaffMaintenance restaurantId={restaurant.id} />
                             <POSPrinterSettings restaurantId={restaurant.id} />
                         </div>
                     </div>
