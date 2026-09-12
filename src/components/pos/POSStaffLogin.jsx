@@ -62,6 +62,18 @@ function PinPad({ onDigit, onBackspace, onSubmit, pin, isDark }) {
 }
 
 export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, onSkip }) {
+    /**
+     * Login mode.
+     *
+     * 'number' (default) — staff type their number then their PIN. Nothing on
+     *   screen identifies who works here until both are correct, and it scales
+     *   past the dozen or so people a name grid can show.
+     * 'list' — the original name grid. Kept for very small teams where picking a
+     *   face is genuinely faster, and as a fallback if someone forgets a number.
+     */
+    const [mode, setMode] = useState('number');
+    const [staffNumber, setStaffNumber] = useState('');
+    const [numberStep, setNumberStep] = useState('number');   // 'number' | 'pin'
     const [selected, setSelected] = useState(null);
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
