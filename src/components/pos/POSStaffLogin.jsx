@@ -271,7 +271,98 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
                 </p>
             </div>
 
-            {!selected ? (
+            {mode === 'number' && !selected ? (
+                /* ── Staff number + PIN ────────────────────────────────────────
+                   Default because it reveals nothing before authentication and
+                   works with any number of staff. */
+                <div className="w-full max-w-xs">
+                    <div className={`mb-4 h-16 rounded-2xl border flex items-center justify-center ${isDark ? 'bg-black/30 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                        {numberStep === 'number' ? (
+                            <span className={`${t.text} text-3xl font-mono font-bold tracking-widest`}>
+                                {staffNumber || <span className={`${t.sub} text-base font-sans font-normal tracking-normal`}>Staff number</span>}
+                            </span>
+                        ) : (
+                            <span className={`${t.text} text-3xl font-bold tracking-widest`}>
+                                {'●'.repeat(pin.length) || <span className={`${t.sub} text-base font-normal tracking-normal`}>PIN</span>}
+                            </span>
+                        )}
+                    </div>
+
+                    {error && <p className="text-red-400 text-sm text-center mb-3" role="alert">{error}</p>}
+
+                    <div className="grid grid-cols-3 gap-2">
+                        {[1,2,3,4,5,6,7,8,9].map(d => (
+                            <button
+                                key={d}
+                                disabled={verifying}
+                                onClick={() => {
+                                    setError('');
+                                    if (numberStep === 'number') {
+                                        if (staffNumber.length < 6) setStaffNumber(staffNumber + d);
+                                    } else {
+                                        const next = pin + d;
+                                        if (next.length <= 6) {
+                                            setPin(next);
+                                            // 4 digits is the common case - submit without an extra tap.
+                                            if (next.length === 4) setTimeout(() => verifyByNumber(next), 80);
+                                        }
+                                    }
+                                }}
+                                className={`h-16 rounded-2xl text-2xl font-bold ${t.key} disabled:opacity-40`}
+                            >
+                                {d}
+                            </button>
+                        ))}
+                        <button
+                            disabled={verifying}
+                            onClick={() => {
+                                setError('');
+                                if (numberStep === 'number') setStaffNumber(staffNumber.slice(0, -1));
+                                else if (pin.length > 0) setPin(pin.slice(0, -1));
+                                else { setNumberStep('number'); }
+                            }}
+                            className={`h-16 rounded-2xl flex items-center justify-center ${t.key} disabled:opacity-40`}
+                        >
+                            <Delete className="h-6 w-6" />
+                        </button>
+                        <button
+                            disabled={verifying}
+                            onClick={() => {
+                                setError('');
+                                if (numberStep === 'number') { if (staffNumber.length < 6) setStaffNumber(staffNumber + '0'); }
+                                else if (pin.length < 6) setPin(pin + '0');
+                            }}
+                            className={`h-16 rounded-2xl text-2xl font-bold ${t.key} disabled:opacity-40`}
+                        >
+                            0
+                        </button>
+                        <button
+                            disabled={verifying || (numberStep === 'number' ? staffNumber.length < 3 : pin.length === 0)}
+                            onClick={() => {
+                                if (numberStep === 'number') { setNumberStep('pin'); setError(''); }
+                                else verifyByNumber(pin);
+                            }}
+                            className="h-16 rounded-2xl text-base font-bold bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white disabled:opacity-40"
+                        >
+                            {verifying ? '…' : numberStep === 'number' ? 'Next' : 'Enter'}
+                        </button>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-4 mt-5">
+                        <button
+                            onClick={() => { setMode('list'); setError(''); setPin(''); setStaffNumber(''); setNumberStep('number'); }}
+                            className={`text-xs underline ${t.skip}`}
+                        >
+                            Pick from a list instead
+                        </button>
+                        {onSkip && (
+                            <button onClick={onSkip} className={`text-xs underline ${t.skip}`}>
+                                Continue as manager
+                            </button>
+                        )}
+                    </div>
+                </div>
+            ) : !selected ? (
                 /* Staff picker */
                 <div className="w-full max-w-2xl">
                     {activeStaff.length === 0 ? (
