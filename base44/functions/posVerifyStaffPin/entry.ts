@@ -261,14 +261,32 @@ Deno.serve(async (req) => {
             terminal,
         });
 
-        // The PIN and its hash never leave the server.
+        // The stored PIN and its PBKDF2 hash never leave the server.
         const { pin: _p, pin_hash: _h, pin_salt: _s, ...safeStaff } = staff;
+
+        // Separate, weaker hash purely for OFFLINE login on this terminal.
+        //
+        // The till must still accept a PIN when the internet drops, so it caches
+        // a value it can verify locally. This is deliberately NOT the stored
+        // PBKDF2 hash - that must never leave the server. It is derived from the
+        // submitted PIN plus ids the terminal already holds, and lives only in
+        // that terminal's IndexedDB.
+        //
+        // Weaker by design: an attacker with the device could brute-force it.
+        // That is an accepted trade for a till that keeps trading during an
+        // outage; the alternative is staff unable to log in when the line drops.
+        let offlinePinHash = null;
+        if (pin) {
+            const data = new TextEncoder().encode(`${staff.id}:${pin}:${staff.restaurant_id}`);
+            offlinePinHash = toHex(await crypto.subtle.digest('SHA-256', data));
+        }
 
         return Response.json({
             valid: true,
             staff: safeStaff,
             session,
             session_expires: expiresAt,
+            pin_hash: offlinePinHash,   // offline-cache value only, see above
         });
     } catch (error) {
         console.error('[STAFF-AUTH] error:', error?.message || error);
