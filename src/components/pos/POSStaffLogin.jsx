@@ -104,6 +104,67 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
         setError('');
     };
 
+    /**
+     * Verify by staff NUMBER.
+     *
+     * Deliberately does not look the number up in the local staff list first -
+     * that list is fetched to the browser and doing so would confirm whether a
+     * number exists before a PIN is entered. The server answers with a single
+     * vague failure for both a wrong number and a wrong PIN.
+     */
+    const verifyByNumber = async (pinValue) => {
+        setVerifying(true);
+        setError('');
+        try {
+            const result = await base44.functions.invoke('posVerifyStaffPin', {
+                staff_number: staffNumber,
+                restaurant_id: restaurant?.id,
+                pin: pinValue,
+                terminal: typeof window !== 'undefined' ? window.location.search : undefined,
+            });
+            const data = result?.data ?? result;
+            if (data?.valid) {
+                if (data.pin_hash && data.staff) {
+                    await cacheStaffPin(data.staff.id, data.staff.restaurant_id, data.pin_hash, data.staff);
+                }
+                saveStaffSession(data.staff?.restaurant_id || restaurant?.id, data.session, data.session_expires, data.staff);
+                onLogin(data.staff);
+            } else {
+                setError(data?.error || 'Incorrect staff number or PIN');
+                setPin('');
+                if (data?.locked) { setNumberStep('number'); setStaffNumber(''); }
+            }
+        } catch (e) {
+            // Offline: fall back to the cached hash for this staff number. The
+            // cache is keyed by staff id, so we resolve the number locally here -
+            // acceptable offline, where the alternative is nobody can log in.
+            try {
+                const match = (staffList || []).find(
+                    st => String(st.staff_number || '').trim() === staffNumber.trim() && st.is_active !== false,
+                );
+                if (!match) { setError('Incorrect staff number or PIN'); setPin(''); return; }
+                const cached = await getCachedStaffPin(match.id);
+                if (!cached) {
+                    setError('Offline — this staff member must log in online once on this terminal first.');
+                    setPin('');
+                    return;
+                }
+                const entered = await computePinHash(match.id, pinValue, match.restaurant_id);
+                if (entered === cached.pin_hash) {
+                    onLogin(cached.staff_info);
+                } else {
+                    setError('Incorrect staff number or PIN');
+                    setPin('');
+                }
+            } catch {
+                setError('Could not verify — try again');
+                setPin('');
+            }
+        } finally {
+            setVerifying(false);
+        }
+    };
+
     const verifyPin = async (p = pin) => {
         if (!selected || verifying) return;
         // No PIN set on the staff record — allow login without verification
