@@ -252,6 +252,11 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
             : 'bg-white border-gray-200 hover:border-orange-400 text-gray-900',
         staffCardSelected: 'border-orange-500 bg-orange-500/10',
         skip:    isDark ? 'text-gray-600 hover:text-gray-400' : 'text-gray-400 hover:text-gray-600',
+        // Keypad keys for the staff-number login. Large and high-contrast: this
+        // is tapped dozens of times a shift, often in a hurry.
+        key:     isDark
+            ? 'bg-white/5 hover:bg-white/10 active:bg-white/20 border border-white/10 text-white'
+            : 'bg-gray-50 hover:bg-gray-100 active:bg-gray-200 border border-gray-200 text-gray-900',
     };
 
     return (
