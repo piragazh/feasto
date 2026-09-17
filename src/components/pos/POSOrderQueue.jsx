@@ -11,8 +11,10 @@ import OrderEditDialog from './OrderEditDialog';
 import BillSplitDialog from './BillSplitDialog';
 import ApplyPromotionDialog from './ApplyPromotionDialog';
 import VoidOrderDialog from './VoidOrderDialog';
+import usePermissionGate from '@/lib/usePermissionGate';
+import { PERMISSIONS } from '@/lib/posPermissions';
 
-export default function POSOrderQueue({ restaurantId, posTheme = 'dark' }) {
+export default function POSOrderQueue({ restaurantId, posTheme = 'dark', restaurant, activeStaffMember }) {
     const isDark = posTheme === 'dark';
     const t = {
         bg:         isDark ? 'bg-[#151720]'               : 'bg-white',
@@ -70,6 +72,8 @@ function SourceBadge({ order }) {
     // Terminal states - an order here is done and must not be re-edited.
     const FINISHED = ['collected', 'delivered', 'cancelled', 'refunded'];
     const isFinished = (o) => FINISHED.includes(o?.status);
+
+    const { guard, overrideDialog } = usePermissionGate({ restaurant, activeStaffMember });
 
     const [editingOrder, setEditingOrder] = useState(null);
     const [splittingOrder, setSplittingOrder] = useState(null);
@@ -321,7 +325,11 @@ function SourceBadge({ order }) {
                                         <div className="space-y-2 flex flex-col gap-1 mb-3">
                                             <div className="grid grid-cols-3 gap-1.5">
                                                 <Button
-                                                    onClick={() => setEditingOrder(order)}
+                                                    onClick={() => guard(PERMISSIONS.ORDER_EDIT, () => setEditingOrder(order), {
+                                                        label: 'edit an order',
+                                                        orderId: order.id,
+                                                        context: `Edit order ${order.order_number || order.id.slice(-6)}`,
+                                                    })}
                                                     className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs h-11 rounded-xl flex-col gap-0.5"
                                                     title="Edit items, add/remove, change quantities"
                                                 >
@@ -337,7 +345,12 @@ function SourceBadge({ order }) {
                                                     Split
                                                 </Button>
                                                 <Button
-                                                    onClick={() => setApplyingPromo(order)}
+                                                    onClick={() => guard(PERMISSIONS.DISCOUNT_APPLY, () => setApplyingPromo(order), {
+                                                        label: 'apply a discount',
+                                                        orderId: order.id,
+                                                        amount: order.total,
+                                                        context: `Discount on order ${order.order_number || order.id.slice(-6)}`,
+                                                    })}
                                                     className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-xs h-11 rounded-xl flex-col gap-0.5"
                                                     title="Apply discount or promotion"
                                                 >
@@ -346,7 +359,12 @@ function SourceBadge({ order }) {
                                                 </Button>
                                             </div>
                                             <Button
-                                                onClick={() => setVoidingOrder(order)}
+                                                onClick={() => guard(PERMISSIONS.ORDER_VOID, () => setVoidingOrder(order), {
+                                                    label: 'void an order',
+                                                    orderId: order.id,
+                                                    amount: order.total,
+                                                    context: `Void order ${order.order_number || order.id.slice(-6)} - £${Number(order.total || 0).toFixed(2)}`,
+                                                })}
                                                 className="w-full bg-red-600/90 hover:bg-red-600 active:bg-red-700 text-white text-xs h-11 rounded-xl"
                                                 title="Void / cancel this order"
                                             >
