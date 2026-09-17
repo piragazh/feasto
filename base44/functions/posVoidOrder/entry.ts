@@ -25,6 +25,61 @@ const VALID_REASON_CODES = [
 
 const VOIDABLE_STATUSES = ['pending', 'confirmed', 'preparing'];
 
+// Mirrors src/lib/posPermissions.js. Functions are self-contained on this
+// platform, so this is duplicated rather than imported - keep the two in step.
+const DEFAULT_ROLE_PERMISSIONS = {
+    waiter: ['order.create', 'table.move'],
+    cashier: ['order.create', 'payment.take', 'order.edit', 'discount.apply', 'coupon.apply', 'drawer.no_sale', 'table.move'],
+    kitchen_staff: [],
+    manager: [
+        'order.create', 'order.edit', 'order.void', 'payment.take', 'payment.refund',
+        'discount.apply', 'discount.over_limit', 'coupon.apply', 'drawer.no_sale',
+        'table.move', 'table.merge', 'reports.view', 'eod.run', 'staff.manage', 'settings.manage',
+    ],
+};
+
+/**
+ * Verify an HMAC-signed token from posVerifyStaffPin or posAuthorizeAction.
+ *
+ * The UI hides actions a role lacks, but hiding is not enforcement - anyone can
+ * call this function directly. This is where the decision is actually made.
+ */
+async function verifySignedToken(token) {
+    try {
+        if (!token || typeof token !== 'string') return null;
+        const secret = Deno.env.get('STAFF_SESSION_SECRET');
+        if (!secret) return null;
+
+        const [body, sig] = token.split('.');
+        if (!body || !sig) return null;
+
+        const key = await crypto.subtle.importKey(
+            'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+        );
+        const expected = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+        const expectedHex = Array.from(new Uint8Array(expected))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+
+        if (expectedHex.length !== sig.length) return null;
+        let diff = 0;
+        for (let i = 0; i < expectedHex.length; i++) diff |= expectedHex.charCodeAt(i) ^ sig.charCodeAt(i);
+        if (diff !== 0) return null;
+
+        const payload = JSON.parse(atob(body));
+        if (payload.exp && new Date(payload.exp) < new Date()) return null;
+        return payload;
+    } catch {
+        return null;
+    }
+}
+
+function roleHasPermission(rolePermissions, role, permission) {
+    const map = (rolePermissions && Object.keys(rolePermissions).length > 0)
+        ? rolePermissions : DEFAULT_ROLE_PERMISSIONS;
+    const granted = map[role];
+    return Array.isArray(granted) && granted.includes(permission);
+}
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -38,7 +93,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { order_id, reason_code, reason_note } = await req.json();
+        const { order_id, reason_code, reason_note, staff_session, override } = await req.json();
 
         if (!order_id) {
             return Response.json({ error: 'order_id required' }, { status: 400 });
