@@ -455,6 +455,11 @@ function SourceBadge({ order }) {
                 />
                 )}
 
+                {/* Manager override prompt. Without this rendered, guard() would
+                    set state that nothing displays and the action would silently
+                    never happen. */}
+                {overrideDialog}
+
                 {voidingOrder && (
                 <VoidOrderDialog
                     order={voidingOrder}
