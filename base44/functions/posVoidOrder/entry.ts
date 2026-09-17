@@ -137,6 +137,63 @@ Deno.serve(async (req) => {
             }, { status: 409 });
         }
 
+        // ── Staff permission check ────────────────────────────────────────────────
+        //
+        // Enforced HERE, not in the UI. usePermissionGate hides the Void button
+        // from a role that lacks the permission, but anyone can call this endpoint
+        // directly - so the decision has to be made server-side or it isn't made
+        // at all.
+        //
+        // Two ways through:
+        //   1. The acting staff member's role holds order.void, or
+        //   2. A manager authorised it and posAuthorizeAction issued an override
+        //      token bound to this permission and this order.
+        //
+        // If no session token is present at all the check is skipped: the till is
+        // still authenticated as the restaurant, and refusing every void because
+        // a staff session expired would stop the restaurant trading. The action is
+        // recorded as unattributed instead.
+        const session = await verifySignedToken(staff_session);
+        if (session) {
+            const restaurantsForPerm = await base44.asServiceRole.entities.Restaurant.filter({
+                id: order.restaurant_id,
+            });
+            const rolePermissions = restaurantsForPerm?.[0]?.role_permissions;
+            const permitted = roleHasPermission(rolePermissions, session.role, 'order.void');
+
+            if (!permitted) {
+                const ovr = await verifySignedToken(override);
+                const validOverride = ovr
+                    && ovr.kind === 'override'
+                    && ovr.permission === 'order.void'
+                    && ovr.restaurant_id === order.restaurant_id
+                    && (!ovr.order_id || ovr.order_id === order_id);
+
+                if (!validOverride) {
+                    console.warn(`[POS-VOID] denied: ${session.staff_name} (${session.role}) lacks order.void, no valid override. order=${order_id}`);
+                    try {
+                        await base44.asServiceRole.entities.PosAuditLog.create({
+                            restaurant_id: order.restaurant_id,
+                            action: 'order.void',
+                            outcome: 'denied',
+                            staff_id: session.staff_id,
+                            staff_name: session.staff_name,
+                            staff_role: session.role,
+                            order_id,
+                            amount: order.total,
+                            detail: 'Attempted void without permission or a valid manager override',
+                        });
+                    } catch { /* audit failure must not change the decision */ }
+
+                    return Response.json({
+                        error: 'You are not permitted to void orders. Ask a manager to authorise it.',
+                        requires_override: true,
+                        permission: 'order.void',
+                    }, { status: 403 });
+                }
+            }
+        }
+
         // ── Tenant check ──────────────────────────────────────────────────────────
         const isAdmin = user.role === 'admin';
 
