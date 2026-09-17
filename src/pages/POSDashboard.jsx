@@ -550,7 +550,7 @@ export default function POSDashboard() {
                         onRemoveDiscount={() => setDiscount(null)}
                     />
                 )}
-                {activeTab === 'queue' && <POSOrderQueue restaurantId={restaurant.id} posTheme={posTheme} />}
+                {activeTab === 'queue' && <POSOrderQueue restaurantId={restaurant.id} posTheme={posTheme} restaurant={restaurant} activeStaffMember={activeStaffMember} />}
                 {activeTab === 'tables' && <POSTablesView restaurantId={restaurant.id} posTheme={posTheme} restaurant={restaurant} />}
                 {activeTab === 'waitlist' && <POSWaitlist posTheme={posTheme} restaurantId={restaurant.id} />}
                 {activeTab === 'payment' && (
