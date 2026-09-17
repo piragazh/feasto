@@ -113,8 +113,10 @@ Deno.serve(async (req) => {
                 });
                 result.migrated.push(name);
             } catch (e) {
-                console.error(`[PIN-MIGRATE] failed for ${name}:`, e?.message);
-                result.failed.push(name);
+                // Record which staff member and why, rather than failing the whole
+                // batch - one unwritable record should not block securing the rest.
+                console.error(`[PIN-MIGRATE] failed for ${name}:`, e?.stack || e?.message);
+                result.failed.push(`${name}: ${e?.message || 'unknown error'}`);
             }
         }
 
@@ -143,7 +145,13 @@ Deno.serve(async (req) => {
             ...result,
         });
     } catch (error) {
-        console.error('[PIN-MIGRATE] error:', error?.message || error);
-        return Response.json({ error: 'Could not migrate staff PINs' }, { status: 500 });
+        // Surface the real cause. This is an admin-only maintenance endpoint, so
+        // there is no attacker to leak internals to - and a generic message here
+        // just means an owner cannot tell a missing entity from a bad write.
+        console.error('[PIN-MIGRATE] error:', error?.stack || error?.message || error);
+        return Response.json({
+            error: 'Could not migrate staff PINs',
+            detail: error?.message || String(error),
+        }, { status: 500 });
     }
 });
