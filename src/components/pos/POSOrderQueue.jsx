@@ -359,7 +359,7 @@ function SourceBadge({ order }) {
                                                 </Button>
                                             </div>
                                             <Button
-                                                onClick={() => guard(PERMISSIONS.ORDER_VOID, () => setVoidingOrder(order), {
+                                                onClick={() => guard(PERMISSIONS.ORDER_VOID, (ovr) => setVoidingOrder({ ...order, __override: ovr }), {
                                                     label: 'void an order',
                                                     orderId: order.id,
                                                     amount: order.total,
@@ -467,6 +467,7 @@ function SourceBadge({ order }) {
                     onClose={() => setVoidingOrder(null)}
                     onUpdate={refetch}
                     isDark={isDark}
+                    overrideToken={voidingOrder?.__override}
                 />
                 )}
                 </div>

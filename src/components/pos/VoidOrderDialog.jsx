@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from 'sonner';
@@ -21,7 +22,7 @@ const REASON_CODES = [
     { value: 'other', label: 'Other' },
 ];
 
-export default function VoidOrderDialog({ order, open, onClose, onUpdate, isDark = true }) {
+export default function VoidOrderDialog({ order, open, onClose, onUpdate, isDark = true, overrideToken }) {
     const [reasonCode, setReasonCode] = useState('');
     const [reasonNote, setReasonNote] = useState('');
     const [isVoiding, setIsVoiding] = useState(false);
@@ -33,10 +34,15 @@ export default function VoidOrderDialog({ order, open, onClose, onUpdate, isDark
         }
         setIsVoiding(true);
         try {
+            // Send the staff session so the server can establish who is voiding,
+            // and the override token if a manager authorised it. The server makes
+            // the decision - the UI gate is only a convenience.
             const result = await base44.functions.invoke('posVoidOrder', {
                 order_id: order.id,
                 reason_code: reasonCode,
                 reason_note: reasonNote || undefined,
+                staff_session: getStaffSessionToken(order.restaurant_id),
+                override: overrideToken || undefined,
             });
             if (result?.data?.success) {
                 const msg = result.data.card_paid_flagged_for_review
