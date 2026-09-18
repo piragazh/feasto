@@ -407,7 +407,11 @@ Deno.serve(async (req) => {
             coupon_code: approvedCouponCodes.length > 0 ? approvedCouponCodes[0] : undefined,
             total: serverTotal,
             status: orderStatus,
-            payment_method: orderData.payment_method || 'cash',
+            // `|| 'cash'` would turn an explicit null into a cash sale. A cart
+            // sent to a table (from the POS or the waiter app) has NO tender yet -
+            // the bill is settled later - and recording it as cash makes an unpaid
+            // table order look like money already taken.
+            payment_method: orderData.payment_method ?? undefined,
             order_type: orderData.order_type || 'collection'
         });
 
