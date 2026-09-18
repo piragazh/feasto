@@ -84,7 +84,7 @@ export default function WaiterApp() {
         return applyPaletteToDocument(restaurant.pos_palette || DEFAULT_PALETTE);
     }, [restaurant]);
 
-    const { data: tables = [] } = useQuery({
+    const { data: tables = [], refetch: refetchTables } = useQuery({
         queryKey: ['waiter-tables', restaurantId],
         queryFn: () => base44.entities.RestaurantTable.filter({ restaurant_id: restaurantId }),
         enabled: !!restaurantId && step !== STEP.LOGIN,
