@@ -245,8 +245,10 @@ export default function WaiterApp() {
 
             toast.success(`Sent to kitchen — ${table.table_number}`);
             setCart([]);
-            setTable(null);
-            setStep(STEP.TABLES);
+            await refetchTableOrders();
+            // Back to the table, not the picker - a waiter usually wants to see
+            // what is now on it, and often adds a second round straight after.
+            setStep(STEP.TABLE);
         } catch (e) {
             toast.error(e?.message || 'Could not send the order');
         } finally {
@@ -374,18 +376,109 @@ export default function WaiterApp() {
                                 const busy = t.status === 'occupied';
                                 return (
                                     <button key={t.id}
-                                        onClick={() => { setTable(t); setStep(STEP.MENU); }}
+                                        onClick={() => { setTable(t); setStep(STEP.TABLE); }}
                                         className={`h-24 rounded-2xl border-2 font-bold text-white flex flex-col items-center justify-center gap-1 active:scale-[0.97] transition-transform ${
                                             busy ? 'bg-orange-500/20 border-orange-500/50' : 'bg-white/5 border-white/10'
                                         }`}>
                                         <span className="text-lg">{t.table_number}</span>
                                         <span className="text-[11px] font-normal text-gray-400 capitalize">
-                                            {busy ? 'occupied' : `${t.capacity || 0} seats`}
+                                            {(() => {
+                                                const n = ordersFor(t.id).length;
+                                                if (n > 0) return `${n} order${n === 1 ? '' : 's'} · £${totalFor(t.id).toFixed(2)}`;
+                                                return busy ? String(t.status || '').replace('_', ' ') : `${t.capacity || 0} seats`;
+                                            })()}
                                         </span>
                                     </button>
                                 );
                             })}
                         </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // ── Table detail ─────────────────────────────────────────────────────────
+    if (step === STEP.TABLE && table) {
+        const orders = ordersFor(table.id);
+        const total = totalFor(table.id);
+        return (
+            <div className="min-h-screen bg-[#0f1117] flex flex-col">
+                <header className="flex items-center gap-2 p-3 border-b border-white/10 flex-shrink-0">
+                    <button onClick={() => { setTable(null); setStep(STEP.TABLES); }}
+                        className="h-11 w-11 rounded-xl bg-white/5 text-white flex items-center justify-center flex-shrink-0">
+                        <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-white font-bold truncate">{table.table_number}</h1>
+                        <p className="text-gray-500 text-xs capitalize">
+                            {String(table.status || 'available').replace('_', ' ')} · {table.capacity || 0} seats
+                        </p>
+                    </div>
+                </header>
+
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                    {orders.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-10">
+                            Nothing on this table yet.
+                        </p>
+                    ) : orders.map(o => (
+                        <div key={o.id} className="rounded-2xl bg-white/5 border border-white/10 p-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-white text-sm font-semibold">
+                                    {o.order_number ? `#${o.order_number}` : `#${o.id.slice(-6)}`}
+                                </span>
+                                <span className="text-white font-bold tabular-nums">£{Number(o.total || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="space-y-1">
+                                {(o.items || []).map((it, i) => (
+                                    <div key={i} className="flex justify-between text-gray-400 text-xs">
+                                        <span className="truncate pr-2">{it.quantity}x {it.name}</span>
+                                        <span className="tabular-nums flex-shrink-0">
+                                            £{(Number(it.price || 0) * (it.quantity || 1)).toFixed(2)}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-gray-600 text-[11px] mt-2 capitalize">
+                                {String(o.status || '').replace(/_/g, ' ')}
+                                {o.staff_name ? ` · ${o.staff_name}` : ''}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="border-t border-white/10 bg-[#151720] p-3 flex-shrink-0 space-y-2">
+                    {orders.length > 0 && (
+                        <div className="flex items-baseline justify-between mb-1">
+                            <span className="text-gray-400 text-xs uppercase tracking-wide font-semibold">Table total</span>
+                            <span className="text-white text-2xl font-bold tabular-nums leading-none">£{total.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    <button onClick={() => setStep(STEP.MENU)}
+                        className="w-full h-14 rounded-2xl bg-orange-500 active:bg-orange-700 text-white font-bold text-base flex items-center justify-center gap-2">
+                        <Plus className="h-5 w-5" />
+                        {orders.length > 0 ? 'Add more items' : 'Start the order'}
+                    </button>
+
+                    {/* Status is changed from the floor because the waiter is the
+                        person who knows. Freeing a table with a live bill is
+                        refused - that would orphan the order. */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => setTableStatus(table, 'needs_cleaning')}
+                            className="h-12 rounded-xl bg-white/5 active:bg-white/15 text-gray-300 text-sm font-semibold">
+                            Needs cleaning
+                        </button>
+                        <button onClick={() => setTableStatus(table, 'available')}
+                            className="h-12 rounded-xl bg-white/5 active:bg-white/15 text-gray-300 text-sm font-semibold">
+                            Mark free
+                        </button>
+                    </div>
+                    {orders.length > 0 && (
+                        <p className="text-gray-600 text-[11px] text-center">
+                            The bill is settled at the till.
+                        </p>
                     )}
                 </div>
             </div>
