@@ -135,6 +135,19 @@ export default function WaiterApp() {
     };
 
     const addItem = (item) => {
+        // Items with options are NOT sendable from here.
+        //
+        // This app has no customization dialog, so adding one would send it with
+        // no size, no toppings and the base price - the kitchen would not know
+        // what to make and the bill would be short. Better to say so plainly and
+        // send the waiter to the till than to produce a wrong order silently.
+        //
+        // (A future version can embed the same customization dialogs the POS
+        // uses; until then this is an honest limit rather than a hidden bug.)
+        if (item.customization_options?.length > 0) {
+            toast.error(`${item.name} has options — ring this one in at the till`, { duration: 5000 });
+            return;
+        }
         const price = item.pos_price != null ? item.pos_price : item.price;
         setCart(prev => {
             const existing = prev.find(c => c.menu_item_id === item.id);
@@ -376,11 +389,23 @@ export default function WaiterApp() {
                 {visible.map(item => {
                     const price = item.pos_price != null ? item.pos_price : item.price;
                     const inCart = cart.find(c => c.menu_item_id === item.id);
+                    const needsOptions = item.customization_options?.length > 0;
                     return (
                         <button key={item.id} onClick={() => addItem(item)}
-                            className="w-full text-left p-3 rounded-2xl bg-white/5 border border-white/10 active:bg-white/10 flex items-center gap-3">
+                            className={`w-full text-left p-3 rounded-2xl border flex items-center gap-3 ${
+                                needsOptions
+                                    ? 'bg-white/[0.02] border-white/5 opacity-50'
+                                    : 'bg-white/5 border-white/10 active:bg-white/10'
+                            }`}>
                             <div className="flex-1 min-w-0">
-                                <p className="text-white text-sm font-medium leading-snug">{item.name}</p>
+                                <p className="text-white text-sm font-medium leading-snug">
+                                    {item.name}
+                                    {needsOptions && (
+                                        <span className="ml-2 text-[11px] font-bold text-amber-400 uppercase tracking-wide">
+                                            till only
+                                        </span>
+                                    )}
+                                </p>
                                 <p className="text-orange-400 text-base font-bold tabular-nums mt-0.5">£{Number(price).toFixed(2)}</p>
                             </div>
                             {inCart && (
