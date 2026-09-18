@@ -496,7 +496,10 @@ export default function WaiterApp() {
     return (
         <div className="min-h-screen bg-[#0f1117] flex flex-col">
             <header className="flex items-center gap-2 p-3 border-b border-white/10 flex-shrink-0">
-                <button onClick={() => { setTable(null); setCart([]); setStep(STEP.TABLES); }}
+                {/* Back to the table, keeping it selected - the waiter is still
+                    serving it. Clearing the cart here would silently discard a
+                    half-built round if they tapped back to check something. */}
+                <button onClick={() => setStep(STEP.TABLE)}
                     className="h-11 w-11 rounded-xl bg-white/5 text-white flex items-center justify-center flex-shrink-0">
                     <ArrowLeft className="h-5 w-5" />
                 </button>
