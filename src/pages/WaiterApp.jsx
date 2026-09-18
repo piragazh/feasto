@@ -372,12 +372,12 @@ export default function WaiterApp() {
                 {!search && categories.length > 0 && (
                     <div className="flex gap-2 overflow-x-auto mt-2 pb-1">
                         <button onClick={() => setCategory('')}
-                            className={`h-10 px-3 rounded-xl text-xs font-semibold whitespace-nowrap ${!category ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-400'}`}>
+                            className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap ${!category ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-400'}`}>
                             All
                         </button>
                         {categories.map(c => (
                             <button key={c} onClick={() => setCategory(c)}
-                                className={`h-10 px-3 rounded-xl text-xs font-semibold whitespace-nowrap capitalize ${category === c ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-400'}`}>
+                                className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap capitalize ${category === c ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-400'}`}>
                                 {c}
                             </button>
                         ))}
@@ -398,7 +398,7 @@ export default function WaiterApp() {
                                     : 'bg-white/5 border-white/10 active:bg-white/10'
                             }`}>
                             <div className="flex-1 min-w-0">
-                                <p className="text-white text-sm font-medium leading-snug">
+                                <p className="text-white text-[15px] font-medium leading-snug">
                                     {item.name}
                                     {needsOptions && (
                                         <span className="ml-2 text-[11px] font-bold text-amber-400 uppercase tracking-wide">
@@ -406,7 +406,7 @@ export default function WaiterApp() {
                                         </span>
                                     )}
                                 </p>
-                                <p className="text-orange-400 text-base font-bold tabular-nums mt-0.5">£{Number(price).toFixed(2)}</p>
+                                <p className="text-orange-400 text-lg font-bold tabular-nums leading-none mt-1">£{Number(price).toFixed(2)}</p>
                             </div>
                             {inCart && (
                                 <span className="h-7 min-w-[28px] px-2 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -428,16 +428,22 @@ export default function WaiterApp() {
                         {cart.map(c => (
                             <div key={c.menu_item_id} className="flex items-center gap-2">
                                 <span className="text-white text-sm flex-1 min-w-0 truncate">{c.name}</span>
+                                {/* 44px minimum: these are the most-tapped controls in the
+                                    app and are used standing up, one-handed. 36px was
+                                    below the touch floor and invited mis-taps that change
+                                    what the kitchen makes. */}
                                 <button onClick={() => changeQty(c.menu_item_id, -1)}
-                                    className="h-9 w-9 rounded-lg bg-white/5 text-white flex items-center justify-center flex-shrink-0">
-                                    {c.quantity === 1 ? <Trash2 className="h-4 w-4 text-red-400" /> : <Minus className="h-4 w-4" />}
+                                    aria-label={c.quantity === 1 ? `Remove ${c.name}` : `One less ${c.name}`}
+                                    className="h-11 w-11 rounded-xl bg-white/5 active:bg-white/15 text-white flex items-center justify-center flex-shrink-0">
+                                    {c.quantity === 1 ? <Trash2 className="h-4 w-4 text-red-400" /> : <Minus className="h-5 w-5" />}
                                 </button>
-                                <span className="text-white w-6 text-center tabular-nums text-sm">{c.quantity}</span>
+                                <span className="text-white w-7 text-center tabular-nums text-base font-semibold">{c.quantity}</span>
                                 <button onClick={() => changeQty(c.menu_item_id, 1)}
-                                    className="h-9 w-9 rounded-lg bg-white/5 text-white flex items-center justify-center flex-shrink-0">
-                                    <Plus className="h-4 w-4" />
+                                    aria-label={`One more ${c.name}`}
+                                    className="h-11 w-11 rounded-xl bg-white/5 active:bg-white/15 text-white flex items-center justify-center flex-shrink-0">
+                                    <Plus className="h-5 w-5" />
                                 </button>
-                                <span className="text-orange-400 text-sm font-bold tabular-nums w-16 text-right flex-shrink-0">
+                                <span className="text-orange-400 text-base font-bold tabular-nums w-[72px] text-right flex-shrink-0">
                                     £{(c.price * c.quantity).toFixed(2)}
                                 </span>
                             </div>
@@ -446,7 +452,7 @@ export default function WaiterApp() {
 
                     <div className="flex items-baseline justify-between mb-2">
                         <span className="text-gray-400 text-xs uppercase tracking-wide font-semibold">Total</span>
-                        <span className="text-white text-2xl font-bold tabular-nums">£{cartTotal.toFixed(2)}</span>
+                        <span className="text-white text-3xl font-bold tabular-nums leading-none">£{cartTotal.toFixed(2)}</span>
                     </div>
 
                     <button onClick={sendToKitchen} disabled={sending}
