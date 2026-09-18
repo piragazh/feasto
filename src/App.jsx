@@ -28,6 +28,7 @@ const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
 const AdminRestaurants = lazyWithRetry(() => import('./pages/AdminRestaurants'));
 const KioskDashboard = lazyWithRetry(() => import('./pages/KioskDashboard'));
 const POSDashboard = lazyWithRetry(() => import('./pages/POSDashboard'));
+const WaiterApp = lazyWithRetry(() => import('./pages/WaiterApp'));
 const TabletDashboard = lazyWithRetry(() => import('./pages/TabletDashboard'));
 import Unsubscribe from './pages/Unsubscribe';
 import Restaurant from './pages/Restaurant';
@@ -343,6 +344,7 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
           />
           <Route path="/KioskDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><KioskDashboard /></Suspense>} />
           <Route path="/POSDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><POSDashboard /></Suspense>} />
+          <Route path="/WaiterApp" element={<Suspense fallback={<RouteLoadingFallback />}><WaiterApp /></Suspense>} />
           <Route path="/TabletDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><TabletDashboard /></Suspense>} />
           <Route path="/home" element={<Navigate to="/Home" replace />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
