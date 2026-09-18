@@ -27,7 +27,7 @@ import { applyPaletteToDocument, DEFAULT_PALETTE } from '@/lib/posThemes';
  *   here is linear — table, then items, then send — rather than parallel.
  */
 
-const STEP = { LOGIN: 'login', TABLES: 'tables', MENU: 'menu' };
+const STEP = { LOGIN: 'login', TABLES: 'tables', TABLE: 'table', MENU: 'menu' };
 
 export default function WaiterApp() {
     const params = new URLSearchParams(window.location.search);
@@ -91,6 +91,22 @@ export default function WaiterApp() {
         refetchInterval: 15000,
     });
 
+    // Live orders for every table, so a waiter can see what is already on a table
+    // before adding to it - and avoid re-ringing a round that has already gone in.
+    const { data: tableOrders = [], refetch: refetchTableOrders } = useQuery({
+        queryKey: ['waiter-table-orders', restaurantId],
+        queryFn: () => base44.entities.Order.filter({
+            restaurant_id: restaurantId,
+            order_type: 'dine_in',
+            status: { $in: ['pending', 'confirmed', 'preparing', 'ready_for_collection'] },
+        }, '-created_date', 100),
+        enabled: !!restaurantId && step !== STEP.LOGIN,
+        refetchInterval: 15000,
+    });
+
+    const ordersFor = (tableId) => tableOrders.filter(o => o.table_id === tableId);
+    const totalFor = (tableId) => ordersFor(tableId).reduce((s2, o) => s2 + Number(o.total || 0), 0);
+
     const { data: menuItems = [] } = useQuery({
         queryKey: ['waiter-menu', restaurantId],
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true }),
@@ -141,6 +157,35 @@ export default function WaiterApp() {
         setStaff(null); setCart([]); setTable(null);
         setStaffNumber(''); setPin(''); setLoginStep('number');
         setStep(STEP.LOGIN);
+    };
+
+    /**
+     * Change a table's status from the floor.
+     *
+     * A waiter is the person who actually knows a table has been cleared or needs
+     * cleaning - making them walk to the till to say so is how floor plans drift
+     * out of step with reality and end up with everything stuck 'occupied'.
+     *
+     * Refuses to free a table that still has live orders: that would orphan the
+     * bill and lose the link between the food and the table it belongs to.
+     */
+    const setTableStatus = async (tbl, status) => {
+        const live = ordersFor(tbl.id);
+        if (status === 'available' && live.length > 0) {
+            toast.error(`${tbl.table_number} still has an unpaid order — settle it at the till first`);
+            return;
+        }
+        try {
+            await base44.entities.RestaurantTable.update(tbl.id, {
+                status,
+                ...(status === 'available' ? { current_order_id: null } : {}),
+            });
+            toast.success(`${tbl.table_number} marked ${status.replace('_', ' ')}`);
+            await refetchTables();
+            if (status === 'available') { setTable(null); setStep(STEP.TABLES); }
+        } catch (e) {
+            toast.error('Could not update the table: ' + (e?.message || 'unknown error'));
+        }
     };
 
     const addItem = (item) => {
