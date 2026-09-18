@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Delete, ArrowLeft, Send, Plus, Minus, Trash2, Search, LogOut } from 'lucide-react';
 import { saveStaffSession, getStaffSessionToken, clearStaffSession } from '@/lib/posStaffSession';
 import { PERMISSIONS, roleHasPermission } from '@/lib/posPermissions';
+import { applyPaletteToDocument, DEFAULT_PALETTE } from '@/lib/posThemes';
 
 /**
  * Waiter App — table-side ordering on a phone or iPad.
@@ -74,6 +75,14 @@ export default function WaiterApp() {
         queryFn: async () => (await base44.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null,
         enabled: !!restaurantId,
     });
+
+    // Follow the restaurant's chosen accent colour. Without this the waiter app
+    // stays default orange while the till shows the restaurant's brand colour -
+    // the same product looking like two different ones on the floor.
+    useEffect(() => {
+        if (!restaurant) return undefined;
+        return applyPaletteToDocument(restaurant.pos_palette || DEFAULT_PALETTE);
+    }, [restaurant]);
 
     const { data: tables = [] } = useQuery({
         queryKey: ['waiter-tables', restaurantId],
