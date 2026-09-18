@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -31,6 +31,28 @@ const STEP = { LOGIN: 'login', TABLES: 'tables', MENU: 'menu' };
 export default function WaiterApp() {
     const params = new URLSearchParams(window.location.search);
     const restaurantId = params.get('restaurantId');
+
+    /**
+     * Device provisioning.
+     *
+     * The backend requires an authenticated Base44 session - the DEVICE is
+     * logged in once as the restaurant, and staff then identify themselves with
+     * a number and PIN on top of that. Without it, everything from loading the
+     * menu to sending an order fails with 401.
+     *
+     * Checked up front because the failure would otherwise surface only at Send:
+     * a waiter would take a whole order at the table before discovering the
+     * device was never set up, and the error ("check your connection") would
+     * point them at entirely the wrong thing.
+     */
+    const [deviceReady, setDeviceReady] = useState(null);   // null = checking
+    useEffect(() => {
+        let cancelled = false;
+        base44.auth.me()
+            .then(u => { if (!cancelled) setDeviceReady(!!u); })
+            .catch(() => { if (!cancelled) setDeviceReady(false); });
+        return () => { cancelled = true; };
+    }, []);
 
     const [step, setStep] = useState(STEP.LOGIN);
     const [staff, setStaff] = useState(null);
@@ -164,6 +186,30 @@ export default function WaiterApp() {
             setSending(false);
         }
     };
+
+    // ── Device not set up ────────────────────────────────────────────────────
+    if (deviceReady === false) {
+        return (
+            <div className="min-h-screen bg-[#0f1117] flex flex-col items-center justify-center p-6 text-center">
+                <h1 className="text-white text-lg font-bold mb-2">This device isn&rsquo;t set up yet</h1>
+                <p className="text-gray-400 text-sm max-w-xs mb-4">
+                    A manager needs to sign in to MealDrop on this device once. After that,
+                    staff just use their number and PIN.
+                </p>
+                <a href="/" className="h-12 px-6 rounded-xl bg-orange-500 text-white font-bold text-sm flex items-center">
+                    Sign in
+                </a>
+            </div>
+        );
+    }
+
+    if (deviceReady === null) {
+        return (
+            <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+                <p className="text-gray-500 text-sm">Checking device&hellip;</p>
+            </div>
+        );
+    }
 
     // ── Login ────────────────────────────────────────────────────────────────
     if (step === STEP.LOGIN) {
