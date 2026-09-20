@@ -200,6 +200,39 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     // Quick-sale buttons configured for this restaurant. Filtered to items that
     // still exist and are available, so a deleted or 86'd item silently drops
     // off the bar rather than leaving a button that errors on tap.
+    /**
+     * Portrait support.
+     *
+     * The layout assumed a fixed landscape terminal - categories, menu and cart
+     * side by side across twelve columns. On a portrait iPad, which is what a lot
+     * of small takeaways actually buy, that produced three unusably narrow
+     * columns.
+     *
+     * In portrait the flow becomes vertical: menu fills the screen and the cart
+     * collapses to a summary bar that expands when tapped. That is the same
+     * pattern Square uses on iPad portrait, and it works because in portrait you
+     * are choosing items most of the time and reviewing the cart occasionally -
+     * not watching both at once.
+     *
+     * Driven by aspect ratio rather than width: a 10" tablet in portrait and a
+     * phone are the same shape problem, while a wide short window is not.
+     */
+    const [isPortrait, setIsPortrait] = useState(
+        typeof window !== 'undefined' ? window.innerHeight > window.innerWidth : false,
+    );
+    useEffect(() => {
+        const onResize = () => setIsPortrait(window.innerHeight > window.innerWidth);
+        window.addEventListener('resize', onResize);
+        window.addEventListener('orientationchange', onResize);
+        return () => {
+            window.removeEventListener('resize', onResize);
+            window.removeEventListener('orientationchange', onResize);
+        };
+    }, []);
+
+    // In portrait the cart is a collapsible sheet rather than a permanent column.
+    const [cartOpen, setCartOpen] = useState(false);
+
     const quickSaleItems = useMemo(() => {
         const configured = restaurant?.quick_sale_items || [];
         return configured.filter(qs => {
