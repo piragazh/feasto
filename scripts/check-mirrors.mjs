@@ -24,9 +24,24 @@
 
 import fs from 'node:fs';
 
+/**
+ * Read a file with COMMENTS STRIPPED.
+ *
+ * Every rule below is documented in a comment next to the code that implements
+ * it - which means a naive substring search passes even when the code is gone
+ * and only the comment remains. Caught during development: deleting the
+ * skipOrderCreation prop still passed, because the comment above it explains
+ * why the prop matters.
+ *
+ * Crude but sufficient: this is a smoke check, not a parser.
+ */
 const read = (p) => {
-    try { return fs.readFileSync(p, 'utf8'); }
+    let src;
+    try { src = fs.readFileSync(p, 'utf8'); }
     catch { return null; }
+    return src
+        .replace(/\/\*[\s\S]*?\*\//g, '')   // block comments, incl. JSX {/* ... */}
+        .replace(/^\s*\/\/.*$/gm, '');        // whole-line // comments
 };
 
 /**
