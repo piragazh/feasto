@@ -87,18 +87,21 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
         try {
             // Clear merged tables for current table
             const mergedWith = table.merged_with || [];
-            await base44.entities.RestaurantTable.update(table.id, {
-                merged_with: []
-            });
+            // Release a table that is only 'occupied' because it was joined.
+            // Without this, joining then separating leaves a table occupied with
+            // no order on it, and the only way back is resetting it by hand.
+            const unmergePatch = { merged_with: [] };
+            if (!table.current_order_id) unmergePatch.status = 'available';
+            await base44.entities.RestaurantTable.update(table.id, unmergePatch);
 
             // Clear references in other tables
             for (const mergedTableId of mergedWith) {
                 const mergedTable = tables.find(t => t.id === mergedTableId);
                 if (mergedTable) {
                     const updatedMerged = (mergedTable.merged_with || []).filter(id => id !== table.id);
-                    await base44.entities.RestaurantTable.update(mergedTableId, {
-                        merged_with: updatedMerged
-                    });
+                    const otherUnmergePatch = { merged_with: updatedMerged };
+                    if (!mergedTable.current_order_id) otherUnmergePatch.status = 'available';
+                    await base44.entities.RestaurantTable.update(mergedTableId, otherUnmergePatch);
                 }
             }
 
