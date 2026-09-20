@@ -620,7 +620,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         <div className={`flex flex-col h-full min-h-0 ${t.bg}`}>
             <POSOfflineSyncBanner restaurantId={restaurantId} onForceRefresh={() => { refetchMenuItems(); refetchTables(); }} />
 
-            <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 md:grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden">
+            <div className={isPortrait
+                ? 'flex-1 min-h-0 flex flex-col gap-2 overflow-hidden'
+                : 'flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 md:grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden'}>
                 {layoutCols.quickActions && (
                     <div className="md:col-span-1 overflow-hidden flex flex-col gap-2">
                         <button onClick={() => setViewMode('tables')} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold ${t.itemCard} border text-center transition-colors`}>
@@ -645,17 +647,17 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     </div>
                 )}
                 {layoutCols.isCategoryGrid && !selectedCategory ? (
-                    <div className={`${layoutCols.menu} overflow-hidden`}>
+                    <div className={isPortrait ? "flex-1 min-h-0 overflow-hidden" : `${layoutCols.menu} overflow-hidden`}>
                         <POSCategoryGrid categories={categories} onSelectCategory={setSelectedCategory} t={t} isDark={isDark} />
                     </div>
                 ) : (
                     <>
                         {layoutCols.showCat && (
-                            <div className={`${layoutCols.cat} overflow-hidden`}>
+                            <div className={isPortrait ? "hidden" : `${layoutCols.cat} overflow-hidden`}>
                                 <POSCategoryPanel categories={categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} t={t} itemCounts={categoryCounts} />
                             </div>
                         )}
-                        <div className={`${layoutCols.menu} overflow-hidden`}>
+                        <div className={isPortrait ? "flex-1 min-h-0 overflow-hidden" : `${layoutCols.menu} overflow-hidden`}>
                             {layoutCols.isCategoryGrid && selectedCategory && (
                                 <div className="h-full flex flex-col">
                                     <button
@@ -675,7 +677,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         </div>
                     </>
                 )}
-                <div className={`${layoutCols.cart} md:row-span-2 min-h-0 overflow-hidden flex flex-col gap-2`}>
+                <div className={isPortrait ? `flex-shrink-0 ${cartOpen ? "max-h-[60vh]" : "max-h-[96px]"} overflow-hidden flex flex-col gap-2 transition-[max-height] duration-200` : `${layoutCols.cart} md:row-span-2 min-h-0 overflow-hidden flex flex-col gap-2`}>
                     {(orderType === 'phone_collection' || orderType === 'phone_delivery') && (
                         <button
                             onClick={() => setPhoneDialogOpen(true)}
