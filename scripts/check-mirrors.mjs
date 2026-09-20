@@ -56,7 +56,10 @@ const CHECKS = [
     {
         rule: 'approveDiscount — over-limit rejects, never silently zeroes',
         file: 'base44/functions/posCreateOrder/entry.ts',
-        mustContain: 'requires_override',
+        // The distinctive part is that it RETURNS rather than zeroing and
+        // carrying on. 'The order has not been placed' is the wording that
+        // proves the reject path, not the silent-zero path, is in place.
+        mustContain: 'The order has not been placed',
         why: 'Zeroing charges the customer full price after staff quoted them less.',
     },
     {
