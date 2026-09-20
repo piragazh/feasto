@@ -672,7 +672,23 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 </div>
                             )}
                             {!layoutCols.isCategoryGrid && (
-                                <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
+{isPortrait && categories.length > 0 && (
+                                    <div className="flex gap-2 overflow-x-auto pb-2 mb-1 flex-shrink-0 scrollbar-hide">
+                                        <button onClick={() => setSelectedCategory('')}
+                                            aria-pressed={!selectedCategory}
+                                            className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap ${!selectedCategory ? 'bg-orange-500 text-white' : t.catBtn}`}>
+                                            All
+                                        </button>
+                                        {categories.map(c => (
+                                            <button key={c} onClick={() => setSelectedCategory(c)}
+                                                aria-pressed={selectedCategory === c}
+                                                className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap capitalize ${selectedCategory === c ? 'bg-orange-500 text-white' : t.catBtn}`}>
+                                                {c}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                                                <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
                             )}
                         </div>
                     </>
@@ -695,6 +711,28 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 }
                             </div>
                             <ChevronRight className="h-4 w-4" />
+                        </button>
+                    )}
+                    {/* Portrait: the cart is collapsed to a summary bar by default.
+                        A permanent cart column on a narrow screen leaves neither
+                        the menu nor the cart usable, and in portrait staff are
+                        choosing items most of the time and reviewing the order
+                        occasionally - not watching both at once. */}
+                    {isPortrait && (
+                        <button
+                            type="button"
+                            onClick={() => setCartOpen(o => !o)}
+                            aria-expanded={cartOpen}
+                            aria-label={cartOpen ? 'Collapse the order' : 'Expand the order'}
+                            className={`w-full h-14 flex-shrink-0 rounded-2xl border ${t.panel} flex items-center justify-between px-4`}
+                        >
+                            <span className={`${t.text} font-bold text-sm`}>
+                                {optimisticCart.length} item{optimisticCart.length === 1 ? '' : 's'}
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <span className={`${t.text} text-xl font-bold tabular-nums`}>£{cartTotal.toFixed(2)}</span>
+                                <ChevronUp className={`h-5 w-5 ${t.textSub} transition-transform ${cartOpen ? '' : 'rotate-180'}`} />
+                            </span>
                         </button>
                     )}
                     <POSCart
