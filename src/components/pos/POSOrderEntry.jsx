@@ -689,7 +689,8 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                         ))}
                                     </div>
                                 )}
-                                                                <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
+                            {!layoutCols.isCategoryGrid && (
+                                <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
                             )}
                         </div>
                     </>
