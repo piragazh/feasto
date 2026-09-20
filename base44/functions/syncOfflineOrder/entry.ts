@@ -268,8 +268,16 @@ Deno.serve(async (req) => {
             order_source: 'pos',
             // Offline orders were paid at the till before being queued, so they
             // must not sync as unpaid - see the same reasoning in posCreateOrder.
+            // Mirrors derivePaymentStatus in src/lib/pos-money-logic.js.
+            //
+            // The null branch is NOT optional: a cart sent to a table while
+            // offline carries no payment_method, and without this check it
+            // synced as 'payment_confirmed' - an unpaid table bill marked paid,
+            // which then let the Queue and KDS close it with nobody having paid.
             payment_status: offlineOrderData.payment_status
-                || (offlineOrderData.payment_method === 'card' ? 'paid_card' : 'payment_confirmed'),
+                || (offlineOrderData.payment_method
+                    ? (offlineOrderData.payment_method === 'card' ? 'paid_card' : 'payment_confirmed')
+                    : 'pending_payment'),
             items: verifiedItems,
             subtotal: serverSubtotal,
             discount: totalDiscount,
