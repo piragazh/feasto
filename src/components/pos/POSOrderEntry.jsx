@@ -671,8 +671,9 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     </div>
                                 </div>
                             )}
-                            {!layoutCols.isCategoryGrid && (
-{isPortrait && categories.length > 0 && (
+                            {/* Portrait: the category rail is hidden, so categories
+                                become a horizontal chip row above the grid. */}
+                            {isPortrait && categories.length > 0 && (
                                     <div className="flex gap-2 overflow-x-auto pb-2 mb-1 flex-shrink-0 scrollbar-hide">
                                         <button onClick={() => setSelectedCategory('')}
                                             aria-pressed={!selectedCategory}
