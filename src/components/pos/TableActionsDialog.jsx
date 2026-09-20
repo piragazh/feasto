@@ -50,19 +50,27 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
 
         setLoading(true);
         try {
-            // Update current table to show it's merged
-            await base44.entities.RestaurantTable.update(table.id, {
-                merged_with: [selectedTableToMerge],
-                status: 'occupied'
-            });
-
-            // Update the other table
             const otherTable = tables.find(t => t.id === selectedTableToMerge);
-            const existingMerged = otherTable?.merged_with || [];
-            await base44.entities.RestaurantTable.update(selectedTableToMerge, {
-                merged_with: [...existingMerged, table.id],
-                status: 'occupied'
-            });
+
+            // APPEND, never overwrite. Setting merged_with to [selectedTableToMerge]
+            // discards any existing merge - so merging 1+2 and then 1+3 silently
+            // dropped the 1-2 link while table 2 still pointed back at table 1,
+            // leaving the group corrupt and asymmetric.
+            const thisMerged = table.merged_with || [];
+            const otherMerged = otherTable?.merged_with || [];
+
+            // Only claim a table as occupied if something is actually ON it.
+            // Marking an empty table occupied purely because it was joined to
+            // another leaves it stuck: no order references it, so nothing ever
+            // frees it and the floor plan fills up with phantom covers.
+            const thisPatch = { merged_with: [...new Set([...thisMerged, selectedTableToMerge])] };
+            if (table.current_order_id) thisPatch.status = 'occupied';
+
+            const otherPatch = { merged_with: [...new Set([...otherMerged, table.id])] };
+            if (otherTable?.current_order_id) otherPatch.status = 'occupied';
+
+            await base44.entities.RestaurantTable.update(table.id, thisPatch);
+            await base44.entities.RestaurantTable.update(selectedTableToMerge, otherPatch);
 
             toast.success('Tables merged successfully!');
             onRefresh();
