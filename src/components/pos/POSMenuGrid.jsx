@@ -25,7 +25,27 @@ const TILE_STRIPE = {
     pink:   'border-l-[6px] border-l-pink-500',
 };
 
-export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange, onSearchFocus, onItemClick, t }) {
+/**
+ * Grid density.
+ *
+ * A 15" landscape till and a 10" iPad want very different numbers of items on
+ * screen, and the grid used one fixed size for both. A busy takeaway with a long
+ * menu wants to see more at once; a small screen, or staff with less confidence,
+ * want bigger targets.
+ *
+ * Stored per DEVICE, like light/dark and sound - it depends on the physical
+ * screen, not the restaurant. Two tills in one shop can reasonably differ.
+ *
+ * Compact still keeps tiles well above the 44px touch floor; the saving comes
+ * from shorter tiles and more columns, not smaller targets.
+ */
+const DENSITY = {
+    comfortable: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-[220px] gap-3',
+    standard:    'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-[200px] gap-3',
+    compact:     'grid-cols-3 md:grid-cols-4 lg:grid-cols-6 auto-rows-[160px] gap-2',
+};
+
+export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange, onSearchFocus, onItemClick, t, density = 'standard' }) {
     return (
         <div className={`col-span-1 md:col-span-7 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>
             <div className={`p-3 border-b ${t.panelHead} flex-shrink-0`}>
@@ -70,7 +90,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                 </div>
             )}
 
-            <div className={`flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[200px] content-start ${filteredItems.length === 0 ? 'hidden' : ''}`}>
+            <div className={`flex-1 overflow-y-auto p-3 grid ${DENSITY[density] || DENSITY.standard} content-start ${filteredItems.length === 0 ? 'hidden' : ''}`}>
                 {filteredItems.map(item => {
                     const effectivePrice = item.pos_price != null ? item.pos_price : item.price;
                     const hasPosOverride = item.pos_price != null && item.pos_price !== item.price;

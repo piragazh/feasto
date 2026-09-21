@@ -283,6 +283,12 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         return () => window.removeEventListener('keydown', onKey);
     }, [searchQuery, showPayment, optimisticCart.length, categories]);
 
+    // Per-device grid density (see POSMenuGrid). Read once; the settings screen
+    // reloads the POS when it changes, like light/dark.
+    const [gridDensity] = useState(() => {
+        try { return localStorage.getItem('pos_grid_density') || 'standard'; } catch { return 'standard'; }
+    });
+
     // In portrait the cart is a collapsible sheet rather than a permanent column.
     const [cartOpen, setCartOpen] = useState(false);
 
@@ -720,7 +726,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                         ← Back to Categories
                                     </button>
                                     <div className="flex-1 overflow-auto">
-                                        <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
+                                        <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} density={gridDensity} />
                                     </div>
                                 </div>
                             )}
@@ -743,7 +749,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     </div>
                                 )}
                             {!layoutCols.isCategoryGrid && (
-                                <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} />
+                                <POSMenuGrid filteredItems={filteredItems} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchFocus={() => setShowKeyboard(true)} onItemClick={handleItemClick} t={t} density={gridDensity} />
                             )}
                         </div>
                     </>
