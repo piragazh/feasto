@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Minus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -108,6 +109,9 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
             const res = await base44.functions.invoke('posUpdateOrder', {
                 order_id: order.id,
                 updates,
+                // Attributes the edit in the audit log. Editing items down after
+                // taking payment is a classic under-ring, so who did it matters.
+                staff_session: getStaffSessionToken(order.restaurant_id),
             });
 
             if (res?.data?.error) {

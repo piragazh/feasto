@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { base44 } from '@/api/base44Client';
+import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { toast } from 'sonner';
 
 export default function BillSplitDialog({ order, open, onClose, onUpdate, posTheme = 'dark' }) {
@@ -59,6 +60,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
 
             const res = await base44.functions.invoke('posUpdateOrder', {
                 order_id: order.id,
+                staff_session: getStaffSessionToken(order.restaurant_id),
                 updates: {
                     notes: `${order.notes || ''} | BILL SPLIT: ${splitInfo}`,
                 },
