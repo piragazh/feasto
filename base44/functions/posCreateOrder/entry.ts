@@ -76,6 +76,61 @@ async function verifyStaffSession(token, restaurantId) {
     }
 }
 
+// ── Menu schedule (MIRROR of src/lib/pos-schedule-logic.js) ────────────────
+// Functions are self-contained on this platform, so this is duplicated. Keep
+// it in step: the tests in pos-schedule.test.js cover the src/ copy, and
+// scripts/check-mirrors.mjs guards that this copy still exists.
+// Times are the restaurant's LOCAL time - this server runs in UTC, so a naive
+// comparison would be an hour wrong for the whole of British Summer Time.
+const SCHEDULE_TZ = 'Europe/London';
+
+function localClock(date, timeZone = SCHEDULE_TZ) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const get = (t) => parts.find(p => p.type === t)?.value;
+    const DAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    return { day: DAYS[get('weekday')], minutes: Number(get('hour')) * 60 + Number(get('minute')) };
+}
+
+function toMinutes(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
+    if (!m) return null;
+    const h = Number(m[1]), min = Number(m[2]);
+    if (h > 23 || min > 59) return null;
+    return h * 60 + min;
+}
+
+function isWithinWindow(w, date) {
+    if (!w) return false;
+    const start = toMinutes(w.start), end = toMinutes(w.end);
+    if (start === null || end === null) return false;
+    const { day, minutes } = localClock(date);
+    const days = Array.isArray(w.days) && w.days.length ? w.days : [0, 1, 2, 3, 4, 5, 6];
+    if (start === end) return days.includes(day);
+    if (start < end) return days.includes(day) && minutes >= start && minutes < end;
+    if (minutes >= start) return days.includes(day);
+    return minutes < end && days.includes((day + 6) % 7);
+}
+
+function isItemAvailableNow(item, date) {
+    const ws = item?.availability_windows;
+    if (!Array.isArray(ws) || ws.length === 0) return true;
+    return ws.some(w => isWithinWindow(w, date));
+}
+
+function scheduledPrice(base, item, date) {
+    const ws = item?.price_windows;
+    let best = Number(base);
+    if (!Array.isArray(ws) || ws.length === 0) return best;
+    for (const w of ws) {
+        const p = Number(w?.price);
+        if (!Number.isFinite(p) || p < 0) continue;
+        if (isWithinWindow(w, date) && p < best) best = p;
+    }
+    return best;
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -147,8 +202,85 @@ Deno.serve(async (req) => {
         // Trust staff-entered prices directly.
         console.log(`[POS] Using staff-entered prices (POS terminal security)`);
 
-        const verifiedItems = orderData.items; // Use client-supplied items as-is
-        const serverSubtotal = verifiedItems.reduce((sum, i) => sum + (i.price * (i.quantity || 1)), 0);
+        // ── Price floor ────────────────────────────────────────────────────────
+        //
+        // This used to read "Use client-supplied items as-is": the main till
+        // accepted whatever price the request carried, and never read the menu.
+        // Kiosk and table ordering both reprice server-side; the POS did not.
+        // Any modified request could ring any item at any price.
+        //
+        // FLOOR, NOT FULL RECOMPUTATION - deliberately, for now. Each item's
+        // minimum legitimate price is computed from the live menu (with any
+        // active timed price applied), and anything below it is refused. Options
+        // and meal upgrades only ever ADD cost, so a genuine order is always at
+        // or above the floor and cannot be broken by this. It blocks the real
+        // loss vector - underpricing - and enforces the end of a happy hour even
+        // if a till's screen is stale.
+        //
+        // What it does NOT do: verify that option surcharges are correct. That
+        // needs the POS customization and meal-upgrade pricing mirrored here,
+        // and getting that wrong would reprice legitimate orders - so it is a
+        // separate, deliberate step rather than something rushed in here.
+        const now = new Date();
+        const menuItems = await base44.asServiceRole.entities.MenuItem.filter({
+            restaurant_id: orderData.restaurant_id,
+        });
+        const menuById = new Map(menuItems.map(m => [m.id, m]));
+
+        const verifiedItems = [];
+        for (const item of orderData.items) {
+            const qty = Number(item.quantity || 1);
+            if (!Number.isFinite(qty) || qty <= 0 || qty > 999) {
+                return Response.json({ error: `Invalid quantity for ${item.name || 'an item'}` }, { status: 400 });
+            }
+            const claimed = Number(item.price);
+            if (!Number.isFinite(claimed) || claimed < 0) {
+                return Response.json({ error: `Invalid price for ${item.name || 'an item'}` }, { status: 400 });
+            }
+
+            const id = String(item.menu_item_id || '');
+
+            // Custom items are a hand-keyed price by design, so there is no menu
+            // price to check against. Bounded, and flagged for the audit trail.
+            if (id.startsWith('custom-')) {
+                verifiedItems.push({ ...item, price: claimed, quantity: qty, is_custom: true });
+                continue;
+            }
+
+            const menuItem = menuById.get(id);
+            if (!menuItem) {
+                // Deleted since the till loaded, or a forged id. Either way we
+                // cannot price it, so refuse rather than guess.
+                return Response.json({
+                    error: `"${item.name || 'An item'}" is no longer on the menu. Refresh the till and try again.`,
+                    stale_menu: true,
+                }, { status: 409 });
+            }
+            if (menuItem.is_available === false || !isItemAvailableNow(menuItem, now)) {
+                return Response.json({
+                    error: `"${menuItem.name}" isn't available at this time.`,
+                    unavailable: true,
+                }, { status: 409 });
+            }
+
+            const base = menuItem.pos_price != null ? menuItem.pos_price : menuItem.price;
+            const floor = scheduledPrice(base, menuItem, now);
+
+            // Penny tolerance for floating-point noise, never more.
+            if (claimed + 0.005 < floor) {
+                console.warn(`[POS-PRICE] rejected underpriced line: ${menuItem.name} claimed=${claimed} floor=${floor} restaurant=${orderData.restaurant_id} user=${user.email}`);
+                return Response.json({
+                    error: `The price for "${menuItem.name}" has changed. Refresh the till and try again.`,
+                    stale_price: true,
+                }, { status: 409 });
+            }
+
+            // Name from the menu, not the request - receipts and kitchen tickets
+            // should show what was actually sold.
+            verifiedItems.push({ ...item, name: menuItem.name, price: claimed, quantity: qty });
+        }
+
+        const serverSubtotal = verifiedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
 
         // ── Manual discount validation (unchanged) ───────────────────────────────
         const MANAGER_MAX_PCT = 20;
