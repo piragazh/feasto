@@ -6,6 +6,32 @@
       "type": "string",
       "description": "Reference to restaurant"
     },
+    "availability_windows": {
+      "type": "array",
+      "description": "When this item can be ordered, e.g. breakfast 07:00-11:30. Empty means always available - scheduling is opt-in so existing menus are unaffected. Times are the restaurant's LOCAL time (Europe/London); see src/lib/pos-schedule-logic.js for why this matters across BST.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "days": { "type": "array", "items": { "type": "number" }, "description": "0=Sunday ... 6=Saturday. Empty means every day." },
+          "start": { "type": "string", "description": "HH:MM, restaurant local time" },
+          "end": { "type": "string", "description": "HH:MM, local, exclusive. Earlier than start means the window crosses midnight." }
+        }
+      }
+    },
+    "price_windows": {
+      "type": "array",
+      "description": "Timed prices, e.g. happy hour. Enforced SERVER-SIDE in posCreateOrder so a till with a stale screen or wrong clock cannot charge a happy-hour price after it ends. A timed price can only lower the price; where windows overlap the lowest applies.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "days": { "type": "array", "items": { "type": "number" }, "description": "0=Sunday ... 6=Saturday. Empty means every day." },
+          "start": { "type": "string", "description": "HH:MM, restaurant local time" },
+          "end": { "type": "string", "description": "HH:MM, local, exclusive. Earlier than start means the window crosses midnight." },
+          "price": { "type": "number", "description": "Price charged during this window. Must be below the normal price to have any effect." },
+          "label": { "type": "string", "description": "Shown on the till, e.g. Happy Hour" }
+        }
+      }
+    },
     "pos_tile_color": {
       "type": "string",
       "enum": ["none", "red", "orange", "amber", "green", "teal", "blue", "purple", "pink"],
