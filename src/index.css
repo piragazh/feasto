@@ -232,7 +232,14 @@
 
    :focus-visible, not :focus: mouse and touch users get no ring, keyboard users
    always do. Uses the accent variable so it follows the restaurant palette. */
-[data-pos-root] :is(button, a, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+/* Dialogs are portalled to document.body, OUTSIDE [data-pos-root] - so a
+   selector scoped only to the root would miss every modal: the customization
+   dialog, the manager override keypad, payment confirmations. That is the same
+   trap that stopped the palette reaching dialogs. html.pos-active is set while
+   the POS is mounted, which covers portals without leaking the ring onto the
+   customer-facing site. */
+:is([data-pos-root], html.pos-active [role="dialog"], html.pos-active [role="alertdialog"])
+  :is(button, a, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 3px solid rgb(var(--pos-accent-500, 249 115 22));
   outline-offset: 2px;
   border-radius: 0.75rem;

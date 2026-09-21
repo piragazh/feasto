@@ -228,6 +228,13 @@ export default function POSDashboard() {
     // miss the accent variables entirely - see applyPaletteToDocument.
     useEffect(() => applyPaletteToDocument(posPalette), [posPalette]);
 
+    // Flag the document while the POS is mounted, so accessibility styles reach
+    // portalled dialogs (see index.css) without affecting the customer site.
+    useEffect(() => {
+        document.documentElement.classList.add('pos-active');
+        return () => document.documentElement.classList.remove('pos-active');
+    }, []);
+
     // Menu-cache timestamp for the top bar readout. Re-read on a timer so the
     // relative label ("12m ago") stays honest without a page refresh.
     const [menuCachedAt, setMenuCachedAt] = useState(null);
