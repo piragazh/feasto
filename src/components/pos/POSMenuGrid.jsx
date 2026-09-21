@@ -32,8 +32,11 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                 <div className="relative">
                     <ShoppingCart className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${t.textSub}`} />
                     <Input
+                        data-pos-search
                         type="text"
-                        placeholder="Search menu items..."
+                        aria-label="Search menu items"
+                        aria-keyshortcuts="/"
+                        placeholder="Search menu items…  ( / )"
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
                         onFocus={onSearchFocus}
