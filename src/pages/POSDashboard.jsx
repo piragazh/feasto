@@ -353,6 +353,7 @@ export default function POSDashboard() {
 
     return (
         <div
+            data-pos-root
             className={`h-full min-h-0 ${t.bg} flex flex-col overflow-hidden`}
             style={{ fontFamily: "'Inter', sans-serif", ...paletteStyle(posPalette) }}
         >

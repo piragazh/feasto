@@ -296,7 +296,7 @@ export default function WaiterApp() {
             }
         };
         return (
-            <div className="min-h-screen bg-[#0f1117] flex flex-col items-center justify-center p-6">
+            <div data-pos-root className="min-h-screen bg-[#0f1117] flex flex-col items-center justify-center p-6">
                 <h1 className="text-white text-xl font-bold mb-1">{restaurant?.name || 'Waiter'}</h1>
                 <p className="text-gray-500 text-xs mb-6">
                     {loginStep === 'number' ? 'Enter your staff number' : 'Enter your PIN'}
@@ -356,7 +356,7 @@ export default function WaiterApp() {
     if (step === STEP.TABLES) {
         const active = tables.filter(t => t.is_active !== false);
         return (
-            <div className="min-h-screen bg-[#0f1117] flex flex-col">
+            <div data-pos-root className="min-h-screen bg-[#0f1117] flex flex-col">
                 <header className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
                     <div>
                         <h1 className="text-white font-bold">Choose a table</h1>
@@ -403,7 +403,7 @@ export default function WaiterApp() {
         const orders = ordersFor(table.id);
         const total = totalFor(table.id);
         return (
-            <div className="min-h-screen bg-[#0f1117] flex flex-col">
+            <div data-pos-root className="min-h-screen bg-[#0f1117] flex flex-col">
                 <header className="flex items-center gap-2 p-3 border-b border-white/10 flex-shrink-0">
                     <button onClick={() => { setTable(null); setStep(STEP.TABLES); }}
                         className="h-11 w-11 rounded-xl bg-white/5 text-white flex items-center justify-center flex-shrink-0">
@@ -494,7 +494,7 @@ export default function WaiterApp() {
     });
 
     return (
-        <div className="min-h-screen bg-[#0f1117] flex flex-col">
+        <div data-pos-root className="min-h-screen bg-[#0f1117] flex flex-col">
             <header className="flex items-center gap-2 p-3 border-b border-white/10 flex-shrink-0">
                 {/* Back to the table, keeping it selected - the waiter is still
                     serving it. Clearing the cart here would silently discard a

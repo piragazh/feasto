@@ -220,3 +220,30 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-alert { animation: none; background-color: rgb(220 38 38); }
 }
+
+/* ── POS accessibility ───────────────────────────────────────────────────────
+   Keyboard focus was effectively invisible across the POS: POS_FOCUS existed in
+   posDesign.js but only a handful of the ~50 components applied it, so tabbing
+   through the till gave no indication of where you were.
+
+   One scoped rule covers every interactive element and cannot drift as
+   components are added - the failure mode the mirrored money logic had, where a
+   documented standard was followed in half the code.
+
+   :focus-visible, not :focus: mouse and touch users get no ring, keyboard users
+   always do. Uses the accent variable so it follows the restaurant palette. */
+[data-pos-root] :is(button, a, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 3px solid rgb(var(--pos-accent-500, 249 115 22));
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+}
+
+/* Honour the OS "reduce motion" setting across the whole POS, not only the
+   new-order alert. Staff stare at this screen all shift. */
+@media (prefers-reduced-motion: reduce) {
+  [data-pos-root] *, [data-pos-root] *::before, [data-pos-root] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
