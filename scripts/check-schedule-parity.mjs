@@ -2,11 +2,17 @@ import fs from 'node:fs';
 import * as tested from '../src/lib/pos-schedule-logic.js';
 
 // Pull the mirrored functions out of the Deno handler and evaluate them.
-const src = fs.readFileSync(new URL('../base44/functions/posCreateOrder/entry.ts', import.meta.url), 'utf8');
-const start = src.indexOf("const SCHEDULE_TZ = 'Europe/London';");
-const end = src.indexOf('Deno.serve(async (req) => {');
-const mirrored = new Function(src.slice(start, end) +
-  '\nreturn { isWithinWindow, isItemAvailableNow, scheduledPrice };')();
+// Every backend function that prices by schedule carries its own copy - they
+// are self-contained on this platform. Each copy is checked independently.
+const MIRRORS = ['posCreateOrder', 'syncOfflineOrder'];
+const loadMirror = (fn) => {
+  const src = fs.readFileSync(new URL(`../base44/functions/${fn}/entry.ts`, import.meta.url), 'utf8');
+  const start = src.indexOf("const SCHEDULE_TZ = 'Europe/London';");
+  const end = src.indexOf('Deno.serve(async (req) => {');
+  if (start < 0) throw new Error(`${fn}: schedule mirror missing`);
+  return new Function(src.slice(start, end) +
+    '\nreturn { isWithinWindow, isItemAvailableNow, scheduledPrice };')();
+};
 
 const instants = [];
 for (const d of ['2026-01-14','2026-03-28','2026-03-29','2026-07-15','2026-10-24','2026-10-25','2026-12-31']) {
@@ -23,6 +29,8 @@ const windows = [
 ];
 
 let checks = 0, mismatches = 0;
+for (const fn of MIRRORS) {
+const mirrored = loadMirror(fn);
 for (const w of windows) for (const t of instants) {
   checks++;
   if (tested.isWithinWindow(w, t) !== mirrored.isWithinWindow(w, t)) {
@@ -38,5 +46,6 @@ for (const w of windows) for (const t of instants) {
     mismatches++; console.log('  MISMATCH isItemAvailableNow', JSON.stringify(w), t.toISOString());
   }
 }
-console.log(`${checks} comparisons across ${instants.length} instants (incl. both BST changeovers): ${mismatches} mismatches`);
+}
+console.log(`${checks} comparisons across ${MIRRORS.length} functions, ${instants.length} instants (incl. both BST changeovers): ${mismatches} mismatches`);
 process.exit(mismatches ? 1 : 0);

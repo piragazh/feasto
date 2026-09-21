@@ -126,6 +126,12 @@ const CHECKS = [
         why: 'It used client prices as-is for its whole history - any modified request could ring any item at any price.',
     },
     {
+        rule: 'Offline sync records the charged price, never overwrites it with base',
+        file: 'base44/functions/syncOfflineOrder/entry.ts',
+        mustContain: 'priceFlags.push',
+        why: 'It overwrote every line with the base menu price, dropping all option surcharges - so offline sales were under-recorded while the cash sat in the drawer.',
+    },
+    {
         rule: 'Table payment settles existing orders, never creates a duplicate',
         file: 'src/components/pos/POSTablesView.jsx',
         mustContain: 'skipOrderCreation',
