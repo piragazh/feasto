@@ -17,6 +17,15 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
     const [selected, setSelected] = useState(restaurant?.pos_palette || DEFAULT_PALETTE);
     const [saving, setSaving] = useState(false);
     const [mode, setMode] = useState(() => localStorage.getItem('pos_theme') || 'dark');
+    const [density, setDensity] = useState(() => {
+        try { return localStorage.getItem('pos_grid_density') || 'standard'; } catch { return 'standard'; }
+    });
+
+    const chooseDensity = (next) => {
+        setDensity(next);
+        try { localStorage.setItem('pos_grid_density', next); } catch { /* ignore */ }
+        window.location.reload();
+    };
 
     useEffect(() => {
         if (restaurant?.pos_palette) setSelected(restaurant.pos_palette);
@@ -86,6 +95,37 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
                     </div>
                     <p className="text-xs text-gray-500 mt-1.5">
                         Applies to <strong>this device only</strong> &mdash; a till by a window may need Light while the kitchen screen stays Dark.
+                    </p>
+                </div>
+
+                {/* Grid density - per device, like screen mode */}
+                <div>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide block mb-2">Menu Grid Size</Label>
+                    <div className="grid grid-cols-3 gap-2 max-w-md" role="radiogroup" aria-label="Menu grid size">
+                        {[
+                            { key: 'comfortable', label: 'Large', hint: 'Fewer, bigger tiles' },
+                            { key: 'standard', label: 'Standard', hint: 'Balanced' },
+                            { key: 'compact', label: 'Compact', hint: 'More items on screen' },
+                        ].map(({ key, label, hint }) => (
+                            <button
+                                key={key}
+                                type="button"
+                                role="radio"
+                                aria-checked={density === key}
+                                onClick={() => chooseDensity(key)}
+                                className={`flex flex-col items-center gap-0.5 p-3 rounded-xl border-2 transition-all ${
+                                    density === key
+                                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                                }`}
+                            >
+                                <span className="text-sm font-semibold">{label}</span>
+                                <span className="text-[11px] opacity-70">{hint}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1.5">
+                        Applies to <strong>this device only</strong> &mdash; a large till and a small tablet usually want different sizes.
                     </p>
                 </div>
 
