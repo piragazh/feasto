@@ -25,6 +25,7 @@ import POSSoundSettings from '@/components/pos/POSSoundSettings.jsx';
 import POSQuickSaleSettings from '@/components/pos/POSQuickSaleSettings.jsx';
 import POSPermissionSettings from '@/components/pos/POSPermissionSettings.jsx';
 import POSStaffMaintenance from '@/components/pos/POSStaffMaintenance.jsx';
+import POSExceptionsReport from '@/components/pos/POSExceptionsReport.jsx';
 import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
 import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
@@ -568,7 +569,17 @@ export default function POSDashboard() {
                 )}
                 {activeTab === 'kitchen' && <KitchenDisplaySystem restaurant={restaurant} />}
                 {activeTab === 'history' && <POSOrderHistory restaurantId={restaurant.id} posTheme={posTheme} />}
-                {activeTab === 'reports' && <POSReports restaurantId={restaurant.id} posTheme={posTheme} />}
+                {/* Reports tab: sales figures, then exceptions beneath them.
+                    Kept on the same tab rather than a separate one so an owner
+                    reviewing the day sees the takings and what was voided or
+                    discounted off them together - the two only make sense side
+                    by side. Scrolls as one page. */}
+                {activeTab === 'reports' && (
+                    <div className="h-full min-h-0 overflow-y-auto space-y-6 pb-4">
+                        <POSReports restaurantId={restaurant.id} posTheme={posTheme} />
+                        <POSExceptionsReport restaurantId={restaurant.id} posTheme={posTheme} />
+                    </div>
+                )}
                 {activeTab === 'eod' && <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />}
                 {activeTab === 'staff' && <POSStaffManager restaurantId={restaurant.id} posTheme={posTheme} currentUser={user} />}
                 {/* Settings is built on the shared light UI kit (Card, Label, Switch),
