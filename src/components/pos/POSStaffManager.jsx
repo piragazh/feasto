@@ -133,8 +133,9 @@ function StaffFormDialog({ open, onClose, staff, restaurantId, onSaved, isDark }
 }
 
 function StaffStats({ staff, orders, t }) {
-    const staffOrders = orders.filter(o => o.staff_id === staff.id);
-    const revenue = staffOrders.reduce((s, o) => s + (o.total || 0), 0);
+    // Sales only - cancelled/refunded orders are not takings. See statsFor().
+    const staffOrders = orders.filter(o => o.staff_id === staff.id && countsAsRevenue(o));
+    const revenue = sumRevenue(staffOrders);
     return (
         <div className="flex items-center gap-4 mt-2">
             <div className="flex items-center gap-1.5">
