@@ -52,6 +52,7 @@ export default function MenuManagement({ restaurantId }) {
         // searched it, but this - the menu editor actually in use - had no input
         // for it, so it was always empty and lookup could never match anything.
         menu_item_no: '',
+        pos_tile_color: 'none',
         name: '',
         description: '',
         price: '',
@@ -549,6 +550,7 @@ CRITICAL REQUIREMENTS:
     const resetForm = () => {
         setFormData({
             menu_item_no: '',
+            pos_tile_color: 'none',
             name: '',
             description: '',
             price: '',
@@ -580,6 +582,7 @@ CRITICAL REQUIREMENTS:
         }));
         setFormData({
             menu_item_no: item.menu_item_no || '',
+            pos_tile_color: item.pos_tile_color || 'none',
             name: item.name,
             description: item.description || '',
             price: item.price.toString(),
@@ -749,6 +752,33 @@ CRITICAL REQUIREMENTS:
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
                                         Your menu board number. Staff can type it into <strong>Item #</strong> on the POS to add this item instantly.
+                                    </p>
+                                </div>
+                                <div className="col-span-2">
+                                    <Label>POS Tile Colour</Label>
+                                    <div className="flex flex-wrap gap-2 mt-1.5" role="radiogroup" aria-label="POS tile colour">
+                                        {[
+                                            ['none', 'bg-gray-100 border-gray-300'],
+                                            ['red', 'bg-red-500'], ['orange', 'bg-orange-500'], ['amber', 'bg-amber-500'],
+                                            ['green', 'bg-green-500'], ['teal', 'bg-teal-500'], ['blue', 'bg-blue-500'],
+                                            ['purple', 'bg-purple-500'], ['pink', 'bg-pink-500'],
+                                        ].map(([c, cls]) => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={formData.pos_tile_color === c}
+                                                aria-label={c === 'none' ? 'No colour' : c}
+                                                title={c === 'none' ? 'No colour' : c}
+                                                onClick={() => setFormData({ ...formData, pos_tile_color: c })}
+                                                className={`h-9 w-9 rounded-lg border-2 ${cls} ${
+                                                    formData.pos_tile_color === c ? 'ring-2 ring-offset-2 ring-gray-900 border-white' : 'border-transparent'
+                                                }`}
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Group items by colour so staff recognise them at a glance &mdash; e.g. all drinks blue, all sides amber.
                                     </p>
                                 </div>
                                 <div>
