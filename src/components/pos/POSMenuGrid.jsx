@@ -2,6 +2,29 @@ import React from 'react';
 import { Input } from "@/components/ui/input";
 import { ShoppingCart, Search } from 'lucide-react';
 
+/**
+ * Tile colour accent.
+ *
+ * Rendered as a thick LEFT STRIPE rather than a full background fill. A full
+ * fill fights the food photography and the price, which are what staff actually
+ * read; a stripe gives the at-a-glance grouping (all drinks blue, all sides amber)
+ * without competing with either. Colour is read before text, which is where the
+ * speed comes from on a menu used every day.
+ *
+ * Full literal class strings so Tailwind's JIT keeps them - building
+ * `border-l-${c}-500` dynamically would be purged from the production CSS.
+ */
+const TILE_STRIPE = {
+    red:    'border-l-[6px] border-l-red-500',
+    orange: 'border-l-[6px] border-l-orange-500',
+    amber:  'border-l-[6px] border-l-amber-500',
+    green:  'border-l-[6px] border-l-green-500',
+    teal:   'border-l-[6px] border-l-teal-500',
+    blue:   'border-l-[6px] border-l-blue-500',
+    purple: 'border-l-[6px] border-l-purple-500',
+    pink:   'border-l-[6px] border-l-pink-500',
+};
+
 export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange, onSearchFocus, onItemClick, t }) {
     return (
         <div className={`col-span-1 md:col-span-7 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>
@@ -54,7 +77,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                             key={item.id}
                             onClick={() => onItemClick(item)}
                             title={item.name}
-                            className={`${t.itemCard} border rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg active:scale-[0.97] flex flex-col h-full relative`}
+                            className={`${t.itemCard} border rounded-2xl overflow-hidden transition-all group text-left hover:shadow-lg active:scale-[0.97] flex flex-col h-full relative ${TILE_STRIPE[item.pos_tile_color] || ''}`}
                         >
                             {/* Image. Fixed 50% of tile height so every tile lines up
                                 regardless of whether an item has a photo. */}
