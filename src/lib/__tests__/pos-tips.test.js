@@ -73,3 +73,48 @@ describe('INVARIANT: a tip is never revenue', () => {
         expect(sumTips([{ tip_amount: 1.1 }, { tip_amount: 2.2 }])).toBe(3.3);
     });
 });
+
+import { tipsByStaff } from '../pos-money-logic.js';
+
+describe('tip distribution', () => {
+    const orders = [
+        { staff_id: 'a', staff_name: 'Anvika', status: 'collected', tip_amount: 4, tip_method: 'cash' },
+        { staff_id: 'a', staff_name: 'Anvika', status: 'collected', tip_amount: 6, tip_method: 'card' },
+        { staff_id: 'b', staff_name: 'Ithalika', status: 'delivered', tip_amount: 3, tip_method: 'cash' },
+        { staff_id: 'b', staff_name: 'Ithalika', status: 'cancelled', tip_amount: 50, tip_method: 'card' },
+    ];
+
+    it('splits each person\'s tips into cash and card', () => {
+        // Cash comes from the drawer; card goes through payroll. Paying both the
+        // same way either shorts staff or double-pays them.
+        const a = tipsByStaff(orders).find(r => r.staff_id === 'a');
+        expect(a.cash).toBe(4);
+        expect(a.card).toBe(6);
+        expect(a.total).toBe(10);
+    });
+
+    it('REGRESSION GUARD: a voided order\'s tip is never distributed', () => {
+        // It was never collected. Distributing it pays staff money the business
+        // does not have.
+        const b = tipsByStaff(orders).find(r => r.staff_id === 'b');
+        expect(b.total).toBe(3);          // NOT 53
+        expect(b.card).toBe(0);
+    });
+
+    it('sorts by total, highest first', () => {
+        expect(tipsByStaff(orders).map(r => r.staff_id)).toEqual(['a', 'b']);
+    });
+
+    it('keeps unattributed tips visible rather than dropping them', () => {
+        const r = tipsByStaff([{ status: 'collected', tip_amount: 2, tip_method: 'cash' }]);
+        expect(r[0].staff_name).toBe('Unattributed');
+        expect(r[0].total).toBe(2);
+    });
+
+    it('avoids floating point drift across many small tips', () => {
+        const many = Array.from({ length: 10 }, () => (
+            { staff_id: 'a', status: 'collected', tip_amount: 0.1, tip_method: 'cash' }
+        ));
+        expect(tipsByStaff(many)[0].total).toBe(1);
+    });
+});

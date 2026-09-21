@@ -242,3 +242,37 @@ export function amountToCharge(total, tip) {
 export function sumTips(orders = []) {
     return Math.round(orders.reduce((s, o) => s + Number(o.tip_amount || 0), 0) * 100) / 100;
 }
+
+/**
+ * Tips per staff member, split by how they were paid.
+ *
+ * The split is not cosmetic. Cash tips can be handed out from the drawer; card
+ * tips arrive in the business's bank account and must be paid through payroll.
+ * An employer who pays both the same way either shorts staff or double-pays.
+ *
+ * Only orders that count as revenue are included - a voided order's tip was
+ * never collected and must not be distributed.
+ *
+ * Returns [{ staff_id, staff_name, cash, card, total, orders }] sorted by total.
+ */
+export function tipsByStaff(orders = []) {
+    const map = new Map();
+    for (const o of orders) {
+        const tip = Number(o.tip_amount || 0);
+        if (!(tip > 0) || !countsAsRevenue(o)) continue;
+        const key = o.staff_id || '__unattributed';
+        const row = map.get(key) || {
+            staff_id: o.staff_id || null,
+            staff_name: o.staff_name || 'Unattributed',
+            cash: 0, card: 0, total: 0, orders: 0,
+        };
+        if (o.tip_method === 'card') row.card += tip; else row.cash += tip;
+        row.total += tip;
+        row.orders += 1;
+        map.set(key, row);
+    }
+    const r2 = (n) => Math.round(n * 100) / 100;
+    return [...map.values()]
+        .map(r => ({ ...r, cash: r2(r.cash), card: r2(r.card), total: r2(r.total) }))
+        .sort((a, b) => b.total - a.total);
+}
