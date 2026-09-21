@@ -459,6 +459,43 @@ Deno.serve(async (req) => {
             : approvedDiscount > 0 ? `manual_discount:${discountReasonCode}` : 'none';
         console.log(`[POS] Order created: ${order.id} restaurant=${orderData.restaurant_id} total=£${serverTotal.toFixed(2)} discount_source=${discountSource} by=${user.email}`);
 
+        // ── Audit money given away ──────────────────────────────────────────────
+        //
+        // Discounts were applied here and logged nowhere persistent - only to the
+        // console, which is gone by the next deploy. A manual discount is exactly
+        // what an exceptions report exists to show: who gave money off, how much,
+        // on which order, and why.
+        //
+        // Coupons are logged too but distinguished: a customer redeeming a
+        // published code is routine, a staff member keying a manual discount is
+        // the thing an owner reviews.
+        if (approvedDiscount > 0 || approvedCouponDiscount > 0) {
+            try {
+                const parts = [];
+                if (approvedDiscount > 0) parts.push(`Manual £${approvedDiscount.toFixed(2)}`);
+                if (approvedCouponDiscount > 0) parts.push(`Coupon £${approvedCouponDiscount.toFixed(2)}`);
+                await base44.asServiceRole.entities.PosAuditLog.create({
+                    restaurant_id: orderData.restaurant_id,
+                    action: approvedDiscount > 0 ? 'discount.apply' : 'coupon.apply',
+                    outcome: 'allowed',
+                    staff_id: staffSession?.staff_id,
+                    staff_name: staffSession?.staff_name,
+                    staff_role: staffSession?.role,
+                    order_id: order.id,
+                    amount: approvedDiscount + approvedCouponDiscount,
+                    reason: discountReasonCode || undefined,
+                    detail: [
+                        parts.join(' + '),
+                        `on subtotal £${serverSubtotal.toFixed(2)}`,
+                        !staffSession ? 'No staff session - unattributed' : null,
+                    ].filter(Boolean).join(' · '),
+                });
+            } catch (auditErr) {
+                // Never fail a completed sale because the audit write failed.
+                console.warn('[AUDIT] Could not persist discount entry:', auditErr?.message);
+            }
+        }
+
         return Response.json({ order });
     } catch (error) {
         console.error('[POS] posCreateOrder error:', error);
