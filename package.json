@@ -11,7 +11,7 @@
     "typecheck": "tsc -p ./jsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:mirrors": "node scripts/check-mirrors.mjs",
+    "check:mirrors": "node scripts/check-mirrors.mjs && node scripts/check-schedule-parity.mjs",
     "preflight": "npm run test && npm run check:mirrors && npm run build",
     "preview": "vite preview"
   },

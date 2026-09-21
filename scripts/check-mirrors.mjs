@@ -120,6 +120,12 @@ const CHECKS = [
         why: 'Using effectiveTotal would hand the tip straight back to the customer as change.',
     },
     {
+        rule: 'posCreateOrder reads the menu and refuses underpriced lines',
+        file: 'base44/functions/posCreateOrder/entry.ts',
+        mustContain: 'claimed + 0.005 < floor',
+        why: 'It used client prices as-is for its whole history - any modified request could ring any item at any price.',
+    },
+    {
         rule: 'Table payment settles existing orders, never creates a duplicate',
         file: 'src/components/pos/POSTablesView.jsx',
         mustContain: 'skipOrderCreation',
