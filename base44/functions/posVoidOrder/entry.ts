@@ -274,6 +274,43 @@ Deno.serve(async (req) => {
             console.warn('[AUDIT] Could not persist void audit log:', dbErr.message);
         }
 
+        // ── PosAuditLog: the record the exceptions report reads ─────────────────
+        //
+        // The DashboardActivity entry above is attributed to user.email - the
+        // TILL's account - so it records that "the till" voided an order, never
+        // which person did. And it lived in a different entity from every other
+        // POS audit event, so no single report could show voids alongside the
+        // overrides and failed logins that explain them.
+        //
+        // This records the actual staff member from the verified session, plus
+        // whether a manager override was involved. DashboardActivity is kept for
+        // any existing consumer.
+        try {
+            const ovrPayload = override ? await verifySignedToken(override) : null;
+            await base44.asServiceRole.entities.PosAuditLog.create({
+                restaurant_id: order.restaurant_id,
+                action: 'order.void',
+                outcome: ovrPayload ? 'overridden' : 'allowed',
+                staff_id: session?.staff_id,
+                staff_name: session?.staff_name,
+                staff_role: session?.role,
+                authorised_by_staff_id: ovrPayload?.approver_id,
+                authorised_by_name: ovrPayload?.approver_name,
+                order_id,
+                amount: Number(order.total || 0),
+                reason: reason_code,
+                detail: [
+                    reason_note ? `Note: ${reason_note}` : null,
+                    `Previous status: ${previousStatus}`,
+                    cardPaid ? 'Card-paid - flagged for refund review' : null,
+                    !session ? 'No staff session - unattributed' : null,
+                ].filter(Boolean).join(' · '),
+            });
+        } catch (auditErr) {
+            // Never fail a completed void because the audit write failed.
+            console.warn('[AUDIT] Could not persist PosAuditLog void entry:', auditErr?.message);
+        }
+
         return Response.json({
             success: true,
             order_id,
