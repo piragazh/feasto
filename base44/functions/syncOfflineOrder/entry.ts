@@ -17,6 +17,61 @@ function _normalizeEmail(email) {
     return email.trim().toLowerCase() || null;
 }
 
+// ── Menu schedule (MIRROR of src/lib/pos-schedule-logic.js) ────────────────
+// Functions are self-contained on this platform, so this is duplicated. Keep
+// it in step: the tests in pos-schedule.test.js cover the src/ copy, and
+// scripts/check-mirrors.mjs guards that this copy still exists.
+// Times are the restaurant's LOCAL time - this server runs in UTC, so a naive
+// comparison would be an hour wrong for the whole of British Summer Time.
+const SCHEDULE_TZ = 'Europe/London';
+
+function localClock(date, timeZone = SCHEDULE_TZ) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const get = (t) => parts.find(p => p.type === t)?.value;
+    const DAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    return { day: DAYS[get('weekday')], minutes: Number(get('hour')) * 60 + Number(get('minute')) };
+}
+
+function toMinutes(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
+    if (!m) return null;
+    const h = Number(m[1]), min = Number(m[2]);
+    if (h > 23 || min > 59) return null;
+    return h * 60 + min;
+}
+
+function isWithinWindow(w, date) {
+    if (!w) return false;
+    const start = toMinutes(w.start), end = toMinutes(w.end);
+    if (start === null || end === null) return false;
+    const { day, minutes } = localClock(date);
+    const days = Array.isArray(w.days) && w.days.length ? w.days : [0, 1, 2, 3, 4, 5, 6];
+    if (start === end) return days.includes(day);
+    if (start < end) return days.includes(day) && minutes >= start && minutes < end;
+    if (minutes >= start) return days.includes(day);
+    return minutes < end && days.includes((day + 6) % 7);
+}
+
+function isItemAvailableNow(item, date) {
+    const ws = item?.availability_windows;
+    if (!Array.isArray(ws) || ws.length === 0) return true;
+    return ws.some(w => isWithinWindow(w, date));
+}
+
+function scheduledPrice(base, item, date) {
+    const ws = item?.price_windows;
+    let best = Number(base);
+    if (!Array.isArray(ws) || ws.length === 0) return best;
+    for (const w of ws) {
+        const p = Number(w?.price);
+        if (!Number.isFinite(p) || p < 0) continue;
+        if (isWithinWindow(w, date) && p < best) best = p;
+    }
+    return best;
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -77,12 +132,59 @@ Deno.serve(async (req) => {
         const menuItems = await base44.asServiceRole.entities.MenuItem.filter({ restaurant_id: offlineOrderData.restaurant_id });
         const menuMap = new Map(menuItems.map(i => [i.id, i]));
 
+        // ── Price check for an ALREADY-PAID order ──────────────────────────────
+        //
+        // This used to OVERWRITE each line with the base menu price:
+        //     price: menuItem.pos_price ?? menuItem.price
+        // which threw away every option surcharge. A 12" pizza with toppings was
+        // recorded at its 7" base price. The customer had paid in full, so the
+        // money was in the drawer while the order said otherwise - every
+        // customised item sold during an outage was under-recorded, and the till
+        // reconciled OVER with no explanation. The comment claimed it verified
+        // prices; it replaced them.
+        //
+        // Now the same floor as posCreateOrder, with two deliberate differences:
+        //
+        //  1. Evaluated at the time the order was TAKEN, not when it syncs. A
+        //     happy-hour sale at 18:30 synced at 20:00 must be judged against
+        //     18:30, or a legitimate discounted sale looks like underpricing.
+        //
+        //  2. A line below the floor is FLAGGED, not rejected. The live path can
+        //     refuse because no money has changed hands yet. Here it already has:
+        //     refusing would lose a completed sale whose cash is in the drawer.
+        //     The charged price is recorded as-is so records match the drawer,
+        //     and the discrepancy goes to the audit log for review.
+        //
+        // offlineCreatedAt is destructured further down this function, so it is
+        // read directly here - referencing it at this point would throw.
+        const takenAt = offlineOrderData.created_at ? new Date(offlineOrderData.created_at) : new Date();
+        const pricedAt = Number.isNaN(takenAt.getTime()) ? new Date() : takenAt;
+        const priceFlags = [];
+
         const verifiedItems = offlineOrderData.items.map(cartItem => {
-            const menuItem = menuMap.get(cartItem.menu_item_id);
-            if (menuItem) {
-                return { ...cartItem, price: menuItem.pos_price ?? menuItem.price };
+            const claimed = Number(cartItem.price);
+            const safeClaimed = Number.isFinite(claimed) && claimed >= 0 ? claimed : 0;
+            const id = String(cartItem.menu_item_id || '');
+
+            if (id.startsWith('custom-')) {
+                return { ...cartItem, price: safeClaimed, is_custom: true };
             }
-            return cartItem; // custom POS items
+
+            const menuItem = menuMap.get(cartItem.menu_item_id);
+            if (!menuItem) {
+                // Deleted since the sale. Keep what was charged; flag it.
+                priceFlags.push(`${cartItem.name || 'Unknown item'}: no longer on the menu`);
+                return { ...cartItem, price: safeClaimed };
+            }
+
+            const base = menuItem.pos_price != null ? menuItem.pos_price : menuItem.price;
+            const floor = scheduledPrice(base, menuItem, pricedAt);
+            if (safeClaimed + 0.005 < floor) {
+                priceFlags.push(`${menuItem.name}: charged £${safeClaimed.toFixed(2)}, menu minimum £${floor.toFixed(2)}`);
+            }
+            // Record what was ACTUALLY charged - options included - so the order
+            // matches the cash in the drawer.
+            return { ...cartItem, name: menuItem.name, price: safeClaimed };
         });
 
         const serverSubtotal = verifiedItems.reduce((sum, i) => sum + (i.price * (i.quantity || 1)), 0);
