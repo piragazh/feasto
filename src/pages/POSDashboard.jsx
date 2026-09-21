@@ -26,6 +26,7 @@ import POSQuickSaleSettings from '@/components/pos/POSQuickSaleSettings.jsx';
 import POSPermissionSettings from '@/components/pos/POSPermissionSettings.jsx';
 import POSStaffMaintenance from '@/components/pos/POSStaffMaintenance.jsx';
 import POSExceptionsReport from '@/components/pos/POSExceptionsReport.jsx';
+import POSTipReport from '@/components/pos/POSTipReport.jsx';
 import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
 import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
@@ -578,6 +579,7 @@ export default function POSDashboard() {
                     <div className="h-full min-h-0 overflow-y-auto space-y-6 pb-4">
                         <POSReports restaurantId={restaurant.id} posTheme={posTheme} />
                         <POSExceptionsReport restaurantId={restaurant.id} posTheme={posTheme} />
+                        <POSTipReport restaurantId={restaurant.id} posTheme={posTheme} />
                     </div>
                 )}
                 {activeTab === 'eod' && <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />}
