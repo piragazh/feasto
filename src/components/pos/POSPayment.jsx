@@ -11,6 +11,7 @@ import { publishCustomerDisplay } from './CustomerDisplay';
 import { printWithCentralizedConfig, hasPrinterForChannel, openCashDrawer } from '@/lib/printUtils';
 import { isNetworkError } from '@/lib/networkStatus';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
+import { TIP_PRESETS, tipFromPercent } from '@/lib/pos-money-logic';
 import { POS_RADIUS, POS_TEXT, POS_TOUCH, POS_FOCUS, POS_TRANSITION } from '@/lib/posDesign';
 import { playSuccess, playError, playAlert } from '@/lib/posSound';
 import {
@@ -173,6 +174,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
      * actually collected.
      */
     const [tipAmount, setTipAmount] = useState(0);
+    // Offer tips on dine-in by default. A counter takeaway prompting for a tip on
+    // every sale irritates customers and slows the queue, so it is opt-in via
+    // restaurant.tips_on_takeaway rather than on everywhere.
+    const tipsEnabled = restaurant?.tips_enabled !== false
+        && (orderType === 'dine_in' || restaurant?.tips_on_takeaway === true);
     const amountDue = Math.round((effectiveTotal + tipAmount) * 100) / 100;
 
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
@@ -740,6 +746,42 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     Add the {phoneOrderMissing.join(' and ')} before taking payment &mdash;
                                     tap <strong>Phone Order</strong> at the top of the POS.
                                 </p>
+                            </div>
+                        )}
+
+                        {/* Tip selector.
+                            'No tip' is always first and always available - tipping
+                            must never be forced or pre-selected. Locked once any
+                            payment is taken, so the amount owed can't shift under a
+                            partly-paid bill. */}
+                        {tipsEnabled && (
+                            <div className="mb-4">
+                                <p className={`${t.subtext} text-xs mb-2 flex justify-between`}>
+                                    <span>Tip</span>
+                                    {tipAmount > 0 && <span className="tabular-nums">+£{tipAmount.toFixed(2)}</span>}
+                                </p>
+                                <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Tip amount">
+                                    {TIP_PRESETS.map(pct => {
+                                        const value = tipFromPercent(effectiveTotal, pct);
+                                        const selected = Math.abs(tipAmount - value) < 0.005;
+                                        return (
+                                            <button
+                                                key={pct}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={selected}
+                                                disabled={payments.length > 0}
+                                                onClick={() => setTipAmount(value)}
+                                                className={`h-12 rounded-xl text-sm font-bold transition-colors disabled:opacity-40 ${
+                                                    selected ? 'bg-orange-500 text-white' : t.inactBtn
+                                                }`}
+                                            >
+                                                {pct === 0 ? 'No tip' : `${pct}%`}
+                                                {pct > 0 && <span className="block text-[11px] font-normal opacity-80 tabular-nums">£{value.toFixed(2)}</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         )}
 
