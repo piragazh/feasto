@@ -160,7 +160,7 @@ export default function ManagerOverrideDialog({
                         </button>
                     ))}
                     <button onClick={backspace} disabled={checking}
-                        className={`h-14 rounded-xl flex items-center justify-center ${keyCls} disabled:opacity-40`}>
+                        className={`h-14 rounded-xl flex items-center justify-center ${keyCls} disabled:opacity-40`} aria-label="Delete last digit">
                         <Delete className="h-5 w-5" />
                     </button>
                     <button onClick={() => press('0')} disabled={checking}

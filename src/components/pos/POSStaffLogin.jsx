@@ -45,7 +45,7 @@ function PinPad({ onDigit, onBackspace, onSubmit, pin, isDark }) {
                     </button>
                 ))}
                 <button onClick={onBackspace}
-                    className={`h-14 rounded-xl flex items-center justify-center transition-all active:scale-95 ${t.del}`}>
+                    className={`h-14 rounded-xl flex items-center justify-center transition-all active:scale-95 ${t.del}`} aria-label="Delete last digit">
                     <Delete className="h-5 w-5" />
                 </button>
                 <button onClick={() => onDigit('0')} disabled={pin.length >= 4}

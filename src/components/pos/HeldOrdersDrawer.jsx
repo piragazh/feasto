@@ -43,7 +43,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                         <h2 className={`${t.text} font-bold text-base`}>Held Orders</h2>
                         <p className={`${t.textMuted} text-xs mt-0.5`}>{filteredOrders.length} of {heldOrders.length} order{heldOrders.length !== 1 ? 's' : ''}</p>
                     </div>
-                    <button onClick={onClose} className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'} transition-colors`}>
+                    <button onClick={onClose} className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'} transition-colors`} aria-label="Close">
                         <X className="h-4 w-4" />
                     </button>
                 </div>

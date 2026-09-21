@@ -118,7 +118,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                 <Edit2 className="h-4 w-4" />
                             </button>
                         )}
-                        <button onClick={onClose} className={`p-2 rounded-xl border ${isDark ? 'border-white/[0.08] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-400 hover:bg-gray-50'} transition-colors`}>
+                        <button onClick={onClose} className={`p-2 rounded-xl border ${isDark ? 'border-white/[0.08] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-400 hover:bg-gray-50'} transition-colors`} aria-label="Close">
                             <X className="h-4 w-4" />
                         </button>
                     </div>

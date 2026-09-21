@@ -40,13 +40,13 @@ export default function OnScreenKeyboard({ onKeyPress, onBackspace, onSpace, onC
                     <Button
                         onClick={onBackspace}
                         className="h-12 flex-1 max-w-[8rem] bg-red-600 hover:bg-red-700 text-white font-bold border border-red-500"
-                    >
+                     aria-label="Delete last digit">
                         <Delete className="h-5 w-5" />
                     </Button>
                     <Button
                         onClick={onSpace}
                         className={`h-12 flex-[3] font-bold border ${spaceCls}`}
-                    >
+                     aria-label="Space">
                         <Space className="h-5 w-5" />
                     </Button>
                     <Button

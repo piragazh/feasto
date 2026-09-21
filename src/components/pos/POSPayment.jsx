@@ -632,7 +632,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     −£{coupon.discount_amount.toFixed(2)}
                                 </span>
                             </div>
-                            <button onClick={handleRemoveCoupon} className="text-red-400 hover:text-red-300 transition-colors">
+                            <button onClick={handleRemoveCoupon} className="text-red-400 hover:text-red-300 transition-colors" aria-label="Remove">
                                 <XCircle className="h-3.5 w-3.5" />
                             </button>
                         </div>

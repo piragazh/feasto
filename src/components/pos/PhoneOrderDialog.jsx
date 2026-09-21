@@ -269,7 +269,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                 <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full animate-pulse ml-2">📞 Incoming</span>
                             )}
                         </div>
-                        <button onClick={onClose} className={`w-8 h-8 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+                        <button onClick={onClose} className={`w-8 h-8 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`} aria-label="Close">
                             <X className="h-4 w-4" />
                         </button>
                     </div>

@@ -49,7 +49,7 @@ export default function NumericKeypad({ rawValue = '', onRawChange, onComplete, 
                     </Button>
                 ))}
                 <Button onClick={backspace}
-                    className={`h-12 text-xl font-bold border ${backspaceCls}`}>
+                    className={`h-12 text-xl font-bold border ${backspaceCls}`} aria-label="Delete last digit">
                     <Delete className="h-5 w-5" />
                 </Button>
 

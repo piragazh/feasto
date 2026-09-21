@@ -168,7 +168,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                     </div>
                     <div className="flex items-center gap-3">
                         <span className={`text-sm font-semibold ${subtext}`}>{step + 1} / {steps.length}</span>
-                        <button onClick={onClose} className={`h-11 w-11 rounded-full flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>
+                        <button onClick={onClose} className={`h-11 w-11 rounded-full flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} aria-label="Close">
                             <X className="h-6 w-6" />
                         </button>
                     </div>

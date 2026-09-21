@@ -122,7 +122,7 @@ export default function POSDiscountPanel({
                         </span>
                     )}
                 </div>
-                <button onClick={onRemove} className="text-red-400 hover:text-red-300 transition-colors">
+                <button onClick={onRemove} className="text-red-400 hover:text-red-300 transition-colors" aria-label="Close">
                     <X className="h-3.5 w-3.5" />
                 </button>
             </div>
