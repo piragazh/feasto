@@ -230,6 +230,59 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         };
     }, []);
 
+    /**
+     * Keyboard shortcuts.
+     *
+     * High-volume counters run on muscle memory, and a USB keyboard or barcode
+     * scanner is common on a till. Deliberately few and conventional - a shortcut
+     * set staff have to learn from a chart is one they will not use.
+     *
+     *   /        focus menu search
+     *   Enter    charge the order (when there is one)
+     *   Esc      clear search
+     *   1-9      choose the Nth category
+     *
+     * Ignored while typing in any field, so entering "1" into a search box or a
+     * PIN never jumps category, and Enter in a form still submits the form.
+     * Also ignored while a dialog is open, so it cannot fire a sale behind a
+     * customization or payment modal.
+     */
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            const tag = (e.target?.tagName || '').toLowerCase();
+            const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable;
+            const dialogOpen = !!document.querySelector('[role="dialog"], [role="alertdialog"]');
+
+            if (e.key === 'Escape' && typing && searchQuery) {
+                setSearchQuery('');
+                e.target.blur?.();
+                return;
+            }
+            if (typing || dialogOpen || showPayment) return;
+
+            if (e.key === '/') {
+                e.preventDefault();
+                document.querySelector('[data-pos-search]')?.focus();
+                return;
+            }
+            if (e.key === 'Enter' && optimisticCart.length > 0) {
+                e.preventDefault();
+                setShowPayment(true);
+                return;
+            }
+            if (/^[1-9]$/.test(e.key)) {
+                const idx = Number(e.key) - 1;
+                if (idx < categories.length) {
+                    e.preventDefault();
+                    setSelectedCategory(categories[idx]);
+                }
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [searchQuery, showPayment, optimisticCart.length, categories]);
+
     // In portrait the cart is a collapsible sheet rather than a permanent column.
     const [cartOpen, setCartOpen] = useState(false);
 
