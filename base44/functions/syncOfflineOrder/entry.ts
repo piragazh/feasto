@@ -339,6 +339,11 @@ Deno.serve(async (req) => {
             validationIssues.push(couponValidationNote);
         }
 
+        // Under-priced lines from the floor check above join the EXISTING review
+        // queue rather than a parallel mechanism - one place for a manager to
+        // look at everything odd about an offline order.
+        for (const flag of priceFlags) validationIssues.push(`Price below menu: ${flag}`);
+
         const needsReview = validationIssues.length > 0;
         const syncValidationNotes = validationIssues.join('; ');
 
