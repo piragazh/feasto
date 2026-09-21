@@ -6,6 +6,12 @@
       "type": "string",
       "description": "Reference to restaurant"
     },
+    "pos_tile_color": {
+      "type": "string",
+      "enum": ["none", "red", "orange", "amber", "green", "teal", "blue", "purple", "pink"],
+      "default": "none",
+      "description": "Colour of this item's tile on the POS grid. Staff build speed on a menu they use daily by recognising colour before reading - e.g. all drinks blue, all sides amber. Visual only; no effect on price or availability."
+    },
     "menu_item_no": {
       "type": "string",
       "description": "Menu board item number for quick POS lookup (e.g., 43, 101, A5)"
