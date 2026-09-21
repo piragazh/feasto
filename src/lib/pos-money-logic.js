@@ -187,3 +187,58 @@ export function tableReleasePatch(order, table) {
     if (table.current_order_id && table.current_order_id !== order.id) return null;
     return { status: 'needs_cleaning', current_order_id: null };
 }
+
+// ─── Tips ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Tips are NOT revenue.
+ *
+ * Under the Employment (Allocation of Tips) Act 2023 tips belong to staff, and
+ * the employer must pass them on in full and keep records. If a tip were folded
+ * into the order total, every revenue report that sums `total` would overstate
+ * the restaurant's takings by the value of its staff's tips - and the business
+ * would appear to be earning money it is legally obliged to pay out.
+ *
+ * So a tip is stored in its own field BESIDE the total. The customer is charged
+ * total + tip; revenue reads total only.
+ */
+export const TIP_PRESETS = [0, 10, 12.5, 15];
+
+/** Hard ceiling. A tip larger than the bill itself is almost always a keying error. */
+export const MAX_TIP_MULTIPLE = 1;
+
+/** Percentage tip on the order total, rounded to the penny. */
+export function tipFromPercent(total, percent) {
+    const t = Number(total || 0), p = Number(percent || 0);
+    if (!(t > 0) || !(p > 0)) return 0;
+    return Math.round(t * p) / 100;
+}
+
+/**
+ * Validate a tip. Returns { tip, error }.
+ *
+ * Rejects rather than silently clamps - the same principle as discounts. If a
+ * cashier keys £50 on a £10 bill, quietly reducing it would charge the customer
+ * something they never agreed to.
+ */
+export function validateTip(tip, total) {
+    const t = Number(tip);
+    if (tip === undefined || tip === null || tip === '') return { tip: 0, error: null };
+    if (!Number.isFinite(t)) return { tip: null, error: 'invalid' };
+    if (t < 0) return { tip: null, error: 'negative' };
+    const rounded = Math.round(t * 100) / 100;
+    if (rounded > Number(total || 0) * MAX_TIP_MULTIPLE && rounded > 0) {
+        return { tip: null, error: 'exceeds_bill' };
+    }
+    return { tip: rounded, error: null };
+}
+
+/** What the customer is actually charged. Revenue must NOT use this. */
+export function amountToCharge(total, tip) {
+    return Math.round((Number(total || 0) + Number(tip || 0)) * 100) / 100;
+}
+
+/** Sum of tips for a set of orders, e.g. per staff member for distribution. */
+export function sumTips(orders = []) {
+    return Math.round(orders.reduce((s, o) => s + Number(o.tip_amount || 0), 0) * 100) / 100;
+}
