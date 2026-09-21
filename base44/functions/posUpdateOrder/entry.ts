@@ -13,6 +13,36 @@ const VALID_DISCOUNT_REASON_CODES = [
     'other',
 ];
 
+/**
+ * Verify a staff session token from posVerifyStaffPin. Duplicated per function
+ * because Base44 functions are self-contained - keep in step with posCreateOrder.
+ * Used here only for ATTRIBUTION of edits in the audit log.
+ */
+async function verifyStaffSession(token, restaurantId) {
+    try {
+        if (!token || typeof token !== 'string') return null;
+        const secret = Deno.env.get('STAFF_SESSION_SECRET');
+        if (!secret) return null;
+        const [body, sig] = token.split('.');
+        if (!body || !sig) return null;
+        const key = await crypto.subtle.importKey(
+            'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+        );
+        const expected = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+        const hex = Array.from(new Uint8Array(expected)).map(b => b.toString(16).padStart(2, '0')).join('');
+        if (hex.length !== sig.length) return null;
+        let diff = 0;
+        for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ sig.charCodeAt(i);
+        if (diff !== 0) return null;
+        const payload = JSON.parse(atob(body));
+        if (payload.exp && new Date(payload.exp) < new Date()) return null;
+        if (restaurantId && payload.restaurant_id !== restaurantId) return null;
+        return payload;
+    } catch {
+        return null;
+    }
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -22,7 +52,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { order_id, updates } = await req.json();
+        const { order_id, updates, staff_session } = await req.json();
 
         if (!order_id || !updates) {
             return Response.json({ error: 'order_id and updates required' }, { status: 400 });
@@ -185,6 +215,37 @@ Deno.serve(async (req) => {
         // Lightweight audit for status transitions
         if (safeUpdates.status && safeUpdates.status !== existingOrder.status) {
             console.log(`[AUDIT] ORDER_STATUS_CHANGED: actor=${user.email} order=${order_id} from=${existingOrder.status} to=${safeUpdates.status}`);
+        }
+
+        // ── Audit the edit ──────────────────────────────────────────────────────
+        //
+        // Edits were logged only to the console. Changing items on an order after
+        // it is placed is a classic way to under-ring a sale (take the money for
+        // three items, then edit the order down to two), so it belongs in the
+        // exceptions report with who did it and what changed.
+        try {
+            const staffSession = await verifyStaffSession(staff_session, existingOrder.restaurant_id);
+            const changed = Object.keys(safeUpdates).filter(k => k !== 'updated_date');
+            const prevTotal = Number(existingOrder.total || 0);
+            const newTotal = Number(order?.total ?? prevTotal);
+            await base44.asServiceRole.entities.PosAuditLog.create({
+                restaurant_id: existingOrder.restaurant_id,
+                action: 'order.edit',
+                outcome: 'allowed',
+                staff_id: staffSession?.staff_id,
+                staff_name: staffSession?.staff_name,
+                staff_role: staffSession?.role,
+                order_id,
+                // The CHANGE in value is what matters for review, not the new total.
+                amount: Math.round((newTotal - prevTotal) * 100) / 100,
+                detail: [
+                    `Changed: ${changed.join(', ') || 'nothing'}`,
+                    `Total £${prevTotal.toFixed(2)} → £${newTotal.toFixed(2)}`,
+                    !staffSession ? 'No staff session - unattributed' : null,
+                ].filter(Boolean).join(' · '),
+            });
+        } catch (auditErr) {
+            console.warn('[AUDIT] Could not persist edit entry:', auditErr?.message);
         }
 
         return Response.json({ order });
