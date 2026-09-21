@@ -108,6 +108,18 @@ const CHECKS = [
         why: 'Same rule, second entry point.',
     },
     {
+        rule: 'validateTip — tip rejected server-side when larger than the bill',
+        file: 'base44/functions/posCreateOrder/entry.ts',
+        mustContain: 'The tip is larger than the bill',
+        why: 'Without server validation a crafted request could record an arbitrary tip.',
+    },
+    {
+        rule: 'Tips are not revenue — change uses amountDue, not the order total',
+        file: 'src/components/pos/POSPayment.jsx',
+        mustContain: 'totalPaid - amountDue',
+        why: 'Using effectiveTotal would hand the tip straight back to the customer as change.',
+    },
+    {
         rule: 'Table payment settles existing orders, never creates a duplicate',
         file: 'src/components/pos/POSTablesView.jsx',
         mustContain: 'skipOrderCreation',
