@@ -160,8 +160,23 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
     // Which tender the cashier has selected. Drives the segmented control and
     // guarantees the primary button below never contradicts it.
     const [tenderType, setTenderType] = useState('cash');
+    /**
+     * Tip and amount due.
+     *
+     * effectiveTotal stays the ORDER TOTAL - that is what revenue reports read,
+     * and tips are not revenue. amountDue is what the customer actually hands
+     * over: total + tip.
+     *
+     * Every "is it paid / how much change" calculation below must use amountDue,
+     * not effectiveTotal. Using effectiveTotal would hand the tip straight back
+     * to the customer as change, and let a payment complete before the tip was
+     * actually collected.
+     */
+    const [tipAmount, setTipAmount] = useState(0);
+    const amountDue = Math.round((effectiveTotal + tipAmount) * 100) / 100;
+
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-    const remaining = Math.max(0, effectiveTotal - totalPaid);
+    const remaining = Math.max(0, amountDue - totalPaid);
     // Denominations recalculate as the amount owed changes (split payments, part-cash).
     const quickCash = quickCashOptions(remaining);
 
@@ -199,7 +214,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setActiveMethod('cash');
         setShowCashConfirm(true);
     }, [quickSale, remaining]);
-    const change = totalPaid - effectiveTotal;
+    const change = totalPaid - amountDue;
     const numericInput = rawValue === '' ? 0 : parseInt(rawValue, 10) / 100;
 
     // Sync to customer display whenever relevant state changes
@@ -315,7 +330,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         try {
             const dominantMethod = finalPayments.length === 1 ? finalPayments[0].method : 'cash';
             const hasCash = finalPayments.find(p => p.method === 'cash');
-            const changeAmt = Math.max(0, finalPayments.reduce((s, p) => s + p.amount, 0) - effectiveTotal);
+            const changeAmt = Math.max(0, finalPayments.reduce((s, p) => s + p.amount, 0) - amountDue);
             // Cash tendered / change are passed as real fields rather than being
             // stuffed into the notes string, so the receipt builder can lay them
             // out properly (and so kitchen tickets can ignore them).
@@ -369,7 +384,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             const result = await createOrder(finalPayments);
             const hasCash = finalPayments.find(p => p.method === 'cash');
             const totalPaidNow = finalPayments.reduce((s, p) => s + p.amount, 0);
-            const changeNow = Math.max(0, totalPaidNow - effectiveTotal);
+            const changeNow = Math.max(0, totalPaidNow - amountDue);
 
             if (result?.offline) {
                 playAlert();
@@ -449,7 +464,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         setRawValue('');
 
         const newTotalPaid = allPayments.reduce((s, p) => s + p.amount, 0);
-        if (newTotalPaid >= effectiveTotal) {
+        if (newTotalPaid >= amountDue) {
             // Auto complete
             completePayment(allPayments);
         }
@@ -695,7 +710,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                    differently from every other panel. */
                                 <div className={`${t.changeBox} px-4 py-3 rounded-xl flex items-baseline justify-between gap-3`}>
                                     <p className={`${t.changeTxt} text-xs font-semibold uppercase tracking-wide`}>Change due</p>
-                                    <p className={`${t.changeAmt} ${POS_TEXT.moneyLarge}`}>£{Math.max(0, totalPaid - effectiveTotal).toFixed(2)}</p>
+                                    <p className={`${t.changeAmt} ${POS_TEXT.moneyLarge}`}>£{Math.max(0, totalPaid - amountDue).toFixed(2)}</p>
                                 </div>
                             )}
                         </>
