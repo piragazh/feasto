@@ -234,6 +234,12 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         });
     }, [cart, discount, coupon, effectiveTotal, remaining, activeMethod]);
 
+    // A tip is paid in whatever tender the customer used; with a split payment we
+    // attribute it to the card portion if any, since a card tip cannot be taken
+    // from the drawer and must be handled through payroll instead.
+    const dominantTipMethod = (summary = []) =>
+        summary.some(p => p.method === 'card') ? 'card' : (summary[0]?.method || 'cash');
+
     const createOrder = async (paymentSummary) => {
         if (blockedForPhoneDetails) {
             throw new Error(`Add the ${phoneOrderMissing.join(' and ')} before taking payment`);
@@ -298,6 +304,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             // from this token only.
             const res = await base44.functions.invoke('posCreateOrder', {
                 ...orderData,
+                // Sent separately from total and validated server-side. Tips are
+                // not revenue, so they must never be folded into the order total.
+                tip_amount: tipAmount > 0 ? tipAmount : undefined,
+                tip_method: tipAmount > 0 ? (dominantTipMethod(paymentSummary) || 'cash') : undefined,
                 staff_session: getStaffSessionToken(restaurantId),
             });
             // invoke() does NOT throw on a 4xx - it resolves with the error body.
