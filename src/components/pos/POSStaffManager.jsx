@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import POSConfirmDialog from './POSConfirmDialog';
+import { countsAsRevenue, sumRevenue, sumTips } from '@/lib/pos-money-logic';
 import {
     UserPlus, Edit2, Trash2, ToggleLeft, ToggleRight,
     TrendingUp, ShoppingCart, DollarSign, Search
@@ -191,6 +192,35 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
         return true;
     });
 
+    /**
+     * Sales vs voids, split using the TESTED rules in pos-money-logic.js.
+     *
+     * Staff revenue previously summed o.total over EVERY order, cancelled and
+     * refunded included. That did more than overstate figures - it inverted
+     * them: a staff member who voided a lot showed HIGHER sales, because their
+     * voided orders still counted. The leaderboard rewarded exactly the
+     * behaviour an owner most needs to see.
+     *
+     * Imported, not copied: this is client code, so it can use the tested
+     * functions directly and cannot drift from them.
+     */
+    const salesOrders = filteredOrders.filter(countsAsRevenue);
+    const voidedOrders = filteredOrders.filter(o => o.status === 'cancelled');
+
+    const statsFor = (staffId) => {
+        const sales = salesOrders.filter(o => o.staff_id === staffId);
+        const revenue = sumRevenue(sales);
+        return {
+            orderCount: sales.length,
+            revenue,
+            avgOrder: sales.length ? revenue / sales.length : 0,
+            // Tips belong to staff, not the business - reported beside revenue,
+            // never inside it (Employment (Allocation of Tips) Act 2023).
+            tips: sumTips(sales),
+            voidCount: voidedOrders.filter(o => o.staff_id === staffId).length,
+        };
+    };
+
     const filtered = staffList.filter(s => {
         if (roleFilter !== 'all' && s.role !== roleFilter) return false;
         if (search && !s.full_name.toLowerCase().includes(search.toLowerCase()) && !(s.email || '').toLowerCase().includes(search.toLowerCase())) return false;
@@ -226,16 +256,14 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
 
     // Stats for selected staff
     const selectedOrders = selectedStaff
-        ? filteredOrders.filter(o => o.staff_id === selectedStaff.id)
+        ? salesOrders.filter(o => o.staff_id === selectedStaff.id)
         : [];
-    const selectedRevenue = selectedOrders.reduce((s, o) => s + (o.total || 0), 0);
+    const selectedRevenue = sumRevenue(selectedOrders);
 
     // Aggregate stats per staff
-    const staffStats = staffList.map(s => ({
-        ...s,
-        orderCount: filteredOrders.filter(o => o.staff_id === s.id).length,
-        revenue: filteredOrders.filter(o => o.staff_id === s.id).reduce((sum, o) => sum + (o.total || 0), 0),
-    })).sort((a, b) => b.revenue - a.revenue);
+    const staffStats = staffList
+        .map(s => ({ ...s, ...statsFor(s.id) }))
+        .sort((a, b) => b.revenue - a.revenue);
 
     return (
         <div className={`flex h-full min-h-0 gap-3 ${t.bg}`}>
