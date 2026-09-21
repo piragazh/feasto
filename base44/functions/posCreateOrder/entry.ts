@@ -350,6 +350,26 @@ Deno.serve(async (req) => {
         const deliveryFee = typeof orderData.delivery_fee === 'number' ? orderData.delivery_fee : 0;
         const serverTotal = Math.max(0, serverSubtotal + deliveryFee - totalDiscount);
 
+        // ── Tip ──────────────────────────────────────────────────────────────
+        // Mirrors validateTip in src/lib/pos-money-logic.js.
+        // Validated HERE, not only in the UI - otherwise a crafted request could
+        // record an arbitrary tip. Rejected rather than clamped: silently reducing
+        // a tip would charge the customer an amount they never agreed to.
+        // Stored beside total, never inside it - tips are not revenue.
+        let tipAmount = 0;
+        if (orderData.tip_amount !== undefined && orderData.tip_amount !== null && orderData.tip_amount !== '') {
+            const t = Number(orderData.tip_amount);
+            if (!Number.isFinite(t) || t < 0) {
+                return Response.json({ error: 'Invalid tip amount' }, { status: 400 });
+            }
+            tipAmount = Math.round(t * 100) / 100;
+            if (tipAmount > serverTotal && tipAmount > 0) {
+                return Response.json({
+                    error: 'The tip is larger than the bill. Please check the amount.',
+                }, { status: 400 });
+            }
+        }
+
         // Strip spoofable / computed fields
         const {
             created_by: _cb,
@@ -382,6 +402,8 @@ Deno.serve(async (req) => {
             // session is missing or invalid the order still completes - refusing
             // a sale because a token expired would stop the restaurant trading -
             // but it is recorded as unattributed rather than trusting the client.
+            tip_amount: tipAmount,
+            tip_method: tipAmount > 0 ? (orderData.tip_method === 'card' ? 'card' : 'cash') : undefined,
             staff_id: staffSession?.staff_id || undefined,
             staff_name: staffSession?.staff_name || undefined,
             staff_role: staffSession?.role || undefined,

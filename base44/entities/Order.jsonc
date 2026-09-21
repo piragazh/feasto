@@ -17,6 +17,16 @@
       "default": "online",
       "description": "Channel through which the order was placed."
     },
+    "tip_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Tip paid by the customer. Stored SEPARATELY from total and deliberately excluded from revenue: under the Employment (Allocation of Tips) Act 2023 tips belong to staff and must be passed on in full. Folding this into total would make every revenue report overstate the restaurant's takings by money it is obliged to pay out."
+    },
+    "tip_method": {
+      "type": "string",
+      "enum": ["cash", "card"],
+      "description": "How the tip was paid. Recorded because cash and card tips are handled differently for distribution and payroll."
+    },
     "staff_id": {
       "type": "string",
       "description": "Staff member who rang in this order. Set SERVER-SIDE from the verified staff session token, never from the client - a client-supplied value could be forged, which would make performance figures and audit trails meaningless. POSStaffManager already reports against this field."
