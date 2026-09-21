@@ -463,8 +463,21 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                             <RoleBadge role={s.role} />
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-green-400 font-bold text-sm">£{s.revenue.toFixed(2)}</p>
-                                            <p className={`${t.textSub} text-[11px]`}>{s.orderCount} orders</p>
+                                            <p className="text-green-400 font-bold text-sm tabular-nums">£{s.revenue.toFixed(2)}</p>
+                                            <p className={`${t.textSub} text-[11px] tabular-nums`}>
+                                                {s.orderCount} orders
+                                                {s.orderCount > 0 && ` · avg £${s.avgOrder.toFixed(2)}`}
+                                            </p>
+                                            {/* Tips shown beside sales, never inside them - they
+                                                belong to staff, not the business. */}
+                                            {s.tips > 0 && (
+                                                <p className="text-sky-400 text-[11px] tabular-nums">+£{s.tips.toFixed(2)} tips</p>
+                                            )}
+                                            {/* Voids surfaced here so a high seller who also
+                                                voids a lot is visible, not hidden by their total. */}
+                                            {s.voidCount > 0 && (
+                                                <p className="text-red-400 text-[11px] tabular-nums">{s.voidCount} voided</p>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
