@@ -11,6 +11,16 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
+// These tests run in Node, where there is no `window` - which is why all nine
+// failed with "window is not defined". The only thing they use from it is
+// window.location.href as a return URL passed into mocked Stripe calls, so a
+// minimal stand-in is enough; installing a full browser emulator is not needed.
+//
+// NOTE: this file exercises mocks and logic written inside the test, not the
+// real checkout component. It documents intended behaviour; it does not prove
+// the real component behaves that way.
+globalThis.window ??= { location: { href: 'https://example.test/checkout' } };
+
 describe('Express Checkout & Card Payment Integration', () => {
     let mockStripe;
     let mockElements;
