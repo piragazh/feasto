@@ -137,3 +137,43 @@ describe('labour summary', () => {
         expect(labourSummary(entries, rates, 1000, now).breakIssues).toBe(1);  // c: 8h, no break
     });
 });
+
+import { rateInForce } from '../pos-labour-logic.js';
+
+describe('rate in force on the day', () => {
+    const rates = [
+        { staff_id: 'a', hourly_rate: 11.44, effective_from: '2025-04-01' },
+        { staff_id: 'a', hourly_rate: 12.21, effective_from: '2026-04-01' },
+        { staff_id: 'b', hourly_rate: 13.00, effective_from: '2025-01-01' },
+    ];
+
+    it('REGRESSION GUARD: a March shift is costed at the March rate, not after the April rise', () => {
+        // Using today's rate for historic shifts misstates every period before
+        // the last minimum-wage rise.
+        expect(rateInForce(rates, 'a', '2026-03-20T10:00:00Z')).toBe(11.44);
+    });
+
+    it('a shift after the rise uses the new rate', () => {
+        expect(rateInForce(rates, 'a', '2026-04-02T10:00:00Z')).toBe(12.21);
+    });
+
+    it('the rise applies from its effective date itself', () => {
+        expect(rateInForce(rates, 'a', '2026-04-01T09:00:00Z')).toBe(12.21);
+    });
+
+    it('undefined before any rate started - reported missing, never guessed', () => {
+        expect(rateInForce(rates, 'a', '2024-06-01T10:00:00Z')).toBeUndefined();
+    });
+
+    it('never borrows another staff member\'s rate', () => {
+        expect(rateInForce(rates, 'c', '2026-05-01T10:00:00Z')).toBeUndefined();
+    });
+
+    it('labourSummary costs each shift at its own day\'s rate', () => {
+        const entries = [
+            { staff_id: 'a', clock_in: '2026-03-20T09:00:00Z', clock_out: '2026-03-20T17:00:00Z' },  // 8h @ 11.44
+            { staff_id: 'a', clock_in: '2026-04-20T09:00:00Z', clock_out: '2026-04-20T17:00:00Z' },  // 8h @ 12.21
+        ];
+        expect(labourSummary(entries, rates, 0).labourCost).toBe(189.2);   // 91.52 + 97.68
+    });
+});

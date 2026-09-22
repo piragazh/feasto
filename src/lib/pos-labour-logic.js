@@ -93,6 +93,32 @@ export function entryPay(entry, hourlyRate) {
 }
 
 /**
+ * The rate in force for a staff member ON A GIVEN DAY.
+ *
+ * Rates change - every April with the National Minimum Wage, and on promotion.
+ * A shift must be costed at the rate that applied when it was worked. Using
+ * today's rate for a March shift after an April rise overstates last month's
+ * labour cost, and understating it the other way hides a real cost increase.
+ *
+ * Picks the latest effective_from on or before the shift's date. Returns
+ * undefined if no rate had started yet - which entryPay reports as missing
+ * rather than guessing.
+ *
+ * @param {object[]} rates  [{ staff_id, hourly_rate, effective_from: 'YYYY-MM-DD' }]
+ */
+export function rateInForce(rates = [], staffId, when) {
+    const day = String(new Date(when).toISOString()).slice(0, 10);
+    let best;
+    for (const r of rates) {
+        if (r?.staff_id !== staffId) continue;
+        const from = String(r.effective_from || '').slice(0, 10);
+        if (!from || from > day) continue;
+        if (!best || from > String(best.effective_from).slice(0, 10)) best = r;
+    }
+    return best ? Number(best.hourly_rate) : undefined;
+}
+
+/**
  * Labour summary for a set of entries.
  *
  * @param {object[]} entries
@@ -112,7 +138,12 @@ export function labourSummary(entries = [], ratesByStaff = {}, revenue = 0, now 
         }
         minutes += mins;
         if (breakShortfall(e)) breakIssues += 1;
-        const pay = entryPay(e, ratesByStaff[e.staff_id]);
+        // A dated rate list costs each shift at the rate in force that day; a
+        // plain { staff_id: rate } map is still accepted for simple use.
+        const rate = Array.isArray(ratesByStaff)
+            ? rateInForce(ratesByStaff, e.staff_id, e.clock_in)
+            : ratesByStaff[e.staff_id];
+        const pay = entryPay(e, rate);
         if (pay === null) missingRate += 1;
         else cost += pay;
     }
