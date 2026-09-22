@@ -1,3 +1,4 @@
+import { stockState } from '@/lib/pos-stock-logic';
 import React from 'react';
 import { Input } from "@/components/ui/input";
 import { ShoppingCart, Search } from 'lucide-react';
@@ -138,6 +139,14 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                 {/* Live offer label so staff can tell the customer why
                                     the price is lower - and so nobody is surprised
                                     when it reverts at the end of the window. */}
+                                {/* Low stock: shown so staff can warn a customer before
+                                    promising the last portion. Sold-out items never reach
+                                    here - they are already off sale. */}
+                                {stockState(item) === 'low' && (
+                                    <span className="absolute bottom-1.5 left-1.5 bg-amber-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded-md">
+                                        {Math.floor(Number(item.stock_quantity))} left
+                                    </span>
+                                )}
                                 {onOffer && (
                                     <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide">
                                         {item._price_label}
