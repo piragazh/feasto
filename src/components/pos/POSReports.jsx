@@ -10,6 +10,7 @@ import { Download, TrendingUp, Clock, DollarSign, Printer, FileText } from 'luci
 import { generateReportPDF } from '@/lib/generatePDF';
 import { toast } from 'sonner';
 import moment from 'moment';
+import { revenueByTender } from '@/lib/pos-money-logic';
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
@@ -92,8 +93,16 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
     }, [orders, effectiveStart, effectiveEnd]);
 
     const totalRevenue = filteredOrders.reduce((s, o) => s + (o.total || 0), 0);
-    const cashRevenue = filteredOrders.filter(o => o.payment_method === 'cash').reduce((s, o) => s + (o.total || 0), 0);
-    const cardRevenue = filteredOrders.filter(o => o.payment_method === 'card').reduce((s, o) => s + (o.total || 0), 0);
+    // Split by tender using the structured cash_amount / card_amount fields.
+    // payment_method alone recorded every split payment as cash for the whole
+    // bill, so this split was wrong for every split payment. Tips are taken off,
+    // since they belong to staff and are not revenue. See revenueByTender.
+    const tenderTotals = filteredOrders.reduce((acc, o) => {
+        const t = revenueByTender(o);
+        return { cash: acc.cash + t.cash, card: acc.card + t.card };
+    }, { cash: 0, card: 0 });
+    const cashRevenue = Math.round(tenderTotals.cash * 100) / 100;
+    const cardRevenue = Math.round(tenderTotals.card * 100) / 100;
     const averageOrder = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
 
     const salesData = useMemo(() => {
