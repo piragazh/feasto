@@ -243,6 +243,32 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
 
     line('=');
 
+    // ── Allergens ──────────────────────────────────────────────────────────
+    // The "Allergen Warnings" printer option previously did nothing at all, so
+    // an owner could switch it on and believe tickets carried allergen
+    // information. Items nobody has confirmed are listed SEPARATELY: their
+    // absence from "CONTAINS" must never be read as meaning they are safe.
+    const allergens = order._allergenSummary;
+    if (config.show_allergens && allergens) {
+        if (allergens.labels?.length) {
+            add(cmd.boldOn);
+            add(`ALLERGENS: ${allergens.labels.join(', ').toUpperCase()}\n`);
+            add(cmd.boldOff);
+        }
+        if (allergens.unconfirmedItems?.length) {
+            add(cmd.boldOn);
+            add('ALLERGENS NOT CONFIRMED:\n');
+            add(cmd.boldOff);
+            allergens.unconfirmedItems.forEach(n => add(`  ${n}\n`));
+            add('  Check before serving.\n');
+        }
+        if (allergens.unavailable) {
+            add(cmd.boldOn, 'ALLERGEN INFO UNAVAILABLE\n', cmd.boldOff);
+            add('  Could not be checked - ask the manager.\n');
+        }
+        if (allergens.labels?.length || allergens.unconfirmedItems?.length || allergens.unavailable) line('=');
+    }
+
     if (!isKitchen) {
         if (!isCompact && !isMinimal) {
             const sub = `\xA3${(order.subtotal || 0).toFixed(2)}`;

@@ -19,6 +19,7 @@
  */
 import { printerManager } from '@/components/restaurant/PrinterService';
 import { base44 } from '@/api/base44Client';
+import { orderAllergenSummary } from '@/lib/allergen-logic';
 import qzTrayService from '@/lib/qzTrayService';
 import { buildCashDrawerBytes } from '@/lib/escpos';
 
@@ -74,6 +75,10 @@ function buildPerPrinterConfig(globalCfg, printerConfig) {
         footer_text: printerConfig.footer_text !== undefined ? printerConfig.footer_text : (legacy.footer_text || ''),
         bluetooth_printer: printerConfig.bluetooth_printer || null,
         show_cash_details: printerConfig.show_cash_details !== undefined ? printerConfig.show_cash_details : (globalCfg.show_cash_details !== false),
+        // Honour the "Allergen Warnings" option, which nothing read before.
+        show_allergens: printerConfig.custom_show_allergens !== undefined
+            ? printerConfig.custom_show_allergens
+            : (globalCfg.custom_show_allergens === true),
         role: printerConfig.role || 'receipt',
     };
 }
@@ -177,6 +182,24 @@ async function printViaNetwork(order, restaurant, printerConfig, globalCfg, { op
  * @returns {{printed: Array<{name:string,role:string,method:string}>, failed: Array<{name:string,role:string,error:string}>, usedFallback: boolean}}
  */
 export async function printWithCentralizedConfig(order, restaurant, channel, browserFallback) {
+    // Work out the order's allergens for any printer that wants them. Best
+    // effort: if the menu can't be read (offline, for instance) the ticket says
+    // the information was UNAVAILABLE rather than printing nothing, because a
+    // silent gap looks identical to "no allergens".
+    try {
+        const wantsAllergens = (restaurant?.printer_config?.centralized_printers || [])
+            .some(p => p?.custom_show_allergens) || restaurant?.printer_config?.custom_show_allergens === true;
+        if (wantsAllergens && !order._allergenSummary) {
+            try {
+                const menu = await base44.entities.MenuItem.filter({ restaurant_id: restaurant.id });
+                const byId = new Map((menu || []).map(m => [m.id, m]));
+                order = { ...order, _allergenSummary: orderAllergenSummary(order.items || [], byId) };
+            } catch {
+                order = { ...order, _allergenSummary: { labels: [], unconfirmedItems: [], unavailable: true } };
+            }
+        }
+    } catch { /* never block printing an order over allergen lookup */ }
+
     const globalCfg = restaurant?.printer_config || {};
     const printers = globalCfg.centralized_printers || [];
     const printed = [];
