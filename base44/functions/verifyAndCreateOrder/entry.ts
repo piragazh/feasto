@@ -387,7 +387,15 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
     }
 
     for (const dealItem of dealItems) {
-        const dealId = String(dealItem.menu_item_id || dealItem.id || '').replace(/^deal_/, '');
+        // Category deals are added to the cart as `deal_<id>_<Date.now()>` (see
+        // Restaurant.jsx addCategoryDealToCart) so two of the same deal with
+        // different picks stay separate lines. Stripping only `deal_` left the
+        // timestamp on, the lookup missed, and every category deal was refused as
+        // DEAL_NOT_FOUND. Base44 ids are hex with no underscores, so a trailing
+        // `_<digits>` is always the timestamp.
+        const dealId = String(dealItem.menu_item_id || dealItem.id || '')
+            .replace(/^deal_/, '')
+            .replace(/_\d{10,}$/, '');
         const dbDeal = dealMap.get(dealId);
         if (!dbDeal) return { valid: false, error: `Meal deal no longer available`, code: 'DEAL_NOT_FOUND', compensatable: true };
         if (dbDeal.is_active === false) return { valid: false, error: `Meal deal is no longer active`, code: 'DEAL_INACTIVE', compensatable: true };
