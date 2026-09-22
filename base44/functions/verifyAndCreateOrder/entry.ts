@@ -82,8 +82,18 @@ function calcItemServerPrice(dbItem, orderItem, isPOS = false) {
                 ? null
                 : customizations[`${customName}_meal_customizations`]) || {};
 
-            if (dbUpgradeOption && Array.isArray(dbUpgradeOption.meal_customizations)) {
-                for (const mealGroup of dbUpgradeOption.meal_customizations) {
+            // ROOT CAUSE FIX: meal extras live on the option GROUP
+            // (dbGroup.meal_customizations), not on the selected upgrade option.
+            // Reading them from the option found nothing, so any priced meal extra
+            // (e.g. Peri Peri Chips +£0.20) was left out: the customer saw £7.19,
+            // this computed £6.99, and the order was rejected as a price mismatch.
+            // That false rejection is why price validation was switched off.
+            // The option-level location is kept as a fallback for older data.
+            const mealGroups = (Array.isArray(dbGroup.meal_customizations) && dbGroup.meal_customizations.length)
+                ? dbGroup.meal_customizations
+                : (Array.isArray(dbUpgradeOption?.meal_customizations) ? dbUpgradeOption.meal_customizations : []);
+            if (mealGroups.length) {
+                for (const mealGroup of mealGroups) {
                     const mealSelections = mealCustomsObj[mealGroup.name];
                     if (!mealSelections) continue;
                     const selections = Array.isArray(mealSelections) ? mealSelections : [mealSelections];
