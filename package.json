@@ -11,7 +11,7 @@
     "typecheck": "tsc -p ./jsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:mirrors": "node scripts/check-mirrors.mjs && node scripts/check-schedule-parity.mjs && node scripts/check-cash-parity.mjs && node scripts/check-stock-parity.mjs && node scripts/check-checkout-pricing.mjs && node scripts/check-checkout-handler.mjs && node scripts/check-coupon-usage.mjs && TZ=UTC node scripts/check-promotion-dates.mjs",
+    "check:mirrors": "node scripts/check-mirrors.mjs && node scripts/check-schedule-parity.mjs && node scripts/check-cash-parity.mjs && node scripts/check-stock-parity.mjs && node scripts/check-checkout-pricing.mjs && node scripts/check-checkout-handler.mjs && node scripts/check-coupon-usage.mjs && TZ=UTC node scripts/check-promotion-dates.mjs && TZ=Europe/London node scripts/check-timestamps.mjs",
     "preflight": "npm run test && npm run check:mirrors && npm run build",
     "preview": "vite preview"
   },
