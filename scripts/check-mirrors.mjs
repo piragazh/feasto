@@ -132,6 +132,18 @@ const CHECKS = [
         why: 'It overwrote every line with the base menu price, dropping all option surcharges - so offline sales were under-recorded while the cash sat in the drawer.',
     },
     {
+        rule: 'Tender split derived server-side: cash = (total + tip) - card',
+        file: 'base44/functions/posCreateOrder/entry.ts',
+        mustContain: 'cashAmount = Math.round((owed - cardAmount) * 100) / 100',
+        why: 'Splits were stored as cash for the whole bill - a £10 cash + £20 card sale made the drawer look £20 short.',
+    },
+    {
+        rule: 'Reports cash/card split uses structured tender amounts',
+        file: 'src/components/pos/POSReports.jsx',
+        mustContain: 'revenueByTender(o)',
+        why: 'payment_method alone counted every split payment entirely as cash revenue.',
+    },
+    {
         rule: 'Table payment settles existing orders, never creates a duplicate',
         file: 'src/components/pos/POSTablesView.jsx',
         mustContain: 'skipOrderCreation',
