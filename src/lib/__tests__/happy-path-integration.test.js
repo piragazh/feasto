@@ -318,10 +318,13 @@ describe('Stacking: two stackable coupons accepted in pipeline', () => {
     });
 
     it('50% cap enforced: three coupons exceeding cap are truncated', async () => {
-        // drink £2.49. Cap=50%=£1.245. SAVE20PCT=20%=£0.498. FLAT3OFF=£3 → remaining=£0.747. FLAT2OFF=£2 → remaining=0. Total=£1.245.
+        // drink £2.49. Cap = 50% = £1.245, which is not a real amount of money.
+        // This test previously ASSERTED £1.245 - it encoded the fractional-penny
+        // bug as the expected answer. The cap is now rounded DOWN to whole pence
+        // (£1.24), so a discount can never exceed 50% and every total is chargeable.
         const items = cart([['drink-01', 1, 0]]);
         const serverSubtotal = 2.49;
-        const cappedDiscount = serverSubtotal * 0.50; // £1.245
+        const cappedDiscount = 1.24; // 50% of £2.49, rounded down to whole pence
         const clientTotal = serverSubtotal + DELIVERY_FEE - cappedDiscount;
 
         const result = await runStackablePipeline({
@@ -331,7 +334,7 @@ describe('Stacking: two stackable coupons accepted in pipeline', () => {
         });
 
         expect(result.error).toBeNull();
-        expect(result.discount).toBeCloseTo(cappedDiscount);
+        expect(result.discount).toBe(cappedDiscount);
     });
 
     it('promotion + two stackable coupons: promotion is separate from coupon stack', async () => {

@@ -293,7 +293,11 @@ export async function resolveCouponDiscount(couponCodesInput, serverSubtotal, re
  * @returns {number} safeDiscount
  */
 export function capPromotionDiscount(clientDiscount, serverSubtotal) {
-    return Math.min(Math.max(0, clientDiscount), serverSubtotal * 0.5);
+    // Same whole-pence rule as coupons: the 50% cap is rounded DOWN so it can
+    // never be exceeded, and the result is always a chargeable amount.
+    const capPence = Math.floor(serverSubtotal * 0.5 * 100 + 1e-9);
+    const wantPence = Math.round(Math.max(0, Number(clientDiscount) || 0) * 100);
+    return Math.min(wantPence, capPence) / 100;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
