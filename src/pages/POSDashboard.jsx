@@ -27,6 +27,7 @@ import POSPermissionSettings from '@/components/pos/POSPermissionSettings.jsx';
 import POSStaffMaintenance from '@/components/pos/POSStaffMaintenance.jsx';
 import POSExceptionsReport from '@/components/pos/POSExceptionsReport.jsx';
 import POSTipReport from '@/components/pos/POSTipReport.jsx';
+import POSCashDrawer from '@/components/pos/POSCashDrawer.jsx';
 import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
 import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
@@ -582,7 +583,15 @@ export default function POSDashboard() {
                         <POSTipReport restaurantId={restaurant.id} posTheme={posTheme} />
                     </div>
                 )}
-                {activeTab === 'eod' && <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />}
+                {/* End of Day: close this till's cash drawer first, then the day's
+                    sales report beneath it - the drawer count is what the Z-report
+                    is reconciled against. */}
+                {activeTab === 'eod' && (
+                    <div className="h-full min-h-0 overflow-y-auto space-y-6 pb-4">
+                        <POSCashDrawer restaurantId={restaurant.id} terminal={posNumber || 1} posTheme={posTheme} />
+                        <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />
+                    </div>
+                )}
                 {activeTab === 'staff' && <POSStaffManager restaurantId={restaurant.id} posTheme={posTheme} currentUser={user} />}
                 {/* Settings is built on the shared light UI kit (Card, Label, Switch),
                     not the POS dark tokens. Rather than half-theming it and getting
