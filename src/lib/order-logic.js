@@ -93,6 +93,54 @@ export function computeAndVerifyTotal({ serverSubtotal, deliveryFee, discount },
  * @param {string} restaurantId
  * @param {Date}   [now]
  */
+/**
+ * Coupon validity dates are stored DATE-ONLY ("2026-10-06"), and JavaScript
+ * reads a date-only string as UTC midnight. So a coupon "valid until 6 October"
+ * actually stopped working at 01:00 UK time ON 6 October (BST) - customers lost
+ * the last day - and one "valid from 22 September" only started at 01:00 that
+ * day.
+ *
+ * A date a person typed means a whole UK day: valid_from starts at 00:00 UK on
+ * that date, valid_until runs to 23:59:59.999 UK on that date. Values that carry
+ * a time (expires_at on reward coupons) are precise already and untouched.
+ *
+ * SYNC RULE: mirrored in functions/verifyAndCreateOrder and
+ * functions/posValidateCoupon, and used by the checkout - all four must agree,
+ * or a coupon the checkout accepts could be refused after the customer pays.
+ */
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function londonOffsetMinutes(t) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/London', hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(new Date(t));
+    const g = (k) => Number(parts.find(p => p.type === k).value);
+    return (Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - t) / 60000;
+}
+
+/** UK midnight at the start of a date-only value. */
+function ukStartOfDay(y, m, d) {
+    const guess = Date.UTC(y, m - 1, d, 0, 0, 0);
+    let t = guess - londonOffsetMinutes(guess) * 60000;
+    t = guess - londonOffsetMinutes(t) * 60000;      // second pass for clock-change days
+    return t;
+}
+
+export function couponValidFromInstant(value) {
+    const m = DATE_ONLY.exec(String(value || '').trim());
+    if (!m) return new Date(value);
+    return new Date(ukStartOfDay(+m[1], +m[2], +m[3]));
+}
+
+export function couponValidUntilInstant(value) {
+    const m = DATE_ONLY.exec(String(value || '').trim());
+    if (!m) return new Date(value);
+    // The last instant of that UK day: the next UK day's start, minus 1ms.
+    const nextDay = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + 1));
+    return new Date(ukStartOfDay(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate()) - 1);
+}
+
 export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new Date()) {
     // A: Active status
     if (!coupon.is_active) {
@@ -100,10 +148,10 @@ export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new D
     }
 
     // B: Date range
-    if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+    if (coupon.valid_from && couponValidFromInstant(coupon.valid_from) > now) {
         return { valid: false, reason: 'not_yet_valid', discount: 0 };
     }
-    if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+    if (coupon.valid_until && couponValidUntilInstant(coupon.valid_until) < now) {
         return { valid: false, reason: 'expired', discount: 0 };
     }
     // Precise expires_at timestamp (reward coupons)
