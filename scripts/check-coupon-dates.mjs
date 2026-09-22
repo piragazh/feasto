@@ -46,5 +46,27 @@ const afterMidnight = new Date('2026-10-06T00:30:00Z'); // 01:30 UK on 6 Oct - u
 checks += 2;
 if (!(until >= lastMoment)) { bad++; console.log('  the last minute of the final day is NOT covered'); }
 if (!(until > afterMidnight)) { bad++; console.log('  still expires in the early hours'); }
+// Matching helpers are not enough: every place that checks a coupon date must
+// actually CALL them. A call site quietly reverting to new Date(...) passes a
+// helper-only comparison - found by mutating exactly that and watching this pass.
+const CALL_SITES = [
+  'src/lib/order-logic.js',
+  'src/components/checkout/DiscountCodeInput.jsx',
+  'base44/functions/verifyAndCreateOrder/entry.ts',
+  'base44/functions/posValidateCoupon/entry.ts',
+];
+for (const rel of CALL_SITES) {
+  const src = fs.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
+  for (const [field, helper] of [['valid_from', 'couponValidFromInstant'], ['valid_until', 'couponValidUntilInstant']]) {
+    checks++;
+    const raw = new RegExp(`new Date\\(\\s*coupon\\.${field}`).test(src);
+    const uses = src.includes(`${helper}(coupon.${field}`);
+    if (raw || !uses) {
+      bad++;
+      console.log(`  DRIFTED ${rel}: coupon.${field} ${raw ? 'is read with new Date()' : `does not use ${helper}`}`);
+    }
+  }
+}
+
 console.log(`${checks} comparisons across ${Object.keys(copies).length} copies: ${bad} mismatches`);
 process.exit(bad ? 1 : 0);
