@@ -6,6 +6,24 @@
       "type": "string",
       "description": "Reference to restaurant"
     },
+    "track_stock": {
+      "type": "boolean",
+      "default": false,
+      "description": "Opt-in. When false (the default) stock is ignored entirely, so existing menus are unaffected."
+    },
+    "stock_quantity": {
+      "type": "number",
+      "description": "Portions on hand. Decremented by the applyOrderStock function on EVERY order path - till, offline, kiosk, QR, online and marketplaces - so it cannot drift by channel."
+    },
+    "low_stock_threshold": {
+      "type": "number",
+      "description": "Warn when stock falls to this level. 0 or empty means no low-stock warning."
+    },
+    "auto_86ed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the item was taken off sale AUTOMATICALLY by reaching zero stock. Distinguishes it from a manager switching it off by hand, so a void or restock can bring an auto-86ed item back without overriding a deliberate decision."
+    },
     "availability_windows": {
       "type": "array",
       "description": "When this item can be ordered, e.g. breakfast 07:00-11:30. Empty means always available - scheduling is opt-in so existing menus are unaffected. Times are the restaurant's LOCAL time (Europe/London); see src/lib/pos-schedule-logic.js for why this matters across BST.",

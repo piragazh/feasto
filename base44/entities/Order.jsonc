@@ -17,6 +17,16 @@
       "default": "online",
       "description": "Channel through which the order was placed."
     },
+    "stock_applied": {
+      "type": "boolean",
+      "default": false,
+      "description": "Set once this order's stock has been deducted. Makes applyOrderStock exactly-once, so the workflow firing twice - or anyone calling the function directly - can never deduct the same order twice."
+    },
+    "stock_restored": {
+      "type": "boolean",
+      "default": false,
+      "description": "Set once a cancelled or refunded order's stock has been put back. Exactly-once, for the same reason."
+    },
     "cash_amount": {
       "type": "number",
       "description": "Cash that went INTO the drawer for this order, net of change and including any cash tip. Structured on purpose: split payments used to be recorded as payment_method 'cash' for the WHOLE total with the real breakdown only in free-text notes, so a £10 cash + £20 card bill counted as £30 of cash - making the drawer look £20 short and the Reports cash/card split wrong. Derived server-side as (total + tip) - card_amount so the two always reconcile."
