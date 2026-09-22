@@ -494,11 +494,59 @@ Deno.serve(async (req) => {
         const clientTotal = Number(orderData.total || 0);
         const isPOS = orderData.order_source === 'pos';
 
-        // ── SKIP SERVER-SIDE PRICE VALIDATION ─────────────────────────────────
-        // Kiosk orders are placed on fixed locked devices inside the restaurant,
-        // so customer tampering is not a concern. POS orders are verified at terminal.
-        // Trust client-supplied prices directly.
-        console.log(`${LOG} Using client-supplied prices (kiosk/POS device security)`);
+        // ── SERVER-SIDE PRICE VALIDATION ──────────────────────────────────────
+        //
+        // This was SKIPPED, with the justification that "kiosk orders are placed on
+        // fixed locked devices" and "POS orders are verified at terminal". Neither
+        // is true of this function: kiosk orders use kioskCreateOrder and POS
+        // orders use posCreateOrder. This function serves only the PUBLIC online
+        // checkout (useCreateOrder), so trusting the browser meant any customer
+        // could set their own price.
+        //
+        // It was switched off because the validator rejected genuine orders. The
+        // root causes are fixed in calcItemServerPrice (meal extras read from the
+        // wrong place; blank-named option groups skipped), and the validator now
+        // uses a FLOOR - only a price below the menu is refused - so a remaining
+        // difference can never turn a paying customer away.
+        //
+        // The order is still charged and recorded at the customer's own total:
+        // validation proves that total is at or above the menu price; it does not
+        // replace it. Replacing it would make the Stripe check below reject a
+        // genuine customer wherever this server's pricing under-counts.
+        const pricing = await validateOrderPricing(base44, {
+            items: normalizedItems,
+            restaurantId: orderData.restaurant_id,
+            clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS,
+            couponCodes: Array.isArray(orderData.coupon_codes) ? orderData.coupon_codes : [],
+            promotionCodes: Array.isArray(orderData.promotion_codes) ? orderData.promotion_codes : [],
+        });
+
+        if (!pricing.valid) {
+            // A card customer has ALREADY been charged by the time we get here, and
+            // the PaymentTransaction that reconcileOrphanedPayments scans for is
+            // created LATER in this function. Refusing without refunding would keep
+            // their money with no order and nothing to trigger a refund - so the
+            // refund is issued here, immediately.
+            let refunded = false;
+            if (orderData.payment_method === 'card' && paymentIntentId) {
+                try {
+                    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
+                    await stripe.refunds.create({ payment_intent: paymentIntentId });
+                    refunded = true;
+                    console.log(`${LOG} Refunded rejected order pi=${paymentIntentId} code=${pricing.code}`);
+                } catch (refundErr) {
+                    // Loud: a charge with no order and a failed refund needs a person.
+                    console.error(`${LOG} REFUND_FAILED after pricing rejection pi=${paymentIntentId} code=${pricing.code}: ${refundErr?.message}`);
+                }
+            }
+            return Response.json({
+                error: pricing.error,
+                success: false,
+                code: pricing.code,
+                refunded,
+            }, { status: 409 });
+        }
+
         const serverSubtotal = clientSubtotal;
         const serverTotal = clientTotal;
 
