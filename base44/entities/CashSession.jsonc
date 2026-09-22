@@ -1,0 +1,129 @@
+{
+  "name": "CashSession",
+  "type": "object",
+  "description": "One cash drawer shift on one till: float in, cash movements during the shift, blind count out, and the variance. Written ONLY by the posCashSession function - the expected figure is computed server-side and never shown to the till before the count is submitted, so staff cannot count towards a known target.",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "terminal": {
+      "type": "number",
+      "description": "Till number. One drawer per till, so a session only counts sales taken on its own terminal."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "opened_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "opened_by_staff_id": {
+      "type": "string"
+    },
+    "opened_by_name": {
+      "type": "string"
+    },
+    "opening_float": {
+      "type": "number",
+      "description": "Cash in the drawer at the start of the shift."
+    },
+    "movements": {
+      "type": "array",
+      "description": "Cash added or removed mid-shift that is not a sale - a change top-up from the safe, cash tips paid to staff, a supplier paid in cash. Each needs a reason, because an unexplained paid-out is exactly what a variance report exists to surface.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "paid_in",
+              "paid_out"
+            ]
+          },
+          "amount": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "staff_id": {
+            "type": "string"
+          },
+          "staff_name": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "closed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "closed_by_staff_id": {
+      "type": "string"
+    },
+    "closed_by_name": {
+      "type": "string"
+    },
+    "counted_cash": {
+      "type": "number",
+      "description": "What the staff member physically counted, entered BLIND - without seeing the expected figure."
+    },
+    "counted_denominations": {
+      "type": "object",
+      "description": "Optional count by note and coin, e.g. { \"20\": 3, \"0.05\": 7 }."
+    },
+    "expected_cash": {
+      "type": "number",
+      "description": "Server-computed: opening float + cash sales on this till in this window + paid in - paid out."
+    },
+    "cash_sales": {
+      "type": "number"
+    },
+    "paid_in": {
+      "type": "number"
+    },
+    "paid_out": {
+      "type": "number"
+    },
+    "variance": {
+      "type": "number",
+      "description": "counted_cash - expected_cash. Negative is SHORT, positive is OVER. Both matter: an over drawer often means a sale was not rung in."
+    },
+    "legacy_split_count": {
+      "type": "number",
+      "description": "Orders from before tender amounts were recorded whose cash portion could not be determined. Non-zero means expected_cash is incomplete and the variance should not be trusted on its own."
+    },
+    "needs_sign_off": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the variance is beyond tolerance and a manager must review it."
+    },
+    "signed_off_by_staff_id": {
+      "type": "string"
+    },
+    "signed_off_by_name": {
+      "type": "string"
+    },
+    "sign_off_note": {
+      "type": "string"
+    },
+    "signed_off_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "status"
+  ]
+}
