@@ -42,6 +42,40 @@ function _normalizeEmail(email) {
     return email.trim().toLowerCase() || null;
 }
 
+// Coupon date rules: MIRROR of src/lib/order-logic.js - a typed date means a
+// whole UK day. Must match the checkout and verifyAndCreateOrder exactly.
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function londonOffsetMinutes(t) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/London', hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(new Date(t));
+    const g = (k) => Number(parts.find(p => p.type === k).value);
+    return (Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - t) / 60000;
+}
+
+function ukStartOfDay(y, m, d) {
+    const guess = Date.UTC(y, m - 1, d, 0, 0, 0);
+    let t = guess - londonOffsetMinutes(guess) * 60000;
+    t = guess - londonOffsetMinutes(t) * 60000;      // second pass for clock-change days
+    return t;
+}
+
+function couponValidFromInstant(value) {
+    const m = DATE_ONLY.exec(String(value || '').trim());
+    if (!m) return new Date(value);
+    return new Date(ukStartOfDay(+m[1], +m[2], +m[3]));
+}
+
+function couponValidUntilInstant(value) {
+    const m = DATE_ONLY.exec(String(value || '').trim());
+    if (!m) return new Date(value);
+    // The last instant of that UK day: the next UK day's start, minus 1ms.
+    const nextDay = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + 1));
+    return new Date(ukStartOfDay(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate()) - 1);
+}
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -120,10 +154,10 @@ Deno.serve(async (req) => {
 
         // ── Date range ────────────────────────────────────────────────────────
         const now = new Date();
-        if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+        if (coupon.valid_from && couponValidFromInstant(coupon.valid_from) > now) {
             return Response.json({ valid: false, error: 'This coupon is not yet valid' }, { status: 200 });
         }
-        if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+        if (coupon.valid_until && couponValidUntilInstant(coupon.valid_until) < now) {
             return Response.json({ valid: false, error: 'This coupon has expired' }, { status: 200 });
         }
         if (coupon.expires_at && new Date(coupon.expires_at) < now) {

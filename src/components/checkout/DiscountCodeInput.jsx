@@ -1,4 +1,5 @@
 /**
+import { couponValidFromInstant, couponValidUntilInstant } from '@/lib/order-logic';
  * DiscountCodeInput — Checkout coupon + promotion entry
  *
  * Coupon stacking policy (mirrored from server):
@@ -102,8 +103,10 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
         if (coupon.minimum_order && subtotal < coupon.minimum_order) { toast.error(`Minimum order of £${coupon.minimum_order.toFixed(2)} required`); return; }
         if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) { toast.error('This coupon has reached its usage limit'); return; }
         const now = new Date();
-        if (coupon.valid_from && new Date(coupon.valid_from) > now) { toast.error('This coupon is not yet valid'); return; }
-        if (coupon.valid_until && new Date(coupon.valid_until) < now) { toast.error('This coupon has expired'); return; }
+        // A typed date means a whole UK day - see order-logic.js. Imported, not
+        // copied, so the checkout can never be more generous than the server.
+        if (coupon.valid_from && couponValidFromInstant(coupon.valid_from) > now) { toast.error('This coupon is not yet valid'); return; }
+        if (coupon.valid_until && couponValidUntilInstant(coupon.valid_until) < now) { toast.error('This coupon has expired'); return; }
 
         // Stacking compatibility check (UX only — server enforces authoritatively)
         if (appliedCoupons.length >= 1) {
