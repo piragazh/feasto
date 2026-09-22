@@ -137,6 +137,146 @@ function calcItemServerPrice(dbItem, orderItem, isPOS = false) {
     return { serverPrice, breakdown };
 }
 
+// ── Coupon & promotion rules: MIRROR of src/lib/order-logic.js ──────────────
+// Copied programmatically, not retyped, so the server applies EXACTLY the rules
+// the tests cover. scripts/check-checkout-parity.mjs executes both side by side.
+// The file's SYNC RULE always claimed this function mirrored these - but until
+// now it contained none of them, and simply trusted the browser's discount.
+const MAX_COUPONS_PER_ORDER = 3;
+const MAX_COUPON_DISCOUNT_RATIO = 0.50; // 50% of subtotal cap
+
+function validateCoupon(coupon, serverSubtotal, restaurantId, now = new Date()) {
+    // A: Active status
+    if (!coupon.is_active) {
+        return { valid: false, reason: 'inactive', discount: 0 };
+    }
+
+    // B: Date range
+    if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+        return { valid: false, reason: 'not_yet_valid', discount: 0 };
+    }
+    if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+        return { valid: false, reason: 'expired', discount: 0 };
+    }
+    // Precise expires_at timestamp (reward coupons)
+    if (coupon.expires_at && new Date(coupon.expires_at) < now) {
+        return { valid: false, reason: 'expired', discount: 0 };
+    }
+
+    // Global usage limit
+    if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+        return { valid: false, reason: 'usage_limit_reached', discount: 0 };
+    }
+
+    // D: Minimum spend
+    if (coupon.minimum_order && serverSubtotal < coupon.minimum_order) {
+        return { valid: false, reason: 'below_minimum_order', discount: 0 };
+    }
+
+    // C: Restaurant scope
+    if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) {
+        return { valid: false, reason: 'wrong_restaurant', discount: 0 };
+    }
+
+    let d = 0;
+    if (coupon.discount_type === 'percentage') {
+        d = (serverSubtotal * coupon.discount_value) / 100;
+        if (coupon.max_discount) d = Math.min(d, coupon.max_discount);
+    } else if (coupon.discount_type === 'free_delivery') {
+        // free_delivery: caller should pass deliveryFee as serverSubtotal context; we return the raw value here
+        d = coupon.discount_value || 0;
+    } else {
+        d = coupon.discount_value || 0;
+    }
+    // Discount can never exceed the subtotal
+    d = Math.min(d, serverSubtotal);
+
+    return { valid: true, reason: null, discount: d };
+}
+
+async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restaurantId, getCoupon, now = new Date()) {
+    if (!couponCodesInput || (Array.isArray(couponCodesInput) && couponCodesInput.length === 0)) {
+        return { error: null, discount: 0, skipped: true };
+    }
+
+    // Normalise to array of upper-cased trimmed codes
+    let codes;
+    if (Array.isArray(couponCodesInput)) {
+        codes = couponCodesInput.map(c => String(c).trim().toUpperCase()).filter(Boolean);
+    } else {
+        codes = String(couponCodesInput).split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
+    }
+
+    if (codes.length === 0) {
+        return { error: null, discount: 0, skipped: true };
+    }
+
+    // A) Max 3 coupons
+    if (codes.length > MAX_COUPONS_PER_ORDER) {
+        return { error: 'MAX_EXCEEDED', discount: 0 };
+    }
+
+    // B) No duplicates
+    if (new Set(codes).size !== codes.length) {
+        return { error: 'DUPLICATE', discount: 0 };
+    }
+
+    // C) Fetch and validate each coupon
+    const validatedCoupons = [];
+    for (const code of codes) {
+        const coupon = await getCoupon(code);
+        if (!coupon) return { error: 'NOT_FOUND', discount: 0 };
+
+        const result = validateCoupon(coupon, serverSubtotal, restaurantId, now);
+        if (!result.valid) return { error: result.reason.toUpperCase(), discount: 0 };
+
+        validatedCoupons.push({ coupon, rawDiscount: result.discount });
+    }
+
+    // D) Stacking check: if > 1 coupon, all must have stackable=true
+    if (validatedCoupons.length > 1) {
+        const nonStackable = validatedCoupons.filter(vc => !vc.coupon.stackable);
+        if (nonStackable.length > 0) return { error: 'STACKING', discount: 0 };
+    }
+
+    // E) Deterministic application order: percentage first (sorted by code asc), then fixed/other
+    const percentageCoupons = validatedCoupons
+        .filter(vc => vc.coupon.discount_type === 'percentage')
+        .sort((a, b) => a.coupon.code.localeCompare(b.coupon.code));
+    const otherCoupons = validatedCoupons
+        .filter(vc => vc.coupon.discount_type !== 'percentage')
+        .sort((a, b) => a.coupon.code.localeCompare(b.coupon.code));
+    const orderedCoupons = [...percentageCoupons, ...otherCoupons];
+
+    // Apply cap: total coupon discount cannot exceed MAX_COUPON_DISCOUNT_RATIO of subtotal
+    const maxDiscount = serverSubtotal * MAX_COUPON_DISCOUNT_RATIO;
+    let accumulated = 0;
+    const appliedCodes = [];
+
+    for (const vc of orderedCoupons) {
+        const remaining = maxDiscount - accumulated;
+        accumulated += Math.min(vc.rawDiscount, remaining);
+        appliedCodes.push(vc.coupon.code);
+    }
+
+    // Round to whole pence. Unrounded, a 50% cap on a £2.49 order is £1.245, and
+    // the order total became £4.235 - not a real amount of money, and not
+    // something Stripe can charge. The CAP is rounded DOWN so the discount can
+    // never exceed the 50% limit; the discount itself is rounded to the nearest
+    // penny within that. (1e-9 absorbs float noise such as 124.50000000000001.)
+    const capPence = Math.floor(maxDiscount * 100 + 1e-9);
+    const discountPence = Math.min(Math.round(accumulated * 100), capPence);
+    return { error: null, discount: discountPence / 100, appliedCodes };
+}
+
+function capPromotionDiscount(clientDiscount, serverSubtotal) {
+    // Same whole-pence rule as coupons: the 50% cap is rounded DOWN so it can
+    // never be exceeded, and the result is always a chargeable amount.
+    const capPence = Math.floor(serverSubtotal * 0.5 * 100 + 1e-9);
+    const wantPence = Math.round(Math.max(0, Number(clientDiscount) || 0) * 100);
+    return Math.min(wantPence, capPence) / 100;
+}
+
 async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS }) {
     const regularItems = items.filter(i => !String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const dealItems = items.filter(i => String(i.menu_item_id || i.id || '').startsWith('deal_'));
