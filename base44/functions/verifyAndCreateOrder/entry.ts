@@ -314,6 +314,41 @@ function liveCouponDiscount(coupon, base) {
     return Math.min(Math.max(0, d), base);
 }
 
+/**
+ * Read a promotion date the way a UK customer's browser does.
+ *
+ * Promotion dates are stored like "2026-08-30T12:27" - a time with NO time zone.
+ * The customer's browser reads that as UK local time; this server runs in UTC and
+ * would read it as UTC. During British Summer Time they are an hour apart, so for
+ * the first hour after a promotion started the checkout accepted the code and
+ * this server refused the order. Renewing WEB15 would have turned away the first
+ * hour of customers.
+ *
+ * A zone-less date-TIME is therefore taken as UK wall-clock time. Anything with an
+ * explicit zone (Z / +01:00), or a date-only string (which JavaScript reads as UTC
+ * on every machine, browser and server alike), is left exactly as it was.
+ */
+function ukInstant(value) {
+    const s = String(value || '').trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+    if (!m) return new Date(s);
+    const [, y, mo, d, h, mi, sec] = m.map(Number);
+    const asUtc = Date.UTC(y, mo - 1, d, h, mi, sec || 0);
+    // London's offset from UTC at (approximately) that moment, in minutes.
+    const offsetAt = (t) => {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Europe/London', hourCycle: 'h23',
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+        }).formatToParts(new Date(t));
+        const g = (k) => Number(parts.find(p => p.type === k).value);
+        return (Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - t) / 60000;
+    };
+    // Two passes so a time right at a clock change resolves correctly.
+    let t = asUtc - offsetAt(asUtc) * 60000;
+    t = asUtc - offsetAt(t) * 60000;
+    return new Date(t);
+}
+
 async function hasActivePromotion(base44, restaurantId, promotionCodes) {
     const wanted = (Array.isArray(promotionCodes) ? promotionCodes : [])
         .map(c => String(c || '').trim().toLowerCase()).filter(Boolean);
@@ -323,8 +358,8 @@ async function hasActivePromotion(base44, restaurantId, promotionCodes) {
     return (promos || []).some(p => {
         const ids = [p.promotion_code, p.name].map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
         if (!ids.some(id => wanted.includes(id))) return false;
-        if (p.start_date && new Date(p.start_date) > now) return false;
-        if (p.end_date && new Date(p.end_date) < now) return false;
+        if (p.start_date && ukInstant(p.start_date) > now) return false;
+        if (p.end_date && ukInstant(p.end_date) < now) return false;
         if (p.usage_limit && Number(p.usage_count || 0) >= Number(p.usage_limit)) return false;
         return true;
     });
