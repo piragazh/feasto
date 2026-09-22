@@ -57,8 +57,13 @@ function calcItemServerPrice(dbItem, orderItem, isPOS = false) {
         : Object.entries(customizations).map(([name, value]) => ({ name, value }));
 
     for (const clientCustom of customizationList) {
-        const customName = clientCustom.name || clientCustom.key;
-        if (!customName) continue;
+        // ROOT CAUSE FIX: an EMPTY group name is a real name, not a missing one.
+        // `if (!customName) continue` treated "" as absent, so every option group
+        // with a blank name was skipped - which in this data is the meal upgrade
+        // on many burgers, wings and wraps. A burger meal was priced £2.50 short
+        // and rejected as a mismatch. Only a genuinely absent name is skipped.
+        const customName = clientCustom.name ?? clientCustom.key;
+        if (customName === undefined || customName === null) continue;
 
         // Skip internal meal_customizations keys stored as "GroupName_meal_customizations"
         if (customName.endsWith('_meal_customizations')) continue;
