@@ -56,6 +56,8 @@ export default function MenuManagement({ restaurantId }) {
         pos_tile_color: 'none',
         availability_windows: [],
         price_windows: [],
+        allergens_confirmed: false,
+        allergens_source: null,
         track_stock: false,
         stock_quantity: '',
         low_stock_threshold: '',
@@ -559,6 +561,8 @@ CRITICAL REQUIREMENTS:
             pos_tile_color: 'none',
             availability_windows: [],
             price_windows: [],
+            allergens_confirmed: false,
+            allergens_source: null,
             track_stock: false,
             stock_quantity: '',
             low_stock_threshold: '',
@@ -596,6 +600,8 @@ CRITICAL REQUIREMENTS:
             pos_tile_color: item.pos_tile_color || 'none',
             availability_windows: item.availability_windows || [],
             price_windows: item.price_windows || [],
+            allergens_confirmed: Boolean(item.allergens_confirmed),
+            allergens_source: item.allergens_source || null,
             track_stock: Boolean(item.track_stock),
             stock_quantity: item.stock_quantity ?? '',
             low_stock_threshold: item.low_stock_threshold ?? '',
@@ -637,6 +643,13 @@ CRITICAL REQUIREMENTS:
             // Stock. Restocking an item that ran out AUTOMATICALLY brings it back
             // on sale; an item a manager switched off by hand stays off - the
             // same rule applyOrderStock uses when a void returns stock.
+            // Record WHO declared the allergens - the business is legally
+            // responsible for their accuracy.
+            allergens_confirmed: Boolean(formData.allergens_confirmed),
+            allergens_source: formData.allergens_source || undefined,
+            ...(formData.allergens_confirmed && !editingItem?.allergens_confirmed
+                ? { allergens_confirmed_at: new Date().toISOString(), allergens_confirmed_by: currentUser?.email || currentUser?.full_name || undefined }
+                : {}),
             track_stock: Boolean(formData.track_stock),
             stock_quantity: formData.track_stock && formData.stock_quantity !== ''
                 ? Math.max(0, Math.floor(Number(formData.stock_quantity))) : null,
@@ -990,6 +1003,10 @@ CRITICAL REQUIREMENTS:
                                         onChange={(v) => setFormData({ ...formData, allergens: v })}
                                         itemName={formData.name}
                                         itemDescription={formData.description}
+                                        confirmed={formData.allergens_confirmed}
+                                        source={formData.allergens_source}
+                                        onConfirmedChange={(v) => setFormData({ ...formData, allergens_confirmed: v })}
+                                        onSourceChange={(v) => setFormData({ ...formData, allergens_source: v })}
                                     />
                                 </div>
                                 <div className="col-span-2">
