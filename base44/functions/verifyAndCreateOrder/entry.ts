@@ -573,11 +573,26 @@ Deno.serve(async (req) => {
              const amountDelta = Math.abs(chargedGBP - serverTotal);
              if (amountDelta > 0.01) { // Allow 1p rounding
                  console.error(`${LOG} STRIPE_AMOUNT_MISMATCH charged=£${chargedGBP.toFixed(2)} clientTotal=£${serverTotal.toFixed(2)} delta=£${amountDelta.toFixed(4)} pi=${paymentIntentId}`);
+                 // The card HAS been charged, and no order will be created. This
+                 // used to return refunded:false and stop - but the
+                 // PaymentTransaction that reconcileOrphanedPayments scans for is
+                 // only written later in this function, so nothing would ever
+                 // refund it. Refund here, the same way a pricing refusal does.
+                 let refunded = false;
+                 try {
+                     await stripe.refunds.create({ payment_intent: paymentIntentId });
+                     refunded = true;
+                     console.log(`${LOG} Refunded amount-mismatch payment pi=${paymentIntentId}`);
+                 } catch (refundErr) {
+                     console.error(`${LOG} REFUND_FAILED after amount mismatch pi=${paymentIntentId}: ${refundErr?.message}`);
+                 }
                  return Response.json({
-                     error: 'Payment amount does not match order total. Please contact support.',
+                     error: refunded
+                         ? 'Payment amount did not match the order, so it has been refunded. Please try again.'
+                         : 'Payment amount does not match order total. Please contact support.',
                      success: false,
                      code: 'STRIPE_AMOUNT_MISMATCH',
-                     refunded: false
+                     refunded,
                  }, { status: 422 });
              }
 
