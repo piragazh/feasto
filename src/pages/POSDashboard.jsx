@@ -28,6 +28,8 @@ import POSStaffMaintenance from '@/components/pos/POSStaffMaintenance.jsx';
 import POSExceptionsReport from '@/components/pos/POSExceptionsReport.jsx';
 import POSTipReport from '@/components/pos/POSTipReport.jsx';
 import POSCashDrawer from '@/components/pos/POSCashDrawer.jsx';
+import POSTimeClock from '@/components/pos/POSTimeClock.jsx';
+import POSLabourReport from '@/components/pos/POSLabourReport.jsx';
 import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
 import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
@@ -581,6 +583,7 @@ export default function POSDashboard() {
                         <POSReports restaurantId={restaurant.id} posTheme={posTheme} />
                         <POSExceptionsReport restaurantId={restaurant.id} posTheme={posTheme} />
                         <POSTipReport restaurantId={restaurant.id} posTheme={posTheme} />
+                        <POSLabourReport restaurantId={restaurant.id} restaurant={restaurant} activeStaffMember={activeStaffMember} posTheme={posTheme} />
                     </div>
                 )}
                 {/* End of Day: close this till's cash drawer first, then the day's
@@ -592,7 +595,14 @@ export default function POSDashboard() {
                         <POSEndOfDay restaurantId={restaurant.id} restaurant={restaurant} posTheme={posTheme} />
                     </div>
                 )}
-                {activeTab === 'staff' && <POSStaffManager restaurantId={restaurant.id} posTheme={posTheme} currentUser={user} />}
+                {/* Staff tab: the signed-in person's time clock first - clocking in is
+                    the thing staff come here for at the start of a shift. */}
+                {activeTab === 'staff' && (
+                    <div className="h-full min-h-0 overflow-y-auto space-y-4 pb-4">
+                        <POSTimeClock restaurantId={restaurant.id} activeStaffMember={activeStaffMember} posTheme={posTheme} />
+                        <POSStaffManager restaurantId={restaurant.id} posTheme={posTheme} currentUser={user} />
+                    </div>
+                )}
                 {/* Settings is built on the shared light UI kit (Card, Label, Switch),
                     not the POS dark tokens. Rather than half-theming it and getting
                     an inconsistent mix, it renders on an explicit light surface so
