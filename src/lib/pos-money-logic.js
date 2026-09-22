@@ -276,3 +276,40 @@ export function tipsByStaff(orders = []) {
         .map(r => ({ ...r, cash: r2(r.cash), card: r2(r.card), total: r2(r.total) }))
         .sort((a, b) => b.total - a.total);
 }
+
+/**
+ * Revenue for one order, split by tender, EXCLUDING tips.
+ *
+ * The Reports cash/card split used payment_method alone. Split payments were
+ * stored as payment_method 'cash' for the whole bill, so every split counted
+ * entirely as cash revenue. Now read from the structured cash_amount /
+ * card_amount fields.
+ *
+ * Those fields INCLUDE any tip (it is money handed over), but tips are not
+ * revenue - so the tip is taken off whichever tender it was paid in.
+ *
+ * Legacy orders without the structured fields fall back to payment_method, and
+ * a legacy split cannot be divided, so it is attributed to its recorded method
+ * as before - no worse than today, and new orders are correct.
+ *
+ * @returns {{ cash: number, card: number }}
+ */
+export function revenueByTender(order) {
+    if (!order || !countsAsRevenue(order)) return { cash: 0, card: 0 };
+    const tip = Number(order.tip_amount || 0);
+    const hasSplit = order.cash_amount !== undefined && order.cash_amount !== null
+        && order.card_amount !== undefined && order.card_amount !== null;
+
+    if (hasSplit) {
+        let cash = Number(order.cash_amount || 0);
+        let card = Number(order.card_amount || 0);
+        if (tip > 0) {
+            if (order.tip_method === 'card') card -= tip; else cash -= tip;
+        }
+        const r = (n) => Math.max(0, Math.round(n * 100) / 100);
+        return { cash: r(cash), card: r(card) };
+    }
+
+    const total = Math.round(Number(order.total || 0) * 100) / 100;
+    return order.payment_method === 'card' ? { cash: 0, card: total } : { cash: total, card: 0 };
+}

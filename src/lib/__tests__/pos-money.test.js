@@ -242,3 +242,39 @@ describe('table lifecycle', () => {
         expect(tableReleasePatch(order, { id: 't1' })).toBeNull();
     });
 });
+
+import { revenueByTender } from '../pos-money-logic.js';
+
+describe('revenue by tender', () => {
+    it('REGRESSION: a split payment is divided, not counted all as cash', () => {
+        // Was: payment_method 'cash' for the whole bill, so every split counted
+        // entirely as cash revenue in Reports.
+        const r = revenueByTender({ status: 'collected', total: 30, cash_amount: 10, card_amount: 20 });
+        expect(r).toEqual({ cash: 10, card: 20 });
+    });
+
+    it('takes a CARD tip off card revenue - tips are not revenue', () => {
+        const r = revenueByTender({ status: 'collected', total: 30, cash_amount: 0, card_amount: 33, tip_amount: 3, tip_method: 'card' });
+        expect(r).toEqual({ cash: 0, card: 30 });
+    });
+
+    it('takes a CASH tip off cash revenue', () => {
+        const r = revenueByTender({ status: 'collected', total: 30, cash_amount: 13, card_amount: 20, tip_amount: 3, tip_method: 'cash' });
+        expect(r).toEqual({ cash: 10, card: 20 });
+    });
+
+    it('cash + card revenue always equals the order total', () => {
+        const o = { status: 'collected', total: 30, cash_amount: 13, card_amount: 20, tip_amount: 3, tip_method: 'cash' };
+        const r = revenueByTender(o);
+        expect(r.cash + r.card).toBe(o.total);
+    });
+
+    it('legacy orders fall back to payment_method', () => {
+        expect(revenueByTender({ status: 'collected', total: 12, payment_method: 'card' })).toEqual({ cash: 0, card: 12 });
+        expect(revenueByTender({ status: 'collected', total: 12, payment_method: 'cash' })).toEqual({ cash: 12, card: 0 });
+    });
+
+    it('voided orders are not revenue in either tender', () => {
+        expect(revenueByTender({ status: 'cancelled', total: 30, cash_amount: 30, card_amount: 0 })).toEqual({ cash: 0, card: 0 });
+    });
+});
