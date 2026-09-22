@@ -270,7 +270,14 @@ export async function resolveCouponDiscount(couponCodesInput, serverSubtotal, re
         appliedCodes.push(vc.coupon.code);
     }
 
-    return { error: null, discount: accumulated, appliedCodes };
+    // Round to whole pence. Unrounded, a 50% cap on a £2.49 order is £1.245, and
+    // the order total became £4.235 - not a real amount of money, and not
+    // something Stripe can charge. The CAP is rounded DOWN so the discount can
+    // never exceed the 50% limit; the discount itself is rounded to the nearest
+    // penny within that. (1e-9 absorbs float noise such as 124.50000000000001.)
+    const capPence = Math.floor(maxDiscount * 100 + 1e-9);
+    const discountPence = Math.min(Math.round(accumulated * 100), capPence);
+    return { error: null, discount: discountPence / 100, appliedCodes };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
