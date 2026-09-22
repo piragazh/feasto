@@ -208,6 +208,7 @@ export default function KioskMenu({
             {selectedItem && (
                 <KioskItemModal
                     item={selectedItem}
+                    kioskConfig={restaurant?.kiosk_config || {}}
                     onClose={() => setSelectedItem(null)}
                     onAdd={(item) => {
                         onAddItem(item);
