@@ -106,8 +106,16 @@ export function entryPay(entry, hourlyRate) {
  *
  * @param {object[]} rates  [{ staff_id, hourly_rate, effective_from: 'YYYY-MM-DD' }]
  */
-export function rateInForce(rates = [], staffId, when) {
-    const day = String(new Date(when).toISOString()).slice(0, 10);
+export function rateInForce(rates = [], staffId, when, timeZone = 'Europe/London') {
+    // The UK LOCAL date, not UTC. A shift starting at 00:30 on 1 April is 23:30
+    // UTC on 31 March during BST - and the National Minimum Wage rises on
+    // 1 April, which is in BST. Using the UTC date costed exactly those
+    // just-after-midnight shifts at the old, lower rate.
+    const d = new Date(when);
+    if (!Number.isFinite(d.getTime())) return undefined;
+    const day = new Intl.DateTimeFormat('en-CA', {
+        timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(d);                                   // en-CA gives YYYY-MM-DD
     let best;
     for (const r of rates) {
         if (r?.staff_id !== staffId) continue;

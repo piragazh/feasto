@@ -177,3 +177,19 @@ describe('rate in force on the day', () => {
         expect(labourSummary(entries, rates, 0).labourCost).toBe(189.2);   // 91.52 + 97.68
     });
 });
+
+describe('REGRESSION: rate day uses UK local date, not UTC', () => {
+    const rates = [
+        { staff_id: 'a', hourly_rate: 11.44, effective_from: '2025-04-01' },
+        { staff_id: 'a', hourly_rate: 12.21, effective_from: '2026-04-01' },
+    ];
+    it('a shift starting 00:30 on 1 April (BST) gets the NEW rate', () => {
+        // 00:30 BST on 1 April is 23:30 UTC on 31 March. The minimum wage
+        // rises on 1 April, in BST, so a UTC date costs exactly these shifts
+        // at the old rate.
+        expect(rateInForce(rates, 'a', '2026-03-31T23:30:00Z')).toBe(12.21);
+    });
+    it('a shift at 23:30 on 31 March UK still gets the OLD rate', () => {
+        expect(rateInForce(rates, 'a', '2026-03-31T22:30:00Z')).toBe(11.44);
+    });
+});
