@@ -27,6 +27,7 @@ import QuickItemLookupDialog from './QuickItemLookupDialog';
 import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestaurant, cacheTables, getCachedTables, savePendingStatusUpdate, setCacheMeta, savePendingTableOrder } from './POSOfflineDB';
 import { isNetworkError } from '@/lib/networkStatus';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
+import { isItemAvailableNow, scheduledPrice } from '@/lib/pos-schedule-logic';
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, onReplaceItem, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
     const isDark = posTheme === 'dark';
@@ -129,7 +130,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         onUpdateQuantity(itemId, newQuantity);
     };
 
-    const { data: menuItems = [], refetch: refetchMenuItems } = useQuery({
+    const { data: rawMenuItems = [], refetch: refetchMenuItems } = useQuery({
     queryKey: ['pos-menu-items', restaurantId],
     queryFn: async () => {
         try {
@@ -147,6 +148,49 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
     enabled: !!restaurantId,
     staleTime: 5 * 60 * 1000, // treat as fresh for 5 min
     });
+
+    /**
+     * The menu AS IT IS RIGHT NOW.
+     *
+     * Applied once, here, so every downstream use - grid, categories, item
+     * lookup, quick sale, Item # search - gets it for free. The alternative was
+     * patching four price sites and three availability checks separately, which
+     * is seven places for the schedule to drift out of step.
+     *
+     *  - Outside an availability window → is_available: false, so the existing
+     *    filters hide it with no further changes.
+     *  - Inside a timed-price window → pos_price becomes the timed price, so the
+     *    existing "pos_price != null" logic charges it; _base_price keeps the
+     *    normal price for the struck-through display.
+     *
+     * Uses the TESTED logic from pos-schedule-logic.js, the same rules the
+     * server enforces - so the price shown is the price the server will accept.
+     *
+     * Re-evaluated every minute: a till is often left open all day, and without
+     * this, breakfast would stay on screen past 11:30 and a happy-hour price
+     * would keep showing after it ended (the server would then refuse the sale).
+     */
+    const [scheduleTick, setScheduleTick] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setScheduleTick(Date.now()), 60000);
+        return () => clearInterval(id);
+    }, []);
+
+    const menuItems = useMemo(() => {
+        const now = new Date(scheduleTick);
+        return rawMenuItems.map(item => {
+            if (!isItemAvailableNow(item, now)) {
+                return { ...item, is_available: false, _scheduled_out: true };
+            }
+            const base = item.pos_price != null ? item.pos_price : item.price;
+            const timed = scheduledPrice(base, item, now);
+            if (timed < base) {
+                const active = (item.price_windows || []).find(w => Number(w.price) === timed);
+                return { ...item, pos_price: timed, _base_price: base, _price_label: active?.label || 'Offer' };
+            }
+            return item;
+        });
+    }, [rawMenuItems, scheduleTick]);
 
     const { data: tables = [], refetch: refetchTables } = useQuery({
         queryKey: ['pos-tables', restaurantId],
