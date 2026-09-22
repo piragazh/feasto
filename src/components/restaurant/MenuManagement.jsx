@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, Wand2, RefreshCw, Copy, Clipboard } from 'lucide-react';
 import { toast } from 'sonner';
+import ScheduleWindowsEditor from './ScheduleWindowsEditor';
 import { ScheduleSection, AllergensSection, NutritionSection, SubcategorySection, MenuItemBadges } from './MenuItemAdvancedFields';
 import AIFoodImageEnhancer from './AIFoodImageEnhancer';
 import ImportFromJustEat from './ImportFromJustEat';
@@ -53,6 +54,8 @@ export default function MenuManagement({ restaurantId }) {
         // for it, so it was always empty and lookup could never match anything.
         menu_item_no: '',
         pos_tile_color: 'none',
+        availability_windows: [],
+        price_windows: [],
         name: '',
         description: '',
         price: '',
@@ -551,6 +554,8 @@ CRITICAL REQUIREMENTS:
         setFormData({
             menu_item_no: '',
             pos_tile_color: 'none',
+            availability_windows: [],
+            price_windows: [],
             name: '',
             description: '',
             price: '',
@@ -583,6 +588,8 @@ CRITICAL REQUIREMENTS:
         setFormData({
             menu_item_no: item.menu_item_no || '',
             pos_tile_color: item.pos_tile_color || 'none',
+            availability_windows: item.availability_windows || [],
+            price_windows: item.price_windows || [],
             name: item.name,
             description: item.description || '',
             price: item.price.toString(),
@@ -780,6 +787,32 @@ CRITICAL REQUIREMENTS:
                                     <p className="text-xs text-gray-500 mt-1">
                                         Group items by colour so staff recognise them at a glance &mdash; e.g. all drinks blue, all sides amber.
                                     </p>
+                                </div>
+                                <div className="col-span-2 pt-2 border-t border-gray-100">
+                                    <Label>When is this available?</Label>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                        Leave empty to sell it all day. Add a window for breakfast, lunch or late menus &mdash;
+                                        outside these times it disappears from the till automatically.
+                                    </p>
+                                    <ScheduleWindowsEditor
+                                        value={formData.availability_windows}
+                                        onChange={(v) => setFormData({ ...formData, availability_windows: v })}
+                                        emptyHint="Available all day."
+                                    />
+                                </div>
+                                <div className="col-span-2 pt-2 border-t border-gray-100">
+                                    <Label>Timed prices (happy hour)</Label>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                        A lower price during set hours. It switches on and off by itself, and the till shows the
+                                        offer so staff can tell customers.
+                                    </p>
+                                    <ScheduleWindowsEditor
+                                        withPrice
+                                        basePrice={formData.pos_price !== '' ? Number(formData.pos_price) : (formData.price !== '' ? Number(formData.price) : null)}
+                                        value={formData.price_windows}
+                                        onChange={(v) => setFormData({ ...formData, price_windows: v })}
+                                        emptyHint="No timed prices."
+                                    />
                                 </div>
                                 <div>
                                     <Label>Item Name *</Label>
