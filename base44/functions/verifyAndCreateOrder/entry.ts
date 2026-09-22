@@ -603,6 +603,16 @@ Deno.serve(async (req) => {
                 console.error(`${LOG} VALIDATION_ERROR - accepting order unvalidated (fail-safe) pi=${paymentIntentId || 'none'}: ${valErr?.message}`, valErr?.stack);
                 pricing = { valid: true, failSafe: true };
             }
+            // "We couldn't check" is not "we checked and it's wrong". The menu and
+            // deal lookups catch their own database errors and REPORT them as a
+            // refusal (MENU_FETCH_FAILED / DEAL_FETCH_FAILED) rather than throwing,
+            // so the catch above never saw them - and a genuine customer was
+            // refused and refunded because of our own hiccup. Every other code is
+            // a real verdict about the order and still refuses.
+            if (!pricing.valid && /_FETCH_FAILED$/.test(String(pricing.code || ''))) {
+                console.error(`${LOG} VALIDATION_UNAVAILABLE (${pricing.code}) - accepting order unvalidated (fail-safe) pi=${paymentIntentId || 'none'}`);
+                pricing = { valid: true, failSafe: true };
+            }
         } else {
             console.warn(`${LOG} price validation switched OFF via SystemSettings - accepting order unvalidated`);
         }
