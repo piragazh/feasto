@@ -832,6 +832,37 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ── Count coupon use ─────────────────────────────────────────────────────
+        // Online orders never counted coupon use - only the till did - so a coupon
+        // limited to "first 50 customers" never ran out online.
+        //
+        // Placed AFTER the order and payment record are written, so:
+        //  - a refused order never uses up a coupon (it returns long before here)
+        //  - a retried request never double-counts (duplicates return early, at the
+        //    idempotency_key / payment_intent_id checks near the top)
+        // and NON-FATAL: the customer has paid and has their order, so a failure
+        // here is logged, never turned into an error.
+        //
+        // KNOWN LIMIT: read-then-write, as on the till. Two orders using the same
+        // coupon at the same instant could both read the same count. A limit could
+        // be exceeded by one in that case; it cannot be under-counted by more.
+        try {
+            const codes = [...new Set(
+                (Array.isArray(orderData.coupon_codes) ? orderData.coupon_codes : [])
+                    .map(c => String(c || '').trim().toUpperCase()).filter(Boolean),
+            )];
+            for (const code of codes) {
+                const rows = await base44.asServiceRole.entities.Coupon.filter({ code });
+                const coupon = rows?.[0];
+                if (!coupon) continue;      // unknown code (e.g. validation switched off) - nothing to count
+                await base44.asServiceRole.entities.Coupon.update(coupon.id, {
+                    usage_count: Number(coupon.usage_count || 0) + 1,
+                });
+            }
+        } catch (usageErr) {
+            console.error(`${LOG} COUPON_USAGE_NOT_COUNTED order=${newOrder.id} codes=${JSON.stringify(orderData.coupon_codes)}: ${usageErr?.message}`);
+        }
+
         console.log(`${LOG} ✅ Order created: id=${newOrder.id} total=£${serverTotal.toFixed(2)}`);
         return Response.json({ success: true, order_id: newOrder.id, order_number: newOrder.order_number }, { status: 201 });
 
