@@ -126,6 +126,7 @@ export default function KioskCart({
             {editingItem && (
                 <KioskItemModal
                     item={editingItem}
+                    kioskConfig={restaurant?.kiosk_config || {}}
                     initialCustomizations={editingItem.customizations}
                     initialItemQuantities={editingItem.itemQuantities}
                     initialQuantity={editingItem.quantity}
