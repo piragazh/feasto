@@ -548,7 +548,7 @@ export default function POSDashboard() {
             <main className={`flex-1 min-h-0 p-4 overflow-hidden ${t.bg}`}>
                 {activeTab === 'order-entry' && (
                     <POSOrderEntry
-                        restaurantId={restaurant.id} cart={cart}
+                        restaurantId={restaurant.id} cart={cart} terminal={posNumber}
                         onAddItem={addToCart} onRemoveItem={removeFromCart}
                         onUpdateQuantity={updateQuantity} onClearCart={clearCart}
                         onReplaceItem={replaceCartItem}
@@ -566,7 +566,7 @@ export default function POSDashboard() {
                 {activeTab === 'payment' && (
                     <POSPayment cart={cart} cartTotal={cartTotal} onPaymentComplete={clearCart}
                         restaurantId={restaurant.id} restaurantName={restaurant.name} orderType={orderType} posTheme={posTheme}
-                        discount={discount} restaurant={restaurant} />
+                        discount={discount} restaurant={restaurant} terminal={posNumber} />
                 )}
                 {activeTab === 'kitchen' && <KitchenDisplaySystem restaurant={restaurant} />}
                 {activeTab === 'history' && <POSOrderHistory restaurantId={restaurant.id} posTheme={posTheme} />}

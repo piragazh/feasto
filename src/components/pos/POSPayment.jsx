@@ -63,7 +63,7 @@ export function quickCashOptions(owed) {
     return [...new Set(opts)].filter(v => v > owed).sort((a, b) => a - b).slice(0, 4);
 }
 
-export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {}, quickSale = false }) {
+export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {}, quickSale = false, terminal = null }) {
     const isDark = posTheme === 'dark';
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
@@ -313,6 +313,15 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 // Sent separately from total and validated server-side. Tips are
                 // not revenue, so they must never be folded into the order total.
                 tip_amount: tipAmount > 0 ? tipAmount : undefined,
+                // Structured tender breakdown. Only the CARD figure is sent - it is
+                // exact, because card terminals never give change - and the server
+                // derives cash as the remainder so the two always reconcile. A split
+                // used to be recorded as the whole bill in cash.
+                card_amount: Math.round(paymentSummary
+                    .filter(p => p.method === 'card')
+                    .reduce((sum, p) => sum + Number(p.amount || 0), 0) * 100) / 100,
+                // Which till, so each cash drawer counts only its own sales.
+                terminal: terminal ?? undefined,
                 tip_method: tipAmount > 0 ? (dominantTipMethod(paymentSummary) || 'cash') : undefined,
                 staff_session: getStaffSessionToken(restaurantId),
             });

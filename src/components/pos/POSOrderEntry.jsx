@@ -29,7 +29,7 @@ import { isNetworkError } from '@/lib/networkStatus';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { isItemAvailableNow, scheduledPrice } from '@/lib/pos-schedule-logic';
 
-export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, onReplaceItem, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount }) {
+export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, onReplaceItem, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount, terminal }) {
     const isDark = posTheme === 'dark';
     const t = {
         panel:          isDark ? 'bg-[#151720] border-white/[0.06]'                                          : 'bg-white border-gray-200',
@@ -600,7 +600,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         <h2 className={`${t.text} font-bold text-xl`}>Payment</h2>
                         <button onClick={() => setShowPayment(false)} className={`px-4 py-2 ${t.payBack} border text-sm font-semibold rounded-xl transition-colors`}>← Back</button>
                     </div>
-                    <POSPayment cart={optimisticCart} cartTotal={cartTotal} quickSale={quickSaleMode} onPaymentComplete={() => { toast.success('Payment completed!'); setShowPayment(false); setQuickSaleMode(false); onClearCart(); }} onBackToCart={() => { setShowPayment(false); setQuickSaleMode(false); }} restaurantId={restaurantId} restaurantName={restaurant?.name} orderType={orderType} posTheme={posTheme} discount={discount} onApplyDiscount={onApplyDiscount} onRemoveDiscount={onRemoveDiscount} restaurant={restaurant} phoneDetails={phoneDetails} />
+                    <POSPayment cart={optimisticCart} cartTotal={cartTotal} quickSale={quickSaleMode} onPaymentComplete={() => { toast.success('Payment completed!'); setShowPayment(false); setQuickSaleMode(false); onClearCart(); }} onBackToCart={() => { setShowPayment(false); setQuickSaleMode(false); }} restaurantId={restaurantId} restaurantName={restaurant?.name} orderType={orderType} posTheme={posTheme} discount={discount} onApplyDiscount={onApplyDiscount} onRemoveDiscount={onRemoveDiscount} restaurant={restaurant} phoneDetails={phoneDetails} terminal={terminal} />
                 </div>
             );
         }
