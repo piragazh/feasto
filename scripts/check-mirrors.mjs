@@ -179,12 +179,34 @@ for (const check of CHECKS) {
 {
     const catalogue = read('src/lib/posPermissions.js');
     const perms = (src) => new Set([...src.matchAll(/'([a-z_]+\.[a-z_]+)'/g)].map(m => m[1]));
-    const wanted = perms(catalogue);
+    // Every permission in the catalogue - taken from the PERMISSIONS object only.
+    const catBlock = catalogue.slice(catalogue.indexOf('export const PERMISSIONS'),
+                                     catalogue.indexOf('};', catalogue.indexOf('export const PERMISSIONS')));
+    const wanted = perms(catBlock);
+
+    // Read ONLY the manager's list inside the defaults block. Scanning the
+    // whole file was blind: the permission being checked usually also appears
+    // in the function's own roleHas(...) call, so a copy missing it from the
+    // defaults still "passed". Caught by removing staff.manage and watching the
+    // check stay green.
+    const managerList = (src) => {
+        const start = src.indexOf('DEFAULT_ROLE_PERMISSIONS = {');
+        if (start < 0) return null;
+        const block = src.slice(start, src.indexOf('};', start));
+        const m = block.match(/manager:\s*\[([\s\S]*?)\]/);
+        return m ? perms(m[1]) : null;
+    };
+
     const dir = 'base44/functions';
     for (const fn of fs.readdirSync(dir)) {
         const src = read(`${dir}/${fn}/entry.ts`);
         if (!src || !src.includes('DEFAULT_ROLE_PERMISSIONS')) continue;
-        const have = perms(src);
+        const have = managerList(src);
+        if (!have) {
+            console.error(`✗ ${fn}: could not find the manager list in DEFAULT_ROLE_PERMISSIONS`);
+            failed++;
+            continue;
+        }
         const missing = [...wanted].filter(p => !have.has(p));
         if (missing.length) {
             console.error(`✗ permission defaults out of date in ${fn}`);
