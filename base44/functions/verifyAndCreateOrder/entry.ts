@@ -654,7 +654,20 @@ Deno.serve(async (req) => {
             }
 
             // Verify Stripe charged amount matches client-supplied total (no price tolerance since we trust the client)
-             const chargedAmountPence = stripeChargedAmountPence ?? paymentIntent.amount;
+             // STRIPE'S OWN FIGURE ONLY. This read `stripeChargedAmountPence ??
+             // paymentIntent.amount` - and stripeChargedAmountPence comes from the
+             // REQUEST BODY. So "confirm Stripe charged this much" used the
+             // caller's own claim of what Stripe charged: get Stripe to charge 1p,
+             // send correct prices and claim the full amount was charged, and both
+             // checks passed. The live checkout never sends this field;
+             // recoverPayment sends the figure it retrieved from Stripe, which is
+             // exactly what we retrieve here - so trusting Stripe directly changes
+             // nothing for either genuine caller.
+             const chargedAmountPence = Number(paymentIntent.amount_received || paymentIntent.amount);
+             if (stripeChargedAmountPence !== undefined && stripeChargedAmountPence !== null
+                 && Number(stripeChargedAmountPence) !== chargedAmountPence) {
+                 console.warn(`${LOG} caller-supplied charged amount ${stripeChargedAmountPence}p ignored; Stripe reports ${chargedAmountPence}p pi=${paymentIntentId}`);
+             }
              const chargedGBP = chargedAmountPence / 100;
              const amountDelta = Math.abs(chargedGBP - serverTotal);
              if (amountDelta > 0.01) { // Allow 1p rounding
