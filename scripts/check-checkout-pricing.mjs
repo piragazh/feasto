@@ -36,7 +36,12 @@ const PROMOS = [{ restaurant_id: 'r1', name: 'Tuesday Deal', promotion_code: 'TU
 
 const base44 = { asServiceRole: { entities: {
   MenuItem: { filter: async () => Object.values(MENU) },
-  MealDeal: { filter: async () => [] },
+  // Real deals from the database: one fixed, one category deal.
+  MealDeal: { filter: async () => [
+    { id: '696f92968ca110ebb3d68ba0', name: '1 Piece Chicken, 3 Hot Wings, Chicken Burger and Fries', deal_price: 9.69, is_active: true, category_rules: [] },
+    { id: '69681db018ad1f2a1ff354de', name: 'Family Pizza Deal', deal_price: 21.99, is_active: true,
+      category_rules: [{ category: 'Pizzas', quantity: 1 }, { category: 'Large Drinks', quantity: 1 }] },
+  ] },
   Coupon:   { filter: async ({ code }) => (COUPONS[code] ? [COUPONS[code]] : []) },
   Promotion:{ filter: async () => PROMOS },
 } } };
@@ -61,6 +66,10 @@ const CASES = [
   ['GENUINE  £5 welcome coupon on a £6.49 order (>50%)', true, run([line('burger', 6.49, { '': 'On its Own' })], { discount: 5, coupons: ['WELCOME5'] })],
   ['GENUINE  10% coupon on Ringer (server under-counts)', true, run([line('ringer', 7.69, { '': 'Meal' })], { discount: 0.77, coupons: ['SAVE10'] })],
   ['GENUINE  free-delivery coupon (checkout shows £0)',   true, run([line('burger', 8.99, { '': 'Meal' })], { discount: 0, coupons: ['FREEDEL'] })],
+  // Deals are added to the cart exactly as Restaurant.jsx does it. A category
+  // deal's id carries a timestamp, which the server used to fail to strip.
+  ['GENUINE  fixed meal deal',                        true,  run([{ menu_item_id: 'deal_696f92968ca110ebb3d68ba0', name: 'deal', price: 9.69, quantity: 1, is_deal: true }])],
+  ['GENUINE  category meal deal (id has timestamp)',  true,  run([{ menu_item_id: 'deal_69681db018ad1f2a1ff354de_1790000000000', name: 'deal', price: 21.99, quantity: 1, is_deal: true, is_category_deal: true }])],
   ['GENUINE  real active promotion',                 true,  run([line('burger', 8.99, { '': 'Meal' })], { discount: 2, promos: ['TUE'] })],
   ['TAMPER   burger meal priced at 1p',              false, run([line('burger', 0.01, { '': 'Meal' })])],
   ['TAMPER   discount with no coupon or promotion',  false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 4 })],
@@ -73,6 +82,7 @@ const CASES = [
   ['TAMPER   burger meal, meal not paid (£6.49)',     false, run([line('burger', 6.49, { '': 'Meal' })])],
   ['TAMPER   expired coupon',                        false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 2, coupons: ['OLD'] })],
   ['TAMPER   £5 coupon claimed as £6',               false, run([line('burger', 6.49, { '': 'On its Own' })], { discount: 6, coupons: ['WELCOME5'] })],
+  ['TAMPER   category meal deal priced at £1',       false, run([{ menu_item_id: 'deal_69681db018ad1f2a1ff354de_1790000000000', name: 'deal', price: 1, quantity: 1, is_deal: true, is_category_deal: true }])],
   ['TAMPER   non-existent coupon',                   false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 1, coupons: ['NOPE'] })],
 ];
 
