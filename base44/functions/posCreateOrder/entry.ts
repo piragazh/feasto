@@ -506,6 +506,34 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ── Tender breakdown ────────────────────────────────────────────────────
+        //
+        // Split payments used to be stored as payment_method 'cash' for the WHOLE
+        // bill, the real breakdown living only in free-text notes. A £10 cash +
+        // £20 card bill therefore counted as £30 of cash: the drawer looked £20
+        // short, the staff member was blamed for money that went on a card, and
+        // the Reports cash/card split was wrong for every split payment.
+        //
+        // Card is taken as the exact figure - card terminals never give change -
+        // and cash is DERIVED as the remainder. That guarantees
+        // cash_amount + card_amount === total + tip, so the drawer and the bill
+        // can never disagree, whatever rounding the client did.
+        //
+        // Left unset for an unpaid table send (no tender yet) and for old clients
+        // that do not send card_amount, which the cash logic then treats as
+        // legacy rather than guessing.
+        let cashAmount;
+        let cardAmount;
+        if (orderData.payment_method && orderData.card_amount !== undefined && orderData.card_amount !== null) {
+            const owed = Math.round((serverTotal + tipAmount) * 100) / 100;
+            const card = Number(orderData.card_amount);
+            if (!Number.isFinite(card) || card < 0) {
+                return Response.json({ error: 'Invalid card amount' }, { status: 400 });
+            }
+            cardAmount = Math.min(Math.round(card * 100) / 100, owed);
+            cashAmount = Math.round((owed - cardAmount) * 100) / 100;
+        }
+
         // Strip spoofable / computed fields
         const {
             created_by: _cb,
@@ -539,6 +567,9 @@ Deno.serve(async (req) => {
             // a sale because a token expired would stop the restaurant trading -
             // but it is recorded as unattributed rather than trusting the client.
             tip_amount: tipAmount,
+            cash_amount: cashAmount,
+            card_amount: cardAmount,
+            terminal: Number.isInteger(Number(orderData.terminal)) ? Number(orderData.terminal) : undefined,
             tip_method: tipAmount > 0 ? (orderData.tip_method === 'card' ? 'card' : 'cash') : undefined,
             staff_id: staffSession?.staff_id || undefined,
             staff_name: staffSession?.staff_name || undefined,
