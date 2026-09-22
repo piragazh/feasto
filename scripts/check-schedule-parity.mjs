@@ -36,11 +36,16 @@ for (const w of windows) for (const t of instants) {
   if (tested.isWithinWindow(w, t) !== mirrored.isWithinWindow(w, t)) {
     mismatches++; console.log('  MISMATCH isWithinWindow', JSON.stringify(w), t.toISOString());
   }
-  const item = { price_windows: [{ ...w, price: 3 }], availability_windows: [w] };
-  checks++;
-  if (tested.scheduledPrice(5, item, t) !== mirrored.scheduledPrice(5, item, t)) {
-    mismatches++; console.log('  MISMATCH scheduledPrice', JSON.stringify(w), t.toISOString());
+  // Blank prices included: Number('') is 0, so a copy that forgets the blank
+  // check makes items FREE. Each copy must ignore blanks identically.
+  for (const price of [3, 0, '', null, undefined, '  ', '2.50']) {
+    const pItem = { price_windows: [{ ...w, price }] };
+    checks++;
+    if (tested.scheduledPrice(5, pItem, t) !== mirrored.scheduledPrice(5, pItem, t)) {
+      mismatches++; console.log('  MISMATCH scheduledPrice', fn, JSON.stringify(price), JSON.stringify(w), t.toISOString());
+    }
   }
+  const item = { price_windows: [{ ...w, price: 3 }], availability_windows: [w] };
   checks++;
   if (tested.isItemAvailableNow(item, t) !== mirrored.isItemAvailableNow(item, t)) {
     mismatches++; console.log('  MISMATCH isItemAvailableNow', JSON.stringify(w), t.toISOString());
