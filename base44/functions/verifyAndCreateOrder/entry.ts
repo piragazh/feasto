@@ -282,6 +282,36 @@ function capPromotionDiscount(clientDiscount, serverSubtotal) {
  * this restaurant? The checkout sends each promotion's code, or its name when it
  * has no code, so both are matched.
  */
+/**
+ * The coupon amount the LIVE checkout gives - mirrors DiscountCodeInput.jsx.
+ *
+ * Checked against the checkout's own rules, not order-logic's 50% cap. That cap
+ * was documented in the test library but was never live: the server trusted the
+ * browser, so customers have always received the checkout's rule - each coupon
+ * capped at the SUBTOTAL. Enforcing 50% now would refuse genuine customers (a
+ * "£5 off" coupon on an £8 order) on a live site, which is a policy change
+ * nobody has decided. See the note to the owner about the 50% question.
+ *
+ * Fraud is stopped by resolveCouponDiscount's ELIGIBILITY checks (the coupon
+ * must exist, be active, in date, for this restaurant, over its minimum spend,
+ * within usage and stacking rules) - not by the cap.
+ */
+function liveCouponDiscount(coupon, base) {
+    let d = 0;
+    if (coupon.discount_type === 'percentage') {
+        d = (base * Number(coupon.discount_value || 0)) / 100;
+        if (coupon.max_discount && d > coupon.max_discount) d = coupon.max_discount;
+    } else if (coupon.discount_type === 'free_delivery') {
+        // The checkout shows 0 here. The older CouponInput used
+        // free_delivery_amount, so allow the larger - a ceiling above what the
+        // browser claims is harmless; one below it refuses a real customer.
+        d = Number(coupon.free_delivery_amount || coupon.discount_value || 0);
+    } else {
+        d = Number(coupon.discount_value || 0);          // fixed, free_item, other
+    }
+    return Math.min(Math.max(0, d), base);
+}
+
 async function hasActivePromotion(base44, restaurantId, promotionCodes) {
     const wanted = (Array.isArray(promotionCodes) ? promotionCodes : [])
         .map(c => String(c || '').trim().toLowerCase()).filter(Boolean);
@@ -404,7 +434,18 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
         console.error(`${LOG} COUPON_INVALID ${couponResult.error} codes=${JSON.stringify(couponCodes)}`);
         return { valid: false, error: 'That coupon can no longer be applied. Please remove it and try again.', code: `COUPON_${couponResult.error}` };
     }
-    const couponDiscount = couponResult.discount || 0;
+    // resolveCouponDiscount above has decided ELIGIBILITY. The AMOUNT allowed
+    // follows the live checkout's rules, on the higher of the two subtotals:
+    // where this server under-counts (see the Ringer Burger note) the customer's
+    // subtotal is the true one, and a percentage coupon on it is worth more. A
+    // higher base is safe - the customer is paying correspondingly more.
+    const couponBase = Math.max(serverSubtotal, Number(clientSubtotal) || 0);
+    let couponDiscount = 0;
+    for (const code of (couponResult.appliedCodes || [])) {
+        const c = await getCoupon(code);
+        if (c) couponDiscount += liveCouponDiscount(c, couponBase);
+    }
+    couponDiscount = Math.min(couponDiscount, couponBase);
     const promoClaim = Math.max(0, clientDiscount - couponDiscount);
 
     let promoAllowed = 0;
@@ -416,7 +457,10 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
         }
         promoAllowed = capPromotionDiscount(promoClaim, serverSubtotal);
     }
-    const combinedCap = Math.floor(serverSubtotal * MAX_COUPON_DISCOUNT_RATIO * 100 + 1e-9) / 100;
+    // A discount can't exceed the order itself. (Promotions alone stay capped at
+    // 50% by capPromotionDiscount - their amounts aren't recomputed here, and
+    // genuine promotions essentially never exceed half an order.)
+    const combinedCap = Math.floor(couponBase * 100 + 1e-9) / 100;
     const allowedDiscount = Math.min(couponDiscount + promoAllowed, combinedCap);
     if (clientDiscount > allowedDiscount + PRICE_TOLERANCE) {
         console.error(`${LOG} DISCOUNT_TOO_LARGE claimed=£${clientDiscount} allowed=£${allowedDiscount}`);
