@@ -6,6 +6,25 @@
       "type": "string",
       "description": "Reference to restaurant"
     },
+    "allergens_confirmed": {
+      "type": "boolean",
+      "default": false,
+      "description": "A PERSON has checked this item's allergens. Until this is true, customers are told the information isn't available - an empty allergens list means nobody has said, NOT that the food is free of allergens. AI suggestions never set this."
+    },
+    "allergens_confirmed_by": {
+      "type": "string",
+      "description": "Who confirmed the allergens. The business is legally responsible for accuracy, so the declaration is attributable."
+    },
+    "allergens_confirmed_at": { "type": "string", "format": "date-time" },
+    "allergens_source": {
+      "type": "string",
+      "enum": ["manual", "ai_suggested"],
+      "description": "Where the list came from. 'ai_suggested' is a guess from the item's name and description and is never shown to customers until confirmed."
+    },
+    "allergen_notes": {
+      "type": "string",
+      "description": "Free text shown with the allergens, e.g. 'fried in shared oil with fish'."
+    },
     "track_stock": {
       "type": "boolean",
       "default": false,
