@@ -119,7 +119,14 @@ export function scheduledPrice(basePrice, item, date = new Date(), timeZone = DE
     if (!Array.isArray(windows) || windows.length === 0) return base;
     let best = base;
     for (const w of windows) {
-        const p = Number(w?.price);
+        // An EMPTY price must be ignored, not read as zero. Number('') and
+        // Number(null) are both 0 in JavaScript, so without this check a price
+        // window saved before the owner typed a price made the item FREE for
+        // the whole window. Caught in the editor's save path, not by the
+        // original tests - which checked 'free' (NaN) but never ''.
+        const raw = w?.price;
+        if (raw === '' || raw === null || raw === undefined || (typeof raw === 'string' && raw.trim() === '')) continue;
+        const p = Number(raw);
         if (!Number.isFinite(p) || p < 0) continue;     // malformed: ignore rather than charge £NaN
         if (isWithinWindow(w, date, timeZone) && p < best) best = p;
     }

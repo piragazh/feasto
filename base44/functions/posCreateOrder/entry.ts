@@ -124,7 +124,11 @@ function scheduledPrice(base, item, date) {
     let best = Number(base);
     if (!Array.isArray(ws) || ws.length === 0) return best;
     for (const w of ws) {
-        const p = Number(w?.price);
+        // Empty price must be ignored, not read as zero - Number('') is 0, which
+        // made an unfinished happy-hour window give the item away free.
+        const raw = w?.price;
+        if (raw === '' || raw === null || raw === undefined || (typeof raw === 'string' && raw.trim() === '')) continue;
+        const p = Number(raw);
         if (!Number.isFinite(p) || p < 0) continue;
         if (isWithinWindow(w, date) && p < best) best = p;
     }
