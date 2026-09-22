@@ -1,3 +1,4 @@
+import AllergenNotice from '@/components/shared/AllergenNotice';
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
 
@@ -91,7 +92,7 @@ function MealSubCustomizations({ opt, selectedUpgrade, customizations, setCustom
     );
 }
 
-export default function KioskItemModal({ item, onClose, onAdd, initialCustomizations, initialItemQuantities, initialQuantity }) {
+export default function KioskItemModal({ item, onClose, onAdd, initialCustomizations, initialItemQuantities, initialQuantity, kioskConfig }) {
     const [quantity, setQuantity] = useState(initialQuantity || 1);
     const [customizations, setCustomizations] = useState({});
     const [itemQuantities, setItemQuantities] = useState({});
@@ -246,6 +247,12 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                     <div>
                         <h2 className="text-white text-2xl font-bold">{item.name}</h2>
                         {item.description && <p className="text-gray-400 mt-1 text-sm">{item.description}</p>}
+                {/* The "Display allergen labels" kiosk setting previously did
+                    nothing at all - an owner could switch it on and believe
+                    customers were being informed. */}
+                {kioskConfig?.show_allergens === true && (
+                    <div className="mt-3"><AllergenNotice item={item} /></div>
+                )}
                         <p className="text-orange-400 font-bold text-xl mt-2">£{basePrice.toFixed(2)}</p>
                     </div>
 

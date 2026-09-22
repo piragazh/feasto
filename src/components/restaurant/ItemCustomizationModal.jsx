@@ -1,3 +1,4 @@
+import AllergenNotice from '@/components/shared/AllergenNotice';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -189,6 +190,10 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                 )}
 
                 <p className="text-gray-600">{item.description}</p>
+                {/* Allergen information, before the customer commits to the item.
+                    Shows "not available - please ask" until a person has confirmed
+                    it; never implies the item is allergen-free. */}
+                <div className="mt-3"><AllergenNotice item={item} /></div>
                 <p className="text-xl font-bold text-gray-900">Base Price: £{item.price?.toFixed(2)}</p>
 
                 {hasCustomizations && (
