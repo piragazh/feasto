@@ -614,10 +614,20 @@ CRITICAL REQUIREMENTS:
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        // Drop incomplete time windows before saving. The pricing logic already
+        // ignores a blank price (it used to read '' as £0 and give the item away),
+        // but nothing half-entered should reach the database at all - defence in
+        // depth on something that moves money.
+        const completeWindow = (w) => w && /^\d{1,2}:\d{2}$/.test(w.start || '') && /^\d{1,2}:\d{2}$/.test(w.end || '');
         const data = {
             ...formData,
             price: parseFloat(formData.price),
             pos_price: formData.pos_price !== '' ? parseFloat(formData.pos_price) : null,
+            availability_windows: (formData.availability_windows || []).filter(completeWindow),
+            price_windows: (formData.price_windows || [])
+                .filter(completeWindow)
+                .filter(w => w.price !== '' && w.price !== null && w.price !== undefined && Number.isFinite(Number(w.price)))
+                .map(w => ({ ...w, price: Number(w.price) })),
         };
 
         if (editingItem) {

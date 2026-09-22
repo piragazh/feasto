@@ -156,3 +156,27 @@ describe('timed pricing', () => {
         expect(scheduledPrice(5, {}, WINTER_5PM)).toBe(5);
     });
 });
+
+describe('REGRESSION: an unfinished price window must never make an item free', () => {
+    // Number('') and Number(null) are both 0 in JavaScript. A happy-hour window
+    // saved before the owner typed a price was read as £0 and gave the item
+    // away for the whole window. The original tests used 'free' (NaN) and
+    // missed this, because that is not what a half-filled form produces.
+    const INSIDE = new Date('2026-01-14T17:30:00Z');
+    const W = { days: [1, 2, 3, 4, 5], start: '17:00', end: '19:00' };
+
+    for (const blank of ['', null, undefined, '   ']) {
+        it(`price = ${JSON.stringify(blank)} leaves the normal price`, () => {
+            expect(scheduledPrice(5, { price_windows: [{ ...W, price: blank }] }, INSIDE)).toBe(5);
+        });
+    }
+
+    it('a real zero IS honoured - a deliberate free item is allowed', () => {
+        // Distinguishes "nothing entered" from "owner chose £0".
+        expect(scheduledPrice(5, { price_windows: [{ ...W, price: 0 }] }, INSIDE)).toBe(0);
+    });
+
+    it('accepts a numeric string from a form input', () => {
+        expect(scheduledPrice(5, { price_windows: [{ ...W, price: '3.50' }] }, INSIDE)).toBe(3.5);
+    });
+});
