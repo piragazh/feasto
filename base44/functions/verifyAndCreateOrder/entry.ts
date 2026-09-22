@@ -277,7 +277,28 @@ function capPromotionDiscount(clientDiscount, serverSubtotal) {
     return Math.min(wantPence, capPence) / 100;
 }
 
-async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS }) {
+/**
+ * Does this order reference at least one REAL, active, in-date promotion for
+ * this restaurant? The checkout sends each promotion's code, or its name when it
+ * has no code, so both are matched.
+ */
+async function hasActivePromotion(base44, restaurantId, promotionCodes) {
+    const wanted = (Array.isArray(promotionCodes) ? promotionCodes : [])
+        .map(c => String(c || '').trim().toLowerCase()).filter(Boolean);
+    if (wanted.length === 0) return false;
+    const promos = await base44.asServiceRole.entities.Promotion.filter({ restaurant_id: restaurantId, is_active: true });
+    const now = new Date();
+    return (promos || []).some(p => {
+        const ids = [p.promotion_code, p.name].map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
+        if (!ids.some(id => wanted.includes(id))) return false;
+        if (p.start_date && new Date(p.start_date) > now) return false;
+        if (p.end_date && new Date(p.end_date) < now) return false;
+        if (p.usage_limit && Number(p.usage_count || 0) >= Number(p.usage_limit)) return false;
+        return true;
+    });
+}
+
+async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS, couponCodes = [], promotionCodes = [] }) {
     const regularItems = items.filter(i => !String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const dealItems = items.filter(i => String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const requiredIds = [...new Set(regularItems.map(i => i.menu_item_id || i.id).filter(Boolean))];
@@ -323,7 +344,12 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
 
         itemResults.push({ id: itemId, name: orderItem.name, quantity, clientUnitPrice: Number(orderItem.price || 0), serverUnitPrice, clientLineTotal, serverLineTotal, delta, breakdown });
 
-        if (delta > PRICE_TOLERANCE * quantity) {
+        // FLOOR, not equality. Only a price BELOW the menu is refused. The old
+        // check rejected any difference in either direction, so every place the
+        // site and this function disagreed turned a paying customer away - which
+        // is why validation was switched off. Extras only ever ADD cost, so a
+        // genuine order is never below the menu price and can't be refused here.
+        if (clientLineTotal < serverLineTotal - PRICE_TOLERANCE * quantity) {
             console.error(`${LOG} PRICE_MISMATCH item="${orderItem.name}" client=£${clientLineTotal.toFixed(2)} server=£${serverLineTotal.toFixed(2)} delta=£${delta.toFixed(4)} [${breakdown.join(',')}]`);
             return { valid: false, error: `Price mismatch detected for "${orderItem.name}". Please refresh and try again.`, code: 'PRICE_MISMATCH', itemResults };
         }
@@ -343,7 +369,7 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
         const serverLineTotal = serverDealPrice * quantity;
         const delta = Math.abs(serverLineTotal - clientLineTotal);
 
-        if (delta > PRICE_TOLERANCE * quantity) {
+        if (clientLineTotal < serverLineTotal - PRICE_TOLERANCE * quantity) {
             console.error(`${LOG} DEAL_PRICE_MISMATCH deal="${dbDeal.name}" client=£${clientLineTotal.toFixed(2)} server=£${serverLineTotal.toFixed(2)} delta=£${delta.toFixed(4)}`);
             return { valid: false, error: `Price mismatch for meal deal "${dbDeal.name}". Please refresh and try again.`, code: 'DEAL_PRICE_MISMATCH', itemResults };
         }
@@ -351,14 +377,56 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
     }
 
     const subtotalDelta = Math.abs(serverSubtotal - Number(clientSubtotal));
-    if (subtotalDelta > PRICE_TOLERANCE) {
+    if (Number(clientSubtotal) < serverSubtotal - PRICE_TOLERANCE) {
         console.error(`${LOG} SUBTOTAL_MISMATCH client=£${clientSubtotal} server=£${serverSubtotal.toFixed(2)} delta=£${subtotalDelta.toFixed(4)}`);
         return { valid: false, serverSubtotal, error: 'Order subtotal mismatch. Please refresh and try again.', code: 'SUBTOTAL_MISMATCH', itemResults };
     }
 
-    const serverTotal = Math.max(0, serverSubtotal + Number(deliveryFee) + Number(smallOrderSurcharge) - Number(discount));
+    // ── Discount ───────────────────────────────────────────────────────────
+    // Previously the browser's discount was used as-is, even inside this
+    // validator: a customer could send any discount, compute a total with it,
+    // and the check passed. Now a discount must be JUSTIFIED:
+    //   - coupons are resolved here with the tested rules (order-logic.js);
+    //     the browser's coupon amount is ignored
+    //   - anything beyond that must be backed by a real, active promotion for
+    //     this restaurant, and is capped by the tested promotion rule
+    //   - the combined discount can never exceed 50% of the order
+    // KNOWN LIMIT: promotion AMOUNTS (tiered, combo, BOGO...) are not
+    // recomputed here - that needs the full promotion engine. What is enforced
+    // is that a real promotion exists and the 50% ceiling.
+    const clientDiscount = Math.max(0, Number(discount) || 0);
+    const getCoupon = async (code) => {
+        const rows = await base44.asServiceRole.entities.Coupon.filter({ code });
+        return rows?.[0] || null;
+    };
+    const couponResult = await resolveCouponDiscount(couponCodes, serverSubtotal, restaurantId, getCoupon);
+    if (couponResult.error) {
+        console.error(`${LOG} COUPON_INVALID ${couponResult.error} codes=${JSON.stringify(couponCodes)}`);
+        return { valid: false, error: 'That coupon can no longer be applied. Please remove it and try again.', code: `COUPON_${couponResult.error}` };
+    }
+    const couponDiscount = couponResult.discount || 0;
+    const promoClaim = Math.max(0, clientDiscount - couponDiscount);
+
+    let promoAllowed = 0;
+    if (promoClaim > PRICE_TOLERANCE) {
+        const hasPromo = await hasActivePromotion(base44, restaurantId, promotionCodes);
+        if (!hasPromo) {
+            console.error(`${LOG} DISCOUNT_UNSUPPORTED claimed=£${clientDiscount} coupons=£${couponDiscount} promotions=${JSON.stringify(promotionCodes)}`);
+            return { valid: false, error: 'That discount could not be verified. Please refresh and try again.', code: 'DISCOUNT_UNSUPPORTED' };
+        }
+        promoAllowed = capPromotionDiscount(promoClaim, serverSubtotal);
+    }
+    const combinedCap = Math.floor(serverSubtotal * MAX_COUPON_DISCOUNT_RATIO * 100 + 1e-9) / 100;
+    const allowedDiscount = Math.min(couponDiscount + promoAllowed, combinedCap);
+    if (clientDiscount > allowedDiscount + PRICE_TOLERANCE) {
+        console.error(`${LOG} DISCOUNT_TOO_LARGE claimed=£${clientDiscount} allowed=£${allowedDiscount}`);
+        return { valid: false, error: 'That discount is larger than allowed. Please refresh and try again.', code: 'DISCOUNT_TOO_LARGE' };
+    }
+
+    // Total: FLOOR against the server-priced subtotal and the VERIFIED discount.
+    const serverTotal = Math.max(0, serverSubtotal + Number(deliveryFee) + Number(smallOrderSurcharge) - Math.min(clientDiscount, allowedDiscount));
     const totalDelta = Math.abs(serverTotal - Number(clientTotal));
-    if (totalDelta > PRICE_TOLERANCE) {
+    if (Number(clientTotal) < serverTotal - PRICE_TOLERANCE) {
         console.error(`${LOG} TOTAL_MISMATCH client=£${clientTotal} server=£${serverTotal.toFixed(2)} delta=£${totalDelta.toFixed(4)} [subtotal=${serverSubtotal.toFixed(2)} delivery=${deliveryFee} surcharge=${smallOrderSurcharge} discount=${discount}]`);
         return { valid: false, serverSubtotal, serverTotal, error: 'Order total mismatch. Please refresh and try again.', code: 'TOTAL_MISMATCH', itemResults };
     }
