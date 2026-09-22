@@ -56,6 +56,11 @@ const CASES = [
   ['TAMPER   discount with no coupon or promotion',  false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 4 })],
   ['TAMPER   invented promotion code',               false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 4, promos: ['FAKE'] })],
   ['TAMPER   real coupon, inflated discount',        false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 8, coupons: ['SAVE10'] })],
+  // Under a FLOOR, a pricing bug that UNDER-counts can't be seen by checking
+  // that genuine orders pass - they pass either way. It shows up only as an
+  // extra that can be dodged. These two fail if either root-cause fix regresses.
+  ['TAMPER   meal with Peri Peri Chips, chips not paid (£6.99)', false, run([line('wings', 6.99, { 'Count': '6 Hot Wings', 'Upgarade?': 'Meal', 'Upgarade?_meal_customizations': { Side: 'Peri Peri Chips' } })])],
+  ['TAMPER   burger meal, meal not paid (£6.49)',     false, run([line('burger', 6.49, { '': 'Meal' })])],
   ['TAMPER   non-existent coupon',                   false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 1, coupons: ['NOPE'] })],
 ];
 
