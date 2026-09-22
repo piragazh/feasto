@@ -628,7 +628,7 @@ CRITICAL REQUIREMENTS:
         setDialogOpen(true);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         // Drop incomplete time windows before saving. The pricing logic already
         // ignores a blank price (it used to read '' as £0 and give the item away),
