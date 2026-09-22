@@ -288,9 +288,11 @@ function capPromotionDiscount(clientDiscount, serverSubtotal) {
  * Checked against the checkout's own rules, not order-logic's 50% cap. That cap
  * was documented in the test library but was never live: the server trusted the
  * browser, so customers have always received the checkout's rule - each coupon
- * capped at the SUBTOTAL. Enforcing 50% now would refuse genuine customers (a
- * "£5 off" coupon on an £8 order) on a live site, which is a policy change
- * nobody has decided. See the note to the owner about the 50% question.
+ * capped at the SUBTOTAL.
+ *
+ * OWNER DECISION: no 50% cap. Each restaurant's minimum order value already
+ * stops a coupon making an order near-free. Enforcing 50% would refuse genuine
+ * customers (a "£5 off" coupon on a £6.49 order), so it is deliberately absent.
  *
  * Fraud is stopped by resolveCouponDiscount's ELIGIBILITY checks (the coupon
  * must exist, be active, in date, for this restaurant, over its minimum spend,

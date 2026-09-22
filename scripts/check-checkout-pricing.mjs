@@ -61,8 +61,8 @@ const CASES = [
   ['GENUINE  burger meal, blank-named group (£8.99)', true, run([line('burger', 8.99, { '': 'Meal' })])],
   ['GENUINE  Ringer collision, customer pays MORE',  true,  run([line('ringer', 7.69, { '': 'Meal' })])],
   ['GENUINE  real coupon SAVE10',                    true,  run([line('burger', 8.99, { '': 'Meal' })], { discount: 0.9, coupons: ['SAVE10'] })],
-  // The checkout caps each coupon at the SUBTOTAL, not 50%. A "£5 off" coupon on
-  // a small order exceeds half of it - the 50% server rule refused these.
+  // OWNER DECISION: no 50% coupon cap (minimum order values do that job).
+  // This case locks it in - reintroduce a 50% cap and it fails.
   ['GENUINE  £5 welcome coupon on a £6.49 order (>50%)', true, run([line('burger', 6.49, { '': 'On its Own' })], { discount: 5, coupons: ['WELCOME5'] })],
   ['GENUINE  10% coupon on Ringer (server under-counts)', true, run([line('ringer', 7.69, { '': 'Meal' })], { discount: 0.77, coupons: ['SAVE10'] })],
   ['GENUINE  free-delivery coupon (checkout shows £0)',   true, run([line('burger', 8.99, { '': 'Meal' })], { discount: 0, coupons: ['FREEDEL'] })],

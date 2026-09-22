@@ -181,7 +181,16 @@ export async function checkPerCustomerLimit(coupon, customerEmail, getUniqueOrde
 
 // Stacking constants — must match functions/verifyAndCreateOrder and functions/posCreateOrder
 const MAX_COUPONS_PER_ORDER = 3;
-const MAX_COUPON_DISCOUNT_RATIO = 0.50; // 50% of subtotal cap
+// NOT ENFORCED ON LIVE ORDERS - by owner decision.
+// The live server (verifyAndCreateOrder.liveCouponDiscount) caps each coupon at
+// the ORDER SUBTOTAL, matching the checkout customers see. The owner chose not to
+// apply a 50% cap because each restaurant's MINIMUM ORDER VALUE already stops a
+// coupon from making an order near-free. Do not "fix" the server to enforce this:
+// genuine customers would be charged, refused and refunded - e.g. a £5 coupon on
+// a £6.49 order. scripts/check-checkout-pricing.mjs fails if that happens.
+// This constant still governs resolveCouponDiscount's returned amount, which the
+// server uses only to decide ELIGIBILITY, not the amount allowed.
+const MAX_COUPON_DISCOUNT_RATIO = 0.50;
 
 /**
  * Apply the coupon stacking policy to an array or comma-separated string of coupon codes.
