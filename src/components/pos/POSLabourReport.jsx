@@ -53,11 +53,17 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
     const canSetRates = !activeStaffMember
         || roleHasPermission(restaurant?.role_permissions, activeStaffMember.role, PERMISSIONS.STAFF_MANAGE);
 
-    const q = (key, fn) => useQuery({ queryKey: [key, restaurantId], queryFn: fn, enabled: !!restaurantId });
-    const entriesQ = q('labour-entries', () => base44.entities.TimeEntry.filter({ restaurant_id: restaurantId }, '-clock_in', 2000));
-    const ratesQ   = q('labour-rates',   () => base44.entities.StaffPayRate.filter({ restaurant_id: restaurantId }));
-    const ordersQ  = q('labour-orders',  () => base44.entities.Order.filter({ restaurant_id: restaurantId }, '-created_date', 3000));
-    const staffQ   = q('labour-staff',   () => base44.entities.StaffMember.filter({ restaurant_id: restaurantId }));
+    // Four independent queries, written out rather than wrapped in a helper:
+    // a helper not named use… breaks the rules of hooks.
+    const enabled = !!restaurantId;
+    const entriesQ = useQuery({ queryKey: ['labour-entries', restaurantId], enabled,
+        queryFn: () => base44.entities.TimeEntry.filter({ restaurant_id: restaurantId }, '-clock_in', 2000) });
+    const ratesQ = useQuery({ queryKey: ['labour-rates', restaurantId], enabled,
+        queryFn: () => base44.entities.StaffPayRate.filter({ restaurant_id: restaurantId }) });
+    const ordersQ = useQuery({ queryKey: ['labour-orders', restaurantId], enabled,
+        queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurantId }, '-created_date', 3000) });
+    const staffQ = useQuery({ queryKey: ['labour-staff', restaurantId], enabled,
+        queryFn: () => base44.entities.StaffMember.filter({ restaurant_id: restaurantId }) });
 
     const loading = entriesQ.isLoading || ratesQ.isLoading || ordersQ.isLoading;
     const failed = entriesQ.isError || ratesQ.isError || ordersQ.isError;
