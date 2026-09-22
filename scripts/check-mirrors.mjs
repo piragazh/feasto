@@ -171,6 +171,29 @@ for (const check of CHECKS) {
     }
 }
 
+// ── Permission defaults ─────────────────────────────────────────────────────
+// DEFAULT_ROLE_PERMISSIONS is duplicated in every function that checks a
+// permission (they are self-contained). If the catalogue in posPermissions.js
+// gains a permission that a function's copy lacks, the manager role there
+// silently loses it - and the first sign would be a manager refused on the till.
+{
+    const catalogue = read('src/lib/posPermissions.js');
+    const perms = (src) => new Set([...src.matchAll(/'([a-z_]+\.[a-z_]+)'/g)].map(m => m[1]));
+    const wanted = perms(catalogue);
+    const dir = 'base44/functions';
+    for (const fn of fs.readdirSync(dir)) {
+        const src = read(`${dir}/${fn}/entry.ts`);
+        if (!src || !src.includes('DEFAULT_ROLE_PERMISSIONS')) continue;
+        const have = perms(src);
+        const missing = [...wanted].filter(p => !have.has(p));
+        if (missing.length) {
+            console.error(`✗ permission defaults out of date in ${fn}`);
+            console.error(`    missing: ${missing.join(', ')}`);
+            failed++;
+        }
+    }
+}
+
 if (failed > 0) {
     console.error(`\n${failed} mirrored rule(s) missing or drifted.`);
     console.error('A money rule was changed in one place and not the other, or a file was reverted.');
