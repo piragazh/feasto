@@ -119,12 +119,20 @@ describe('Happy path: one coupon applied', () => {
         expect(result.discount).toBeCloseTo(couponDiscount);
     });
 
-    it('£3 flat coupon applied to a single drink order (discount capped at subtotal)', async () => {
+    it('£3 flat coupon on a single drink is capped at 50% of the subtotal, in whole pence', async () => {
+        // This test previously expected the discount to be capped at the FULL
+        // subtotal (£2.49), leaving only delivery to pay. That contradicts the
+        // documented policy in order-logic.js - MAX_COUPON_DISCOUNT_RATIO = 0.50 -
+        // which exists so no coupon can make an order almost free. The test was
+        // wrong, not the code.
+        //
+        // It also exposed a real bug: the capped discount was £1.245 and the total
+        // £4.235, a fraction of a penny. The cap is now rounded DOWN to £1.24 so
+        // it can never exceed 50%.
         const items = cart([['drink-01', 1, 99]]);
-        // Server subtotal: £2.49. Fixed £3 discount capped at £2.49
         const serverSubtotal = 2.49;
-        const couponDiscount = Math.min(3.00, serverSubtotal); // £2.49
-        const expectedTotal = Math.max(0, serverSubtotal + DELIVERY_FEE - couponDiscount);
+        const couponDiscount = 1.24;                       // 50% of £2.49, rounded down
+        const expectedTotal = serverSubtotal + DELIVERY_FEE - couponDiscount;  // £4.24
 
         const result = await runServerPipeline({
             cartItems: items,
@@ -133,8 +141,10 @@ describe('Happy path: one coupon applied', () => {
         });
 
         expect(result.error).toBeNull();
-        expect(result.discount).toBeCloseTo(2.49);
-        expect(result.serverTotal).toBeCloseTo(DELIVERY_FEE); // only delivery remains
+        expect(result.discount).toBe(1.24);
+        expect(result.serverTotal).toBeCloseTo(4.24, 2);
+        // Whole pence - the bug this guards against was a total of £4.235.
+        expect(Math.round(result.serverTotal * 100)).toBeCloseTo(result.serverTotal * 100, 6);
     });
 });
 
