@@ -1,0 +1,31 @@
+{
+  "name": "StaffPayRate",
+  "type": "object",
+  "description": "A staff member's hourly rate, kept SEPARATE from StaffMember on purpose. Every till fetches the staff list to show the login screen, and the entity API returns every field to any logged-in browser - so a rate stored on StaffMember would put every colleague's wage in every till's memory, readable from developer tools. Only the labour report reads this entity. NOTE: this limits routine exposure; it is not a hard security boundary, because the platform offers no field-level access control that has been verified.",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "staff_id": {
+      "type": "string"
+    },
+    "hourly_rate": {
+      "type": "number",
+      "description": "Gross hourly rate in GBP."
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date",
+      "description": "When this rate starts. Rates change (e.g. each April with the National Minimum Wage), and a shift must be costed at the rate in force on the day it was worked, not today's."
+    },
+    "set_by_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "staff_id",
+    "hourly_rate",
+    "effective_from"
+  ]
+}
