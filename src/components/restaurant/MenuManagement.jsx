@@ -634,6 +634,14 @@ CRITICAL REQUIREMENTS:
         // ignores a blank price (it used to read '' as £0 and give the item away),
         // but nothing half-entered should reach the database at all - defence in
         // depth on something that moves money.
+        // Who is declaring the allergens. Read here rather than assumed: an
+        // undeclared variable would throw on every save, optional chaining or not.
+        let confirmedBy;
+        if (formData.allergens_confirmed && !editingItem?.allergens_confirmed) {
+            try { const u = await base44.auth.me(); confirmedBy = u?.email || u?.full_name || undefined; }
+            catch { /* attribution is best-effort - never block saving a menu item */ }
+        }
+
         const completeWindow = (w) => w && /^\d{1,2}:\d{2}$/.test(w.start || '') && /^\d{1,2}:\d{2}$/.test(w.end || '');
         const data = {
             ...formData,
@@ -648,7 +656,7 @@ CRITICAL REQUIREMENTS:
             allergens_confirmed: Boolean(formData.allergens_confirmed),
             allergens_source: formData.allergens_source || undefined,
             ...(formData.allergens_confirmed && !editingItem?.allergens_confirmed
-                ? { allergens_confirmed_at: new Date().toISOString(), allergens_confirmed_by: currentUser?.email || currentUser?.full_name || undefined }
+                ? { allergens_confirmed_at: new Date().toISOString(), allergens_confirmed_by: confirmedBy }
                 : {}),
             track_stock: Boolean(formData.track_stock),
             stock_quantity: formData.track_stock && formData.stock_quantity !== ''
