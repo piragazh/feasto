@@ -567,13 +567,45 @@ Deno.serve(async (req) => {
         // validation proves that total is at or above the menu price; it does not
         // replace it. Replacing it would make the Stripe check below reject a
         // genuine customer wherever this server's pricing under-counts.
-        const pricing = await validateOrderPricing(base44, {
-            items: normalizedItems,
-            restaurantId: orderData.restaurant_id,
-            clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS,
-            couponCodes: Array.isArray(orderData.coupon_codes) ? orderData.coupon_codes : [],
-            promotionCodes: Array.isArray(orderData.promotion_codes) ? orderData.promotion_codes : [],
-        });
+        // ── Emergency switch ───────────────────────────────────────────────────
+        // SystemSettings setting_key 'checkout_price_validation', setting_value
+        // 'off' disables validation instantly, with no redeploy - checkout then
+        // behaves exactly as it did before validation was restored. For use if
+        // genuine customers are ever being refused after a release.
+        let validationEnabled = true;
+        try {
+            const sw = await base44.asServiceRole.entities.SystemSettings.filter({ setting_key: 'checkout_price_validation' });
+            if (String(sw?.[0]?.setting_value || '').trim().toLowerCase() === 'off') validationEnabled = false;
+        } catch (swErr) {
+            // Can't read the switch - keep validating (the safe default for fraud)
+            // but say so, since the switch is the owner's emergency brake.
+            console.warn(`${LOG} could not read checkout_price_validation switch: ${swErr?.message}`);
+        }
+
+        // ── Fail-safe ──────────────────────────────────────────────────────────
+        // If validation itself CRASHES (e.g. a database hiccup looking up a coupon)
+        // the card has already been charged, and an unhandled throw would reach
+        // the outer catch: no order, no refund, and no PaymentTransaction for
+        // reconcileOrphanedPayments to find - the customer's money simply kept.
+        // An internal error is not evidence of fraud, so it falls back to exactly
+        // how checkout behaved before validation was restored, and logs loudly.
+        let pricing = { valid: true };
+        if (validationEnabled) {
+            try {
+                pricing = await validateOrderPricing(base44, {
+                    items: normalizedItems,
+                    restaurantId: orderData.restaurant_id,
+                    clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS,
+                    couponCodes: Array.isArray(orderData.coupon_codes) ? orderData.coupon_codes : [],
+                    promotionCodes: Array.isArray(orderData.promotion_codes) ? orderData.promotion_codes : [],
+                });
+            } catch (valErr) {
+                console.error(`${LOG} VALIDATION_ERROR - accepting order unvalidated (fail-safe) pi=${paymentIntentId || 'none'}: ${valErr?.message}`, valErr?.stack);
+                pricing = { valid: true, failSafe: true };
+            }
+        } else {
+            console.warn(`${LOG} price validation switched OFF via SystemSettings - accepting order unvalidated`);
+        }
 
         if (!pricing.valid) {
             // A card customer has ALREADY been charged by the time we get here, and
