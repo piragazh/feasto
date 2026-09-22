@@ -56,6 +56,9 @@ export default function MenuManagement({ restaurantId }) {
         pos_tile_color: 'none',
         availability_windows: [],
         price_windows: [],
+        track_stock: false,
+        stock_quantity: '',
+        low_stock_threshold: '',
         name: '',
         description: '',
         price: '',
@@ -556,6 +559,9 @@ CRITICAL REQUIREMENTS:
             pos_tile_color: 'none',
             availability_windows: [],
             price_windows: [],
+            track_stock: false,
+            stock_quantity: '',
+            low_stock_threshold: '',
             name: '',
             description: '',
             price: '',
@@ -590,6 +596,10 @@ CRITICAL REQUIREMENTS:
             pos_tile_color: item.pos_tile_color || 'none',
             availability_windows: item.availability_windows || [],
             price_windows: item.price_windows || [],
+            track_stock: Boolean(item.track_stock),
+            stock_quantity: item.stock_quantity ?? '',
+            low_stock_threshold: item.low_stock_threshold ?? '',
+            auto_86ed: Boolean(item.auto_86ed),
             name: item.name,
             description: item.description || '',
             price: item.price.toString(),
@@ -624,6 +634,16 @@ CRITICAL REQUIREMENTS:
             price: parseFloat(formData.price),
             pos_price: formData.pos_price !== '' ? parseFloat(formData.pos_price) : null,
             availability_windows: (formData.availability_windows || []).filter(completeWindow),
+            // Stock. Restocking an item that ran out AUTOMATICALLY brings it back
+            // on sale; an item a manager switched off by hand stays off - the
+            // same rule applyOrderStock uses when a void returns stock.
+            track_stock: Boolean(formData.track_stock),
+            stock_quantity: formData.track_stock && formData.stock_quantity !== ''
+                ? Math.max(0, Math.floor(Number(formData.stock_quantity))) : null,
+            low_stock_threshold: formData.track_stock && formData.low_stock_threshold !== ''
+                ? Math.max(0, Math.floor(Number(formData.low_stock_threshold))) : null,
+            ...(formData.track_stock && formData.auto_86ed && Number(formData.stock_quantity) > 0
+                ? { is_available: true, auto_86ed: false } : {}),
             price_windows: (formData.price_windows || [])
                 .filter(completeWindow)
                 .filter(w => w.price !== '' && w.price !== null && w.price !== undefined && Number.isFinite(Number(w.price)))
@@ -797,6 +817,37 @@ CRITICAL REQUIREMENTS:
                                     <p className="text-xs text-gray-500 mt-1">
                                         Group items by colour so staff recognise them at a glance &mdash; e.g. all drinks blue, all sides amber.
                                     </p>
+                                </div>
+                                <div className="col-span-2 pt-2 border-t border-gray-100">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={!!formData.track_stock}
+                                            onChange={e => setFormData({ ...formData, track_stock: e.target.checked })}
+                                            className="h-5 w-5 rounded" />
+                                        <span className="font-medium text-sm">Track stock for this item</span>
+                                    </label>
+                                    <p className="text-xs text-gray-500 mt-1 mb-2">
+                                        When it reaches zero it comes off sale everywhere at once &mdash; till, online, kiosk and QR.
+                                    </p>
+                                    {formData.track_stock && (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <Label className="text-xs">In stock (portions)</Label>
+                                                <Input type="number" min="0" step="1" value={formData.stock_quantity}
+                                                    onChange={e => setFormData({ ...formData, stock_quantity: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs">Warn when down to</Label>
+                                                <Input type="number" min="0" step="1" value={formData.low_stock_threshold}
+                                                    onChange={e => setFormData({ ...formData, low_stock_threshold: e.target.value })}
+                                                    placeholder="Optional" />
+                                            </div>
+                                            {formData.auto_86ed && (
+                                                <p className="col-span-2 text-xs text-amber-700">
+                                                    This sold out automatically. Setting stock above zero puts it back on sale.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="col-span-2 pt-2 border-t border-gray-100">
                                     <Label>When is this available?</Label>
