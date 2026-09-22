@@ -26,7 +26,12 @@ const MENU = {
     { name: '', type: 'single', options: [{ label: 'Normal', price: 0 }, { label: 'Spicy', price: 0 }] },
     { name: '', type: 'meal_upgrade', options: [{ label: 'On its Own', price: 0 }, { label: 'Meal', price: 2.5 }], meal_customizations: [] }] },
 };
-const COUPONS = { SAVE10: { code: 'SAVE10', is_active: true, discount_type: 'percentage', discount_value: 10, stackable: false, restaurant_id: 'r1' } };
+const COUPONS = {
+  SAVE10:  { code: 'SAVE10',  is_active: true, discount_type: 'percentage', discount_value: 10, stackable: false, restaurant_id: 'r1' },
+  WELCOME5:{ code: 'WELCOME5',is_active: true, discount_type: 'fixed', discount_value: 5, stackable: false, restaurant_id: 'r1' },
+  FREEDEL: { code: 'FREEDEL', is_active: true, discount_type: 'free_delivery', discount_value: 2.99, stackable: false, restaurant_id: 'r1' },
+  OLD:     { code: 'OLD',     is_active: true, discount_type: 'fixed', discount_value: 2, stackable: false, restaurant_id: 'r1', valid_until: '2020-01-01' },
+};
 const PROMOS = [{ restaurant_id: 'r1', name: 'Tuesday Deal', promotion_code: 'TUE', is_active: true }];
 
 const base44 = { asServiceRole: { entities: {
@@ -51,6 +56,11 @@ const CASES = [
   ['GENUINE  burger meal, blank-named group (£8.99)', true, run([line('burger', 8.99, { '': 'Meal' })])],
   ['GENUINE  Ringer collision, customer pays MORE',  true,  run([line('ringer', 7.69, { '': 'Meal' })])],
   ['GENUINE  real coupon SAVE10',                    true,  run([line('burger', 8.99, { '': 'Meal' })], { discount: 0.9, coupons: ['SAVE10'] })],
+  // The checkout caps each coupon at the SUBTOTAL, not 50%. A "£5 off" coupon on
+  // a small order exceeds half of it - the 50% server rule refused these.
+  ['GENUINE  £5 welcome coupon on a £6.49 order (>50%)', true, run([line('burger', 6.49, { '': 'On its Own' })], { discount: 5, coupons: ['WELCOME5'] })],
+  ['GENUINE  10% coupon on Ringer (server under-counts)', true, run([line('ringer', 7.69, { '': 'Meal' })], { discount: 0.77, coupons: ['SAVE10'] })],
+  ['GENUINE  free-delivery coupon (checkout shows £0)',   true, run([line('burger', 8.99, { '': 'Meal' })], { discount: 0, coupons: ['FREEDEL'] })],
   ['GENUINE  real active promotion',                 true,  run([line('burger', 8.99, { '': 'Meal' })], { discount: 2, promos: ['TUE'] })],
   ['TAMPER   burger meal priced at 1p',              false, run([line('burger', 0.01, { '': 'Meal' })])],
   ['TAMPER   discount with no coupon or promotion',  false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 4 })],
@@ -61,6 +71,8 @@ const CASES = [
   // extra that can be dodged. These two fail if either root-cause fix regresses.
   ['TAMPER   meal with Peri Peri Chips, chips not paid (£6.99)', false, run([line('wings', 6.99, { 'Count': '6 Hot Wings', 'Upgarade?': 'Meal', 'Upgarade?_meal_customizations': { Side: 'Peri Peri Chips' } })])],
   ['TAMPER   burger meal, meal not paid (£6.49)',     false, run([line('burger', 6.49, { '': 'Meal' })])],
+  ['TAMPER   expired coupon',                        false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 2, coupons: ['OLD'] })],
+  ['TAMPER   £5 coupon claimed as £6',               false, run([line('burger', 6.49, { '': 'On its Own' })], { discount: 6, coupons: ['WELCOME5'] })],
   ['TAMPER   non-existent coupon',                   false, run([line('burger', 8.99, { '': 'Meal' })], { discount: 1, coupons: ['NOPE'] })],
 ];
 
