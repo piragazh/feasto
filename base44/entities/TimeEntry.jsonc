@@ -1,0 +1,71 @@
+{
+  "name": "TimeEntry",
+  "type": "object",
+  "description": "One worked shift for one staff member. Written only by the posTimeClock function, from the staff member's own verified PIN session - so nobody can clock in on a colleague's behalf. Times are stored as instants; worked hours are always their real elapsed difference (see src/lib/pos-labour-logic.js for why this matters on the nights the clocks change).",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "staff_id": {
+      "type": "string"
+    },
+    "staff_name": {
+      "type": "string",
+      "description": "Captured at clock-in so the timesheet stays readable if the staff record changes."
+    },
+    "staff_role": {
+      "type": "string"
+    },
+    "clock_in": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "clock_out": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "break_minutes": {
+      "type": "number",
+      "default": 0,
+      "description": "Unpaid break taken during the shift. Deducted from worked time."
+    },
+    "on_break_since": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Set while a break is in progress; cleared (and added to break_minutes) when it ends."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "edited_by_staff_id": {
+      "type": "string"
+    },
+    "edited_by_name": {
+      "type": "string",
+      "description": "Manager who last corrected this entry. Corrections to pay records must be attributable."
+    },
+    "edit_reason": {
+      "type": "string"
+    },
+    "original_clock_in": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The clock-in as first recorded, preserved when a manager corrects it - so an edit can never silently rewrite what actually happened."
+    },
+    "original_clock_out": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "staff_id",
+    "clock_in",
+    "status"
+  ]
+}
