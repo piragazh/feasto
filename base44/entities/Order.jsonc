@@ -17,6 +17,10 @@
       "default": "online",
       "description": "Channel through which the order was placed."
     },
+    "covers": {
+      "type": "number",
+      "description": "How many people are on the table. Used for seat numbering and for sales-per-cover."
+    },
     "stock_applied": {
       "type": "boolean",
       "default": false,
@@ -137,6 +141,24 @@
           },
           "itemQuantities": {
             "type": "object"
+          },
+          "course": {
+            "type": "string",
+            "enum": ["drinks", "starters", "mains", "desserts"],
+            "description": "Which course this line belongs to. Absent means mains, the commonest case, so existing orders are unaffected."
+          },
+          "seat": {
+            "type": "number",
+            "description": "Which cover ordered it, so food reaches the right person and a bill can be split by seat. 0 or absent means it is for the table (sides, sharing platters)."
+          },
+          "fired": {
+            "type": "boolean",
+            "description": "This line has been sent to the kitchen. HELD and FIRED are explicit states, never inferred: if a waiter believes mains were sent and they are sitting unfired, the table waits until they complain."
+          },
+          "fired_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it went to the kitchen, so \"how long since mains were fired\" can be answered."
           }
         }
       }
