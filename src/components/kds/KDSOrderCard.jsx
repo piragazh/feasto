@@ -1,3 +1,4 @@
+import { groupByCourse, minutesSinceFired } from '@/lib/pos-course-logic';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,9 @@ function getUrgency(mins, isReady) {
 }
 
 export default function KDSOrderCard({ order, onAction, actionLabel, actionColor, tick, isReady }) {
+    // Courses for this ticket. Orders that never set a course produce a single
+    // group, and the card renders exactly as it always did.
+    const courseGroups = groupByCourse(order?.items || []);
     const [expanded, setExpanded] = useState(true);
     const [acting, setActing] = useState(false);
 
@@ -128,14 +132,48 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
             {/* Items */}
             {expanded && (
                 <div className={`mx-3 mb-3 rounded-lg overflow-hidden ${urgency === URGENCY.urgent ? 'bg-red-900/40' : 'bg-gray-900/60'}`}>
-                    {(order.items || []).map((item, idx) => (
+                    {/* Courses. A HELD course is shown, clearly marked, rather than
+                        hidden: the kitchen needs to know it exists and is coming,
+                        and a waiter who thinks it was sent must be able to see
+                        that it wasn't. Orders with no courses set behave exactly
+                        as before - everything lands in one unlabelled group. */}
+                    {courseGroups.length > 1 && courseGroups.map(group => (
+                        <div key={group.course} className={`px-3 py-1.5 flex items-center justify-between border-b ${
+                            group.fired ? 'bg-gray-800/60 border-gray-700/50' : 'bg-amber-900/40 border-amber-700/50'
+                        }`}>
+                            <span className="text-xs font-bold uppercase tracking-wide text-gray-300">
+                                {group.label}
+                                <span className="ml-2 font-normal text-gray-500">{group.items.length} item{group.items.length === 1 ? '' : 's'}</span>
+                            </span>
+                            {group.fired ? (
+                                <span className="text-[11px] text-gray-400 tabular-nums">
+                                    fired{minutesSinceFired(group) !== null ? ` ${minutesSinceFired(group)}m ago` : ''}
+                                </span>
+                            ) : (
+                                <span className="text-[11px] font-bold text-amber-300">
+                                    {group.partial ? 'PART-FIRED — DO NOT START' : 'HELD — DO NOT START'}
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                    {(courseGroups.length > 1 ? courseGroups.flatMap(g => g.items) : (order.items || [])).map((item, idx) => (
                         <div key={idx} className={`px-3 py-2.5 ${idx < order.items.length - 1 ? 'border-b border-gray-700/50' : ''}`}>
                             <div className="flex items-start gap-2">
                                 <span className="text-orange-400 font-bold text-lg leading-none mt-0.5 w-8 shrink-0">
                                     ×{item.quantity}
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-white font-semibold text-base leading-snug">{item.name}</p>
+                                    <p className="text-white font-semibold text-base leading-snug">
+                                        {item.name}
+                                        {/* Seat, so the pass knows who gets what. */}
+                                        {Number(item.seat) > 0 && (
+                                            <span className="ml-2 text-xs font-bold text-gray-400">seat {item.seat}</span>
+                                        )}
+                                        {/* A held line must never look ready to cook. */}
+                                        {courseGroups.length > 1 && item.fired !== true && (
+                                            <span className="ml-2 text-[11px] font-bold text-amber-300 uppercase">held</span>
+                                        )}
+                                    </p>
                                     {/* Customizations */}
                                     {item.customizations && Object.keys(item.customizations).length > 0 && (
                                         <div className="mt-1 space-y-0.5">
