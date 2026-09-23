@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Users, Settings, Grid3x3, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import TableActionsDialog from './TableActionsDialog';
+import { getStaffSessionToken } from '@/lib/posStaffSession';
+import { COURSES, COURSE_LABELS, courseOf, seatOf, groupByCourse, minutesSinceFired } from '@/lib/pos-course-logic';
 import OrderEditDialog from './OrderEditDialog';
 import VoidOrderDialog from './VoidOrderDialog';
 import POSPayment from './POSPayment';
@@ -71,6 +73,44 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
      * Frees the source table only if no other orders remain on it, and claims
      * the destination only if it is not already holding a different order.
      */
+    const [firing, setFiring] = useState(null);
+
+    /** Set a line's course or seat. Prices are untouchable on this path. */
+    const assignLine = async (order, index, patch) => {
+        try {
+            const res = await base44.functions.invoke('posCourseUpdate', {
+                action: 'assign', order_id: order.id, assignments: [{ index, ...patch }],
+                staff_session: getStaffSessionToken(restaurantId),
+            });
+            const data = res?.data ?? res;
+            if (data?.error) throw new Error(data.error);
+            await refetchTableOrders();
+        } catch (e) {
+            toast.error(e?.message || 'Could not update that item');
+        }
+    };
+
+    /** Send a course to the kitchen. */
+    const fireCourseNow = async (order, course) => {
+        setFiring(order.id + course);
+        try {
+            const res = await base44.functions.invoke('posCourseUpdate', {
+                action: 'fire', order_id: order.id, course,
+                staff_session: getStaffSessionToken(restaurantId),
+            });
+            const data = res?.data ?? res;
+            if (data?.error) throw new Error(data.error);
+            await refetchTableOrders();
+            toast.success(`${COURSE_LABELS[course]} sent to the kitchen`);
+        } catch (e) {
+            // Deliberately explicit: a waiter must never be left assuming a
+            // course went when it didn't.
+            toast.error(`${COURSE_LABELS[course]} was NOT sent: ${e?.message || 'unknown error'}`);
+        } finally {
+            setFiring(null);
+        }
+    };
+
     const moveOrderToTable = async (order, destTable) => {
         setMoving(true);
         try {
@@ -232,11 +272,57 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                             </div>
                             <div className="space-y-1 mb-3">
                                 {(order.items || []).map((it, i) => (
-                                    <div key={i} className={`flex justify-between ${t.textSub} text-xs`}>
-                                        <span className="truncate pr-2">{it.quantity}x {it.name}</span>
-                                        <span className="tabular-nums flex-shrink-0">£{(Number(it.price || 0) * (it.quantity || 1)).toFixed(2)}</span>
+                                    <div key={i} className={`flex items-center justify-between gap-2 ${t.textSub} text-xs`}>
+                                        <span className="truncate pr-1 flex-1 min-w-0">
+                                            {it.quantity}x {it.name}
+                                            {it.fired && <span className="ml-1 text-green-500">✓</span>}
+                                        </span>
+                                        {/* Course and seat, set per line. Changing them
+                                            goes through posCourseUpdate, which can only
+                                            write course/seat/fired - never a price. */}
+                                        <select
+                                            value={courseOf(it)}
+                                            onChange={(e) => assignLine(order, i, { course: e.target.value })}
+                                            aria-label={`Course for ${it.name}`}
+                                            className={`h-9 rounded-lg px-1 text-[11px] ${isDark ? 'bg-black/30 border border-white/10 text-white' : 'bg-white border border-gray-300'}`}
+                                        >
+                                            {COURSES.map(c => <option key={c} value={c}>{COURSE_LABELS[c]}</option>)}
+                                        </select>
+                                        <select
+                                            value={seatOf(it) || ''}
+                                            onChange={(e) => assignLine(order, i, { seat: e.target.value === '' ? 0 : Number(e.target.value) })}
+                                            aria-label={`Seat for ${it.name}`}
+                                            className={`h-9 rounded-lg px-1 text-[11px] ${isDark ? 'bg-black/30 border border-white/10 text-white' : 'bg-white border border-gray-300'}`}
+                                        >
+                                            <option value="">Table</option>
+                                            {Array.from({ length: Math.max(Number(viewingTable.capacity) || 0, 8) }, (_, n) => n + 1)
+                                                .map(n => <option key={n} value={n}>Seat {n}</option>)}
+                                        </select>
+                                        <span className="tabular-nums flex-shrink-0 w-14 text-right">£{(Number(it.price || 0) * (it.quantity || 1)).toFixed(2)}</span>
                                     </div>
                                 ))}
+
+                                {/* Firing. A held course is shown as HELD, never merely
+                                    absent - a waiter who thinks mains were sent must be
+                                    able to see that they weren't. */}
+                                <div className="flex flex-wrap gap-1.5 pt-2">
+                                    {groupByCourse(order.items || []).map(g => (
+                                        <button
+                                            key={g.course}
+                                            disabled={g.fired || firing === order.id + g.course}
+                                            onClick={() => fireCourseNow(order, g.course)}
+                                            className={`h-11 px-3 rounded-xl text-xs font-bold ${
+                                                g.fired
+                                                    ? 'bg-green-600/20 text-green-400 border border-green-600/30'
+                                                    : 'bg-amber-500 text-black hover:bg-amber-400'
+                                            }`}
+                                        >
+                                            {g.fired
+                                                ? `${g.label} sent${minutesSinceFired(g) !== null ? ` · ${minutesSinceFired(g)}m` : ''}`
+                                                : `Fire ${g.label}${g.partial ? ' (rest)' : ''}`}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             {/* Correct a table order in place: change what was rung
                                 in, move it to the right table, or void it entirely.
