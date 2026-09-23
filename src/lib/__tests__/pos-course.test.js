@@ -106,9 +106,16 @@ describe('firing a course', () => {
 
     it('REGRESSION GUARD: never mutates the original order', () => {
         // A failed save must not leave the screen showing a course as sent.
-        const before = JSON.parse(JSON.stringify(items));
-        fireCourse(items, 'mains');
-        expect(items).toEqual(before);
+        //
+        // Builds its OWN items on purpose: sharing the array with the tests above
+        // made this blind - they fire it first, so by the time this ran the
+        // damage was already done and the "before" snapshot matched. Found by
+        // mutating fireCourse to Object.assign and watching this still pass.
+        const own = [item('Soup', 'starters', 1), item('Steak', 'mains', 1)];
+        const before = JSON.parse(JSON.stringify(own));
+        const out = fireCourse(own, 'mains');
+        expect(own).toEqual(before);                 // untouched
+        expect(out[1].fired).toBe(true);             // and the copy really did fire
     });
 
     it('re-firing does not reset the original time', () => {
