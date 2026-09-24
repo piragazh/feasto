@@ -141,7 +141,36 @@ export function couponValidUntilInstant(value) {
     return new Date(ukStartOfDay(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate()) - 1);
 }
 
-export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new Date()) {
+/**
+ * Who a coupon belongs to, or null if it is open to anyone.
+ *
+ * Reads the proper loyalty_owner field, and also understands the older hack that
+ * wrote "loyalty_user_<email>" into restaurant_id. That hack meant a redeemed
+ * reward was rejected as the wrong restaurant and could never be spent, so the
+ * legacy form is read as OWNERSHIP here - existing coupons start working without
+ * touching live data.
+ */
+export function couponOwner(coupon) {
+    const owner = String(coupon?.loyalty_owner || '').trim();
+    if (owner) return owner.toLowerCase();
+    const legacy = String(coupon?.restaurant_id || '');
+    return legacy.startsWith('loyalty_user_')
+        ? `email:${legacy.slice('loyalty_user_'.length).toLowerCase()}`
+        : null;
+}
+
+/** Is this coupon scoped to a restaurant at all? The legacy tag is not one. */
+export function couponRestaurantScope(coupon) {
+    const rid = String(coupon?.restaurant_id || '');
+    return (!rid || rid.startsWith('loyalty_user_')) ? null : rid;
+}
+
+/**
+ * @param {string[]} customerKeys identities of the person ordering, e.g.
+ *        ['email:sam@x.com', 'phone:07123456789']. A coupon with an owner can
+ *        only be used by that person.
+ */
+export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new Date(), customerKeys = null) {
     // A: Active status
     if (!coupon.is_active) {
         return { valid: false, reason: 'inactive', discount: 0 };
@@ -170,8 +199,20 @@ export function validateCoupon(coupon, serverSubtotal, restaurantId, now = new D
     }
 
     // C: Restaurant scope
-    if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) {
+    const scope = couponRestaurantScope(coupon);
+    if (scope && scope !== restaurantId) {
         return { valid: false, reason: 'wrong_restaurant', discount: 0 };
+    }
+
+    // A loyalty reward belongs to the person who earned it. Checked only when
+    // the caller supplies the customer's identities - older callers that don't
+    // behave exactly as before.
+    const owner = couponOwner(coupon);
+    if (owner && Array.isArray(customerKeys)) {
+        const mine = customerKeys.filter(Boolean).map(k => String(k).toLowerCase());
+        if (!mine.includes(owner)) {
+            return { valid: false, reason: 'not_yours', discount: 0 };
+        }
     }
 
     let d = 0;
