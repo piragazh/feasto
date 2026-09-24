@@ -76,9 +76,10 @@ Deno.serve(async (req) => {
         else if (targetReward.reward_type === 'percentage_discount') couponDiscountType = 'percentage';
         else if (targetReward.reward_type === 'free_delivery') couponDiscountType = 'fixed'; // handled at checkout level
 
-        // Create coupon record - scoped to this user via restaurant_id trick:
-        // We store user_email in a dedicated field by using the description uniquely,
-        // and set a restaurant_id of "loyalty_user_<email>" so we can filter by user
+        // Ownership goes in loyalty_owner. It used to be encoded by writing
+        // "loyalty_user_<email>" into restaurant_id, which made the checkout AND
+        // the server reject the coupon as being for the wrong restaurant - so a
+        // redeemed reward could never actually be spent by anyone.
         await base44.entities.Coupon.create({
             code: couponCode,
             description: `Reward: ${targetReward.name}`,
@@ -87,8 +88,8 @@ Deno.serve(async (req) => {
             is_active: true,
             valid_until: expiresAt.split('T')[0],
             expires_at: expiresAt,
-            // Tag coupon with user email so they can only see their own
-            restaurant_id: `loyalty_user_${user.email}`
+            loyalty_owner: `email:${user.email}`,
+            restaurant_id: targetReward.restaurant_id || null
         });
 
         // Record transaction
