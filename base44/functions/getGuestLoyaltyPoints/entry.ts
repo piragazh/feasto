@@ -5,6 +5,36 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
+// Loyalty phone identity: MIRROR of src/lib/loyalty-identity.js.
+// Points were awarded under one normalisation and looked up under another, so
+// a customer who typed +44... was told they had no points. One rule, everywhere.
+function normalizeUkPhone(phone) {
+    let digits = String(phone ?? '').replace(/\D/g, '');
+    if (!digits) return '';
+
+    // International dialling prefix, e.g. 0044…
+    if (digits.startsWith('00')) digits = digits.slice(2);
+
+    // UK country code in any remaining form, e.g. 447123456789
+    if (digits.startsWith('44') && digits.length >= 11) {
+        digits = '0' + digits.slice(2);
+    }
+
+    // A UK national number without its leading 0, e.g. 7123456789
+    if (digits.length === 10 && digits.startsWith('7')) {
+        digits = '0' + digits;
+    }
+
+    // Too short to be real - treat as no number rather than inventing a key
+    // that several different customers could collide on.
+    return digits.length >= 9 ? digits : '';
+}
+
+function phoneLoyaltyKey(phone) {
+    const n = normalizeUkPhone(phone);
+    return n ? `phone:${n}` : null;
+}
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ error: 'POST only' }), { status: 400 });
@@ -19,7 +49,9 @@ Deno.serve(async (req) => {
         }
 
         // Coerce to string first to prevent crash if number is passed
-        let normalizedPhone = String(phone || '').replace(/\D/g, '');
+        // Same rule as awarding - these two disagreed, so a customer who typed
+        // their number in international form was shown a balance of zero.
+        let normalizedPhone = normalizeUkPhone(phone);
 
         // If orderId provided, verify phone matches order (security check)
         if (orderId) {

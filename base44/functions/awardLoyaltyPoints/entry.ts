@@ -13,24 +13,43 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-function normalizePhone(phone) {
-    let digits = (phone || '').replace(/\D/g, '');
-    // LOW-5 FIX: Handle both '447xxxxxxxxx' (11 digits from posCreateOrder)
-    // and '+447xxxxxxxxx' (12 digits with country code).
-    // posCreateOrder converts 07xxx → 447xxx (11 digits), so check for both 11 and 12.
-    if (digits.startsWith('44') && (digits.length === 11 || digits.length === 12)) {
+// Loyalty phone identity: MIRROR of src/lib/loyalty-identity.js.
+// Points were awarded under one normalisation and looked up under another, so
+// a customer who typed +44... was told they had no points. One rule, everywhere.
+function normalizeUkPhone(phone) {
+    let digits = String(phone ?? '').replace(/\D/g, '');
+    if (!digits) return '';
+
+    // International dialling prefix, e.g. 0044…
+    if (digits.startsWith('00')) digits = digits.slice(2);
+
+    // UK country code in any remaining form, e.g. 447123456789
+    if (digits.startsWith('44') && digits.length >= 11) {
         digits = '0' + digits.slice(2);
     }
-    return digits;
+
+    // A UK national number without its leading 0, e.g. 7123456789
+    if (digits.length === 10 && digits.startsWith('7')) {
+        digits = '0' + digits;
+    }
+
+    // Too short to be real - treat as no number rather than inventing a key
+    // that several different customers could collide on.
+    return digits.length >= 9 ? digits : '';
+}
+
+function phoneLoyaltyKey(phone) {
+    const n = normalizeUkPhone(phone);
+    return n ? `phone:${n}` : null;
 }
 
 function getLoyaltyIdentifier(order) {
     if (order.created_by && order.created_by !== 'anonymous') {
         return { type: 'email', key: order.created_by };
     }
-    const phone = normalizePhone(order.phone);
-    if (phone) {
-        return { type: 'phone', key: `phone:${phone}` };
+    const key = phoneLoyaltyKey(order.phone ?? order.customer_phone ?? order.guest_phone);
+    if (key) {
+        return { type: 'phone', key };
     }
     return null;
 }
