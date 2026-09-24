@@ -171,6 +171,10 @@ Deno.serve(async (req) => {
                             merged_into: identifier.key,
                             merged_at: new Date().toISOString(),
                         });
+                        // From here the guest record is already at zero. If crediting
+                        // the account fails the points would simply vanish, so the
+                        // guest record is put back exactly as it was.
+                        try {
                         const accRows = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: identifier.key });
                         const acc = accRows?.[0];
                         if (acc) {
@@ -196,6 +200,14 @@ Deno.serve(async (req) => {
                             restaurant_id: order.restaurant_id,
                             description: `Merged ${carry} points from guest orders on ${phoneKey.replace('phone:', '')}`,
                         });
+                        } catch (creditErr) {
+                            // Put the guest balance back rather than lose it.
+                            await base44.asServiceRole.entities.LoyaltyPoints.update(guest.id, {
+                                total_points: carry, merged_into: null, merged_at: null,
+                            });
+                            console.error(`[LOYALTY] merge rolled back for ${phoneKey}: ${creditErr?.message}`);
+                            throw creditErr;
+                        }
                         console.log(`[LOYALTY] merged ${carry} points ${phoneKey} -> ${identifier.key}`);
                     }
                 }
