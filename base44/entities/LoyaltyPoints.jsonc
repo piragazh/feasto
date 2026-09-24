@@ -30,6 +30,11 @@
       "default": 0,
       "description": "Number of qualifying orders"
     },
+    "merged_into": {
+      "type": "string",
+      "description": "Set when a phone-keyed guest balance has been merged into an account balance. The record is kept at zero rather than deleted, so the merge is auditable and can never be applied twice."
+    },
+    "merged_at": { "type": "string", "format": "date-time" },
     "tier": {
       "type": "string",
       "enum": [
