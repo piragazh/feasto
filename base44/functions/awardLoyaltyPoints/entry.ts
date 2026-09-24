@@ -146,6 +146,65 @@ Deno.serve(async (req) => {
         const multiplier = restaurant.loyalty_points_multiplier || 1;
         const pointsToAward = Math.floor((order.total || 0) * pointsPerPound * multiplier);
 
+        // ── Merge a guest balance into the account ─────────────────────────────
+        //
+        // Someone who signs in sometimes and checks out as a guest other times
+        // builds TWO balances - one under their account, one under their phone -
+        // and sees less than they earned. When a signed-in order carries a phone
+        // that has its own balance, the two are the same person, so they are
+        // merged here.
+        //
+        // The guest record is NOT deleted: it is zeroed and stamped merged_into,
+        // so the merge is auditable and can never be applied twice. The stamp is
+        // written BEFORE the points are added - if that write fails nothing is
+        // merged, whereas the other order would double the points on a retry.
+        if (identifier.type === 'email') {
+            try {
+                const phoneKey = phoneLoyaltyKey(order.phone ?? order.customer_phone ?? order.guest_phone);
+                if (phoneKey) {
+                    const guestRows = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: phoneKey });
+                    const guest = guestRows?.[0];
+                    const carry = Math.floor(Number(guest?.total_points || 0));
+                    if (guest && !guest.merged_into && carry > 0) {
+                        await base44.asServiceRole.entities.LoyaltyPoints.update(guest.id, {
+                            total_points: 0,
+                            merged_into: identifier.key,
+                            merged_at: new Date().toISOString(),
+                        });
+                        const accRows = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: identifier.key });
+                        const acc = accRows?.[0];
+                        if (acc) {
+                            await base44.asServiceRole.entities.LoyaltyPoints.update(acc.id, {
+                                total_points: Math.floor(Number(acc.total_points || 0)) + carry,
+                                points_earned: Math.floor(Number(acc.points_earned || 0)) + carry,
+                            });
+                        } else {
+                            await base44.asServiceRole.entities.LoyaltyPoints.create({
+                                user_email: identifier.key,
+                                phone: order.phone || undefined,
+                                total_points: carry,
+                                points_earned: carry,
+                                points_redeemed: 0,
+                                orders_count: 0,
+                            });
+                        }
+                        await base44.asServiceRole.entities.LoyaltyTransaction.create({
+                            user_email: identifier.key,
+                            transaction_type: 'earned',
+                            points: carry,
+                            order_id: order.id,
+                            restaurant_id: order.restaurant_id,
+                            description: `Merged ${carry} points from guest orders on ${phoneKey.replace('phone:', '')}`,
+                        });
+                        console.log(`[LOYALTY] merged ${carry} points ${phoneKey} -> ${identifier.key}`);
+                    }
+                }
+            } catch (mergeErr) {
+                // Never fail awarding points because a merge went wrong.
+                console.error('[LOYALTY] merge failed:', mergeErr?.message);
+            }
+        }
+
         const existing = await base44.asServiceRole.entities.LoyaltyPoints.filter({ user_email: identifier.key });
         
         if (existing?.length) {
