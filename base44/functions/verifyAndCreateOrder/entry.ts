@@ -226,7 +226,7 @@ function validateCoupon(coupon, serverSubtotal, restaurantId, now = new Date()) 
     return { valid: true, reason: null, discount: d };
 }
 
-async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restaurantId, getCoupon, now = new Date(, customerKeys = null)) {
+async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restaurantId, getCoupon, now = new Date(), customerKeys = null) {
     if (!couponCodesInput || (Array.isArray(couponCodesInput) && couponCodesInput.length === 0)) {
         return { error: null, discount: 0, skipped: true };
     }

@@ -303,7 +303,7 @@ const MAX_COUPON_DISCOUNT_RATIO = 0.50;
  * @param {Date}     [now]
  * @returns {Promise<{ error: string|null, discount: number, appliedCodes?: string[], skipped?: boolean }>}
  */
-export async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restaurantId, getCoupon, now = new Date(, customerKeys = null)) {
+export async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restaurantId, getCoupon, now = new Date(), customerKeys = null) {
     if (!couponCodesInput || (Array.isArray(couponCodesInput) && couponCodesInput.length === 0)) {
         return { error: null, discount: 0, skipped: true };
     }
