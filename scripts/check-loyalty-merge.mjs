@@ -11,6 +11,7 @@ const src = fs.readFileSync(new URL('../base44/functions/awardLoyaltyPoints/entr
   .split('\n').filter(l => !/^import /.test(l)).join('\n');
 
 function world({ account = null, guest = null, signedIn = true } = {}) {
+  const ctl = { failAccountCredit: false };
   const db = { LoyaltyPoints: [], LoyaltyTransaction: [] };
   let n = 0;
   if (account) db.LoyaltyPoints.push({ id: 'acc', user_email: 'sam@x.com', total_points: account, points_earned: account, points_redeemed: 0, orders_count: 2 });
@@ -24,7 +25,12 @@ function world({ account = null, guest = null, signedIn = true } = {}) {
       : name === 'SystemSettings' ? [{ setting_key: 'loyalty_points_per_pound', setting_value: '1' }]
       : (db[name] || [])).filter(r => Object.entries(q).every(([k, v]) => r[k] === v)),
     create: async (d) => { const r = { id: `${name}-${++n}`, ...d }; (db[name] ||= []).push(r); return r; },
-    update: async (id, d) => { const r = (db[name] || []).find(x => x.id === id); Object.assign(r || {}, d); return r; },
+    update: async (id, d) => {
+      // Induced failure: crediting the ACCOUNT balance throws, after the guest
+      // record has already been zeroed.
+      if (name === 'LoyaltyPoints' && id === 'acc' && ctl.failAccountCredit) throw new Error('simulated write failure');
+      const r = (db[name] || []).find(x => x.id === id); Object.assign(r || {}, d); return r;
+    },
   });
   const ents = {}; for (const k of ['Order', 'Restaurant', 'SystemSettings', 'LoyaltyPoints', 'LoyaltyTransaction']) ents[k] = table(k);
   const base44 = { auth: { me: async () => { throw new Error('no session'); } }, asServiceRole: { entities: ents } };
@@ -36,7 +42,7 @@ function world({ account = null, guest = null, signedIn = true } = {}) {
     finally { [console.log, console.warn, console.error] = q; }
   };
   const find = (key) => db.LoyaltyPoints.find(r => r.user_email === key);
-  return { call, db, find };
+  return { call, db, find, set failAccountCredit(v) { ctl.failAccountCredit = v; } };
 }
 const checks = [];
 const check = (label, ok, detail) => { checks.push(ok); console.log(`  ${ok ? '✓' : '✗ WRONG'}  ${label.padEnd(50)} ${detail}`); };
@@ -66,6 +72,21 @@ const check = (label, ok, detail) => { checks.push(ok); console.log(`  ${ok ? '�
   await w.call();
   const acc = w.find('sam@x.com');
   check('merges even when the account has no balance yet', acc && acc.total_points === 100, `account ${acc?.total_points}`); }
+
+// The real hazard: the guest record is zeroed BEFORE the account is credited.
+// If that credit fails the points would vanish, so they must be put back.
+{
+  const w = world({ account: 50, guest: 120 });
+  const ents = w.db;
+  // Make crediting the account fail, leaving the guest record already zeroed.
+  const original = Object.getOwnPropertyDescriptor(Object.prototype, 'x');
+  void original; void ents;
+  w.failAccountCredit = true;
+  await w.call();
+  const gst = w.find('phone:07123456789');
+  check('points are restored if the account credit fails', gst.total_points === 120 && !gst.merged_into,
+        `guest ${gst.total_points}, stamped ${!!gst.merged_into}`);
+}
 
 const good = checks.filter(Boolean).length;
 console.log(`\n  ${good}/${checks.length} correct`);
