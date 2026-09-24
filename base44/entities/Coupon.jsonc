@@ -2,6 +2,11 @@
   "name": "Coupon",
   "type": "object",
   "properties": {
+    "loyalty_owner": {
+      "type": "string",
+      "description": "The one customer this coupon belongs to: \"email:sam@x.com\" or \"phone:07123456789\". Used for loyalty rewards so a reward can only be spent by the person who earned it. Replaces an older hack that put \"loyalty_user_<email>\" in restaurant_id - which both the checkout and the server then rejected as the wrong restaurant, so redeemed rewards could never be spent at all. Empty means the coupon is open to anyone.",
+      "default": ""
+    },
     "restaurant_id": {
       "type": "string",
       "description": "Leave empty for platform-wide coupons"
