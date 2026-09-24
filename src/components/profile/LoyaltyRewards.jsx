@@ -40,9 +40,19 @@ export default function LoyaltyRewards({ user }) {
         queryKey: ['redeemed-coupons', user.email],
         queryFn: async () => {
             try {
-                // Filter by the user-scoped restaurant_id tag set during redemption
-                const coupons = await base44.entities.Coupon.filter({
-                    restaurant_id: `loyalty_user_${user.email}`
+                // Rewards are owned via loyalty_owner now. The old tag put
+                // "loyalty_user_<email>" in restaurant_id, which made the coupon
+                // unusable at checkout (wrong restaurant). Both are read here so
+                // anything redeemed before the change still appears.
+                const [owned, legacy] = await Promise.all([
+                    base44.entities.Coupon.filter({ loyalty_owner: `email:${user.email}` }),
+                    base44.entities.Coupon.filter({ restaurant_id: `loyalty_user_${user.email}` }),
+                ]);
+                const seen = new Set();
+                const coupons = [...(owned || []), ...(legacy || [])].filter(c => {
+                    if (seen.has(c.id)) return false;
+                    seen.add(c.id);
+                    return true;
                 });
                 return coupons.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
             } catch (e) {
