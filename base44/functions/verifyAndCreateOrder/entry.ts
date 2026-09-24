@@ -226,7 +226,7 @@ function validateCoupon(coupon, serverSubtotal, restaurantId, now = new Date()) 
     return { valid: true, reason: null, discount: d };
 }
 
-async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restaurantId, getCoupon, now = new Date()) {
+async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restaurantId, getCoupon, now = new Date(, customerKeys = null)) {
     if (!couponCodesInput || (Array.isArray(couponCodesInput) && couponCodesInput.length === 0)) {
         return { error: null, discount: 0, skipped: true };
     }
@@ -259,7 +259,7 @@ async function resolveCouponDiscount(couponCodesInput, serverSubtotal, restauran
         const coupon = await getCoupon(code);
         if (!coupon) return { error: 'NOT_FOUND', discount: 0 };
 
-        const result = validateCoupon(coupon, serverSubtotal, restaurantId, now);
+        const result = validateCoupon(coupon, serverSubtotal, restaurantId, now, customerKeys);
         if (!result.valid) return { error: result.reason.toUpperCase(), discount: 0 };
 
         validatedCoupons.push({ coupon, rawDiscount: result.discount });
@@ -506,7 +506,21 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
         const rows = await base44.asServiceRole.entities.Coupon.filter({ code });
         return rows?.[0] || null;
     };
-    const couponResult = await resolveCouponDiscount(couponCodes, serverSubtotal, restaurantId, getCoupon);
+    // Who this order belongs to, so a loyalty reward can only be used by the
+    // customer who earned it. Without these keys the ownership check is skipped
+    // and anyone holding the code could spend someone else's reward.
+    const orderPhoneDigits = String(orderData?.phone ?? orderData?.customer_phone ?? '').replace(/\D/g, '');
+    let ukPhone = orderPhoneDigits;
+    if (ukPhone.startsWith('00')) ukPhone = ukPhone.slice(2);
+    if (ukPhone.startsWith('44') && ukPhone.length >= 11) ukPhone = '0' + ukPhone.slice(2);
+    if (ukPhone.length === 10 && ukPhone.startsWith('7')) ukPhone = '0' + ukPhone;
+    const customerKeys = [
+        orderData?.created_by && orderData.created_by !== 'anonymous' ? `email:${orderData.created_by}` : null,
+        orderData?.customer_email ? `email:${orderData.customer_email}` : null,
+        ukPhone.length >= 9 ? `phone:${ukPhone}` : null,
+    ].filter(Boolean);
+
+    const couponResult = await resolveCouponDiscount(couponCodes, serverSubtotal, restaurantId, getCoupon, customerKeys);
     if (couponResult.error) {
         console.error(`${LOG} COUPON_INVALID ${couponResult.error} codes=${JSON.stringify(couponCodes)}`);
         return { valid: false, error: 'That coupon can no longer be applied. Please remove it and try again.', code: `COUPON_${couponResult.error}` };
