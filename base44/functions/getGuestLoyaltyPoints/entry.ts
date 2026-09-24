@@ -60,7 +60,9 @@ Deno.serve(async (req) => {
                 return new Response(JSON.stringify({ error: 'Order not found' }), { status: 404 });
             }
             const order = orders[0];
-            const orderPhone = (order.phone || '').replace(/\D/g, '');
+            // Normalised the same way, or a customer whose order stored
+            // "+447..." is told their own phone "does not match" and refused.
+            const orderPhone = normalizeUkPhone(order.phone ?? order.customer_phone ?? order.guest_phone);
 
             // If phone provided, verify it matches the order
             if (phone && orderPhone !== normalizedPhone) {
