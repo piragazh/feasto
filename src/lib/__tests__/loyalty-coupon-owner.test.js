@@ -19,33 +19,38 @@ const reward = (owner, extra = {}) => ({
 
 describe('a reward coupon belongs to one customer', () => {
     it('the owner can use it', () => {
-        expect(validateCoupon(reward('email:sam@x.com'), 20, REST, ['email:sam@x.com']).valid).toBe(true);
+        expect(validateCoupon(reward('email:sam@x.com'), 20, REST, new Date(), ['email:sam@x.com']).valid).toBe(true);
     });
 
     it('a guest can own one by phone', () => {
-        expect(validateCoupon(reward('phone:07123456789'), 20, REST, ['phone:07123456789']).valid).toBe(true);
+        expect(validateCoupon(reward('phone:07123456789'), 20, REST, new Date(), ['phone:07123456789']).valid).toBe(true);
     });
 
     it('someone else cannot use it', () => {
-        const r = validateCoupon(reward('email:sam@x.com'), 20, REST, ['email:alex@x.com']);
+        const r = validateCoupon(reward('email:sam@x.com'), 20, REST, new Date(), ['email:alex@x.com']);
         expect(r.valid).toBe(false);
-        expect(r.reason).toBe('not_your_coupon');
+        expect(r.reason).toBe('not_yours');
     });
 
     it('cannot be used with no identity at all', () => {
-        expect(validateCoupon(reward('email:sam@x.com'), 20, REST, []).valid).toBe(false);
+        expect(validateCoupon(reward('email:sam@x.com'), 20, REST, new Date(), []).valid).toBe(false);
+    });
+
+    it('an older caller that supplies no identities behaves as before', () => {
+        // Deliberate: callers that predate ownership must not start failing.
+        expect(validateCoupon(reward('email:sam@x.com'), 20, REST, new Date()).valid).toBe(true);
     });
 
     it('matches when the customer has both an account and a phone', () => {
-        expect(validateCoupon(reward('phone:07123456789'), 20, REST, ['email:sam@x.com', 'phone:07123456789']).valid).toBe(true);
+        expect(validateCoupon(reward('phone:07123456789'), 20, REST, new Date(), ['email:sam@x.com', 'phone:07123456789']).valid).toBe(true);
     });
 });
 
 describe('ordinary coupons are untouched', () => {
     it('a normal promotional code still works for anyone', () => {
         const plain = { code: 'SAVE10', is_active: true, discount_type: 'percentage', discount_value: 10, restaurant_id: REST };
-        expect(validateCoupon(plain, 20, REST, []).valid).toBe(true);
-        expect(validateCoupon(plain, 20, REST).valid).toBe(true);        // no identity passed at all
+        expect(validateCoupon(plain, 20, REST, new Date(), []).valid).toBe(true);
+        expect(validateCoupon(plain, 20, REST, new Date()).valid).toBe(true);        // no identity passed at all
     });
 });
 
@@ -53,11 +58,11 @@ describe('REGRESSION GUARD: the old tagging is gone', () => {
     it('a reward coupon is valid at the restaurant it belongs to', () => {
         // Previously restaurant_id held "loyalty_user_sam@x.com", so this was
         // rejected as wrong_restaurant and the reward was unusable.
-        expect(validateCoupon(reward('email:sam@x.com'), 20, REST, ['email:sam@x.com']).reason).not.toBe('wrong_restaurant');
+        expect(validateCoupon(reward('email:sam@x.com'), 20, REST, new Date(), ['email:sam@x.com']).reason).not.toBe('wrong_restaurant');
     });
 
     it('a coupon still cannot be used at a different restaurant', () => {
-        const r = validateCoupon(reward('email:sam@x.com'), 20, 'other-rest', ['email:sam@x.com']);
+        const r = validateCoupon(reward('email:sam@x.com'), 20, 'other-rest', new Date(), ['email:sam@x.com']);
         expect(r.reason).toBe('wrong_restaurant');
     });
 });
