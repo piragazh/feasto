@@ -89,3 +89,42 @@ describe('spotting a split balance', () => {
         expect(mergeCandidate({ created_by: 'anonymous', phone: '07123456789' })).toBeNull();
     });
 });
+
+import { validateCoupon, couponOwner, couponRestaurantScope } from '../order-logic.js';
+
+describe('loyalty reward coupons', () => {
+    const legacy = { code: 'RW-1', is_active: true, discount_type: 'fixed', discount_value: 5, restaurant_id: 'loyalty_user_sam@x.com' };
+    const guestReward = { code: 'RW-2', is_active: true, discount_type: 'fixed', discount_value: 5, loyalty_owner: 'phone:07123456789' };
+    const ordinary = { code: 'SAVE10', is_active: true, discount_type: 'percentage', discount_value: 10, restaurant_id: 'r1' };
+
+    it('REGRESSION GUARD: a redeemed reward is no longer "wrong restaurant"', () => {
+        // redeemReward wrote "loyalty_user_<email>" into restaurant_id, so both
+        // the checkout and the server refused it - points could be spent nowhere.
+        expect(couponRestaurantScope(legacy)).toBeNull();
+        expect(validateCoupon(legacy, 20, 'r1').valid).toBe(true);
+    });
+
+    it('reads the legacy tag as ownership', () => {
+        expect(couponOwner(legacy)).toBe('email:sam@x.com');
+    });
+
+    it('only the person who earned it can spend it', () => {
+        expect(validateCoupon(legacy, 20, 'r1', new Date(), ['email:sam@x.com']).valid).toBe(true);
+        expect(validateCoupon(legacy, 20, 'r1', new Date(), ['email:eve@x.com']).reason).toBe('not_yours');
+    });
+
+    it('a guest reward is bound to the phone that earned it', () => {
+        expect(validateCoupon(guestReward, 20, 'r1', new Date(), ['phone:07123456789']).valid).toBe(true);
+        expect(validateCoupon(guestReward, 20, 'r1', new Date(), ['phone:07999999999']).reason).toBe('not_yours');
+    });
+
+    it('an ordinary coupon is unaffected and still scoped to its restaurant', () => {
+        expect(validateCoupon(ordinary, 20, 'r1', new Date(), ['phone:07123456789']).valid).toBe(true);
+        expect(validateCoupon(ordinary, 20, 'r2', new Date(), []).reason).toBe('wrong_restaurant');
+    });
+
+    it('callers that supply no identity behave exactly as before', () => {
+        // Nothing that already worked starts failing because of this change.
+        expect(validateCoupon(guestReward, 20, 'r1').valid).toBe(true);
+    });
+});
