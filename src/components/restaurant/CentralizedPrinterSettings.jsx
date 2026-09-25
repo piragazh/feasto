@@ -786,6 +786,21 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
         { ...DEFAULT_PRINTER, name: 'Printer A (Primary)', assigned_channels: ['online_order', 'pos_order', 'kiosk_order'] },
     ]);
 
+    // What is currently saved, to tell whether there are unsaved edits. With up to
+    // eight printer cards and the only Save button at the very bottom, changes
+    // were silently lost if anyone navigated away.
+    const [savedSnapshot, setSavedSnapshot] = useState(null);
+    const hydrate = (list) => { setPrinters(list); setSavedSnapshot(JSON.stringify(list)); };
+    const isDirty = savedSnapshot !== null && JSON.stringify(printers) !== savedSnapshot;
+
+    // Warn before leaving the page with unsaved edits.
+    useEffect(() => {
+        if (!isDirty) return;
+        const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', warn);
+        return () => window.removeEventListener('beforeunload', warn);
+    }, [isDirty]);
+
     // Hydrate from existing restaurant data
     useEffect(() => {
         if (!restaurant) return;
@@ -823,7 +838,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                     template: c.template || 'standard',
                 });
             }
-            setPrinters(migrated);
+            hydrate(migrated);
         } else {
             // Migrate from old single/legacy structure
             const printerA = {
@@ -885,7 +900,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                     template: c.template || 'standard',
                 });
             }
-            setPrinters(migratedPrinters);
+            hydrate(migratedPrinters);
         }
     }, [restaurant]);
 
@@ -894,6 +909,8 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['restaurant-printers', restaurantId] });
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
+            // What was just saved is the new baseline.
+            setSavedSnapshot(JSON.stringify(printers));
             toast.success('Printer settings saved');
         },
         onError: () => toast.error('Failed to save'),
@@ -952,23 +969,30 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
     return (
         <div className="space-y-6">
             {/* Tab switcher */}
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+            {/* Scrolls sideways on narrow screens rather than wrapping or clipping. */}
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit max-w-full overflow-x-auto" role="tablist">
                 {[
-                    { id: 'printers', label: '🖨️ Printers' },
-                    { id: 'agent', label: '⚡ Local Print Agent' },
-                    { id: 'android_agent', label: '📲 Android Agent' },
-                    { id: 'diagnostics', label: '🔬 Diagnostics' },
-                ].map(tab => (
+                    { id: 'printers', label: 'Printers', Icon: Printer },
+                    { id: 'agent', label: 'Desktop Agent', Icon: Monitor },
+                    { id: 'android_agent', label: 'Android Agent', Icon: Smartphone },
+                    { id: 'diagnostics', label: 'Diagnostics', Icon: Activity },
+                ].map(({ id, label, Icon }) => (
                     <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            activeTab === tab.id
+                        key={id}
+                        role="tab"
+                        aria-selected={activeTab === id}
+                        onClick={() => setActiveTab(id)}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                            activeTab === id
                                 ? 'bg-white shadow text-gray-900'
                                 : 'text-gray-500 hover:text-gray-700'
                         }`}
                     >
-                        {tab.label}
+                        <Icon className="h-4 w-4" />
+                        {label}
+                        {id === 'printers' && isDirty && (
+                            <span className="h-2 w-2 rounded-full bg-amber-500" aria-label="unsaved changes" />
+                        )}
                     </button>
                 ))}
             </div>
@@ -987,6 +1011,10 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
 
             {activeTab === 'printers' && (<>
             {/* ── Bluetooth persistence notice ─── */}
+            {/* Only relevant to Bluetooth printers. It used to show to everyone -
+                a network or Android-agent setup was greeted by a large warning
+                about something it does not use. */}
+            {printers.some(p => (p.connection_type || 'bluetooth') === 'bluetooth') && (
             <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
                 <WifiOff className="h-5 w-5 flex-shrink-0 mt-0.5 text-amber-600" />
                 <div>
@@ -1000,6 +1028,7 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                     </p>
                 </div>
             </div>
+            )}
 
             {/* ── Channel routing overview ─── */}
             <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-gray-50">
@@ -1067,10 +1096,20 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
                         ))}
                     </div>
 
-                    <Button onClick={save} disabled={mutation.isPending} className="w-full mt-6 bg-orange-500 hover:bg-orange-600">
-                        <Save className="h-4 w-4 mr-2" />
-                        {mutation.isPending ? 'Saving...' : 'Save All Printer Settings'}
-                    </Button>
+                    {/* Sticks to the bottom while there are unsaved edits, so the
+                        button is always in reach however many printers there are. */}
+                    <div className={`${isDirty ? 'sticky bottom-3 z-10' : ''} mt-6`}>
+                        <div className={`flex items-center gap-3 ${isDirty ? 'p-3 rounded-xl bg-white border border-amber-300 shadow-lg' : ''}`}>
+                            {isDirty && (
+                                <span className="text-sm text-amber-700 font-medium flex-1">You have unsaved changes</span>
+                            )}
+                            <Button onClick={save} disabled={mutation.isPending || !isDirty}
+                                className={`${isDirty ? '' : 'w-full'} bg-orange-500 hover:bg-orange-600`}>
+                                <Save className="h-4 w-4 mr-2" />
+                                {mutation.isPending ? 'Saving…' : isDirty ? 'Save changes' : 'All changes saved'}
+                            </Button>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
             </>)}
