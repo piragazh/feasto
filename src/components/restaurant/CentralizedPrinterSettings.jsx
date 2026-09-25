@@ -12,7 +12,8 @@ import {
     Printer, Bluetooth, Usb, Wifi, Save, CheckCircle2,
     AlertCircle, Info, RefreshCw, ShoppingBag, Cpu,
     TabletSmartphone, ArrowRight, Zap, Plus, Trash2, FlaskConical,
-    WifiOff, ChevronDown, ChevronUp, ChefHat, Receipt, ExternalLink, Circle
+    WifiOff, ChevronDown, ChevronUp, ChefHat, Receipt, ExternalLink, Circle,
+    Monitor, Smartphone, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import BluetoothPrinterManager from '@/components/restaurant/BluetoothPrinterManager';
