@@ -254,3 +254,25 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* ── POS typography ────────────────────────────────────────────────────────
+   Money must never jitter. Proportional digits change width as totals change,
+   so a price column visibly shifts while staff are reading it. Tabular figures
+   keep every digit the same width, so columns line up and a changing total
+   stays still.
+
+   Applied to the utility Tailwind already uses in the POS, plus anything
+   explicitly marked as an amount. */
+.tabular-nums,
+[data-amount] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "cv01" 1;
+}
+
+/* Large figures - totals, the cart sum, the payment screen - read better
+   slightly tightened; at display sizes default tracking looks loose. */
+.pos-display {
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
