@@ -5,32 +5,60 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
 
-    let body;
-    try {
-        body = await req.json();
-    } catch {
-        return Response.json({ error: 'Invalid JSON' }, { status: 400 });
-    }
-
-    console.log('Uber Eats webhook received:', JSON.stringify(body).slice(0, 500));
-
-    // Verify Uber Eats client secret — ALWAYS required, fail closed if not configured
+    // ── Signature: HMAC-SHA256 of the RAW body, keyed by the client secret ──
+    //
+    // Uber sends X-Uber-Signature: a lowercased hex HMAC-SHA256 of the raw
+    // request body using the app's client secret as the key
+    // (developer.uber.com/docs/eats/guides/webhooks).
+    //
+    // This previously compared the signature header to the client secret ITSELF,
+    // which a genuine Uber webhook can never match - so every real order would
+    // have been rejected. The other branch accepted a bearer token equal to the
+    // secret, which Uber does not send either.
+    //
+    // The HMAC must be computed over the exact bytes received, so the body is
+    // read as TEXT first and only parsed afterwards - re-serialising the JSON
+    // changes the bytes and breaks the signature.
     const clientSecret = Deno.env.get('UBER_EATS_CLIENT_SECRET');
     if (!clientSecret) {
         console.error('[SECURITY] UBER_EATS_CLIENT_SECRET not set — rejecting all webhook requests');
         return Response.json({ error: 'Webhook not configured' }, { status: 503 });
     }
 
-    const authHeader = req.headers.get('Authorization') || '';
-    const uberSig = req.headers.get('x-uber-signature') || '';
-    const providedSecret = authHeader.replace('Bearer ', '').replace('Basic ', '').trim();
+    const rawBody = await req.text();
+    const providedSig = (req.headers.get('x-uber-signature') || '').trim().toLowerCase();
 
-    const signatureValid = (providedSecret && providedSecret === clientSecret) ||
-                           (uberSig && uberSig === clientSecret);
-    if (!signatureValid) {
-        console.error('Uber Eats webhook: invalid or missing signature');
+    let expectedSig = '';
+    try {
+        const key = await crypto.subtle.importKey(
+            'raw', new TextEncoder().encode(clientSecret),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+        );
+        const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
+        expectedSig = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+        console.error('[UBER] could not compute signature:', e?.message);
+        return Response.json({ error: 'Signature check failed' }, { status: 500 });
+    }
+
+    // Constant-time comparison.
+    let diff = providedSig.length ^ expectedSig.length;
+    for (let i = 0; i < Math.max(providedSig.length, expectedSig.length); i++) {
+        diff |= (providedSig.charCodeAt(i) || 0) ^ (expectedSig.charCodeAt(i) || 0);
+    }
+    if (diff !== 0) {
+        console.error('[UBER] webhook rejected: signature mismatch');
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    let body;
+    try {
+        body = JSON.parse(rawBody);
+    } catch {
+        return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+
+    console.log('Uber Eats webhook received:', rawBody.slice(0, 500));
 
     try {
         const base44 = createClientFromRequest(req);
