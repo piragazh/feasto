@@ -12,6 +12,7 @@ import BillSplitDialog from './BillSplitDialog';
 import ApplyPromotionDialog from './ApplyPromotionDialog';
 import VoidOrderDialog from './VoidOrderDialog';
 import usePermissionGate from '@/lib/usePermissionGate';
+import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { PERMISSIONS } from '@/lib/posPermissions';
 
 export default function POSOrderQueue({ restaurantId, posTheme = 'dark', restaurant, activeStaffMember }) {
@@ -217,12 +218,25 @@ function SourceBadge({ order }) {
             const newDiscount = (order.discount || 0) + couponResult.discount_amount;
             const newTotal = Math.max(0, (order.total || 0) - couponResult.discount_amount);
 
-            await base44.entities.Order.update(order.id, {
-                coupon_codes: newCodes,
-                coupon_code: newCodes[0], // legacy compat
-                discount: parseFloat(newDiscount.toFixed(2)),
-                total: parseFloat(newTotal.toFixed(2)),
+            // Routed through posUpdateOrder rather than writing the order directly.
+            // Writing discount and total from the browser meant the figures were
+            // whatever this page calculated, and the change left NO entry in
+            // PosAuditLog - so coupons applied here never showed up in the
+            // exceptions report that exists to oversee discounting.
+            // posUpdateOrder requires a reason code, checks the manager threshold,
+            // recomputes the total server-side and records who did it.
+            const res = await base44.functions.invoke('posUpdateOrder', {
+                order_id: order.id,
+                updates: {
+                    coupon_codes: newCodes,
+                    coupon_code: newCodes[0], // legacy compat
+                    discount: parseFloat(newDiscount.toFixed(2)),
+                    discount_reason_code: 'coupon',
+                },
+                staff_session: getStaffSessionToken(restaurantId),
             });
+            const data = res?.data ?? res;
+            if (data?.error) throw new Error(data.error);
 
             toast.success(`Coupon ${couponResult.coupon_code} applied — £${couponResult.discount_amount.toFixed(2)} off`);
             setApplyingPromo(null);
