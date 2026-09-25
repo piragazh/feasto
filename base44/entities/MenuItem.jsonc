@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Reference to restaurant"
     },
+    "platform_prices": {
+      "type": "object",
+      "description": "Price to charge on each marketplace, e.g. { \"uber_eats\": 9.99 }. Marketplace prices are normally higher than in store to absorb commission. When absent the restaurant's marketplace markup is applied to the normal price; when that is zero the in-store price is used, which is a legitimate choice."
+    },
     "allergens_confirmed": {
       "type": "boolean",
       "default": false,
