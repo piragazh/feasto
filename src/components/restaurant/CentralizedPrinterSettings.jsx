@@ -907,11 +907,12 @@ export default function CentralizedPrinterSettings({ restaurantId }) {
 
     const mutation = useMutation({
         mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
-        onSuccess: () => {
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['restaurant-printers', restaurantId] });
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
-            // What was just saved is the new baseline.
-            setSavedSnapshot(JSON.stringify(printers));
+            // The baseline is exactly what was SENT, not the current screen: an edit
+            // made while the save was in flight must still show as unsaved.
+            setSavedSnapshot(JSON.stringify(variables?.printer_config?.centralized_printers ?? variables?.centralized_printers ?? printers));
             toast.success('Printer settings saved');
         },
         onError: () => toast.error('Failed to save'),
