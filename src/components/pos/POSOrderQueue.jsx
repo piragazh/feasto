@@ -275,7 +275,20 @@ function SourceBadge({ order }) {
                 </Button>
             )}
 
-            <div className={`grid gap-4 ${searchResults !== null ? 'grid-cols-1' : 'grid-cols-2 xl:grid-cols-5'}`}>
+            {/* All five stages need to be visible at once during service.
+                Previously five columns only appeared at xl (1280px+), so a
+                landscape tablet (1024-1280px) dropped to TWO columns and pushed
+                Preparing, Ready and Out for Delivery below the fold - they looked
+                like they had disappeared.
+
+                Now: five columns from lg (1024px), which covers landscape
+                tablets. Below that the row scrolls sideways with each column at a
+                readable minimum width, rather than wrapping out of sight. */}
+            <div className={
+                searchResults !== null
+                    ? 'grid gap-4 grid-cols-1'
+                    : 'grid gap-4 grid-cols-2 lg:grid-cols-5 max-lg:grid-flow-col max-lg:auto-cols-[minmax(260px,1fr)] max-lg:grid-cols-none max-lg:overflow-x-auto max-lg:pb-2'
+            }>
                 {Object.entries(displayOrders).map(([status, statusOrders]) => (
                 <div key={status} className={`${t.bg} rounded-xl border ${t.border} p-4`}>
                     <h3 className={`${t.text} font-bold mb-4 capitalize text-center p-2 ${t.colHeader} rounded-lg text-sm`}>
