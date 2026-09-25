@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
                 status: 'pending',
                 retry_count: 0,
                 next_retry_at: null,
+                expires_at: new Date(Date.now() + MAX_JOB_AGE_MINUTES * 60 * 1000).toISOString(),
             });
             return Response.json({ success: true, job_id: job.id });
         }
@@ -267,8 +268,40 @@ Deno.serve(async (req) => {
                 retry_count: 0,
                 next_retry_at: null,
                 error_message: `Manually retried by ${user.email} at ${new Date().toLocaleString()}`,
+                // A fresh window: without it, retrying an old ticket would be
+                // expired again on the very next poll.
+                expires_at: new Date(Date.now() + MAX_JOB_AGE_MINUTES * 60 * 1000).toISOString(),
             });
             return Response.json({ success: true });
+        }
+
+        // ── CLEAR_STUCK: remove every job that is not going to print ──────────────
+        //
+        // After a printer outage, hundreds of jobs could pile up. The dashboard only
+        // offered a per-job Cancel, and Clean up only removes 'done' and 'failed'
+        // jobs - never the pending and processing ones that were actually stuck - so
+        // the only way out was deleting rows in the database by hand.
+        //
+        // Stuck jobs are marked failed rather than deleted, so there is a record of
+        // what did not print and any single ticket can still be retried.
+        if (action === 'clear_stuck') {
+            const user = await base44.auth.me().catch(() => null);
+            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
+
+            const [pending, processing] = await Promise.all([
+                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'pending' }),
+                base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'processing' }),
+            ]);
+            const stuck = [...(pending || []), ...(processing || [])];
+            const stamp = new Date().toISOString();
+            for (const j of stuck) {
+                await base44.asServiceRole.entities.PrintJob.update(j.id, {
+                    status: 'failed', agent_id: null, next_retry_at: null, completed_at: stamp,
+                    error_message: `Cleared by ${user.email} - not printed.`,
+                });
+            }
+            return Response.json({ success: true, cleared: stuck.length });
         }
 
         // ── CANCEL: Dashboard user cancels a pending or processing job
