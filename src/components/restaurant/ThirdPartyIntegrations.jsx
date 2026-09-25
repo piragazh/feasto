@@ -157,7 +157,7 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                                 {isConnected ? (
                                     <>
                                         <p className="text-xs text-gray-500">
-                                            Logged in as: <span className="font-medium text-gray-700">{saved.email}</span>
+                                            Store ID: <span className="font-medium text-gray-700">{saved.store_id || '\u2014'}</span>
                                         </p>
                                         <div className="flex gap-2">
                                             <Button
@@ -215,43 +215,25 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                                     <p className="text-sm text-gray-600">{activePlatform.helpText}</p>
                                     <div className="space-y-3">
                                         <div>
-                                            <Label htmlFor="tp-email">Email Address</Label>
+                                            <Label htmlFor="tp-store-id">Store ID</Label>
                                             <Input
-                                                id="tp-email"
-                                                type="email"
-                                                placeholder="restaurant@email.com"
-                                                value={credentials.email}
-                                                onChange={e => setCredentials(prev => ({ ...prev, email: e.target.value }))}
+                                                id="tp-store-id"
+                                                type="text"
+                                                placeholder="e.g. 4f2b9c10-…"
+                                                value={credentials.store_id}
+                                                onChange={e => setCredentials(prev => ({ ...prev, store_id: e.target.value }))}
+                                                onKeyDown={e => e.key === 'Enter' && handleSave()}
                                                 className="mt-1"
                                             />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="tp-password">Password</Label>
-                                            <div className="relative mt-1">
-                                                <Input
-                                                    id="tp-password"
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    placeholder="••••••••"
-                                                    value={credentials.password}
-                                                    onChange={e => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                                                    onKeyDown={e => e.key === 'Enter' && handleSave()}
-                                                    className="pr-10"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                                    onClick={() => setShowPassword(v => !v)}
-                                                >
-                                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                </button>
-                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Find this in your {activePlatform.name} partner portal.
+                                            </p>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-gray-400">
-                                        Your credentials are stored securely and only used to sync orders on your behalf.{' '}
-                                        <a href={activePlatform.loginUrl} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">
-                                            Forgot password?
-                                        </a>
+                                    <p className="text-xs text-gray-500 bg-gray-50 border rounded-lg p-2">
+                                        MealDrop never asks for your {activePlatform.name} password. You approve the
+                                        connection on {activePlatform.name}&rsquo;s own site, and you can revoke it there
+                                        at any time.
                                     </p>
                                 </div>
                             </AlertDialogDescription>
