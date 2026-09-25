@@ -21,6 +21,19 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
         try { return localStorage.getItem('pos_grid_density') || 'standard'; } catch { return 'standard'; }
     });
 
+    // Tile text size, separate from grid size on purpose: a counter may want big
+    // tiles with modest text, or compact tiles with names staff can read at arm's
+    // length. Tying them together forces a trade nobody asked for.
+    const [textSize, setTextSize] = useState(() => {
+        try { return localStorage.getItem('pos_tile_text_size') || 'm'; } catch { return 'm'; }
+    });
+
+    const chooseTextSize = (next) => {
+        setTextSize(next);
+        try { localStorage.setItem('pos_tile_text_size', next); } catch { /* ignore */ }
+        window.location.reload();
+    };
+
     const chooseDensity = (next) => {
         setDensity(next);
         try { localStorage.setItem('pos_grid_density', next); } catch { /* ignore */ }
@@ -96,6 +109,34 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
                     <p className="text-xs text-gray-500 mt-1.5">
                         Applies to <strong>this device only</strong> &mdash; a till by a window may need Light while the kitchen screen stays Dark.
                     </p>
+                </div>
+
+                {/* Tile text size - per device */}
+                <div>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide block mb-2">Item Text Size</Label>
+                    <div className="grid grid-cols-3 gap-2 max-w-md" role="radiogroup" aria-label="Item text size">
+                        {[
+                            { key: 's', label: 'S', hint: 'More on a line' },
+                            { key: 'm', label: 'M', hint: 'Balanced' },
+                            { key: 'l', label: 'L', hint: 'Read at arm\u2019s length' },
+                        ].map(({ key, label, hint }) => (
+                            <button
+                                key={key}
+                                type="button"
+                                role="radio"
+                                aria-checked={textSize === key}
+                                onClick={() => chooseTextSize(key)}
+                                className={`flex flex-col items-center gap-0.5 p-3 rounded-xl border-2 transition-all ${
+                                    textSize === key
+                                        ? 'border-accent-500 bg-accent-50 text-accent-700'
+                                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                                }`}
+                            >
+                                <span className={`font-bold ${key === 's' ? 'text-sm' : key === 'm' ? 'text-base' : 'text-xl'}`}>{label}</span>
+                                <span className="text-[11px] opacity-70 text-center leading-tight">{hint}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Grid density - per device, like screen mode */}
