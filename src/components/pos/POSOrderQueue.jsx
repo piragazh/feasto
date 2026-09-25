@@ -216,7 +216,6 @@ function SourceBadge({ order }) {
             const newCodes = existingCodes.slice(0, 3); // max 3
 
             const newDiscount = (order.discount || 0) + couponResult.discount_amount;
-            const newTotal = Math.max(0, (order.total || 0) - couponResult.discount_amount);
 
             // Routed through posUpdateOrder rather than writing the order directly.
             // Writing discount and total from the browser meant the figures were
