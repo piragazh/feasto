@@ -65,6 +65,7 @@ export default function MenuManagement({ restaurantId }) {
         description: '',
         price: '',
         pos_price: '',
+        marketplace_price: '',
         availability_channel: 'both',
         category: '',
         subcategory: '',
@@ -570,6 +571,7 @@ CRITICAL REQUIREMENTS:
             description: '',
             price: '',
             pos_price: '',
+            marketplace_price: '',
             availability_channel: 'both',
             category: '',
             subcategory: '',
@@ -610,6 +612,7 @@ CRITICAL REQUIREMENTS:
             description: item.description || '',
             price: item.price.toString(),
             pos_price: item.pos_price != null ? item.pos_price.toString() : '',
+            marketplace_price: item.platform_prices?.default != null ? String(item.platform_prices.default) : '',
             availability_channel: item.availability_channel || 'both',
             category: item.category || '',
             subcategory: item.subcategory || '',
@@ -647,6 +650,12 @@ CRITICAL REQUIREMENTS:
             ...formData,
             price: parseFloat(formData.price),
             pos_price: formData.pos_price !== '' ? parseFloat(formData.pos_price) : null,
+            // One marketplace price covers every platform, stored under `default`.
+            // A per-platform price can be added later without migrating anything -
+            // see marketplacePrice() in uber-menu-mapping.js.
+            platform_prices: formData.marketplace_price !== ''
+                ? { ...(editingItem?.platform_prices || {}), default: parseFloat(formData.marketplace_price) }
+                : (() => { const { default: _drop, ...rest } = editingItem?.platform_prices || {}; return Object.keys(rest).length ? rest : null; })(),
             availability_windows: (formData.availability_windows || []).filter(completeWindow),
             // Stock. Restocking an item that ran out AUTOMATICALLY brings it back
             // on sale; an item a manager switched off by hand stays off - the
@@ -963,6 +972,20 @@ CRITICAL REQUIREMENTS:
                                         onChange={(e) => setFormData({ ...formData, pos_price: e.target.value })}
                                     />
                                     <p className="text-xs text-gray-500 mt-1">Leave empty to use the online price in POS</p>
+                                </div>
+                                <div>
+                                    <Label>Marketplace Price (£)</Label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="Uber Eats, Deliveroo, Just Eat"
+                                        value={formData.marketplace_price}
+                                        onChange={(e) => setFormData({ ...formData, marketplace_price: e.target.value })}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Usually higher than in store, to absorb marketplace commission.
+                                        Leave empty to apply the restaurant&rsquo;s default markup.
+                                    </p>
                                 </div>
                                 <div className="col-span-2">
                                     <Label>Availability Channel</Label>
