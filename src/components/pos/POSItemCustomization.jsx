@@ -189,7 +189,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                 </div>
 
                 <div 
-                    className={`flex-1 overflow-y-auto p-2 md:p-4 min-h-0 ${showKeyboard ? 'pb-80' : ''}`}
+                    className={`flex-1 min-h-0 overflow-y-auto p-2 md:p-4 min-h-0 ${showKeyboard ? 'pb-80' : ''}`}
                     style={{
                         display: 'grid',
                         gridTemplateColumns: `repeat(${columns}, 1fr)`,

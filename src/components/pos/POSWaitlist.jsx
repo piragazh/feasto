@@ -134,7 +134,7 @@ export default function POSWaitlist({ posTheme = 'dark', restaurantId = null }) 
             {/* Waiting Guests */}
             <div className={`${t.panel} rounded-xl border p-4 overflow-hidden flex flex-col`}>
                 <h2 className={`${t.text} font-bold text-lg mb-4`}>Waiting ({waitingGuests.length})</h2>
-                <div className="flex-1 overflow-y-auto space-y-2">
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
                     {waitingGuests.length === 0 ? (
                         <p className={`${t.emptyText} text-center py-8`}>No guests waiting</p>
                     ) : (
@@ -185,7 +185,7 @@ export default function POSWaitlist({ posTheme = 'dark', restaurantId = null }) 
             {/* Seated Guests */}
             <div className={`${t.panel} rounded-xl border p-4 overflow-hidden flex flex-col`}>
                 <h2 className={`${t.text} font-bold text-lg mb-4`}>Seated ({seatedGuests.length})</h2>
-                <div className="flex-1 overflow-y-auto space-y-2">
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
                     {seatedGuests.length === 0 ? (
                         <p className={`${t.emptyText} text-center py-8`}>No seated guests</p>
                     ) : (

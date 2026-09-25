@@ -25,7 +25,7 @@ export default function POSCategoryPanel({ categories, selectedCategory, onSelec
             <div className={`px-4 py-3 border-b ${t.panelHead} flex-shrink-0`}>
                 <h2 className={`${t.textMuted} text-xs font-semibold uppercase tracking-wider`}>Categories</h2>
             </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1 scrollbar-hide">
                 {entries.map(({ id, label, count }) => {
                     const active = selectedCategory === id;
                     return (

@@ -299,7 +299,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                 </div>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-hide">
+                <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1.5 scrollbar-hide">
                     {filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-32 text-center">
                             <p className={`${t.textMuted} text-sm`}>No staff found</p>
@@ -354,7 +354,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
 
                 {selectedStaff ? (
                     /* Selected staff detail */
-                    <div className="flex-1 overflow-y-auto space-y-3 scrollbar-hide">
+                    <div className="flex-1 min-h-0 overflow-y-auto space-y-3 scrollbar-hide">
                         {/* Profile card */}
                         <div className={`${t.panel} border rounded-2xl p-5`}>
                             <div className="flex items-start justify-between">
@@ -443,7 +443,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                     </div>
                 ) : (
                     /* Overview: leaderboard */
-                    <div className="flex-1 overflow-y-auto space-y-3 scrollbar-hide">
+                    <div className="flex-1 min-h-0 overflow-y-auto space-y-3 scrollbar-hide">
                         <div className={`${t.panel} border rounded-2xl overflow-hidden`}>
                             <div className={`px-4 py-3 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-100'} flex items-center gap-2`}>
                                 <TrendingUp className="h-4 w-4 text-orange-400" />

@@ -186,7 +186,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                 </div>
 
                 {/* Options — fills remaining space */}
-                <div className={`flex-1 overflow-y-auto px-6 pb-4 ${showKeyboard ? 'pb-80' : ''}`}>
+                <div className={`flex-1 min-h-0 overflow-y-auto px-6 pb-4 ${showKeyboard ? 'pb-80' : ''}`}>
                     {/* Meal upgrade */}
                     {currentStep?.type === 'meal_upgrade' && (
                         <div className="grid grid-cols-1 gap-4 h-full">

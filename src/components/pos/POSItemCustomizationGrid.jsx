@@ -144,7 +144,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                 </div>
 
                 {/* Scrollable options */}
-                <div className={`flex-1 overflow-y-auto px-4 py-3 space-y-5 ${showKeyboard ? 'pb-80' : ''}`}>
+                <div className={`flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-5 ${showKeyboard ? 'pb-80' : ''}`}>
                     {allGroups.map((option) => (
                         <div key={option.name + (option._isMealSub ? '_meal' : '')}>
                             <div className={`flex items-center justify-between px-3 py-1.5 rounded-lg mb-2 ${sectionHead}`}>

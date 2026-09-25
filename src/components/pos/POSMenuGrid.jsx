@@ -91,7 +91,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                 </div>
             )}
 
-            <div className={`flex-1 overflow-y-auto p-3 grid ${DENSITY[density] || DENSITY.standard} content-start ${filteredItems.length === 0 ? 'hidden' : ''}`}>
+            <div className={`flex-1 min-h-0 overflow-y-auto p-3 grid ${DENSITY[density] || DENSITY.standard} content-start ${filteredItems.length === 0 ? 'hidden' : ''}`}>
                 {filteredItems.map(item => {
                     const effectivePrice = item.pos_price != null ? item.pos_price : item.price;
                     // A live timed offer (happy hour etc) takes precedence: strike

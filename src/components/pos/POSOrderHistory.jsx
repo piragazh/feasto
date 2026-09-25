@@ -252,7 +252,7 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
             </div>
 
             {/* Order list */}
-            <div className="flex-1 overflow-y-auto space-y-2 scrollbar-hide">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-2 scrollbar-hide">
                 {isLoading ? (
                     <div className="flex items-center justify-center h-40">
                         <div className="w-8 h-8 rounded-full border-4 border-orange-500/30 border-t-orange-500 animate-spin" />

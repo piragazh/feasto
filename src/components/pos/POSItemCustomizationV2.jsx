@@ -251,7 +251,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                 </div>
 
                 {/* Step content */}
-                <div className={`flex-1 overflow-y-auto px-5 py-3 space-y-3 ${showKeyboard ? 'pb-80' : ''}`}>
+                <div className={`flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-3 ${showKeyboard ? 'pb-80' : ''}`}>
 
                     {/* Meal upgrade */}
                     {currentStep?.type === 'meal_upgrade' && currentStep.options?.map(opt => {

@@ -36,7 +36,7 @@ export default function POSTablesGrid({
                 </button>
             </div>
 
-            <div className={`flex-1 ${t.tableContainer} rounded-2xl border p-4 overflow-y-auto`}>
+            <div className={`flex-1 min-h-0 ${t.tableContainer} rounded-2xl border p-4 overflow-y-auto`}>
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {tables.map(table => {
                         const orders = getTableOrders(table.id);

@@ -554,7 +554,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
 
             {/* ── Grid View ── */}
             {viewMode === 'grid' && (
-                <div className={`flex-1 ${t.panel} rounded-xl border p-4 overflow-y-auto`}>
+                <div className={`flex-1 min-h-0 ${t.panel} rounded-xl border p-4 overflow-y-auto`}>
                     {tables.length === 0 && (
                         <div className={`h-full flex flex-col items-center justify-center ${t.textMuted} text-center px-6 py-16`}>
                             <Grid3x3 className="h-16 w-16 mb-3 opacity-20" />

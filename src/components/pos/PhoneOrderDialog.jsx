@@ -275,7 +275,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                     </div>
 
                     {/* Scrollable body */}
-                    <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                    <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
 
                         {/* Order type toggle */}
                         <div className={`flex rounded-xl overflow-hidden border ${borderCls} text-xs font-semibold`}>

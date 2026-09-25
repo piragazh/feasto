@@ -601,7 +601,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     )}
                 </div>
 
-                <div className="space-y-1 flex-1 overflow-y-auto mb-3">
+                <div className="space-y-1 flex-1 min-h-0 overflow-y-auto mb-3">
                     {cart.map(item => (
                         <div key={item.id} className={`flex justify-between ${t.subtext} text-sm`}>
                             <span>{item.quantity}x {item.name}</span>

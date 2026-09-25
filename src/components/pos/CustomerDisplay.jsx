@@ -68,7 +68,7 @@ export default function CustomerDisplay() {
 
             <div className="flex-1 flex overflow-hidden">
                 {/* Items list */}
-                <div className="flex-1 p-6 overflow-y-auto scrollbar-hide">
+                <div className="flex-1 min-h-0 p-6 overflow-y-auto scrollbar-hide">
                     <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-4">Your Order</p>
                     <div className="space-y-2">
                         <AnimatePresence initial={false}>
