@@ -43,9 +43,34 @@ function phoneLoyaltyKey(phone) {
     return n ? `phone:${n}` : null;
 }
 
+/**
+ * Accounts that are NOT a customer. Online orders are created by a service
+ * account, so created_by is the same no-reply address for every customer - and
+ * keying points by it pooled 333 orders' worth of points into ONE balance while
+ * real customers earned nothing. These fall through to the phone number, which
+ * is the identity that actually belongs to the customer.
+ */
+function isRealCustomerAccount(email) {
+    const e = String(email || '').trim().toLowerCase();
+    if (!e || e === 'anonymous') return false;
+    if (e.startsWith('service+')) return false;
+    if (e.endsWith('@no-reply.base44.com')) return false;
+    if (e.includes('noreply') || e.includes('no-reply')) return false;
+    return e.includes('@');
+}
+
 function getLoyaltyIdentifier(order) {
-    if (order.created_by && order.created_by !== 'anonymous') {
+    if (isRealCustomerAccount(order.created_by)) {
         return { type: 'email', key: order.created_by };
+    }
+    // The customer's own address, when the order carries one.
+    if (isRealCustomerAccount(order.customer_email)) {
+        const phoneFirst = phoneLoyaltyKey(order.phone ?? order.customer_phone ?? order.guest_phone);
+        // Phone is the identity the owner chose for loyalty, since most
+        // customers never register. Their email is used only if there is no
+        // usable phone number on the order.
+        if (phoneFirst) return { type: 'phone', key: phoneFirst };
+        return { type: 'email', key: order.customer_email };
     }
     const key = phoneLoyaltyKey(order.phone ?? order.customer_phone ?? order.guest_phone);
     if (key) {
