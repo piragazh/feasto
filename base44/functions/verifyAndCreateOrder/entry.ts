@@ -509,14 +509,14 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
     // Who this order belongs to, so a loyalty reward can only be used by the
     // customer who earned it. Without these keys the ownership check is skipped
     // and anyone holding the code could spend someone else's reward.
-    const orderPhoneDigits = String(orderData?.phone ?? orderData?.customer_phone ?? '').replace(/\D/g, '');
+    const orderPhoneDigits = String(customerPhone || '').replace(/\D/g, '');
     let ukPhone = orderPhoneDigits;
     if (ukPhone.startsWith('00')) ukPhone = ukPhone.slice(2);
     if (ukPhone.startsWith('44') && ukPhone.length >= 11) ukPhone = '0' + ukPhone.slice(2);
     if (ukPhone.length === 10 && ukPhone.startsWith('7')) ukPhone = '0' + ukPhone;
     const customerKeys = [
-        orderData?.created_by && orderData.created_by !== 'anonymous' ? `email:${orderData.created_by}` : null,
-        orderData?.customer_email ? `email:${orderData.customer_email}` : null,
+        customerAccount && customerAccount !== 'anonymous' ? `email:${customerAccount}` : null,
+        customerEmail ? `email:${customerEmail}` : null,
         ukPhone.length >= 9 ? `phone:${ukPhone}` : null,
     ].filter(Boolean);
 
