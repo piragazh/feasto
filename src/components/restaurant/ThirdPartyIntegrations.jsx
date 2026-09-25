@@ -16,7 +16,7 @@ const PLATFORMS = [
         icon: '🚗',
         color: 'bg-black',
         loginUrl: 'https://restaurant.uber.com',
-        helpText: 'Use your Uber Eats Restaurant Manager email and password.',
+        helpText: 'Enter your Uber Eats store ID. You authorise MealDrop on Uber\u2019s own site \u2014 we never ask for or store your marketplace password.',
     },
     {
         id: 'deliveroo',
@@ -24,7 +24,7 @@ const PLATFORMS = [
         icon: '🚲',
         color: 'bg-teal-600',
         loginUrl: 'https://restaurant-hub.deliveroo.com',
-        helpText: 'Use your Deliveroo Restaurant Hub email and password.',
+        helpText: 'Enter your Deliveroo site ID. You authorise MealDrop on Deliveroo\u2019s own site \u2014 we never ask for or store your marketplace password.',
     },
     {
         id: 'just_eat',
@@ -32,13 +32,16 @@ const PLATFORMS = [
         icon: '🍽️',
         color: 'bg-orange-500',
         loginUrl: 'https://partner.just-eat.co.uk',
-        helpText: 'Use your Just Eat Partner Centre email and password.',
+        helpText: 'Just Eat integration requires partner API access and is not available yet. We will never ask for your Just Eat login.',
     },
 ];
 
 export default function ThirdPartyIntegrations({ restaurantId }) {
     const [editingPlatform, setEditingPlatform] = useState(null);
-    const [credentials, setCredentials] = useState({ email: '', password: '' });
+    // Store ID only. This screen used to collect the restaurant's marketplace
+    // email and password - a marketplace login is full account access, so it is
+    // never asked for or stored.
+    const [credentials, setCredentials] = useState({ store_id: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
@@ -58,14 +61,14 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
     });
 
     const openConnect = (platformId) => {
-        setCredentials({ email: '', password: '' });
+        setCredentials({ store_id: '' });
         setShowPassword(false);
         setEditingPlatform(platformId);
     };
 
     const handleSave = async () => {
-        if (!credentials.email || !credentials.password) {
-            toast.error('Please enter your email and password');
+        if (!credentials.store_id) {
+            toast.error('Please enter your store ID');
             return;
         }
         setSaving(true);
@@ -73,8 +76,7 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
             await base44.functions.invoke('saveThirdPartyIntegration', {
                 restaurantId,
                 platform: editingPlatform,
-                email: credentials.email,
-                password: credentials.password,
+                store_id: credentials.store_id,
                 enabled: true,
             });
             toast.success(`${PLATFORMS.find(p => p.id === editingPlatform)?.name} connected`);
