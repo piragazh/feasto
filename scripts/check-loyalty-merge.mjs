@@ -7,6 +7,7 @@
  * applied twice - which would inflate points on every later order.
  */
 import fs from 'node:fs';
+const checksPre = [];
 const src = fs.readFileSync(new URL('../base44/functions/awardLoyaltyPoints/entry.ts', import.meta.url), 'utf8')
   .split('\n').filter(l => !/^import /.test(l)).join('\n');
 
@@ -44,7 +45,23 @@ function world({ account = null, guest = null, signedIn = true } = {}) {
   const find = (key) => db.LoyaltyPoints.find(r => r.user_email === key);
   return { call, db, find, set failAccountCredit(v) { ctl.failAccountCredit = v; } };
 }
-const checks = [];
+// REGRESSION GUARD: online orders are created by a SERVICE account, so keying
+// points by created_by pooled 333 orders' worth of points into one balance while
+// real customers earned nothing. Service accounts must fall through to the phone.
+{
+  const src2 = fs.readFileSync(new URL('../base44/functions/awardLoyaltyPoints/entry.ts', import.meta.url), 'utf8');
+  const a = src2.indexOf('function normalizeUkPhone'), b = src2.indexOf('Deno.serve(');
+  const ident = new Function(src2.slice(a, b) + '\nreturn getLoyaltyIdentifier;')();
+  const service = ident({ created_by: 'service+949a924c@no-reply.base44.com', customer_email: 'c@x.com', phone: '07931729926' });
+  const guest = ident({ created_by: 'anonymous', phone: '07599055393' });
+  const signedIn = ident({ created_by: 'sam@x.com', phone: '07123456789' });
+  console.log(`  ${service?.key === 'phone:07931729926' ? '✓' : '✗ WRONG'}  a service-account order goes to the CUSTOMER'S phone     ${service?.key}`);
+  console.log(`  ${guest?.key === 'phone:07599055393' ? '✓' : '✗ WRONG'}  a guest order goes to their phone                        ${guest?.key}`);
+  console.log(`  ${signedIn?.key === 'sam@x.com' ? '✓' : '✗ WRONG'}  a signed-in customer still uses their account            ${signedIn?.key}`);
+  checksPre.push(service?.key === 'phone:07931729926', guest?.key === 'phone:07599055393', signedIn?.key === 'sam@x.com');
+}
+
+const checks = [...checksPre];
 const check = (label, ok, detail) => { checks.push(ok); console.log(`  ${ok ? '✓' : '✗ WRONG'}  ${label.padEnd(50)} ${detail}`); };
 
 { const w = world({ account: 50, guest: 120 });
