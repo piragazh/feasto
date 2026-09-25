@@ -164,7 +164,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent 
                 hideClose
-                className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-0 flex flex-col max-h-[85vh]`}
+                className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-0 flex flex-col max-h-[85dvh]`}
                 style={{
                     maxWidth: columns === 1 ? '90vw' : columns === 2 ? '95vw' : '98vw'
                 }}

@@ -798,7 +798,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                         </div>
                     </>
                 )}
-                <div className={isPortrait ? `flex-shrink-0 ${cartOpen ? "max-h-[60vh]" : "max-h-[96px]"} overflow-hidden flex flex-col gap-2 transition-[max-height] duration-200` : `${layoutCols.cart} md:row-span-2 min-h-0 overflow-hidden flex flex-col gap-2`}>
+                <div className={isPortrait ? `flex-shrink-0 ${cartOpen ? "max-h-[60dvh]" : "max-h-[96px]"} overflow-hidden flex flex-col gap-2 transition-[max-height] duration-200` : `${layoutCols.cart} md:row-span-2 min-h-0 overflow-hidden flex flex-col gap-2`}>
                     {(orderType === 'phone_collection' || orderType === 'phone_delivery') && (
                         <button
                             onClick={() => setPhoneDialogOpen(true)}

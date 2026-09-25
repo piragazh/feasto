@@ -310,7 +310,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
 
     const stuckDialog = showStuck ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowStuck(false)}>
-            <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-auto p-5" onClick={e => e.stopPropagation()}>
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full max-h-[80dvh] overflow-auto p-5" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-1">
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                         <AlertTriangle className="h-5 w-5 text-red-400" />Orders needing review

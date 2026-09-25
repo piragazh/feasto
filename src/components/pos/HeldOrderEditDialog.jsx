@@ -33,7 +33,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className={`${isDark ? 'bg-[#1a1d27] border-white/[0.06]' : 'bg-white border-gray-200'} max-w-md p-0 flex flex-col max-h-[85vh]`}>
+            <DialogContent className={`${isDark ? 'bg-[#1a1d27] border-white/[0.06]' : 'bg-white border-gray-200'} max-w-md p-0 flex flex-col max-h-[85dvh]`}>
                 <DialogHeader className={`px-4 py-3 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-100'}`}>
                     <DialogTitle className={isDark ? 'text-white' : 'text-gray-900'}>
                         Edit Held Order

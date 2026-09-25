@@ -68,7 +68,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className={`${dlg} max-w-md max-h-[85vh] overflow-y-auto ${showKeyboard ? 'pb-80' : ''}`}>
+            <DialogContent className={`${dlg} max-w-md max-h-[85dvh] overflow-y-auto ${showKeyboard ? 'pb-80' : ''}`}>
                 <DialogHeader>
                     <DialogTitle className={`${labelCls} text-xl`}>Add Custom Item</DialogTitle>
                     <DialogDescription>Enter the item name and price to add to the cart</DialogDescription>

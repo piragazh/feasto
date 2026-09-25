@@ -253,7 +253,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
                 {/* Dialog */}
-                <div className={`relative z-10 w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl border ${borderCls} ${bg} shadow-2xl overflow-hidden`}>
+                <div className={`relative z-10 w-full max-w-xl max-h-[90dvh] flex flex-col rounded-2xl border ${borderCls} ${bg} shadow-2xl overflow-hidden`}>
 
                     {/* Header */}
                     <div className={`flex items-center justify-between px-5 py-4 border-b ${borderCls} flex-shrink-0`}>

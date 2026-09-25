@@ -409,7 +409,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                 {/* Destination picker for a mis-keyed table */}
                 {movingOrder && (
                     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4" onClick={() => setMovingOrder(null)}>
-                        <div className={`${t.panel} border rounded-2xl w-full max-w-md p-5 max-h-[80vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
+                        <div className={`${t.panel} border rounded-2xl w-full max-w-md p-5 max-h-[80dvh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
                             <h3 className={`${t.text} font-bold text-lg mb-1`}>Move to which table?</h3>
                             <p className={`${t.textSub} text-xs mb-4`}>
                                 Moving {movingOrder.items?.length || 0} item{(movingOrder.items?.length || 0) !== 1 ? 's' : ''} from {viewingTable.table_number}

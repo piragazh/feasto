@@ -87,7 +87,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-bold flex items-center gap-2">
                         <Scissors className="h-5 w-5" />
