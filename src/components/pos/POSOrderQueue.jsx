@@ -49,7 +49,12 @@ function SourceBadge({ order }) {
     } else if (src === 'qr') {
         Icon = QrCode; label = 'Table QR order'; cls = 'bg-teal-500/15 text-teal-300 border-teal-500/30';
     } else if (src === 'third_party') {
-        Icon = Truck; label = 'Third-party platform'; cls = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+        // Name the platform. On a busy pass "Uber Eats" tells staff which bag and
+        // which courier; "third-party" tells them nothing useful.
+        const PLATFORMS = { uber_eats: 'Uber Eats', deliveroo: 'Deliveroo', just_eat: 'Just Eat' };
+        Icon = Truck;
+        label = PLATFORMS[order.third_party_platform] || 'Third-party platform';
+        cls = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
     } else if (type === 'dine_in') {
         Icon = UtensilsCrossed; label = 'Dine in'; cls = 'bg-teal-500/15 text-teal-300 border-teal-500/30';
     } else if (type === 'delivery') {
