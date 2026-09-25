@@ -82,13 +82,11 @@ Deno.serve(async (req) => {
 
         if (!matched) {
             console.error(`[UBER] UNROUTED ORDER uber_order_id=${uberOrderId} store_id=${storeId || '(none supplied)'} — no restaurant has this store id in its Uber Eats integration. Order NOT created; Uber will retry.`);
-            try {
-                await base44.asServiceRole.entities.DashboardActivity.create({
-                    activity_type: 'error',
-                    title: 'Uber Eats order could not be routed',
-                    description: `An Uber Eats order arrived for store id "${storeId || 'unknown'}" but no restaurant is set up with it. Check the store id in Third-Party Integrations. The order has NOT been accepted.`,
-                });
-            } catch { /* alerting is best effort - the 5xx is what protects the order */ }
+            // NOTE: no alert is raised here yet - this app has no general
+            // operator-alert entity (DashboardActivity tracks presence, not events).
+            // The 503 is what protects the order: Uber retries rather than treating
+            // it as delivered. Worth wiring to a real alert channel so a mistyped
+            // store id is noticed in minutes rather than by a missing order.
             return Response.json({
                 error: 'Store not recognised',
                 code: 'STORE_NOT_MAPPED',
