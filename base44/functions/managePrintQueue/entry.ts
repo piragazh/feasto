@@ -4,6 +4,25 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 const RETRY_DELAYS_SECONDS = [30, 120, 300];
 const MAX_RETRIES = RETRY_DELAYS_SECONDS.length;
 
+// A ticket older than this is never printed automatically.
+//
+// A printer that is offline for an hour used to come back and print every queued
+// ticket, OLDEST FIRST - so current customers waited behind stale tickets and the
+// kitchen got a pile of paper for food already served. Past this age a job is
+// failed as 'expired' instead. Staff can still reprint it deliberately with
+// Retry, which gives it a fresh window.
+const MAX_JOB_AGE_MINUTES = 20;
+
+/** When a job stops being worth printing. */
+function jobExpiry(job) {
+    if (job?.expires_at) return new Date(job.expires_at).getTime();
+    // Jobs created before expires_at existed: age from creation. created_date is
+    // UTC without a zone marker on this platform, so the Z is added explicitly.
+    const created = String(job?.created_date || '');
+    const t = new Date(/Z|[+-]\d\d:?\d\d$/.test(created) ? created : created + 'Z').getTime();
+    return Number.isFinite(t) ? t + MAX_JOB_AGE_MINUTES * 60 * 1000 : Infinity;
+}
+
 // Helper: authenticate Android agent via API key (used by agent-facing actions)
 function authenticateApiKey(req, body) {
     const apiKey = req.headers.get('x-api-key') || body.api_key;
@@ -77,7 +96,27 @@ Deno.serve(async (req) => {
             for (const j of stuckJobs) {
                 const jobDate = j.updated_date || j.created_date;
                 if (jobDate && jobDate < stuckCutoff) {
-                    await base44.asServiceRole.entities.PrintJob.update(j.id, { status: 'pending', agent_id: null });
+                    // A job still 'processing' after 2 minutes means the agent never
+                    // reported back - typically the connection to the printer HUNG
+                    // rather than failing cleanly (a changed IP does exactly this).
+                    //
+                    // It used to go back to 'pending' WITHOUT counting as an attempt,
+                    // so it cycled processing -> pending -> processing forever and the
+                    // retry limit never triggered: 300+ jobs accumulated at one site.
+                    // It now counts, and gives up like any other failure.
+                    const attempts = (j.retry_count || 0) + 1;
+                    if (attempts > MAX_RETRIES) {
+                        await base44.asServiceRole.entities.PrintJob.update(j.id, {
+                            status: 'failed', agent_id: null, retry_count: attempts, next_retry_at: null,
+                            completed_at: new Date().toISOString(),
+                            error_message: `Printer did not respond after ${MAX_RETRIES} attempts - check the printer is on and its IP address is correct.`,
+                        });
+                    } else {
+                        await base44.asServiceRole.entities.PrintJob.update(j.id, {
+                            status: 'pending', agent_id: null, retry_count: attempts,
+                            error_message: `Printer did not respond (attempt ${attempts} of ${MAX_RETRIES}).`,
+                        });
+                    }
                 }
             }
 
@@ -87,12 +126,29 @@ Deno.serve(async (req) => {
                 status: 'pending',
             });
 
+            // Expire stale jobs rather than printing them late.
+            const nowMs = now.getTime();
+            const live = [];
+            for (const j of pendingJobs) {
+                if (jobExpiry(j) < nowMs) {
+                    await base44.asServiceRole.entities.PrintJob.update(j.id, {
+                        status: 'failed', agent_id: null, next_retry_at: null,
+                        completed_at: new Date().toISOString(),
+                        error_message: `Expired - not printed because it was more than ${MAX_JOB_AGE_MINUTES} minutes old. Use Retry to print it anyway.`,
+                    });
+                } else {
+                    live.push(j);
+                }
+            }
+
             // Filter out jobs that are waiting for retry backoff
             const nowIso = now.toISOString();
-            const readyJobs = pendingJobs.filter(j => !j.next_retry_at || j.next_retry_at <= nowIso);
+            const readyJobs = live.filter(j => !j.next_retry_at || j.next_retry_at <= nowIso);
 
-            // Sort by created_date ascending (oldest first)
-            readyJobs.sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+            // NEWEST first. After an outage the current order is the one a customer
+            // is standing at the counter waiting for; oldest-first made them wait
+            // behind every backlogged ticket.
+            readyJobs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
             const pendingJob = readyJobs[0];
             if (!pendingJob) return Response.json({ job: null });
