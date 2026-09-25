@@ -36,7 +36,7 @@ export default function POSCategoryPanel({ categories, selectedCategory, onSelec
                             title={label}
                             className={`relative w-full text-left pl-4 pr-3 min-h-[48px] py-2.5 ${POS_RADIUS.control} ${POS_TEXT.primaryBold} ${POS_TRANSITION} ${POS_FOCUS} active:scale-[0.98] flex items-center justify-between gap-2 ${
                                 active
-                                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25'
+                                    ? 'bg-accent-500 text-white shadow-lg shadow-accent-500/25'
                                     : t.catBtn
                             }`}
                         >

@@ -67,7 +67,7 @@ export default function POSSoundSettings() {
                 <div className={settings.enabled ? '' : 'opacity-40 pointer-events-none'}>
                     <div className="flex items-center justify-between mb-2">
                         <Label className="text-sm font-semibold">Volume</Label>
-                        <span className="text-sm font-bold tabular-nums text-orange-600">{volumePct}%</span>
+                        <span className="text-sm font-bold tabular-nums text-accent-600">{volumePct}%</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <VolumeX className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -80,7 +80,7 @@ export default function POSSoundSettings() {
                             onChange={(e) => update({ volume: Number(e.target.value) / 100 })}
                             onMouseUp={() => playPreview()}
                             onTouchEnd={() => playPreview()}
-                            className="flex-1 h-2 accent-orange-500 cursor-pointer"
+                            className="flex-1 h-2 accent-accent-500 cursor-pointer"
                             aria-label="Sound volume"
                         />
                         <Volume2 className="h-4 w-4 text-gray-500 flex-shrink-0" />

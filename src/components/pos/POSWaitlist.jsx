@@ -106,7 +106,7 @@ export default function POSWaitlist({ posTheme = 'dark', restaurantId = null }) 
                     </div>
                     <Button
                         onClick={addToWaitlist}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-10"
+                        className="w-full bg-accent-500 hover:bg-accent-600 text-white font-bold h-10"
                     >
                         Add to Waitlist
                     </Button>

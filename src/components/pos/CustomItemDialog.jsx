@@ -86,7 +86,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                                         key={cat}
                                         onClick={() => setActiveTab(cat)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                            currentTab === cat ? 'bg-orange-500 text-white' : inactTabCls
+                                            currentTab === cat ? 'bg-accent-500 text-white' : inactTabCls
                                         }`}
                                     >
                                         {cat}
@@ -107,7 +107,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                                 >
                                     <div className="text-left w-full">
                                         <div className="text-sm font-medium">{item.name}</div>
-                                        <div className="text-xs text-orange-400">
+                                        <div className="text-xs text-accent-400">
                                             £{typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
                                         </div>
                                     </div>
@@ -158,7 +158,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                     <Button
                         onClick={handleAdd}
                         disabled={!itemName.trim() || !itemPrice || isNaN(parseFloat(itemPrice)) || parseFloat(itemPrice) <= 0}
-                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50"
+                        className="flex-1 bg-accent-500 hover:bg-accent-600 text-white disabled:opacity-50"
                     >
                         Add to Cart
                     </Button>

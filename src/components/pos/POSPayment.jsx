@@ -88,8 +88,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         // still required" (outstanding balance); green is reserved solely for
         // change owed back to the customer, which is the one thing a cashier
         // must not miss.
-        totalBox: isDark ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-orange-50 border border-orange-200',
-        totalTxt: isDark ? 'text-orange-300' : 'text-orange-700',
+        totalBox: isDark ? 'bg-accent-500/10 border border-accent-500/30' : 'bg-accent-50 border border-accent-200',
+        totalTxt: isDark ? 'text-accent-300' : 'text-accent-700',
         totalAmt: isDark ? 'text-white' : 'text-gray-900',
         owedBox:  isDark ? 'bg-amber-500/10 border border-amber-500/40' : 'bg-amber-50 border border-amber-300',
         owedTxt:  isDark ? 'text-amber-300' : 'text-amber-700',
@@ -100,11 +100,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         // Segmented control: a recessed track with one raised active segment, so
         // the selected tender is unambiguous at a glance.
         segTrack:  isDark ? 'bg-black/30 border border-white/[0.06]' : 'bg-gray-100 border border-gray-200',
-        segActive: isDark ? 'bg-orange-500 text-white shadow' : 'bg-orange-500 text-white shadow',
+        segActive: isDark ? 'bg-accent-500 text-white shadow' : 'bg-accent-500 text-white shadow',
         segIdle:   isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-white/5' : 'text-gray-500 hover:text-gray-800 hover:bg-white',
-        cashBtn:  'bg-orange-500 hover:bg-orange-400 text-white',
+        cashBtn:  'bg-accent-500 hover:bg-accent-400 text-white',
         // Primary actions use the accent so they follow the restaurant palette.
-        cardBtn:  'bg-orange-500 hover:bg-orange-400 text-white',
+        cardBtn:  'bg-accent-500 hover:bg-accent-400 text-white',
         cardBtn2: isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200',
     };
     // Local discount state — initialised from prop (set in cart), can be changed on payment screen too
@@ -678,7 +678,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         </div>
                     ) : discount ? (
                         <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-white/5 border-white/[0.08] text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
-                            <AlertCircle className="h-3.5 w-3.5 shrink-0 text-orange-400" />
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0 text-accent-400" />
                             <span>Manual discount applied — remove it to add a coupon</span>
                         </div>
                     ) : isOffline ? (
@@ -691,8 +691,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             onClick={() => setCouponDialogOpen(true)}
                             className={`w-full flex items-center justify-center gap-2 ${POS_TOUCH.control} rounded-xl text-xs font-semibold border transition-colors ${
                                 isDark
-                                    ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-400 hover:text-orange-400'
-                                    : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-orange-500'
+                                    ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-400 hover:text-accent-400'
+                                    : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-accent-500'
                             }`}
                         >
                             <Tag className="h-3.5 w-3.5" />
@@ -782,7 +782,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                                 disabled={payments.length > 0}
                                                 onClick={() => setTipAmount(value)}
                                                 className={`h-12 rounded-xl text-sm font-bold transition-colors disabled:opacity-40 ${
-                                                    selected ? 'bg-orange-500 text-white' : t.inactBtn
+                                                    selected ? 'bg-accent-500 text-white' : t.inactBtn
                                                 }`}
                                             >
                                                 {pct === 0 ? 'No tip' : `${pct}%`}
@@ -914,7 +914,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <AlertDialogDescription className={t.dialogDesc}>
                             Process cash payment of £{numericInput.toFixed(2)}?
                             {numericInput > remaining + 0.001 && (
-                                <span className="block mt-1 font-semibold text-orange-400">
+                                <span className="block mt-1 font-semibold text-accent-400">
                                     Change due: £{(numericInput - remaining).toFixed(2)}
                                 </span>
                             )}
@@ -934,7 +934,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 <AlertDialogContent className={`${t.dialog} border`}>
                     <AlertDialogHeader>
                         <AlertDialogTitle className={`${t.dialogTxt} flex items-center gap-2`}>
-                            <AlertCircle className="h-5 w-5 text-orange-400" />
+                            <AlertCircle className="h-5 w-5 text-accent-400" />
                             Cash Under Total
                         </AlertDialogTitle>
                         <AlertDialogDescription className={t.dialogDesc}>
@@ -943,7 +943,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Go Back</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { setShowCashUnderConfirm(false); addPayment('cash', numericInput); }} className="bg-orange-500 hover:bg-orange-600 text-white">
+                        <AlertDialogAction onClick={() => { setShowCashUnderConfirm(false); addPayment('cash', numericInput); }} className="bg-accent-500 hover:bg-accent-600 text-white">
                             Accept Partial
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -976,7 +976,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             a distinct "card machine is working" state, not a
                             primary action. */}
                         <AlertDialogAction onClick={processCard} disabled={isProcessing}
-                            className="bg-orange-500 hover:bg-orange-400 text-white">
+                            className="bg-accent-500 hover:bg-accent-400 text-white">
                             {hasConfiguredTerminal ? `Send £${(numericInput > 0 ? numericInput : remaining).toFixed(2)} to Terminal` : (isProcessing ? 'Processing...' : 'Confirm')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -1087,7 +1087,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <Button onClick={() => { setTerminalStep(null); setActiveMethod(null); }} variant="outline" className={`flex-1 ${t.cancelDlg}`}>
                             Back to Methods
                         </Button>
-                        <Button onClick={handleTerminalRetry} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">
+                        <Button onClick={handleTerminalRetry} className="flex-1 bg-accent-500 hover:bg-accent-600 text-white">
                             Retry
                         </Button>
                     </AlertDialogFooter>
@@ -1121,7 +1121,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             </Button>
                             <Button
                                 onClick={() => { setCompletedOrder(null); onPaymentComplete(); }}
-                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white"
+                                className="w-full h-11 bg-accent-500 hover:bg-accent-600 text-white"
                             >
                                 New Order
                             </Button>

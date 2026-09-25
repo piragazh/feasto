@@ -42,7 +42,7 @@ export default function TableSelectionDialog({ open, onClose, tables, onSelectTa
                                     }}
                                     className={`h-20 text-base font-bold transition-all ${
                                         selectedTable?.id === table.id
-                                            ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                                            ? 'bg-accent-500 hover:bg-accent-600 text-white'
                                             : 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600'
                                     }`}
                                 >

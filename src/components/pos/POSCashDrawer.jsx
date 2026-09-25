@@ -139,7 +139,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                                 setResult(d.session);
                                 toast.success('Variance signed off');
                             })}
-                            className="h-12 w-full rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold disabled:opacity-40">
+                            className="h-12 w-full rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-bold disabled:opacity-40">
                             Manager sign-off
                         </button>
                         <p className={`${t.sub} text-[11px]`}>
@@ -191,7 +191,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                         qc.invalidateQueries({ queryKey: ['cash-session', restaurantId, terminal] });
                         toast.success(`Till ${terminal} opened`);
                     })}
-                    className="h-14 w-full rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-base disabled:opacity-40">
+                    className="h-14 w-full rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-bold text-base disabled:opacity-40">
                     Open till with £{counted.toFixed(2)}
                 </button>
             </div>
@@ -235,7 +235,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                     <button onClick={() => setMode('paid_out')} className={`h-14 rounded-xl text-sm font-semibold flex flex-col items-center justify-center gap-0.5 ${t.btn}`}>
                         <ArrowUpCircle className="h-5 w-5" /> Paid out
                     </button>
-                    <button onClick={() => setMode('close')} className="h-14 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-600 text-white flex flex-col items-center justify-center gap-0.5">
+                    <button onClick={() => setMode('close')} className="h-14 rounded-xl text-sm font-bold bg-accent-500 hover:bg-accent-600 text-white flex flex-col items-center justify-center gap-0.5">
                         <Lock className="h-5 w-5" /> Close till
                     </button>
                 </div>
@@ -260,7 +260,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                                 qc.invalidateQueries({ queryKey: ['cash-session', restaurantId, terminal] });
                                 toast.success('Recorded');
                             })}
-                            className="h-12 rounded-xl font-bold bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40">
+                            className="h-12 rounded-xl font-bold bg-accent-500 hover:bg-accent-600 text-white disabled:opacity-40">
                             Record
                         </button>
                     </div>
@@ -286,7 +286,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                                 setMode(null);
                                 setResult(d.session);
                             })}
-                            className="h-12 rounded-xl font-bold bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40">
+                            className="h-12 rounded-xl font-bold bg-accent-500 hover:bg-accent-600 text-white disabled:opacity-40">
                             Submit count
                         </button>
                     </div>

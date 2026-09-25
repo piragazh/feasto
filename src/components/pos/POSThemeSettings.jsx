@@ -83,7 +83,7 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
                                 onClick={() => chooseMode(key)}
                                 className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
                                     mode === key
-                                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                        ? 'border-accent-500 bg-accent-50 text-accent-700'
                                         : 'border-gray-200 hover:border-gray-300 text-gray-600'
                                 }`}
                             >
@@ -115,7 +115,7 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
                                 onClick={() => chooseDensity(key)}
                                 className={`flex flex-col items-center gap-0.5 p-3 rounded-xl border-2 transition-all ${
                                     density === key
-                                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                        ? 'border-accent-500 bg-accent-50 text-accent-700'
                                         : 'border-gray-200 hover:border-gray-300 text-gray-600'
                                 }`}
                             >
@@ -153,9 +153,9 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
                                     )}
                                     {/* Live preview of the ramp this palette produces */}
                                     <div className="flex gap-1" style={paletteStyle(key)}>
-                                        <span className="h-7 w-7 rounded-lg bg-orange-500" />
-                                        <span className="h-7 w-4 rounded-lg bg-orange-400" />
-                                        <span className="h-7 w-2.5 rounded-lg bg-orange-200" />
+                                        <span className="h-7 w-7 rounded-lg bg-accent-500" />
+                                        <span className="h-7 w-4 rounded-lg bg-accent-400" />
+                                        <span className="h-7 w-2.5 rounded-lg bg-accent-200" />
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold text-gray-800">{palette.label}</p>

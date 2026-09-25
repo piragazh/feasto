@@ -90,7 +90,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                                             <p className={`${t.textSub} text-[11px]`}>{formatTime(held.heldAt)}</p>
                                         </div>
                                     </div>
-                                    <span className={`text-xs font-bold text-orange-500 ml-2 flex-shrink-0`}>
+                                    <span className={`text-xs font-bold text-accent-500 ml-2 flex-shrink-0`}>
                                         £{held.total.toFixed(2)}
                                     </span>
                                 </div>
@@ -111,7 +111,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => { onRecall(held); onClose(); }}
-                                        className="flex-1 h-8 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                                        className="flex-1 h-8 bg-accent-500 hover:bg-accent-600 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                                     >
                                         <RotateCcw className="h-3 w-3" />
                                         Recall

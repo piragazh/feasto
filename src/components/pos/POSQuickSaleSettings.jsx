@@ -153,7 +153,7 @@ export default function POSQuickSaleSettings({ restaurantId, restaurant }) {
                         type="button"
                         onClick={() => save(configured)}
                         disabled={saving}
-                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                        className="bg-accent-500 hover:bg-accent-600 text-white"
                     >
                         {saving ? 'Saving…' : 'Save Quick Sale Buttons'}
                     </Button>

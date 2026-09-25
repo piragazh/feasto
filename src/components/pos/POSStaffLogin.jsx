@@ -13,14 +13,14 @@ async function computePinHash(staffId, pin, restaurantId) {
 const ROLES = {
     waiter:        { label: 'Waiter',        color: 'bg-blue-500' },
     cashier:       { label: 'Cashier',       color: 'bg-green-500' },
-    kitchen_staff: { label: 'Kitchen Staff', color: 'bg-orange-500' },
+    kitchen_staff: { label: 'Kitchen Staff', color: 'bg-accent-500' },
     manager:       { label: 'Manager',       color: 'bg-purple-500' },
 };
 
 function PinPad({ onDigit, onBackspace, onSubmit, pin, isDark }) {
     const t = {
         btn:    isDark ? 'bg-white/5 hover:bg-white/10 border border-white/[0.08] text-white' : 'bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-900',
-        submit: 'bg-orange-500 hover:bg-orange-600 text-white border border-orange-500',
+        submit: 'bg-accent-500 hover:bg-accent-600 text-white border border-accent-500',
         del:    isDark ? 'bg-white/5 hover:bg-red-500/20 border border-white/[0.08] text-gray-400 hover:text-red-400' : 'bg-gray-100 hover:bg-red-50 border border-gray-200 text-gray-500 hover:text-red-500',
     };
     const digits = ['1','2','3','4','5','6','7','8','9'];
@@ -31,7 +31,7 @@ function PinPad({ onDigit, onBackspace, onSubmit, pin, isDark }) {
                 {[0,1,2,3].map(i => (
                     <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${
                         i < pin.length
-                            ? 'bg-orange-500 border-orange-500 scale-110'
+                            ? 'bg-accent-500 border-accent-500 scale-110'
                             : isDark ? 'border-gray-600' : 'border-gray-300'
                     }`} />
                 ))}
@@ -248,9 +248,9 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
         text:    isDark ? 'text-white' : 'text-gray-900',
         sub:     isDark ? 'text-gray-400' : 'text-gray-500',
         staffCard: isDark
-            ? 'bg-[#1a1d27] border-white/[0.06] hover:border-orange-500/50 text-white'
-            : 'bg-white border-gray-200 hover:border-orange-400 text-gray-900',
-        staffCardSelected: 'border-orange-500 bg-orange-500/10',
+            ? 'bg-[#1a1d27] border-white/[0.06] hover:border-accent-500/50 text-white'
+            : 'bg-white border-gray-200 hover:border-accent-400 text-gray-900',
+        staffCardSelected: 'border-accent-500 bg-accent-500/10',
         skip:    isDark ? 'text-gray-600 hover:text-gray-400' : 'text-gray-400 hover:text-gray-600',
         // Keypad keys for the staff-number login. Large and high-contrast: this
         // is tapped dozens of times a shift, often in a hurry.
@@ -266,7 +266,7 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
                 {restaurant?.logo_url ? (
                     <img src={restaurant.logo_url} alt={restaurant.name} className="w-16 h-16 rounded-2xl object-cover mx-auto mb-3" />
                 ) : (
-                    <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/30">
+                    <div className="w-16 h-16 bg-accent-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-accent-500/30">
                         <UtensilsCrossed className="h-8 w-8 text-white" />
                     </div>
                 )}
@@ -347,7 +347,7 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
                                 if (numberStep === 'number') { setNumberStep('pin'); setError(''); }
                                 else verifyByNumber(pin);
                             }}
-                            className="h-16 rounded-2xl text-base font-bold bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white disabled:opacity-40"
+                            className="h-16 rounded-2xl text-base font-bold bg-accent-500 hover:bg-accent-600 active:bg-accent-700 text-white disabled:opacity-40"
                         >
                             {verifying ? '…' : numberStep === 'number' ? 'Next' : 'Enter'}
                         </button>
@@ -425,7 +425,7 @@ export default function POSStaffLogin({ staffList, restaurant, isDark, onLogin, 
                         <div className="text-center space-y-3 w-full">
                             <p className={`${t.sub} text-sm`}>No PIN set — tap to continue</p>
                             <button onClick={() => onLogin(selected)}
-                                className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-all active:scale-95">
+                                className="w-full h-12 bg-accent-500 hover:bg-accent-600 text-white font-bold rounded-xl transition-all active:scale-95">
                                 Log In
                             </button>
                         </div>

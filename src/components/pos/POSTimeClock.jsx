@@ -78,7 +78,7 @@ export default function POSTimeClock({ restaurantId, activeStaffMember, posTheme
         <div className={`${t.panel} border rounded-2xl p-4 space-y-3`}>
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
-                    <Clock className="h-5 w-5 text-orange-400 flex-shrink-0" />
+                    <Clock className="h-5 w-5 text-accent-400 flex-shrink-0" />
                     <div className="min-w-0">
                         <p className={`${t.text} font-bold truncate`}>{activeStaffMember.full_name}</p>
                         <p className={`${t.sub} text-xs`}>
@@ -94,7 +94,7 @@ export default function POSTimeClock({ restaurantId, activeStaffMember, posTheme
 
             {!isLoading && !entry && (
                 <button disabled={busy} onClick={() => act('clock_in', 'Clocked in')}
-                    className="h-14 w-full rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-40">
+                    className="h-14 w-full rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-40">
                     <LogIn className="h-5 w-5" /> Clock in
                 </button>
             )}
@@ -113,7 +113,7 @@ export default function POSTimeClock({ restaurantId, activeStaffMember, posTheme
                         </button>
                     )}
                     <button disabled={busy} onClick={() => act('clock_out', 'Clocked out')}
-                        className="h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-40">
+                        className="h-14 rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-40">
                         <LogOut className="h-5 w-5" /> Clock out
                     </button>
                 </div>

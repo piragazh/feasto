@@ -32,7 +32,7 @@ export default function POSConfirmDialog({
         : 'border-gray-200 text-gray-600 hover:bg-gray-50';
     const confirmCls = destructive
         ? 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white'
-        : 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white';
+        : 'bg-accent-500 hover:bg-accent-600 active:bg-accent-700 text-white';
 
     return (
         <div

@@ -118,8 +118,8 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
     const subtext = isDark ? 'text-gray-400' : 'text-gray-500';
     const divider = isDark ? 'border-white/[0.06]' : 'border-gray-200';
     const sectionHead = isDark ? 'text-gray-300 bg-white/[0.04]' : 'text-gray-700 bg-gray-50';
-    const tileUnsel = isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-orange-500/40' : 'bg-gray-50 border-gray-200 hover:border-orange-400';
-    const tileSel = 'bg-orange-500 border-orange-500 text-white';
+    const tileUnsel = isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400';
+    const tileSel = 'bg-accent-500 border-accent-500 text-white';
 
     if (!item?.customization_options?.length) return null;
 
@@ -136,7 +136,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                 <div className={`flex items-center justify-between px-5 py-4 border-b ${divider} flex-shrink-0`}>
                     <div>
                         <p className={`font-bold text-lg ${text}`}>{item.name}</p>
-                        <p className="text-orange-400 font-bold text-xl mt-0.5">£{currentPrice.toFixed(2)}</p>
+                        <p className="text-accent-400 font-bold text-xl mt-0.5">£{currentPrice.toFixed(2)}</p>
                     </div>
                     <button onClick={onClose} className={`h-10 w-10 rounded-full flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} aria-label="Close">
                         <X className="h-5 w-5" />
@@ -164,7 +164,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                                                 className={`rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-1 min-h-[80px] transition-all active:scale-95 ${isSelected ? tileSel : `${tileUnsel} ${text}`}`}
                                             >
                                                 <span className="font-semibold text-base text-center">{opt.label}</span>
-                                                {optPrice(opt) > 0 && <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                                {optPrice(opt) > 0 && <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
                                                 {isSelected && <Check className="h-5 w-5" />}
                                             </button>
                                         );
@@ -185,7 +185,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                                                 className={`rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-1 min-h-[80px] transition-all active:scale-95 ${isSelected ? tileSel : `${tileUnsel} ${text}`}`}
                                             >
                                                 <span className="font-semibold text-base text-center">{opt.label}</span>
-                                                {optPrice(opt) > 0 && <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                                {optPrice(opt) > 0 && <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
                                                 {isSelected && <Check className="h-5 w-5" />}
                                             </button>
                                         );
@@ -205,7 +205,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                                                 className={`rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-1 min-h-[80px] transition-all active:scale-95 ${isSelected ? tileSel : `${tileUnsel} ${text}`}`}
                                             >
                                                 <span className="font-semibold text-base text-center">{opt.label}</span>
-                                                {optPrice(opt) > 0 && <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                                {optPrice(opt) > 0 && <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
                                                 {isSelected && <Check className="h-5 w-5" />}
                                             </button>
                                         );
@@ -235,7 +235,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                     <Button onClick={onClose} className={`flex-1 h-14 font-bold text-base rounded-2xl ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'}`}>
                         Cancel
                     </Button>
-                    <Button onClick={handleConfirm} className="flex-[3] h-14 font-bold text-base rounded-2xl bg-orange-500 hover:bg-orange-400 text-white flex items-center justify-center gap-2">
+                    <Button onClick={handleConfirm} className="flex-[3] h-14 font-bold text-base rounded-2xl bg-accent-500 hover:bg-accent-400 text-white flex items-center justify-center gap-2">
                         <Check className="h-5 w-5" />
                         {isEditing ? 'Update Item' : 'Add to Cart'} — £{currentPrice.toFixed(2)}
                     </Button>

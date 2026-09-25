@@ -168,7 +168,7 @@ export default function ManagerOverrideDialog({
                         0
                     </button>
                     <button onClick={() => submit()} disabled={checking || value.length === 0}
-                        className="h-14 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white disabled:opacity-40">
+                        className="h-14 rounded-xl text-sm font-bold bg-accent-500 hover:bg-accent-600 active:bg-accent-700 text-white disabled:opacity-40">
                         {checking ? '…' : step === 'number' ? 'Next' : 'OK'}
                     </button>
                 </div>

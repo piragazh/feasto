@@ -141,7 +141,7 @@ export default function POSExceptionsReport({ restaurantId, posTheme = 'dark' })
                     {Object.entries(RANGES).map(([key, r]) => (
                         <button key={key} role="radio" aria-checked={range === key}
                             onClick={() => setRange(key)}
-                            className={`h-11 px-4 rounded-xl text-sm font-semibold ${range === key ? 'bg-orange-500 text-white' : t.chip}`}>
+                            className={`h-11 px-4 rounded-xl text-sm font-semibold ${range === key ? 'bg-accent-500 text-white' : t.chip}`}>
                             {r.label}
                         </button>
                     ))}
@@ -205,7 +205,7 @@ export default function POSExceptionsReport({ restaurantId, posTheme = 'dark' })
             <div className={`${t.panel} border rounded-2xl p-4`}>
                 <div className="flex flex-wrap gap-1.5 mb-3" role="radiogroup" aria-label="Exception type">
                     <button role="radio" aria-checked={typeFilter === 'all'} onClick={() => setTypeFilter('all')}
-                        className={`h-11 px-3 rounded-xl text-xs font-semibold ${typeFilter === 'all' ? 'bg-orange-500 text-white' : t.chip}`}>
+                        className={`h-11 px-3 rounded-xl text-xs font-semibold ${typeFilter === 'all' ? 'bg-accent-500 text-white' : t.chip}`}>
                         All ({inRange.length})
                     </button>
                     {Object.entries(TYPES).map(([key, cfg]) => {
@@ -213,7 +213,7 @@ export default function POSExceptionsReport({ restaurantId, posTheme = 'dark' })
                         if (!n) return null;
                         return (
                             <button key={key} role="radio" aria-checked={typeFilter === key} onClick={() => setTypeFilter(key)}
-                                className={`h-11 px-3 rounded-xl text-xs font-semibold ${typeFilter === key ? 'bg-orange-500 text-white' : t.chip}`}>
+                                className={`h-11 px-3 rounded-xl text-xs font-semibold ${typeFilter === key ? 'bg-accent-500 text-white' : t.chip}`}>
                                 {cfg.label} ({n})
                             </button>
                         );

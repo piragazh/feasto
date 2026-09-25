@@ -164,7 +164,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                 <div className={`flex items-center justify-between px-6 py-4 border-b ${divider} flex-shrink-0`}>
                     <div>
                         <p className={`font-bold text-xl ${text}`}>{item.name}</p>
-                        <p className="text-orange-400 font-bold text-2xl">£{currentPrice.toFixed(2)}</p>
+                        <p className="text-accent-400 font-bold text-2xl">£{currentPrice.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <span className={`text-sm font-semibold ${subtext}`}>{step + 1} / {steps.length}</span>
@@ -176,7 +176,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
 
                 {/* Progress bar */}
                 <div className={`h-1.5 ${isDark ? 'bg-white/10' : 'bg-gray-200'} flex-shrink-0`}>
-                    <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
+                    <div className="h-full bg-accent-500 transition-all duration-300" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
                 </div>
 
                 {/* Step title */}
@@ -196,12 +196,12 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                 return (
                                     <button key={opt.label}
                                         onClick={() => toggleMealUpgrade(isMealOpt)}
-                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-orange-500 border-orange-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-orange-500/40' : 'bg-gray-50 border-gray-200 hover:border-orange-400'}`}
+                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">
-                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
-                                            {isSelected && <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center"><Check className="h-6 w-6 text-orange-500" /></div>}
+                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                            {isSelected && <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center"><Check className="h-6 w-6 text-accent-500" /></div>}
                                         </div>
                                     </button>
                                 );
@@ -219,12 +219,12 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                 return (
                                     <button key={opt.label}
                                         onClick={() => toggleSingle(currentStep.name, opt.label, currentStep._isMealSub)}
-                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-orange-500 border-orange-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-orange-500/40' : 'bg-gray-50 border-gray-200 hover:border-orange-400'}`}
+                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">
-                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
-                                            {isSelected && <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center"><Check className="h-6 w-6 text-orange-500" /></div>}
+                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                            {isSelected && <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center"><Check className="h-6 w-6 text-accent-500" /></div>}
                                         </div>
                                     </button>
                                 );
@@ -241,13 +241,13 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                 return (
                                     <button key={opt.label}
                                         onClick={() => toggleMultiple(currentStep.name, opt.label, currentStep._isMealSub)}
-                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-orange-500 border-orange-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-orange-500/40' : 'bg-gray-50 border-gray-200 hover:border-orange-400'}`}
+                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">
-                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
                                             <div className={`h-10 w-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-white border-white' : isDark ? 'border-white/30' : 'border-gray-300'}`}>
-                                                {isSelected && <Check className="h-6 w-6 text-orange-500" />}
+                                                {isSelected && <Check className="h-6 w-6 text-accent-500" />}
                                             </div>
                                         </div>
                                     </button>
@@ -282,7 +282,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                             Cancel
                         </Button>
                     )}
-                    <Button onClick={handleNext} className={`flex-[4] h-16 font-bold text-xl rounded-2xl flex items-center justify-center gap-3 bg-orange-500 hover:bg-orange-400 text-white`}>
+                    <Button onClick={handleNext} className={`flex-[4] h-16 font-bold text-xl rounded-2xl flex items-center justify-center gap-3 bg-accent-500 hover:bg-accent-400 text-white`}>
                         {isLastStep ? (<><Check className="h-6 w-6" />{isEditing ? 'Update Item' : 'Add to Cart'} — £{currentPrice.toFixed(2)}</>) : currentStep?.type === 'instructions' ? (<>Skip / Next <ChevronRight className="h-6 w-6" /></>) : (<>Next <ChevronRight className="h-6 w-6" /></>)}
                     </Button>
                 </div>

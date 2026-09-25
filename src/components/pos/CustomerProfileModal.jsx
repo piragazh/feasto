@@ -94,7 +94,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
     const border = isDark ? 'border-white/[0.08]' : 'border-gray-200';
     const text = isDark ? 'text-white' : 'text-gray-900';
     const textSub = isDark ? 'text-gray-400' : 'text-gray-500';
-    const inputCls = `w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors ${isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-orange-500/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'}`;
+    const inputCls = `w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors ${isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-accent-500/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-accent-400'}`;
     const labelCls = `text-xs font-semibold mb-1 block ${textSub}`;
     const tabCls = (tab) => `flex-1 py-2 text-xs font-semibold transition-colors rounded-lg ${activeTab === tab ? (isDark ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-800') : textSub}`;
 
@@ -104,8 +104,8 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                 {/* Header */}
                 <div className={`flex items-center justify-between px-5 py-4 border-b ${border}`}>
                     <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDark ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
-                            <User className="h-5 w-5 text-orange-500" />
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-500/10' : 'bg-accent-50'}`}>
+                            <User className="h-5 w-5 text-accent-500" />
                         </div>
                         <div>
                             <p className={`font-bold text-sm ${text}`}>{customer.full_name}</p>
@@ -174,18 +174,18 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                 <p className={`text-xs text-center py-4 ${textSub}`}>No saved addresses yet</p>
                             )}
                             {form.saved_addresses.map((addr, i) => (
-                                <div key={i} className={`rounded-xl border p-3 space-y-1 ${addr.is_default ? (isDark ? 'border-orange-500/40 bg-orange-500/5' : 'border-orange-300 bg-orange-50') : border}`}>
+                                <div key={i} className={`rounded-xl border p-3 space-y-1 ${addr.is_default ? (isDark ? 'border-accent-500/40 bg-accent-500/5' : 'border-accent-300 bg-accent-50') : border}`}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <MapPin className={`h-3.5 w-3.5 ${addr.is_default ? 'text-orange-500' : textSub}`} />
-                                            <span className={`text-xs font-semibold ${addr.is_default ? 'text-orange-500' : text}`}>{addr.label}</span>
+                                            <MapPin className={`h-3.5 w-3.5 ${addr.is_default ? 'text-accent-500' : textSub}`} />
+                                            <span className={`text-xs font-semibold ${addr.is_default ? 'text-accent-500' : text}`}>{addr.label}</span>
                                             {addr.is_default && (
-                                                <span className="text-[11px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-semibold">Default</span>
+                                                <span className="text-[11px] bg-accent-500 text-white px-1.5 py-0.5 rounded-full font-semibold">Default</span>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-1">
                                             {!addr.is_default && (
-                                                <button onClick={() => setDefaultAddress(i)} className={`text-xs px-2 py-1 rounded-lg border transition-colors ${isDark ? 'border-white/[0.08] text-gray-400 hover:text-orange-400' : 'border-gray-200 text-gray-500 hover:text-orange-500'}`}>
+                                                <button onClick={() => setDefaultAddress(i)} className={`text-xs px-2 py-1 rounded-lg border transition-colors ${isDark ? 'border-white/[0.08] text-gray-400 hover:text-accent-400' : 'border-gray-200 text-gray-500 hover:text-accent-500'}`}>
                                                     <Star className="h-3 w-3" />
                                                 </button>
                                             )}
@@ -199,11 +199,11 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                             ))}
 
                             {showAddAddress && (
-                                <div className={`rounded-xl border p-3 space-y-2 ${isDark ? 'border-orange-500/20 bg-orange-500/5' : 'border-orange-200 bg-orange-50'}`}>
+                                <div className={`rounded-xl border p-3 space-y-2 ${isDark ? 'border-accent-500/20 bg-accent-500/5' : 'border-accent-200 bg-accent-50'}`}>
                                     <input className={inputCls} placeholder="Label (e.g. Home, Work)" value={newAddressLabel} onChange={e => setNewAddressLabel(e.target.value)} />
                                     <textarea className={inputCls + ' resize-none'} rows={2} placeholder="Full address" value={newAddress} onChange={e => setNewAddress(e.target.value)} />
                                     <div className="flex gap-2">
-                                        <button onClick={addAddress} disabled={!newAddress.trim()} className="flex-1 py-2 rounded-xl bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-1">
+                                        <button onClick={addAddress} disabled={!newAddress.trim()} className="flex-1 py-2 rounded-xl bg-accent-500 text-white text-xs font-semibold hover:bg-accent-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-1">
                                             <Check className="h-3.5 w-3.5" /> Add Address
                                         </button>
                                         <button onClick={() => setShowAddAddress(false)} className={`px-4 py-2 rounded-xl border text-xs font-semibold ${isDark ? 'border-white/[0.08] text-gray-400' : 'border-gray-200 text-gray-500'} transition-colors`}>
@@ -214,7 +214,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                             )}
 
                             {!showAddAddress && (
-                                <button onClick={() => setShowAddAddress(true)} className={`w-full py-2.5 rounded-xl border border-dashed text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${isDark ? 'border-white/[0.08] text-gray-400 hover:border-orange-500/40 hover:text-orange-400' : 'border-gray-300 text-gray-500 hover:border-orange-400 hover:text-orange-500'}`}>
+                                <button onClick={() => setShowAddAddress(true)} className={`w-full py-2.5 rounded-xl border border-dashed text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${isDark ? 'border-white/[0.08] text-gray-400 hover:border-accent-500/40 hover:text-accent-400' : 'border-gray-300 text-gray-500 hover:border-accent-400 hover:text-accent-500'}`}>
                                     <Plus className="h-3.5 w-3.5" /> Add New Address
                                 </button>
                             )}
@@ -237,7 +237,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold capitalize ${
                                                     order.status === 'delivered' || order.status === 'collected' ? 'bg-green-500/10 text-green-500' :
                                                     order.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
-                                                    'bg-orange-500/10 text-orange-500'
+                                                    'bg-accent-500/10 text-accent-500'
                                                 }`}>{order.status?.replace(/_/g, ' ')}</span>
                                             </div>
                                             <span className={`text-xs font-bold ${text}`}>£{order.total?.toFixed(2)}</span>
@@ -268,7 +268,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                 Cancel
                             </button>
                         )}
-                        <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold transition-colors disabled:opacity-50">
+                        <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-accent-500 hover:bg-accent-600 text-white text-xs font-semibold transition-colors disabled:opacity-50">
                             {saving ? 'Saving...' : 'Save Changes'}
                         </button>
                     </div>

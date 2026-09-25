@@ -94,7 +94,7 @@ export default function POSStaffMaintenance({ restaurantId }) {
                         <Button
                             onClick={() => runPinMigration(false)}
                             disabled={pinBusy}
-                            className="bg-orange-500 hover:bg-orange-600 text-white"
+                            className="bg-accent-500 hover:bg-accent-600 text-white"
                         >
                             {pinBusy ? 'Working…' : 'Secure All PINs'}
                         </Button>

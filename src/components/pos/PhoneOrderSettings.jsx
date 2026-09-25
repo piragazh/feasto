@@ -63,7 +63,7 @@ export default function PhoneOrderSettings({ restaurantId }) {
                     </div>
                     <button
                         onClick={() => setSettings(s => ({ ...s, cid_enabled: !s.cid_enabled }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.cid_enabled ? 'bg-orange-500' : 'bg-gray-200'}`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.cid_enabled ? 'bg-accent-500' : 'bg-gray-200'}`}
                     >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.cid_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
@@ -84,8 +84,8 @@ export default function PhoneOrderSettings({ restaurantId }) {
                                         onClick={() => setSettings(s => ({ ...s, cid_type: opt.id }))}
                                         className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-semibold transition-colors ${
                                             settings.cid_type === opt.id
-                                                ? 'border-orange-400 bg-orange-50 text-orange-700'
-                                                : 'border-gray-200 text-gray-600 hover:border-orange-200'
+                                                ? 'border-accent-400 bg-accent-50 text-accent-700'
+                                                : 'border-gray-200 text-gray-600 hover:border-accent-200'
                                         }`}
                                     >
                                         <opt.icon className="h-5 w-5" />
@@ -154,7 +154,7 @@ export default function PhoneOrderSettings({ restaurantId }) {
                     Even without CID, staff can always manually search customers by phone number or postcode directly in the Phone Order panel on the POS terminal.
                 </div>
 
-                <Button onClick={save} className="w-full bg-orange-500 hover:bg-orange-600">
+                <Button onClick={save} className="w-full bg-accent-500 hover:bg-accent-600">
                     <Save className="h-4 w-4 mr-2" /> Save Settings
                 </Button>
             </CardContent>

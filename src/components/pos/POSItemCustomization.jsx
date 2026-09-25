@@ -174,7 +174,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                         <DialogTitle className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} ${columns === 1 ? 'text-lg' : 'text-base'}`}>
                             {item.name}
                         </DialogTitle>
-                        <p className="text-orange-400 font-bold text-lg mt-1">
+                        <p className="text-accent-400 font-bold text-lg mt-1">
                             £{currentPrice.toFixed(2)}
                         </p>
                     </div>
@@ -226,7 +226,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                    {option.options?.map(opt => (
                                        <div 
                                            key={opt.label} 
-                                           className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
+                                           className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                            onClick={() => {
                                                const newIsMeal = opt.label.toLowerCase().includes('meal');
                                                setIsMeal(newIsMeal);
@@ -247,7 +247,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                        {opt.label}
                                                    </Label>
                                                    {optPrice(opt) > 0 && (
-                                                   <span className="font-bold text-orange-400 text-sm flex items-center gap-1">
+                                                   <span className="font-bold text-accent-400 text-sm flex items-center gap-1">
                                                        {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && optBasePrice(opt) > 0 && (
                                                            <span className="line-through text-gray-500 font-normal text-xs">£{optBasePrice(opt).toFixed(2)}</span>
                                                        )}
@@ -266,7 +266,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                     {option.options?.map(opt => (
                                         <div 
                                             key={opt.label} 
-                                            className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
+                                            className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                             onClick={() => handleSingleSelect(option.name, opt.label)}
                                         >
                                             <RadioGroupItem 
@@ -281,7 +281,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                 {opt.label}
                                             </Label>
                                             {optPrice(opt) > 0 && (
-                                                <span className={`font-bold text-orange-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'} flex items-center gap-1`}>
+                                                <span className={`font-bold text-accent-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'} flex items-center gap-1`}>
                                                     {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && optBasePrice(opt) > 0 && (
                                                         <span className="line-through text-gray-500 font-normal text-xs">£{optBasePrice(opt).toFixed(2)}</span>
                                                     )}
@@ -296,7 +296,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             {option.options?.map(opt => (
                                             <div 
                                             key={opt.label}
-                                            className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
+                                            className={`flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                             onClick={() => handleMultipleSelect(option.name, opt.label)}
                                         >
                                             <Checkbox
@@ -312,7 +312,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                 {opt.label}
                                             </Label>
                                             {optPrice(opt) > 0 && (
-                                                <span className={`font-bold text-orange-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'} flex items-center gap-1`}>
+                                                <span className={`font-bold text-accent-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'} flex items-center gap-1`}>
                                                     {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && optBasePrice(opt) > 0 && (
                                                         <span className="line-through text-gray-500 font-normal text-xs">£{optBasePrice(opt).toFixed(2)}</span>
                                                     )}
@@ -328,9 +328,9 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     
                     {/* Meal Customizations - Show when meal is selected */}
                     {isMeal && item.customization_options?.find(opt => opt.type === 'meal_upgrade')?.meal_customizations?.map(mealOpt => (
-                        <div key={mealOpt.name} className={`space-y-2 col-span-full border-t ${isDark ? 'border-orange-500/30' : 'border-orange-300'} pt-3`}>
+                        <div key={mealOpt.name} className={`space-y-2 col-span-full border-t ${isDark ? 'border-accent-500/30' : 'border-accent-300'} pt-3`}>
                             <div className="flex items-baseline gap-1">
-                                <Label className="font-bold text-orange-400 text-base">
+                                <Label className="font-bold text-accent-400 text-base">
                                     {mealOpt.name}
                                 </Label>
                                 {mealOpt.required && (
@@ -350,7 +350,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                     {mealOpt.options?.map(opt => (
                                         <div 
                                             key={opt.label} 
-                                            className={`flex items-center space-x-2 p-2 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
+                                            className={`flex items-center space-x-2 p-2 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                             onClick={() => setMealCustomizations(prev => ({
                                                 ...prev,
                                                 [mealOpt.name]: opt.label
@@ -368,7 +368,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                         {opt.label}
                                                     </Label>
                                                     {optPrice(opt) > 0 && (
-                                                    <span className="font-bold text-orange-400 text-xs flex items-center gap-1">
+                                                    <span className="font-bold text-accent-400 text-xs flex items-center gap-1">
                                                         {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && (
                                                             <span className="line-through text-gray-500 font-normal text-[11px]">£{optBasePrice(opt).toFixed(2)}</span>
                                                         )}
@@ -383,7 +383,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     {mealOpt.options?.map(opt => (
                                                     <div 
                                                     key={opt.label}
-                                                className={`flex items-center space-x-2 p-2 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-orange-500`}
+                                                className={`flex items-center space-x-2 p-2 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                             onClick={() => {
                                                 setMealCustomizations(prev => ({
                                                     ...prev,
@@ -405,7 +405,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                         {opt.label}
                                                     </Label>
                                                     {optPrice(opt) > 0 && (
-                                                        <span className="font-bold text-orange-400 text-xs flex items-center gap-1">
+                                                        <span className="font-bold text-accent-400 text-xs flex items-center gap-1">
                                                             {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && (
                                                                 <span className="line-through text-gray-500 font-normal text-[11px]">£{optBasePrice(opt).toFixed(2)}</span>
                                                             )}
@@ -446,7 +446,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     </Button>
                     <Button 
                         onClick={handleConfirm}
-                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg h-12 text-sm"
+                        className="flex-1 bg-accent-500 hover:bg-accent-600 text-white font-bold rounded-lg h-12 text-sm"
                     >
                         {isEditing ? 'Update Item' : 'Add to Cart'}
                     </Button>

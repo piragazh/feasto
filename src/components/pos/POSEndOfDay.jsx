@@ -113,8 +113,8 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
             {/* Header */}
             <div className={`${t.card} rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3`}>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-500/15 rounded-xl flex items-center justify-center">
-                        <Receipt className="h-5 w-5 text-orange-400" />
+                    <div className="w-10 h-10 bg-accent-500/15 rounded-xl flex items-center justify-center">
+                        <Receipt className="h-5 w-5 text-accent-400" />
                     </div>
                     <div>
                         <h2 className={`${t.text} font-bold text-lg`}>End of Day Report</h2>
@@ -128,7 +128,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                             type="date"
                             value={reportDate}
                             onChange={e => setReportDate(e.target.value)}
-                            className={`pl-9 pr-3 py-2 rounded-xl border text-sm font-medium ${t.input} focus:outline-none focus:ring-2 focus:ring-orange-500/50`}
+                            className={`pl-9 pr-3 py-2 rounded-xl border text-sm font-medium ${t.input} focus:outline-none focus:ring-2 focus:ring-accent-500/50`}
                         />
                     </div>
                     <Button size="sm" variant="ghost" onClick={() => refetch()} className={t.textMuted}>
@@ -138,7 +138,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                         size="sm"
                         onClick={printEOD}
                         disabled={isPrinting || (!restaurant?.printer_config?.bluetooth_printer?.id && !restaurant?.printer_config?.qz_printer_name)}
-                        className="bg-orange-500 hover:bg-orange-600 text-white gap-2"
+                        className="bg-accent-500 hover:bg-accent-600 text-white gap-2"
                     >
                         <Printer className="h-4 w-4" />
                         {isPrinting ? 'Printing...' : 'Print Z-Report'}
@@ -164,7 +164,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                 {[
                     { label: 'Total Sales', value: `£${stats.totalSales.toFixed(2)}`, icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-500/10' },
                     { label: 'Orders', value: stats.orderCount, icon: Receipt, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-                    { label: 'Avg Order', value: `£${stats.avgOrder.toFixed(2)}`, icon: DollarSign, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+                    { label: 'Avg Order', value: `£${stats.avgOrder.toFixed(2)}`, icon: DollarSign, color: 'text-accent-400', bg: 'bg-accent-500/10' },
                     { label: 'Cancelled', value: stats.cancelled.length, icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
                 ].map(({ label, value, icon: Icon, color, bg }) => (
                     <div key={label} className={`${t.card} rounded-2xl p-4 flex items-center gap-3`}>
@@ -183,7 +183,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                 {/* Payment Breakdown */}
                 <div className={`${t.card} rounded-2xl p-5`}>
                     <h3 className={`${t.text} font-bold mb-4 flex items-center gap-2`}>
-                        <CreditCard className="h-4 w-4 text-orange-400" /> Payment Breakdown
+                        <CreditCard className="h-4 w-4 text-accent-400" /> Payment Breakdown
                     </h3>
                     {Object.keys(stats.byMethod).length === 0 ? (
                         <p className={`${t.textMuted} text-sm text-center py-6`}>No completed orders for this date</p>
@@ -201,7 +201,7 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                             ))}
                             <div className={`flex items-center justify-between pt-2`}>
                                 <span className={`${t.text} font-bold`}>Total</span>
-                                <span className="text-orange-400 font-bold text-lg">£{stats.totalSales.toFixed(2)}</span>
+                                <span className="text-accent-400 font-bold text-lg">£{stats.totalSales.toFixed(2)}</span>
                             </div>
                             {stats.totalDiscount > 0 && (
                                 <div className={`flex items-center justify-between text-sm`}>

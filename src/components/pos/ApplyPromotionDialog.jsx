@@ -106,7 +106,7 @@ export default function ApplyPromotionDialog({
             <DialogContent className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} max-w-lg`}>
                 <DialogHeader>
                     <DialogTitle className={`${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
-                        <Tag className="h-4 w-4 text-orange-400" />
+                        <Tag className="h-4 w-4 text-accent-400" />
                         Apply Coupon
                         {appliedCouponCount > 0 && (
                             <span className={`ml-auto text-xs font-normal ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -128,9 +128,9 @@ export default function ApplyPromotionDialog({
 
                 {/* Mutual exclusion warning */}
                 {hasManualDiscount && (
-                    <div className="flex items-start gap-2 bg-orange-500/10 border border-orange-500/30 rounded-lg px-3 py-2">
-                        <AlertCircle className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
-                        <p className="text-orange-300 text-xs">
+                    <div className="flex items-start gap-2 bg-accent-500/10 border border-accent-500/30 rounded-lg px-3 py-2">
+                        <AlertCircle className="h-4 w-4 text-accent-400 shrink-0 mt-0.5" />
+                        <p className="text-accent-300 text-xs">
                             A manual discount is already applied. Coupons and manual discounts cannot be combined — remove the manual discount first.
                         </p>
                     </div>
@@ -151,7 +151,7 @@ export default function ApplyPromotionDialog({
                         <Button
                             onClick={handleManualApply}
                             disabled={!manualCode.trim() || validating === manualCode.trim().toUpperCase() || couponLimitReached || hasManualDiscount}
-                            className="bg-orange-500 hover:bg-orange-600 shrink-0"
+                            className="bg-accent-500 hover:bg-accent-600 shrink-0"
                         >
                             {validating === manualCode.trim().toUpperCase()
                                 ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -208,7 +208,7 @@ export default function ApplyPromotionDialog({
                                                     <p className="text-gray-500 text-xs mt-0.5 truncate">{coupon.description}</p>
                                                 )}
                                                 {!meetsMinimum && (
-                                                    <p className="text-orange-400 text-xs mt-0.5">
+                                                    <p className="text-accent-400 text-xs mt-0.5">
                                                         Need £{(coupon.minimum_order - cartSubtotal).toFixed(2)} more
                                                     </p>
                                                 )}

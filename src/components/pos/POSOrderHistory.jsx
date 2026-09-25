@@ -8,7 +8,7 @@ import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 const STATUS_COLORS = {
     pending:               'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
     confirmed:             'bg-blue-500/10 text-blue-400 border-blue-500/30',
-    preparing:             'bg-orange-500/10 text-orange-400 border-orange-500/30',
+    preparing:             'bg-accent-500/10 text-accent-400 border-accent-500/30',
     out_for_delivery:      'bg-purple-500/10 text-purple-400 border-purple-500/30',
     ready_for_collection:  'bg-teal-500/10 text-teal-400 border-teal-500/30',
     delivered:             'bg-green-500/10 text-green-400 border-green-500/30',
@@ -99,7 +99,7 @@ function OrderRow({ order, t, isDark }) {
                                             </p>
                                         )}
                                     </div>
-                                    <p className="text-orange-500 text-xs font-bold flex-shrink-0">£{(item.price * item.quantity).toFixed(2)}</p>
+                                    <p className="text-accent-500 text-xs font-bold flex-shrink-0">£{(item.price * item.quantity).toFixed(2)}</p>
                                 </div>
                             ))}
                         </div>
@@ -121,7 +121,7 @@ function OrderRow({ order, t, isDark }) {
                         )}
                         <div className="flex justify-between text-sm font-bold">
                             <span className={t.text}>Total</span>
-                            <span className="text-orange-500">£{order.total?.toFixed(2)}</span>
+                            <span className="text-accent-500">£{order.total?.toFixed(2)}</span>
                         </div>
                         {order.payment_method && (
                             <p className={`${t.textSub} text-[11px] text-right capitalize`}>Paid by {order.payment_method.replace('_', ' ')}</p>
@@ -149,7 +149,7 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
         input:    isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400',
         select:   isDark ? 'bg-[#0f1117] border-white/[0.08] text-white' : 'bg-gray-50 border-gray-200 text-gray-900',
         pill:     isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600',
-        pillActive:'bg-orange-500 text-white border-orange-500',
+        pillActive:'bg-accent-500 text-white border-accent-500',
     };
 
     const [datePreset, setDatePreset] = useState('Today');
@@ -243,7 +243,7 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
                 </div>
                 <div>
                     <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider`}>Revenue</p>
-                    <p className="text-orange-500 font-bold text-lg">£{totalRevenue.toFixed(2)}</p>
+                    <p className="text-accent-500 font-bold text-lg">£{totalRevenue.toFixed(2)}</p>
                 </div>
                 <div>
                     <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider`}>Avg. Order</p>
@@ -255,7 +255,7 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
             <div className="flex-1 min-h-0 overflow-y-auto space-y-2 scrollbar-hide">
                 {isLoading ? (
                     <div className="flex items-center justify-center h-40">
-                        <div className="w-8 h-8 rounded-full border-4 border-orange-500/30 border-t-orange-500 animate-spin" />
+                        <div className="w-8 h-8 rounded-full border-4 border-accent-500/30 border-t-accent-500 animate-spin" />
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-40 text-center">

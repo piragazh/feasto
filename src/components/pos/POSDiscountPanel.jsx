@@ -83,11 +83,11 @@ export default function POSDiscountPanel({
 
     const inputCls = `w-full px-3 py-2 rounded-xl border text-sm font-medium outline-none transition-colors ${
         isDark
-            ? 'bg-white/5 border-white/[0.08] text-white placeholder-gray-500 focus:border-orange-500/50'
-            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'
+            ? 'bg-white/5 border-white/[0.08] text-white placeholder-gray-500 focus:border-accent-500/50'
+            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-accent-400'
     }`;
 
-    const typeBtnActive = 'bg-orange-500 text-white';
+    const typeBtnActive = 'bg-accent-500 text-white';
     const typeBtnInactive = isDark
         ? 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/[0.08]'
         : 'bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-200';
@@ -101,8 +101,8 @@ export default function POSDiscountPanel({
 
     const selectCls = `w-full px-3 py-2 rounded-xl border text-sm font-medium outline-none transition-colors appearance-none ${
         isDark
-            ? 'bg-[#1a1d27] border-white/[0.12] text-white focus:border-orange-500/50'
-            : 'bg-white border-gray-200 text-gray-900 focus:border-orange-400'
+            ? 'bg-[#1a1d27] border-white/[0.12] text-white focus:border-accent-500/50'
+            : 'bg-white border-gray-200 text-gray-900 focus:border-accent-400'
     }`;
 
     if (discount) {
@@ -143,7 +143,7 @@ export default function POSDiscountPanel({
     if (couponActive) {
         return (
             <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-white/5 border-white/[0.08] text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
-                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-orange-400" />
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-accent-400" />
                 <span>Coupon applied — remove it to add a manual discount</span>
             </div>
         );
@@ -155,8 +155,8 @@ export default function POSDiscountPanel({
                 onClick={() => setOpen(true)}
                 className={`w-full flex items-center justify-center gap-2 h-9 rounded-xl text-xs font-semibold border transition-colors ${
                     isDark
-                        ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-400 hover:text-orange-400'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-orange-500'
+                        ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-400 hover:text-accent-400'
+                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-accent-500'
                 }`}
             >
                 <Tag className="h-3.5 w-3.5" />
@@ -234,7 +234,7 @@ export default function POSDiscountPanel({
             {/* Reason (required) */}
             <div>
                 <div className={`flex items-center gap-1 mb-1 text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <AlertCircle className="h-3 w-3 text-orange-400" />
+                    <AlertCircle className="h-3 w-3 text-accent-400" />
                     Reason (required)
                 </div>
                 <select
@@ -254,7 +254,7 @@ export default function POSDiscountPanel({
             <button
                 onClick={handleApply}
                 disabled={!value || parseFloat(value) <= 0 || !reasonCode || loading}
-                className="w-full h-9 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors"
+                className="w-full h-9 bg-accent-500 hover:bg-accent-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors"
             >
                 {loading ? 'Checking…' : 'Apply Discount'}
             </button>

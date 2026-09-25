@@ -9,7 +9,7 @@ function ConfirmPopup({ message, onConfirm, onCancel, isDark }) {
         <div className={`fixed inset-0 z-[200] flex items-center justify-center ${isDark ? 'bg-black/50' : 'bg-black/30'}`}>
             <div className={`${isDark ? 'bg-[#1a1d27] border-white/[0.1] text-white' : 'bg-white border-gray-200 text-gray-900'} border rounded-2xl p-5 w-72 shadow-2xl`}>
                 <div className="flex items-center gap-2 mb-3">
-                    <AlertTriangle className="h-5 w-5 text-orange-400 flex-shrink-0" />
+                    <AlertTriangle className="h-5 w-5 text-accent-400 flex-shrink-0" />
                     <p className="text-sm font-semibold">{message}</p>
                 </div>
                 <div className="flex gap-2">
@@ -60,13 +60,13 @@ export default function POSCart({
                 <div className="flex items-center gap-2">
                     <h2 className={`${t.text} font-bold text-base`}>Order</h2>
                     {totalUnits > 0 && (
-                        <span className="text-xs bg-orange-500 text-white rounded-full min-w-[22px] h-[22px] px-1.5 flex items-center justify-center font-bold flex-shrink-0 tabular-nums">
+                        <span className="text-xs bg-accent-500 text-white rounded-full min-w-[22px] h-[22px] px-1.5 flex items-center justify-center font-bold flex-shrink-0 tabular-nums">
                             {totalUnits}
                         </span>
                     )}
                 </div>
                 {orderType === 'dine_in' && selectedTable && (
-                    <span className="text-xs bg-orange-500/20 text-orange-500 border border-orange-500/30 px-2 py-0.5 rounded-lg font-medium">
+                    <span className="text-xs bg-accent-500/20 text-accent-500 border border-accent-500/30 px-2 py-0.5 rounded-lg font-medium">
                         {selectedTable.table_number}
                     </span>
                 )}
@@ -111,7 +111,7 @@ export default function POSCart({
                                     {item.specialInstructions && (
                                         <p className={`${t.textSub} text-[11px] italic mt-0.5`}>"{item.specialInstructions}"</p>
                                     )}
-                                    <p className={`text-orange-500 mt-1 ${POS_TEXT.moneySmall}`}>£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
+                                    <p className={`text-accent-500 mt-1 ${POS_TEXT.moneySmall}`}>£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
                                 </button>
                                 <button
                                     onClick={() => handleRemove(item.id, item.name)}
@@ -160,21 +160,21 @@ export default function POSCart({
                             <button
                                 onClick={onSelectTable}
                                 disabled={tables.length === 0}
-                                className={`w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white font-bold ${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-sm ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2`}
+                                className={`w-full bg-accent-500 hover:bg-accent-600 active:bg-accent-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white font-bold ${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-sm ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-accent-500/25 flex items-center justify-center gap-2`}
                             >
                                 <Users className="h-4 w-4" />
                                 Select Table ({tables.length})
                             </button>
                         ) : (
                             <>
-                                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-2.5 text-center">
-                                    <p className={`text-orange-400 ${POS_TEXT.micro} uppercase tracking-wide`}>Selected</p>
+                                <div className="bg-accent-500/10 border border-accent-500/30 rounded-xl p-2.5 text-center">
+                                    <p className={`text-accent-400 ${POS_TEXT.micro} uppercase tracking-wide`}>Selected</p>
                                     <p className={`${t.text} font-bold text-base`}>{selectedTable.table_number}</p>
                                 </div>
                                 <button
                                     onClick={onAddToTable}
                                     disabled={optimisticCart.length === 0 || isAddingToTable}
-                                    className={`w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-40 disabled:shadow-none text-white font-bold ${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-sm ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2`}
+                                    className={`w-full bg-accent-500 hover:bg-accent-600 active:bg-accent-700 disabled:opacity-40 disabled:shadow-none text-white font-bold ${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-sm ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-accent-500/25 flex items-center justify-center gap-2`}
                                 >
                                     <ShoppingCart className="h-4 w-4" />
                                     {isAddingToTable ? 'Adding...' : 'Send to Table'}
@@ -207,7 +207,7 @@ export default function POSCart({
                         <button
                             onClick={onCharge}
                             disabled={optimisticCart.length === 0}
-                            className={`w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-40 disabled:shadow-none text-white ${POS_RADIUS.control} ${POS_TOUCH.primary} ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2.5 active:scale-[0.99]`}
+                            className={`w-full bg-accent-500 hover:bg-accent-600 active:bg-accent-700 disabled:opacity-40 disabled:shadow-none text-white ${POS_RADIUS.control} ${POS_TOUCH.primary} ${POS_TRANSITION} ${POS_FOCUS} shadow-lg shadow-accent-500/25 flex items-center justify-center gap-2.5 active:scale-[0.99]`}
                         >
                             <ShoppingCart className="h-5 w-5" />
                             <span>Charge</span>

@@ -33,7 +33,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
         subtext:    isDark ? 'text-gray-300'                  : 'text-gray-600',
         inactivBtn: isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300 border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-200',
         input:      isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900',
-        tabActive:  isDark ? 'text-orange-400 border-orange-400'  : 'text-orange-500 border-orange-500',
+        tabActive:  isDark ? 'text-accent-400 border-accent-400'  : 'text-accent-500 border-accent-500',
         tabInactive:isDark ? 'text-gray-400 hover:text-white'      : 'text-gray-500 hover:text-gray-900',
         tabBorder:  isDark ? 'border-gray-700'                     : 'border-gray-200',
         chartGrid:  isDark ? '#374151' : '#e5e7eb',
@@ -268,7 +268,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                             onClick={() => setPreset(p.key)}
                             className={`h-9 px-4 font-bold text-sm ${
                                 preset === p.key
-                                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                                    ? 'bg-accent-500 hover:bg-accent-600 text-white'
                                     : t.inactivBtn
                             }`}
                         >
@@ -299,7 +299,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                     <Button onClick={exportCSV} size="sm" className="bg-green-700 hover:bg-green-600 text-white h-9 px-3">
                         <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
                     </Button>
-                    <Button onClick={exportPDF} size="sm" className="bg-orange-600 hover:bg-orange-500 text-white h-9 px-3">
+                    <Button onClick={exportPDF} size="sm" className="bg-accent-600 hover:bg-accent-500 text-white h-9 px-3">
                         <FileText className="h-3.5 w-3.5 mr-1.5" /> PDF
                     </Button>
                     <Button onClick={printReport} disabled={isPrinting} size="sm"
@@ -315,7 +315,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                 {[
                     { label: 'Revenue', value: `£${totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-green-400' },
                     { label: 'Orders', value: filteredOrders.length, icon: TrendingUp, color: 'text-blue-400' },
-                    { label: 'Avg Order', value: `£${averageOrder.toFixed(2)}`, icon: DollarSign, color: 'text-orange-400' },
+                    { label: 'Avg Order', value: `£${averageOrder.toFixed(2)}`, icon: DollarSign, color: 'text-accent-400' },
                     { label: 'Cash', value: `£${cashRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-yellow-400' },
                     { label: 'Peak Hour', value: peakHour, icon: Clock, color: 'text-purple-400' },
                 ].map(({ label, value, icon: Icon, color }) => (

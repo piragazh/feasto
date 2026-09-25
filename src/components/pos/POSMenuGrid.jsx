@@ -17,7 +17,7 @@ import { ShoppingCart, Search } from 'lucide-react';
  */
 const TILE_STRIPE = {
     red:    'border-l-[6px] border-l-red-500',
-    orange: 'border-l-[6px] border-l-orange-500',
+    orange: 'border-l-[6px] border-l-accent-500',
     amber:  'border-l-[6px] border-l-amber-500',
     green:  'border-l-[6px] border-l-green-500',
     teal:   'border-l-[6px] border-l-teal-500',
@@ -77,7 +77,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                             <p className="text-sm font-semibold">No items match &ldquo;{searchQuery}&rdquo;</p>
                             <button
                                 onClick={() => onSearchChange('')}
-                                className="text-orange-500 text-xs font-semibold mt-2 underline"
+                                className="text-accent-500 text-xs font-semibold mt-2 underline"
                             >
                                 Clear search
                             </button>
@@ -170,7 +170,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                             £{Number(struckPrice).toFixed(2)}
                                         </span>
                                     )}
-                                    <span className="text-orange-500 font-bold text-xl tabular-nums leading-none">
+                                    <span className="text-accent-500 font-bold text-xl tabular-nums leading-none">
                                         £{effectivePrice.toFixed(2)}
                                     </span>
                                 </div>

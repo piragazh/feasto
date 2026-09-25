@@ -39,13 +39,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         textSub:        isDark ? 'text-gray-500'                                                              : 'text-gray-400',
         catBtn:         isDark ? 'text-gray-400 hover:text-white hover:bg-white/5'                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
         catCount:       isDark ? 'bg-white/[0.07] text-gray-400'                                              : 'bg-gray-100 text-gray-500',
-        itemCard:       isDark ? 'bg-[#1a1d27] border-transparent hover:border-orange-500/60 hover:shadow-orange-500/10' : 'bg-white border-gray-200 hover:border-orange-400 hover:shadow-orange-100',
+        itemCard:       isDark ? 'bg-[#1a1d27] border-transparent hover:border-accent-500/60 hover:shadow-accent-500/10' : 'bg-white border-gray-200 hover:border-accent-400 hover:shadow-accent-100',
         itemImg:        isDark ? 'bg-[#0f1117]'                                                               : 'bg-gray-50',
-        itemName:       isDark ? 'text-white group-hover:text-orange-300'                                     : 'text-gray-800 group-hover:text-orange-500',
+        itemName:       isDark ? 'text-white group-hover:text-accent-300'                                     : 'text-gray-800 group-hover:text-accent-500',
         cartItem:       isDark ? 'bg-[#1a1d27] border-white/[0.05]'                                          : 'bg-gray-50 border-gray-100',
         qtyMinus:       isDark ? 'bg-white/5 hover:bg-white/10 text-white'                                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700',
-        qtyPlus:        isDark ? 'bg-orange-500/20 hover:bg-orange-500/30 text-orange-400'                   : 'bg-orange-100 hover:bg-orange-200 text-orange-600',
-        searchBg:       isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-orange-500/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400',
+        qtyPlus:        isDark ? 'bg-accent-500/20 hover:bg-accent-500/30 text-accent-400'                   : 'bg-accent-100 hover:bg-accent-200 text-accent-600',
+        searchBg:       isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-accent-500/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-accent-400',
         emptyIcon:      isDark ? 'text-gray-700'                                                              : 'text-gray-300',
         emptyText:      isDark ? 'text-gray-500'                                                              : 'text-gray-400',
         emptySub:       isDark ? 'text-gray-600'                                                              : 'text-gray-300',
@@ -640,7 +640,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     <h2 className={`${t.text} font-bold text-xl`}>Floor Plan</h2>
                     <div className="flex gap-2">
                         <button onClick={() => setViewMode('tables')} className={`px-4 py-2 ${t.floorBack} border text-sm font-semibold rounded-xl transition-colors`}>Grid View</button>
-                        <button onClick={() => setViewMode('entry')} className="px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 text-sm font-semibold rounded-xl transition-colors">Back to Orders</button>
+                        <button onClick={() => setViewMode('entry')} className="px-4 py-2 bg-accent-500/10 hover:bg-accent-500/20 border border-accent-500/30 text-accent-400 text-sm font-semibold rounded-xl transition-colors">Back to Orders</button>
                     </div>
                 </div>
                 <FloorPlanView tables={tables} tableOrders={tableOrders} onRefresh={() => { refetchTables(); refetchTableOrders(); }} onTableClick={(table) => { setViewingTable(table); setShowPayment(true); }} />
@@ -744,7 +744,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             <PauseCircle className="h-4 w-4 mb-1" />
                             Held
                             {heldOrders.length > 0 && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">{heldOrders.length}</span>
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">{heldOrders.length}</span>
                             )}
                         </button>
                     </div>
@@ -765,7 +765,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 <div className="h-full flex flex-col">
                                     <button
                                         onClick={() => setSelectedCategory('')}
-                                        className="flex items-center gap-2 px-4 py-3 mb-2 font-semibold text-sm rounded-lg transition-colors bg-orange-500 hover:bg-orange-600 text-white"
+                                        className="flex items-center gap-2 px-4 py-3 mb-2 font-semibold text-sm rounded-lg transition-colors bg-accent-500 hover:bg-accent-600 text-white"
                                     >
                                         ← Back to Categories
                                     </button>
@@ -780,13 +780,13 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     <div className="flex gap-2 overflow-x-auto pb-2 mb-1 flex-shrink-0 scrollbar-hide">
                                         <button onClick={() => setSelectedCategory('')}
                                             aria-pressed={!selectedCategory}
-                                            className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap ${!selectedCategory ? 'bg-orange-500 text-white' : t.catBtn}`}>
+                                            className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap ${!selectedCategory ? 'bg-accent-500 text-white' : t.catBtn}`}>
                                             All
                                         </button>
                                         {categories.map(c => (
                                             <button key={c} onClick={() => setSelectedCategory(c)}
                                                 aria-pressed={selectedCategory === c}
-                                                className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap capitalize ${selectedCategory === c ? 'bg-orange-500 text-white' : t.catBtn}`}>
+                                                className={`h-11 px-4 rounded-xl text-sm font-semibold whitespace-nowrap capitalize ${selectedCategory === c ? 'bg-accent-500 text-white' : t.catBtn}`}>
                                                 {c}
                                             </button>
                                         ))}
@@ -805,7 +805,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border font-semibold text-sm transition-colors ${
                                 phoneDetails?.name
                                     ? isDark ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700'
-                                    : isDark ? 'bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20' : 'bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100'
+                                    : isDark ? 'bg-accent-500/10 border-accent-500/30 text-accent-400 hover:bg-accent-500/20' : 'bg-accent-50 border-accent-200 text-accent-600 hover:bg-accent-100'
                             }`}
                         >
                             <div className="flex items-center gap-2">
@@ -886,7 +886,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 >
                     <PauseCircle className="h-4 w-4" /> Held Orders
                     {heldOrders.length > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center">
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-accent-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center">
                             {heldOrders.length}
                         </span>
                     )}

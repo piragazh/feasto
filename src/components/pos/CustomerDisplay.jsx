@@ -54,7 +54,7 @@ export default function CustomerDisplay() {
                     {logoUrl ? (
                         <img src={logoUrl} alt={restaurantName} className="w-8 h-8 rounded-lg object-cover" />
                     ) : (
-                        <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
                             <ShoppingBag className="h-4 w-4 text-white" />
                         </div>
                     )}
@@ -82,7 +82,7 @@ export default function CustomerDisplay() {
                                     className="flex items-center justify-between bg-white/[0.04] border border-white/[0.06] rounded-2xl px-5 py-4"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <span className="w-9 h-9 bg-orange-500/20 text-orange-400 rounded-xl flex items-center justify-center text-sm font-black">
+                                        <span className="w-9 h-9 bg-accent-500/20 text-accent-400 rounded-xl flex items-center justify-center text-sm font-black">
                                             {item.quantity}
                                         </span>
                                         <div>
@@ -128,9 +128,9 @@ export default function CustomerDisplay() {
                                 initial={{ scale: 1.04 }}
                                 animate={{ scale: 1 }}
                                 transition={{ duration: 0.25 }}
-                                className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-5 text-center"
+                                className="bg-accent-500/10 border border-accent-500/30 rounded-2xl p-5 text-center"
                             >
-                                <p className="text-orange-300 text-xs font-semibold uppercase tracking-widest mb-1">Total</p>
+                                <p className="text-accent-300 text-xs font-semibold uppercase tracking-widest mb-1">Total</p>
                                 <p className="text-white text-5xl font-black">£{effectiveTotal.toFixed(2)}</p>
                             </motion.div>
                         </div>
@@ -169,7 +169,7 @@ function IdleScreen({ restaurantName, logoUrl }) {
             {logoUrl ? (
                 <img src={logoUrl} alt={restaurantName} className="w-24 h-24 rounded-3xl object-cover shadow-2xl" />
             ) : (
-                <div className="w-24 h-24 bg-orange-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-orange-500/30">
+                <div className="w-24 h-24 bg-accent-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-accent-500/30">
                     <ShoppingBag className="h-12 w-12 text-white" />
                 </div>
             )}

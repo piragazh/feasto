@@ -243,7 +243,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
     const text = isDark ? 'text-white' : 'text-gray-900';
     const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
     const borderCls = isDark ? 'border-white/[0.08]' : 'border-gray-200';
-    const inputCls = `w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors ${isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-orange-500/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400'}`;
+    const inputCls = `w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors ${isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-accent-500/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-accent-400'}`;
     const labelCls = `text-xs font-semibold mb-1 block ${textMuted}`;
 
     return (
@@ -258,8 +258,8 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                     {/* Header */}
                     <div className={`flex items-center justify-between px-5 py-4 border-b ${borderCls} flex-shrink-0`}>
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-orange-500/15 flex items-center justify-center">
-                                <Phone className="h-4 w-4 text-orange-400" />
+                            <div className="w-8 h-8 rounded-xl bg-accent-500/15 flex items-center justify-center">
+                                <Phone className="h-4 w-4 text-accent-400" />
                             </div>
                             <div>
                                 <h2 className={`font-bold text-base ${text}`}>Phone Order</h2>
@@ -284,7 +284,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                 { id: 'phone_delivery', label: '🚚 Delivery' },
                             ].map(opt => (
                                 <button key={opt.id} onClick={() => onOrderTypeChange(opt.id)}
-                                    className={`flex-1 py-2.5 transition-colors ${orderType === opt.id ? 'bg-orange-500 text-white' : `${textMuted} ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}`}>
+                                    className={`flex-1 py-2.5 transition-colors ${orderType === opt.id ? 'bg-accent-500 text-white' : `${textMuted} ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}`}>
                                     {opt.label}
                                 </button>
                             ))}
@@ -316,7 +316,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                         autoFocus
                                     />
                                     <button onClick={() => doPhoneSearch(customerPhone)} disabled={searching}
-                                        className={`px-4 rounded-xl border text-xs font-semibold transition-colors flex items-center gap-1.5 ${isDark ? 'bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20' : 'bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100'}`}>
+                                        className={`px-4 rounded-xl border text-xs font-semibold transition-colors flex items-center gap-1.5 ${isDark ? 'bg-accent-500/10 border-accent-500/30 text-accent-400 hover:bg-accent-500/20' : 'bg-accent-50 border-accent-200 text-accent-600 hover:bg-accent-100'}`}>
                                         {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
                                         {searching ? 'Searching…' : 'Find'}
                                     </button>
@@ -329,7 +329,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                         </div>
                                         {foundCustomer.id && (
                                             <button onClick={() => setShowProfileModal(true)}
-                                                className={`flex items-center gap-1 text-xs ${isDark ? 'text-gray-400 hover:text-orange-400' : 'text-gray-500 hover:text-orange-600'} transition-colors`}>
+                                                className={`flex items-center gap-1 text-xs ${isDark ? 'text-gray-400 hover:text-accent-400' : 'text-gray-500 hover:text-accent-600'} transition-colors`}>
                                                 <ExternalLink className="h-3 w-3" /> Profile
                                             </button>
                                         )}
@@ -347,7 +347,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                         value={postcode} onChange={e => setPostcode(e.target.value.toUpperCase())}
                                         onKeyDown={e => e.key === 'Enter' && doPostcodeSearch()} />
                                     <button onClick={doPostcodeSearch} disabled={postcodeSearching}
-                                        className={`px-4 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${isDark ? 'bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20' : 'bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100'}`}>
+                                        className={`px-4 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${isDark ? 'bg-accent-500/10 border-accent-500/30 text-accent-400 hover:bg-accent-500/20' : 'bg-accent-50 border-accent-200 text-accent-600 hover:bg-accent-100'}`}>
                                         {postcodeSearching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
                                         Find
                                     </button>
@@ -356,7 +356,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                     <div className={`mt-2 rounded-xl border overflow-hidden ${borderCls}`}>
                                         {postcodeResults.map((c, i) => (
                                             <button key={i} onClick={() => selectFromPostcodeSearch(c)}
-                                                className={`w-full text-left px-3 py-2.5 text-xs border-b last:border-0 transition-colors ${isDark ? 'border-white/[0.05] hover:bg-white/5 text-gray-300' : 'border-gray-100 hover:bg-orange-50 text-gray-700'}`}>
+                                                className={`w-full text-left px-3 py-2.5 text-xs border-b last:border-0 transition-colors ${isDark ? 'border-white/[0.05] hover:bg-white/5 text-gray-300' : 'border-gray-100 hover:bg-accent-50 text-gray-700'}`}>
                                                 <p className="font-semibold">{c.full_name || 'Unknown'} · {c.phone_number}</p>
                                                 <p className={`truncate ${textMuted}`}>{c.delivery_address}</p>
                                             </button>
@@ -368,8 +368,8 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
 
                         {/* ── New Customer Form ── shown automatically after failed phone search */}
                         {showNewCustomerForm && (
-                            <div className={`rounded-xl border p-4 space-y-3 ${isDark ? 'border-orange-500/25 bg-orange-500/5' : 'border-orange-200 bg-orange-50'}`}>
-                                <div className={`flex items-center gap-2 text-sm font-bold ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>
+                            <div className={`rounded-xl border p-4 space-y-3 ${isDark ? 'border-accent-500/25 bg-accent-500/5' : 'border-accent-200 bg-accent-50'}`}>
+                                <div className={`flex items-center gap-2 text-sm font-bold ${isDark ? 'text-accent-400' : 'text-accent-600'}`}>
                                     <UserPlus className="h-4 w-4" /> New Customer
                                     <span className={`ml-auto text-xs font-normal ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Phone: {customerPhone}</span>
                                 </div>
@@ -393,7 +393,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                                 <div className={`absolute z-50 w-full mt-1 rounded-xl border overflow-hidden shadow-lg ${isDark ? 'bg-[#1a1d27] border-white/[0.08]' : 'bg-white border-gray-200'}`}>
                                                     {newPostcodeAuto.slice(0, 6).map(pc => (
                                                         <button key={pc} onClick={() => selectNewPostcode(pc)}
-                                                            className={`w-full text-left px-3 py-2 text-xs transition-colors ${isDark ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-orange-50'}`}>
+                                                            className={`w-full text-left px-3 py-2 text-xs transition-colors ${isDark ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-accent-50'}`}>
                                                             <MapPin className="h-3 w-3 inline mr-1.5 opacity-50" />{pc}
                                                         </button>
                                                     ))}
@@ -406,7 +406,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                     </>
                                 )}
                                 <button onClick={saveNewCustomer} disabled={!customerName}
-                                    className="w-full py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 disabled:opacity-50 transition-colors">
+                                    className="w-full py-2.5 rounded-xl bg-accent-500 text-white text-sm font-bold hover:bg-accent-600 disabled:opacity-50 transition-colors">
                                     Save Customer & Continue
                                 </button>
                             </div>
@@ -432,7 +432,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                     <div className="flex gap-1.5 flex-wrap mb-2">
                                         {foundCustomer.savedAddresses.map((addr, i) => (
                                             <button key={i} onClick={() => setDeliveryAddress(addr.address)}
-                                                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-colors ${deliveryAddress === addr.address ? 'bg-orange-500 text-white border-orange-500' : isDark ? 'border-white/[0.08] text-gray-400 hover:border-orange-500/30 hover:text-orange-400' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}>
+                                                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-colors ${deliveryAddress === addr.address ? 'bg-accent-500 text-white border-accent-500' : isDark ? 'border-white/[0.08] text-gray-400 hover:border-accent-500/30 hover:text-accent-400' : 'border-gray-200 text-gray-500 hover:border-accent-300 hover:text-accent-500'}`}>
                                                 {addr.is_default && <Star className="h-2.5 w-2.5" />}
                                                 {addr.label || `Address ${i + 1}`}
                                             </button>
@@ -455,7 +455,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                         <div className={`absolute z-50 w-full mt-1 rounded-xl border overflow-hidden shadow-lg ${isDark ? 'bg-[#1a1d27] border-white/[0.08]' : 'bg-white border-gray-200'}`}>
                                             {postcodeAutocomplete.slice(0, 6).map(pc => (
                                                 <button key={pc} onClick={() => selectPostcodeResult(pc)}
-                                                    className={`w-full text-left px-3 py-2 text-xs transition-colors ${isDark ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-orange-50'}`}>
+                                                    className={`w-full text-left px-3 py-2 text-xs transition-colors ${isDark ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-accent-50'}`}>
                                                     <MapPin className="h-3 w-3 inline mr-1.5 opacity-50" />{pc}
                                                 </button>
                                             ))}
@@ -472,7 +472,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                 <div className="flex gap-2 flex-wrap">
                                     {COLLECTION_TIMES.map(t2 => (
                                         <button key={t2} onClick={() => setCollectionTime(t2)}
-                                            className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${collectionTime === t2 ? 'bg-orange-500 text-white border-orange-500' : `${isDark ? 'border-white/[0.08] text-gray-400 hover:border-orange-500/30 hover:text-orange-400' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}`}>
+                                            className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${collectionTime === t2 ? 'bg-accent-500 text-white border-accent-500' : `${isDark ? 'border-white/[0.08] text-gray-400 hover:border-accent-500/30 hover:text-accent-400' : 'border-gray-200 text-gray-500 hover:border-accent-300 hover:text-accent-500'}`}`}>
                                             {t2}
                                         </button>
                                     ))}
@@ -494,7 +494,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                         {/* Add new customer CTA — if phone searched but no customer found and form was dismissed */}
                         {!foundCustomer && !showNewCustomerForm && customerPhone && (
                             <button onClick={() => setShowNewCustomerForm(true)}
-                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed text-sm font-semibold transition-colors ${isDark ? 'border-orange-500/30 text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/50' : 'border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400'}`}>
+                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed text-sm font-semibold transition-colors ${isDark ? 'border-accent-500/30 text-accent-400 hover:bg-accent-500/10 hover:border-accent-500/50' : 'border-accent-300 text-accent-600 hover:bg-accent-50 hover:border-accent-400'}`}>
                                 <UserPlus className="h-4 w-4" /> Add as New Customer
                             </button>
                         )}
@@ -514,7 +514,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                             Cancel
                         </button>
                         <button onClick={confirmAndClose} disabled={!customerName}
-                            className="flex-2 flex-grow-[2] py-3 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                            className="flex-2 flex-grow-[2] py-3 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:opacity-40 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2">
                             <Phone className="h-4 w-4" />
                             Confirm & Add Items
                         </button>

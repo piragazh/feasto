@@ -18,7 +18,7 @@ import {
 const ROLES = [
     { value: 'waiter',        label: 'Waiter',        color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
     { value: 'cashier',       label: 'Cashier',       color: 'bg-green-500/10 text-green-400 border-green-500/30' },
-    { value: 'kitchen_staff', label: 'Kitchen Staff', color: 'bg-orange-500/10 text-orange-400 border-orange-500/30' },
+    { value: 'kitchen_staff', label: 'Kitchen Staff', color: 'bg-accent-500/10 text-accent-400 border-accent-500/30' },
     { value: 'manager',       label: 'Manager',       color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
 ];
 
@@ -123,7 +123,7 @@ function StaffFormDialog({ open, onClose, staff, restaurantId, onSaved, isDark }
                 </div>
                 <DialogFooter>
                     <Button variant="ghost" onClick={onClose} className={isDark ? 'text-gray-400' : 'text-gray-600'}>Cancel</Button>
-                    <Button onClick={save} disabled={saving} className="bg-orange-500 hover:bg-orange-600 text-white">
+                    <Button onClick={save} disabled={saving} className="bg-accent-500 hover:bg-accent-600 text-white">
                         {saving ? 'Saving...' : (staff ? 'Save Changes' : 'Add Staff')}
                     </Button>
                 </DialogFooter>
@@ -139,7 +139,7 @@ function StaffStats({ staff, orders, t }) {
     return (
         <div className="flex items-center gap-4 mt-2">
             <div className="flex items-center gap-1.5">
-                <ShoppingCart className="h-3 w-3 text-orange-400" />
+                <ShoppingCart className="h-3 w-3 text-accent-400" />
                 <span className={`${t.textSub} text-xs`}>{staffOrders.length} orders</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -163,7 +163,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
         textSub: isDark ? 'text-gray-500' : 'text-gray-400',
         input:   isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900',
         pill:    isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600',
-        pillActive: 'bg-orange-500 text-white border-orange-500',
+        pillActive: 'bg-accent-500 text-white border-accent-500',
     };
 
     const [search, setSearch] = useState('');
@@ -275,7 +275,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                     <h2 className={`${t.text} font-bold text-base`}>Staff Members</h2>
                     {isAdmin && (
                         <Button onClick={() => { setEditingStaff(null); setFormOpen(true); }}
-                            className="bg-orange-500 hover:bg-orange-600 text-white h-8 px-3 text-xs gap-1">
+                            className="bg-accent-500 hover:bg-accent-600 text-white h-8 px-3 text-xs gap-1">
                             <UserPlus className="h-3.5 w-3.5" /> Add
                         </Button>
                     )}
@@ -311,13 +311,13 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                             <button key={s.id} onClick={() => setSelectedStaff(isSelected ? null : s)}
                                 className={`w-full text-left p-3 rounded-xl border transition-all ${
                                     isSelected
-                                        ? 'border-orange-500/50 bg-orange-500/5'
-                                        : `${t.card} border hover:border-orange-500/30`
+                                        ? 'border-accent-500/50 bg-accent-500/5'
+                                        : `${t.card} border hover:border-accent-500/30`
                                 } ${!s.is_active ? 'opacity-50' : ''}`}>
                                 <div className="flex items-center justify-between mb-1">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 ${
-                                            s.is_active ? 'bg-orange-500' : 'bg-gray-500'
+                                            s.is_active ? 'bg-accent-500' : 'bg-gray-500'
                                         }`}>
                                             {s.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                         </div>
@@ -359,7 +359,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                         <div className={`${t.panel} border rounded-2xl p-5`}>
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white ${selectedStaff.is_active ? 'bg-orange-500' : 'bg-gray-500'}`}>
+                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white ${selectedStaff.is_active ? 'bg-accent-500' : 'bg-gray-500'}`}>
                                         {selectedStaff.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                     </div>
                                     <div>
@@ -403,7 +403,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                         {/* KPI cards */}
                         <div className="grid grid-cols-3 gap-3">
                             {[
-                                { label: 'Orders', value: selectedOrders.length, icon: ShoppingCart, color: 'text-orange-400' },
+                                { label: 'Orders', value: selectedOrders.length, icon: ShoppingCart, color: 'text-accent-400' },
                                 { label: 'Revenue', value: `£${selectedRevenue.toFixed(2)}`, icon: TrendingUp, color: 'text-green-400' },
                                 { label: 'Avg. Order', value: selectedOrders.length ? `£${(selectedRevenue / selectedOrders.length).toFixed(2)}` : '£0.00', icon: DollarSign, color: 'text-blue-400' },
                             ].map(({ label, value, icon: Icon, color }) => (
@@ -435,7 +435,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                                 {format(new Date(order.created_date), 'dd MMM, HH:mm')} · {order.order_type?.replace('_', ' ')}
                                             </p>
                                         </div>
-                                        <p className="text-orange-500 text-sm font-bold">£{order.total?.toFixed(2)}</p>
+                                        <p className="text-accent-500 text-sm font-bold">£{order.total?.toFixed(2)}</p>
                                     </div>
                                 ))}
                             </div>
@@ -446,16 +446,16 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                     <div className="flex-1 min-h-0 overflow-y-auto space-y-3 scrollbar-hide">
                         <div className={`${t.panel} border rounded-2xl overflow-hidden`}>
                             <div className={`px-4 py-3 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-100'} flex items-center gap-2`}>
-                                <TrendingUp className="h-4 w-4 text-orange-400" />
+                                <TrendingUp className="h-4 w-4 text-accent-400" />
                                 <h4 className={`${t.text} font-semibold text-sm`}>Staff Leaderboard · {datePreset}</h4>
                             </div>
                             <div className="divide-y divide-white/[0.03]">
                                 {staffStats.map((s, i) => (
                                     <div key={s.id} className={`px-4 py-3 flex items-center gap-4 ${!s.is_active ? 'opacity-40' : ''}`}>
-                                        <span className={`w-6 text-center text-sm font-bold ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : t.textSub}`}>
+                                        <span className={`w-6 text-center text-sm font-bold ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-accent-400' : t.textSub}`}>
                                             {i + 1}
                                         </span>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white ${s.is_active ? 'bg-orange-500' : 'bg-gray-500'}`}>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white ${s.is_active ? 'bg-accent-500' : 'bg-gray-500'}`}>
                                             {s.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                         </div>
                                         <div className="flex-1 min-w-0">

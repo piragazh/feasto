@@ -145,7 +145,7 @@ export default function POSPermissionSettings({ restaurantId, restaurant }) {
                     <Button
                         onClick={save}
                         disabled={saving || !dirty}
-                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                        className="bg-accent-500 hover:bg-accent-600 text-white"
                     >
                         {saving ? 'Saving…' : 'Save Permissions'}
                     </Button>

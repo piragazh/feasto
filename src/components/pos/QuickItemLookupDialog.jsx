@@ -61,7 +61,7 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                 <DialogHeader className={`px-4 py-4 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-100'}`}>
                     <DialogTitle className={isDark ? 'text-white' : 'text-gray-900'} asChild>
                         <div className="flex items-center gap-2">
-                            <Search className="h-5 w-5 text-orange-500" />
+                            <Search className="h-5 w-5 text-accent-500" />
                             Quick Item Lookup
                         </div>
                     </DialogTitle>
@@ -96,7 +96,7 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                                     />
                                     <Button
                                         onClick={handleSearch}
-                                        className="bg-orange-500 hover:bg-orange-600 text-white px-6"
+                                        className="bg-accent-500 hover:bg-accent-600 text-white px-6"
                                     >
                                         Find
                                     </Button>
@@ -160,7 +160,7 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                                             {selectedItem.description}
                                         </p>
                                     )}
-                                    <p className={`text-sm font-bold mt-2 ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>
+                                    <p className={`text-sm font-bold mt-2 ${isDark ? 'text-accent-400' : 'text-accent-600'}`}>
                                         £{(selectedItem.pos_price != null ? selectedItem.pos_price : selectedItem.price).toFixed(2)}
                                     </p>
                                 </div>
@@ -176,7 +176,7 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                                 </Button>
                                 <Button
                                     onClick={handleAdd}
-                                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                                    className="flex-1 bg-accent-500 hover:bg-accent-600 text-white"
                                 >
                                     Add to Cart
                                 </Button>

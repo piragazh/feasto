@@ -14,12 +14,12 @@ export default function POSTablesGrid({
 
     const statusStyles = isDark ? {
         available:      { card: 'border-white/[0.06] hover:border-green-500/40', dot: 'bg-green-400', label: 'text-green-400' },
-        occupied:       { card: 'border-orange-500/40 bg-orange-500/5', dot: 'bg-orange-400', label: 'text-orange-400' },
+        occupied:       { card: 'border-accent-500/40 bg-accent-500/5', dot: 'bg-accent-400', label: 'text-accent-400' },
         reserved:       { card: 'border-blue-500/30 bg-blue-500/5', dot: 'bg-blue-400', label: 'text-blue-400' },
         needs_cleaning: { card: 'border-yellow-500/30 bg-yellow-500/5', dot: 'bg-yellow-400', label: 'text-yellow-400' },
     } : {
         available:      { card: 'border-gray-200 hover:border-green-400', dot: 'bg-green-400', label: 'text-green-600' },
-        occupied:       { card: 'border-orange-400 bg-orange-50', dot: 'bg-orange-400', label: 'text-orange-600' },
+        occupied:       { card: 'border-accent-400 bg-accent-50', dot: 'bg-accent-400', label: 'text-accent-600' },
         reserved:       { card: 'border-blue-300 bg-blue-50', dot: 'bg-blue-400', label: 'text-blue-600' },
         needs_cleaning: { card: 'border-yellow-400 bg-yellow-50', dot: 'bg-yellow-400', label: 'text-yellow-600' },
     };
@@ -70,7 +70,7 @@ export default function POSTablesGrid({
                                     )}
                                     {hasOrders ? (
                                         <>
-                                            <p className="text-orange-400 text-[11px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                            <p className="text-accent-400 text-[11px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
                                             <p className={`${isDark ? 'text-white' : 'text-gray-900'} font-bold text-sm`}>£{total.toFixed(2)}</p>
                                         </>
                                     ) : (

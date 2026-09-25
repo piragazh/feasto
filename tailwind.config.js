@@ -4,6 +4,23 @@ module.exports = {
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
   theme: {
   	extend: {
+  		colors: {
+  			// The POS accent, driven by the palette a restaurant chooses. The
+  			// fallbacks are the default orange, so the till looks right before
+  			// any palette is applied and if JavaScript never runs.
+  			accent: {
+  				50: 'rgb(var(--pos-accent-50, 255 247 237) / <alpha-value>)',
+  				100: 'rgb(var(--pos-accent-100, 255 237 213) / <alpha-value>)',
+  				200: 'rgb(var(--pos-accent-200, 254 215 170) / <alpha-value>)',
+  				300: 'rgb(var(--pos-accent-300, 253 186 116) / <alpha-value>)',
+  				400: 'rgb(var(--pos-accent-400, 251 146 60) / <alpha-value>)',
+  				500: 'rgb(var(--pos-accent-500, 249 115 22) / <alpha-value>)',
+  				600: 'rgb(var(--pos-accent-600, 234 88 12) / <alpha-value>)',
+  				700: 'rgb(var(--pos-accent-700, 194 65 12) / <alpha-value>)',
+  				800: 'rgb(var(--pos-accent-800, 154 52 18) / <alpha-value>)',
+  				900: 'rgb(var(--pos-accent-900, 124 45 18) / <alpha-value>)',
+  			},
+  		},
   		fontFamily: {
   			// Plus Jakarta Sans: geometric enough to look considered, with open
   			// counters that stay legible at a glance across a counter. The stack

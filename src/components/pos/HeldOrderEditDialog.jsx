@@ -84,7 +84,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                                         </span>
                                         <button
                                             onClick={() => handleQuantityChange(idx, item.quantity + 1)}
-                                            className={`h-6 w-6 rounded flex items-center justify-center ${isDark ? 'bg-orange-500/20 hover:bg-orange-500/30' : 'bg-orange-100 hover:bg-orange-200'}`}
+                                            className={`h-6 w-6 rounded flex items-center justify-center ${isDark ? 'bg-accent-500/20 hover:bg-accent-500/30' : 'bg-accent-100 hover:bg-accent-200'}`}
                                         >
                                             <Plus className="h-3 w-3" />
                                         </button>
@@ -112,7 +112,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                     <Button variant="outline" onClick={onClose} className="flex-1">
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">
+                    <Button onClick={handleSave} className="flex-1 bg-accent-500 hover:bg-accent-600 text-white">
                         Save Order
                     </Button>
                 </div>

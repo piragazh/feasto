@@ -18,7 +18,7 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
     const getStatusColor = (status) => {
         switch (status) {
             case 'available': return 'bg-green-500/20 border-green-500';
-            case 'occupied': return 'bg-orange-500/20 border-orange-500';
+            case 'occupied': return 'bg-accent-500/20 border-accent-500';
             case 'reserved': return 'bg-blue-500/20 border-blue-500';
             case 'needs_cleaning': return 'bg-yellow-500/20 border-yellow-500';
             default: return 'bg-gray-700 border-gray-600';
@@ -28,7 +28,7 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
     const getStatusBadge = (status) => {
         const colors = {
             available: 'bg-green-500',
-            occupied: 'bg-orange-500',
+            occupied: 'bg-accent-500',
             reserved: 'bg-blue-500',
             needs_cleaning: 'bg-yellow-500'
         };
@@ -170,7 +170,7 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
 
                                 {hasOrders ? (
                                     <>
-                                        <p className="text-orange-400 text-xs">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                        <p className="text-accent-400 text-xs">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
                                         <p className="text-white font-bold text-sm mt-1">£{total.toFixed(2)}</p>
                                     </>
                                 ) : (

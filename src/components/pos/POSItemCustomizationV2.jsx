@@ -210,8 +210,8 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
     const subtext = isDark ? 'text-gray-400' : 'text-gray-500';
     const divider = isDark ? 'border-white/[0.06]' : 'border-gray-200';
     const optionBase = `w-full text-left rounded-2xl border-2 transition-all active:scale-95 flex items-center justify-between px-5 py-4 min-h-[72px]`;
-    const optionUnselected = isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-orange-500/40' : 'bg-gray-50 border-gray-200 hover:border-orange-400';
-    const optionSelected = 'bg-orange-500 border-orange-500 text-white';
+    const optionUnselected = isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400';
+    const optionSelected = 'bg-accent-500 border-accent-500 text-white';
 
     if (!item?.customization_options?.length) return null;
 
@@ -223,7 +223,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                 <div className={`flex items-center justify-between px-5 py-4 border-b ${divider} flex-shrink-0`}>
                     <div>
                         <p className={`font-bold text-lg ${text}`}>{item.name}</p>
-                        <p className="text-orange-400 font-bold text-xl mt-0.5">£{currentPrice.toFixed(2)}</p>
+                        <p className="text-accent-400 font-bold text-xl mt-0.5">£{currentPrice.toFixed(2)}</p>
                     </div>
                     <button onClick={onClose} className={`h-10 w-10 rounded-full flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} aria-label="Close">
                         <X className="h-5 w-5" />
@@ -234,7 +234,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                 <div className={`flex items-center gap-1.5 px-5 pt-3 pb-1 flex-shrink-0`}>
                     {steps.map((s, i) => (
                         <button key={i} onClick={() => setStep(i)}
-                            className={`h-2 rounded-full transition-all ${i === step ? 'bg-orange-500 flex-1' : i < step ? 'bg-orange-300 w-4' : isDark ? 'bg-white/10 w-4' : 'bg-gray-200 w-4'}`}
+                            className={`h-2 rounded-full transition-all ${i === step ? 'bg-accent-500 flex-1' : i < step ? 'bg-accent-300 w-4' : isDark ? 'bg-white/10 w-4' : 'bg-gray-200 w-4'}`}
                         />
                     ))}
                 </div>
@@ -264,7 +264,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                             >
                                 <span className="font-semibold text-lg">{opt.label}</span>
                                 <div className="flex items-center gap-3">
-                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
                                     {isSelected && <Check className="h-6 w-6" />}
                                 </div>
                             </button>
@@ -283,7 +283,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                             >
                                 <span className="font-semibold text-lg">{opt.label}</span>
                                 <div className="flex items-center gap-3">
-                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${selected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${selected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
                                     {selected && <Check className="h-6 w-6" />}
                                 </div>
                             </button>
@@ -301,9 +301,9 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                             >
                                 <span className="font-semibold text-lg">{opt.label}</span>
                                 <div className="flex items-center gap-3">
-                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${selected ? 'text-white' : 'text-orange-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${selected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
                                     <div className={`h-6 w-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${selected ? 'bg-white border-white' : isDark ? 'border-white/30' : 'border-gray-300'}`}>
-                                        {selected && <Check className="h-4 w-4 text-orange-500" />}
+                                        {selected && <Check className="h-4 w-4 text-accent-500" />}
                                     </div>
                                 </div>
                             </button>
@@ -342,7 +342,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                     )}
 
                     <Button onClick={handleNext}
-                        className={`flex-[3] h-14 font-bold text-base rounded-2xl flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white`}
+                        className={`flex-[3] h-14 font-bold text-base rounded-2xl flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-400 text-white`}
                     >
                         {isLastStep ? (
                             <>

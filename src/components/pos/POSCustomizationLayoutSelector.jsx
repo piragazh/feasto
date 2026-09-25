@@ -61,18 +61,18 @@ export default function POSCustomizationLayoutSelector({ restaurantId }) {
                         onClick={() => mutation.mutate(layout.id)}
                         className={`w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all ${
                             isSelected
-                                ? 'border-orange-500 bg-orange-50'
-                                : 'border-gray-200 hover:border-orange-300 bg-white'
+                                ? 'border-accent-500 bg-accent-50'
+                                : 'border-gray-200 hover:border-accent-300 bg-white'
                         }`}
                     >
-                        <div className={`mt-0.5 p-2 rounded-lg flex-shrink-0 ${isSelected ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                        <div className={`mt-0.5 p-2 rounded-lg flex-shrink-0 ${isSelected ? 'bg-accent-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                             <Icon className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
-                            <p className={`font-semibold ${isSelected ? 'text-orange-700' : 'text-gray-900'}`}>{layout.label}</p>
+                            <p className={`font-semibold ${isSelected ? 'text-accent-700' : 'text-gray-900'}`}>{layout.label}</p>
                             <p className="text-sm text-gray-500 mt-0.5">{layout.description}</p>
                         </div>
-                        {isSelected && <Check className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />}
+                        {isSelected && <Check className="h-5 w-5 text-accent-500 flex-shrink-0 mt-0.5" />}
                     </button>
                 );
             })}

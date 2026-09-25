@@ -156,23 +156,23 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
 
     const statusColor = (status) => ({
         available: t.tableIdle,
-        occupied: 'bg-orange-500/20 border-orange-500',
+        occupied: 'bg-accent-500/20 border-accent-500',
         reserved: 'bg-blue-500/20 border-blue-500',
         needs_cleaning: 'bg-yellow-500/20 border-yellow-500',
     }[status] || t.tableIdle);
 
     const statusBadgeColor = (status) => ({
         available: 'bg-green-500',
-        occupied: 'bg-orange-500',
+        occupied: 'bg-accent-500',
         reserved: 'bg-blue-500',
         needs_cleaning: 'bg-yellow-500',
     }[status] || 'bg-gray-500');
 
     const floorPlanStatusColor = (status, hasOrders) => {
-        if (hasOrders) return 'border-orange-500 bg-orange-500/25';
+        if (hasOrders) return 'border-accent-500 bg-accent-500/25';
         return {
             available: 'border-green-500 bg-green-500/15',
-            occupied: 'border-orange-500 bg-orange-500/25',
+            occupied: 'border-accent-500 bg-accent-500/25',
             reserved: 'border-blue-500 bg-blue-500/25',
             needs_cleaning: 'border-yellow-400 bg-yellow-400/20',
         }[status] || (isDark ? 'border-gray-500 bg-gray-700' : 'border-gray-400 bg-gray-100');
@@ -365,7 +365,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                     <Button
                         onClick={() => setShowPayment(true)}
                         disabled={ordersForTable.length === 0}
-                        className="h-14 px-8 text-base font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
+                        className="h-14 px-8 text-base font-bold bg-accent-500 hover:bg-accent-600 text-white rounded-xl"
                     >
                         Take Payment
                     </Button>
@@ -454,14 +454,14 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                     <Button
                         size="sm"
                         onClick={() => setViewMode('floorplan')}
-                        className={`h-9 px-3 ${viewMode === 'floorplan' ? 'bg-orange-500 hover:bg-orange-600 text-white' : t.toggle}`}
+                        className={`h-9 px-3 ${viewMode === 'floorplan' ? 'bg-accent-500 hover:bg-accent-600 text-white' : t.toggle}`}
                     >
                         <LayoutGrid className="h-4 w-4 mr-1.5" /> Floor Plan
                     </Button>
                     <Button
                         size="sm"
                         onClick={() => setViewMode('grid')}
-                        className={`h-9 px-3 ${viewMode === 'grid' ? 'bg-orange-500 hover:bg-orange-600 text-white' : t.toggle}`}
+                        className={`h-9 px-3 ${viewMode === 'grid' ? 'bg-accent-500 hover:bg-accent-600 text-white' : t.toggle}`}
                     >
                         <Grid3x3 className="h-4 w-4 mr-1.5" /> Grid
                     </Button>
@@ -472,7 +472,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
             <div className={`flex gap-4 text-xs ${t.textSub} flex-wrap`}>
                 {[
                     { label: 'Available', color: 'bg-green-500' },
-                    { label: 'Occupied', color: 'bg-orange-500' },
+                    { label: 'Occupied', color: 'bg-accent-500' },
                     { label: 'Reserved', color: 'bg-blue-500' },
                     { label: 'Needs Cleaning', color: 'bg-yellow-400' },
                 ].map(s => (
@@ -539,7 +539,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                 )}
                                 {hasOrders ? (
                                     <>
-                                        <p className="text-orange-300 text-[11px] mt-0.5">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                        <p className="text-accent-300 text-[11px] mt-0.5">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
                                         <p className={`${t.text} font-bold text-sm`}>£{total.toFixed(2)}</p>
                                     </>
                                 ) : (
@@ -593,7 +593,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                         )}
                                         {hasOrders ? (
                                             <>
-                                                <p className="text-orange-400 text-[11px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+                                                <p className="text-accent-400 text-[11px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
                                                 <p className={`${t.text} font-bold text-sm`}>£{total.toFixed(2)}</p>
                                             </>
                                         ) : (

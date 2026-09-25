@@ -343,7 +343,7 @@ function SourceBadge({ order }) {
                                             ))}
                                         </div>
 
-                                        <p className="text-orange-500 font-bold mb-3">£{order.total.toFixed(2)}</p>
+                                        <p className="text-accent-500 font-bold mb-3">£{order.total.toFixed(2)}</p>
 
                                         {/* Order actions.
                                             - 28px buttons were well under the touch floor, which is

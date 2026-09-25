@@ -209,7 +209,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                             />
                             {discountChanged && (
                                 <div className="mt-2 space-y-1">
-                                    <Label className="text-orange-400 text-xs">Reason code required</Label>
+                                    <Label className="text-accent-400 text-xs">Reason code required</Label>
                                     <Select value={discountReasonCode} onValueChange={setDiscountReasonCode}>
                                         <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                                             <SelectValue placeholder="Select reason" />
@@ -232,14 +232,14 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                             </div>
                             <div>
                                 <p className="text-gray-400 text-xs">Total</p>
-                                <p className="text-orange-400 text-2xl font-bold">£{total.toFixed(2)}</p>
+                                <p className="text-accent-400 text-2xl font-bold">£{total.toFixed(2)}</p>
                             </div>
                         </div>
                     </div>
 
                     <DialogFooter>
                         <Button variant="outline" onClick={onClose} className="bg-gray-700 border-gray-600 text-white">Cancel</Button>
-                        <Button onClick={() => setConfirmSave(true)} disabled={!canSave} className="bg-orange-500 hover:bg-orange-600">
+                        <Button onClick={() => setConfirmSave(true)} disabled={!canSave} className="bg-accent-500 hover:bg-accent-600">
                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
                         </Button>
                     </DialogFooter>
@@ -251,7 +251,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-orange-400" /> Save Order Changes?
+                            <AlertTriangle className="h-5 w-5 text-accent-400" /> Save Order Changes?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             This will update the live order. New total: £{total.toFixed(2)}. Are you sure?
@@ -259,7 +259,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleSaveConfirmed} className="bg-orange-500 hover:bg-orange-600 text-white">Save Changes</AlertDialogAction>
+                        <AlertDialogAction onClick={handleSaveConfirmed} className="bg-accent-500 hover:bg-accent-600 text-white">Save Changes</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

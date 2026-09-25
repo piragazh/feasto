@@ -105,7 +105,7 @@ export default function POSDashboard() {
         textSub:    isDark ? 'text-gray-500'  : 'text-gray-400',
         pill:       isDark ? 'bg-[#0f1117]'   : 'bg-gray-100',
         iconBtn:    isDark ? 'bg-white/5 hover:bg-white/10 border border-white/[0.06] text-gray-400 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-500 hover:text-gray-900',
-        tabActive:  isDark ? 'text-orange-400 border-orange-500' : 'text-orange-500 border-orange-500',
+        tabActive:  isDark ? 'text-accent-400 border-accent-500' : 'text-accent-500 border-accent-500',
         tabInactive:isDark ? 'text-gray-500 border-transparent hover:text-gray-300 hover:border-gray-600' : 'text-gray-400 border-transparent hover:text-gray-700 hover:border-gray-300',
     };
 
@@ -317,7 +317,7 @@ export default function POSDashboard() {
     if (!user || !restaurant) return (
         <div className={`min-h-screen ${t.bg} flex items-center justify-center`}>
             <div className="text-center">
-                <div className="w-16 h-16 rounded-full border-4 border-orange-500/30 border-t-orange-500 animate-spin mx-auto mb-4" />
+                <div className="w-16 h-16 rounded-full border-4 border-accent-500/30 border-t-accent-500 animate-spin mx-auto mb-4" />
                 <p className={`${t.textMuted} font-medium`}>Loading POS System...</p>
             </div>
         </div>
@@ -327,7 +327,7 @@ export default function POSDashboard() {
     if (maxPos > 1 && !posNumber) return (
         <div className={`min-h-screen ${t.bg} flex items-center justify-center`}>
             <div className="text-center max-w-md w-full px-6">
-                <div className="w-20 h-20 bg-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-orange-500/30">
+                <div className="w-20 h-20 bg-accent-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-accent-500/30">
                     <UtensilsCrossed className="h-10 w-10 text-white" />
                 </div>
                 <h2 className={`${t.text} text-2xl font-bold mb-1`}>{restaurant.name}</h2>
@@ -335,8 +335,8 @@ export default function POSDashboard() {
                 <div className="grid grid-cols-2 gap-3">
                     {Array.from({ length: maxPos }, (_, i) => i + 1).map(num => (
                         <button key={num} onClick={() => setPosNumber(num)}
-                            className={`h-24 ${isDark ? 'bg-[#1a1d27] border-gray-700' : 'bg-white border-gray-200'} hover:bg-orange-500/10 border hover:border-orange-500 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all group`}>
-                            <ShoppingCart className={`h-7 w-7 ${t.textMuted} group-hover:text-orange-400 transition-colors`} />
+                            className={`h-24 ${isDark ? 'bg-[#1a1d27] border-gray-700' : 'bg-white border-gray-200'} hover:bg-accent-500/10 border hover:border-accent-500 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all group`}>
+                            <ShoppingCart className={`h-7 w-7 ${t.textMuted} group-hover:text-accent-400 transition-colors`} />
                             <span className={`${t.text} font-semibold text-sm`}>Terminal {num}</span>
                         </button>
                     ))}
@@ -384,7 +384,7 @@ export default function POSDashboard() {
                         {restaurant.logo_url ? (
                             <img src={restaurant.logo_url} alt={restaurant.name} className="w-9 h-9 rounded-xl object-cover" />
                         ) : (
-                            <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+                            <div className="w-9 h-9 bg-accent-500 rounded-xl flex items-center justify-center shadow-lg shadow-accent-500/30">
                                 <UtensilsCrossed className="h-5 w-5 text-white" />
                             </div>
                         )}
@@ -419,7 +419,7 @@ export default function POSDashboard() {
                                 aria-pressed={orderType === ot.id}
                                 className={`px-5 h-11 ${POS_RADIUS.control} text-sm font-semibold ${POS_TRANSITION} ${POS_FOCUS} ${
                                     orderType === ot.id
-                                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25'
+                                        ? 'bg-accent-500 text-white shadow-lg shadow-accent-500/25'
                                         : `${t.textMuted} hover:${isDark ? 'text-white' : 'text-gray-900'} active:scale-[0.98]`
                                 }`}>
                                 {ot.label}
@@ -451,9 +451,9 @@ export default function POSDashboard() {
                             )}
                         </div>
 
-                        <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2">
-                            <ShoppingCart className="h-4 w-4 text-orange-400" />
-                            <span className="text-orange-500 font-bold text-sm">{cart.reduce((s, i) => s + i.quantity, 0)} · £{cartTotal.toFixed(2)}</span>
+                        <div className="flex items-center gap-2 bg-accent-500/10 border border-accent-500/30 rounded-xl px-3 py-2">
+                            <ShoppingCart className="h-4 w-4 text-accent-400" />
+                            <span className="text-accent-500 font-bold text-sm">{cart.reduce((s, i) => s + i.quantity, 0)} · £{cartTotal.toFixed(2)}</span>
                         </div>
 
                         {/* QZ Tray status + Open Cash Drawer button */}
@@ -501,7 +501,7 @@ export default function POSDashboard() {
                                 onClick={() => setShowStaffLogin(true)}
                                 aria-label={`Switch staff member. Currently: ${activeStaffMember.full_name}`}
                                 className={`flex items-center gap-2 px-3 h-11 ${POS_RADIUS.control} border ${POS_TRANSITION} ${POS_FOCUS} ${t.iconBtn}`}>
-                                <div className={`w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-white ${POS_TEXT.micro} flex-shrink-0`} aria-hidden="true">
+                                <div className={`w-6 h-6 rounded-full bg-accent-500 flex items-center justify-center text-white ${POS_TEXT.micro} flex-shrink-0`} aria-hidden="true">
                                     {activeStaffMember.full_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                                 </div>
                                 <span className={`text-xs font-semibold ${t.textMuted} hidden sm:block`}>

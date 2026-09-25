@@ -134,7 +134,7 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
                 <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Period">
                     {Object.entries(RANGES).map(([k, r]) => (
                         <button key={k} role="radio" aria-checked={range === k} onClick={() => setRange(k)}
-                            className={`h-11 px-4 rounded-xl text-sm font-semibold ${range === k ? 'bg-orange-500 text-white' : t.chip}`}>
+                            className={`h-11 px-4 rounded-xl text-sm font-semibold ${range === k ? 'bg-accent-500 text-white' : t.chip}`}>
                             {r.label}
                         </button>
                     ))}
@@ -225,7 +225,7 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
                                                     {editing === member.id && (
                                                         <tr>
                                                             <td colSpan={5} className="pb-3">
-                                                                <div className="flex flex-wrap items-end gap-2 p-3 rounded-xl border border-orange-500/30 bg-orange-500/5">
+                                                                <div className="flex flex-wrap items-end gap-2 p-3 rounded-xl border border-accent-500/30 bg-accent-500/5">
                                                                     <label className="flex flex-col gap-1">
                                                                         <span className={`${t.sub} text-[11px]`}>Hourly rate £</span>
                                                                         <input type="number" step="0.01" min="0" value={rateInput}
@@ -238,7 +238,7 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
                                                                             className={`h-11 rounded-lg px-2 ${t.input}`} />
                                                                     </label>
                                                                     <button onClick={() => saveRate(member.id)}
-                                                                        className="h-11 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold">Save</button>
+                                                                        className="h-11 px-4 rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-bold">Save</button>
                                                                     <button onClick={() => setEditing(null)} className={`h-11 px-4 rounded-xl ${t.chip}`}>Cancel</button>
                                                                     <p className={`${t.sub} text-[11px] w-full`}>
                                                                         A new rate applies from its start date. Earlier shifts keep the rate they were worked at.

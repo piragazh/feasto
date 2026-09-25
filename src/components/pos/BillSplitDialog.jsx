@@ -89,7 +89,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
                     {/* Total */}
                     <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-3 rounded`}>
                         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Order Total</p>
-                        <p className="text-orange-400 text-2xl font-bold">£{order?.total.toFixed(2)}</p>
+                        <p className="text-accent-400 text-2xl font-bold">£{order?.total.toFixed(2)}</p>
                     </div>
 
                     {/* Number of Splits */}
@@ -157,7 +157,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
 
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} className={isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'}>Cancel</Button>
-                    <Button onClick={finalizeSplit} className="bg-orange-500 hover:bg-orange-600" disabled={customSplits.length === 0}>
+                    <Button onClick={finalizeSplit} className="bg-accent-500 hover:bg-accent-600" disabled={customSplits.length === 0}>
                         Complete Split
                     </Button>
                 </DialogFooter>

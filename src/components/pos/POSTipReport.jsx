@@ -74,7 +74,7 @@ export default function POSTipReport({ restaurantId, posTheme = 'dark' }) {
                     {Object.entries(RANGES).map(([key, r]) => (
                         <button key={key} role="radio" aria-checked={range === key}
                             onClick={() => setRange(key)}
-                            className={`h-11 px-4 rounded-xl text-sm font-semibold ${range === key ? 'bg-orange-500 text-white' : t.chip}`}>
+                            className={`h-11 px-4 rounded-xl text-sm font-semibold ${range === key ? 'bg-accent-500 text-white' : t.chip}`}>
                             {r.label}
                         </button>
                     ))}

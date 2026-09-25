@@ -220,7 +220,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
                             <Button
                                 onClick={() => handleChangeStatus('occupied')}
                                 disabled={loading}
-                                className="bg-orange-600 hover:bg-orange-700 text-white"
+                                className="bg-accent-600 hover:bg-accent-700 text-white"
                             >
                                 Occupied
                             </Button>
@@ -309,7 +309,7 @@ export default function TableActionsDialog({ open, onClose, table, tables, onRef
                                     <Button
                                         onClick={handleSplitTable}
                                         disabled={loading}
-                                        className="bg-orange-600 hover:bg-orange-700"
+                                        className="bg-accent-600 hover:bg-accent-700"
                                     >
                                         <Split className="h-4 w-4 mr-2" />
                                         Split
