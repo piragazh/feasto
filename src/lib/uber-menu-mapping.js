@@ -31,9 +31,17 @@
  * price. The in-store price is never sent unless that is what the owner chose.
  */
 
-/** £8.99 -> 899. Rounded, never truncated: 8.995 must not become 899. */
+/**
+ * £8.99 -> 899.
+ *
+ * The naive Math.round(amount * 100) under-charges on some values: 2.005 * 100
+ * is 200.49999999999997 in floating point, so it rounds DOWN to 200 instead of
+ * 201. Normalising the scaled value first removes that representation error, so
+ * a price is never a penny lower on the marketplace than intended.
+ */
 export function toMinorUnits(amount) {
-    return Math.round(Number(amount || 0) * 100);
+    const scaled = Number(amount || 0) * 100;
+    return Math.round(Number(scaled.toFixed(4)));
 }
 
 /**
