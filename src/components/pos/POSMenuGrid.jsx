@@ -46,7 +46,19 @@ const DENSITY = {
     compact:     'grid-cols-3 md:grid-cols-4 lg:grid-cols-6 auto-rows-[160px] gap-2',
 };
 
-export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange, onSearchFocus, onItemClick, t, density = 'standard' }) {
+/**
+ * Item text size, chosen in settings and kept separate from grid size: a counter
+ * may want big tiles with modest text, or compact tiles with names readable at
+ * arm's length. The price steps with it, since name and price are read together.
+ */
+const TEXT_SIZE = {
+    s: { name: 'text-[12px] leading-tight', price: 'text-lg' },
+    m: { name: 'text-[14px] leading-snug',  price: 'text-xl' },
+    l: { name: 'text-[17px] leading-snug',  price: 'text-2xl' },
+};
+
+export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange, onSearchFocus, onItemClick, t, density = 'standard', textSize = 'm', categoryImages = {} }) {
+    const type = TEXT_SIZE[textSize] || TEXT_SIZE.m;
     return (
         <div className={`col-span-1 md:col-span-7 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>
             <div className={`p-3 border-b ${t.panelHead} flex-shrink-0`}>
@@ -127,7 +139,22 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                     className="w-full h-full items-center justify-center absolute inset-0"
                                     style={{ display: item.image_url ? 'none' : 'flex' }}
                                 >
-                                    <ShoppingCart className={`h-8 w-8 ${t.textSub} opacity-40`} />
+                                    {/* An item with no photo shows its CATEGORY icon
+                                        rather than a generic cart: a grid of identical
+                                        placeholders gives staff nothing to aim at,
+                                        whereas the category art is recognisable at a
+                                        glance even when the tile is small. */}
+                                    {categoryImages?.[item.category] ? (
+                                        <img
+                                            src={categoryImages[item.category]}
+                                            alt=""
+                                            loading="lazy"
+                                            className="w-1/2 h-1/2 object-contain opacity-45"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                    ) : (
+                                        <ShoppingCart className={`h-8 w-8 ${t.textSub} opacity-40`} />
+                                    )}
                                 </div>
                                 {/* Flags an item that opens the options dialog, so staff
                                     know a tap won't add straight to the cart. */}
@@ -158,7 +185,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                 {/* Name is deliberately quieter than the price: staff
                                     scan tiles by price and photo, and a bold name
                                     competing with a bold price slows that down. */}
-                                <h3 className={`font-medium text-[13px] line-clamp-2 leading-tight transition-colors ${t.itemName}`}>
+                                <h3 className={`font-medium line-clamp-2 transition-colors ${type.name} ${t.itemName}`}>
                                     {item.name}
                                 </h3>
                                 {/* Price pinned bottom-right: it is the value staff scan
@@ -170,7 +197,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                             £{Number(struckPrice).toFixed(2)}
                                         </span>
                                     )}
-                                    <span className="text-accent-500 font-bold text-xl tabular-nums leading-none">
+                                    <span className={`text-accent-500 font-bold tabular-nums leading-none ${type.price}`}>
                                         £{effectivePrice.toFixed(2)}
                                     </span>
                                 </div>
