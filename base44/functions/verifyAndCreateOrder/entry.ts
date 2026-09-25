@@ -520,7 +520,7 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
         ukPhone.length >= 9 ? `phone:${ukPhone}` : null,
     ].filter(Boolean);
 
-    const couponResult = await resolveCouponDiscount(couponCodes, serverSubtotal, restaurantId, getCoupon, customerKeys);
+    const couponResult = await resolveCouponDiscount(couponCodes, serverSubtotal, restaurantId, getCoupon, new Date(), customerKeys);
     if (couponResult.error) {
         console.error(`${LOG} COUPON_INVALID ${couponResult.error} codes=${JSON.stringify(couponCodes)}`);
         return { valid: false, error: 'That coupon can no longer be applied. Please remove it and try again.', code: `COUPON_${couponResult.error}` };
