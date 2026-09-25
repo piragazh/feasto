@@ -74,6 +74,11 @@
       "default": 0,
       "description": "Number of retry attempts so far"
     },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "After this, the job is failed as expired instead of printed. Stops a printer that comes back after an outage printing a pile of stale tickets. A manual Retry resets it."
+    },
     "next_retry_at": {
       "type": "string",
       "format": "date-time",
