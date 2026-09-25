@@ -397,7 +397,7 @@ async function hasActivePromotion(base44, restaurantId, promotionCodes) {
     });
 }
 
-async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS, couponCodes = [], promotionCodes = [] }) {
+async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS, couponCodes = [], promotionCodes = [], customerPhone = '', customerAccount = '', customerEmail = '' }) {
     const regularItems = items.filter(i => !String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const dealItems = items.filter(i => String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const requiredIds = [...new Set(regularItems.map(i => i.menu_item_id || i.id).filter(Boolean))];
@@ -679,6 +679,12 @@ Deno.serve(async (req) => {
                     clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS,
                     couponCodes: Array.isArray(orderData.coupon_codes) ? orderData.coupon_codes : [],
                     promotionCodes: Array.isArray(orderData.promotion_codes) ? orderData.promotion_codes : [],
+                    // Identities, so a loyalty reward can only be spent by the
+                    // customer who earned it. Without these the ownership check
+                    // is skipped and anyone with the code could use it.
+                    customerPhone: orderData.phone ?? orderData.customer_phone ?? '',
+                    customerAccount: orderData.created_by ?? '',
+                    customerEmail: orderData.customer_email ?? '',
                 });
             } catch (valErr) {
                 console.error(`${LOG} VALIDATION_ERROR - accepting order unvalidated (fail-safe) pi=${paymentIntentId || 'none'}: ${valErr?.message}`, valErr?.stack);
