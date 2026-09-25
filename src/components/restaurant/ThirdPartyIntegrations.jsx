@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { AlertCircle, Check, X, Settings, RefreshCw, LogIn, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Check, X, Settings, RefreshCw, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PLATFORMS = [
@@ -42,7 +42,6 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
     // email and password - a marketplace login is full account access, so it is
     // never asked for or stored.
     const [credentials, setCredentials] = useState({ store_id: '' });
-    const [showPassword, setShowPassword] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
     const [syncing, setSyncing] = useState(false);
