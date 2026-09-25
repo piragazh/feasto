@@ -84,24 +84,34 @@ export default function OrderModification({ restaurantId }) {
     const modifyOrderMutation = useMutation({
         mutationFn: async ({ orderId, items, note }) => {
             const order = activeOrders.find(o => o.id === orderId);
-            const newSubtotal = items.reduce((sum, item) => 
-                sum + (item.price * item.quantity), 0
-            );
-            const newTotal = newSubtotal + (order.delivery_fee || 0) - (order.discount || 0);
 
-            await base44.entities.Order.update(orderId, {
-                items: items,
-                subtotal: newSubtotal,
-                total: newTotal,
-                status_history: [
-                    ...(order.status_history || []),
-                    {
-                        status: order.status,
-                        timestamp: new Date().toISOString(),
-                        note: `Order modified by restaurant: ${note}`
-                    }
-                ]
+            // Routed through posUpdateOrder rather than writing the order directly.
+            // The browser used to compute subtotal and total and save them itself,
+            // which meant the prices were whatever the page said, and the change
+            // left NO entry in the audit log - so modified orders never appeared
+            // in the exceptions report. posUpdateOrder re-prices every line from
+            // the menu, recomputes the totals server-side and records who changed
+            // what.
+            const res = await base44.functions.invoke('posUpdateOrder', {
+                order_id: orderId,
+                updates: {
+                    items,
+                    status_history: [
+                        ...(order.status_history || []),
+                        {
+                            status: order.status,
+                            timestamp: new Date().toISOString(),
+                            note: `Order modified by restaurant: ${note}`,
+                        },
+                    ],
+                },
             });
+            const data = res?.data ?? res;
+            if (data?.error) throw new Error(data.error);
+
+            // The server decides the total, so the customer is told the figure
+            // that was actually saved rather than one the page guessed.
+            const newTotal = Number(data?.order?.total ?? order.total ?? 0);
 
             // Notify customer about modification
             const itemsText = items.map(i => `${i.quantity}x ${i.name}`).join(', ');
