@@ -63,16 +63,39 @@ Deno.serve(async (req) => {
         const total = parseFloat(((uberOrder.payment?.charges?.total_food_and_beverage?.amount || subtotal * 100) / 100).toFixed(2));
         const deliveryFee = parseFloat(((uberOrder.payment?.charges?.delivery_fee?.amount || 0) / 100).toFixed(2));
 
-        // Match restaurant by store_id saved during integration setup
-        let restaurantId = 'uber_eats_unassigned';
+        // Match restaurant by store_id saved during integration setup.
+        //
+        // An unmatched store used to fall back to a fake id ('uber_eats_unassigned'),
+        // and the order was created anyway - belonging to a restaurant that does not
+        // exist, so it appeared on NOBODY'S kitchen screen and was silently lost.
+        // One mistyped store id in settings and a restaurant's Uber orders vanish
+        // with no error anywhere.
+        //
+        // Now it fails loudly and returns 5xx, so Uber RETRIES rather than
+        // considering the order delivered to us. A real order is never dropped on
+        // the floor because of a configuration mistake.
         const storeId = uberOrder.restaurant?.id || uberOrder.store_id || body.resource_id || '';
-        if (storeId) {
-            const allRestaurants = await base44.asServiceRole.entities.Restaurant.list();
-            const matched = allRestaurants.find(r =>
-                r.third_party_integrations?.uber_eats?.store_id === storeId
-            );
-            if (matched) restaurantId = matched.id;
+        const allRestaurants = await base44.asServiceRole.entities.Restaurant.list();
+        const matched = storeId
+            ? allRestaurants.find(r => r.third_party_integrations?.uber_eats?.store_id === storeId)
+            : null;
+
+        if (!matched) {
+            console.error(`[UBER] UNROUTED ORDER uber_order_id=${uberOrderId} store_id=${storeId || '(none supplied)'} — no restaurant has this store id in its Uber Eats integration. Order NOT created; Uber will retry.`);
+            try {
+                await base44.asServiceRole.entities.DashboardActivity.create({
+                    activity_type: 'error',
+                    title: 'Uber Eats order could not be routed',
+                    description: `An Uber Eats order arrived for store id "${storeId || 'unknown'}" but no restaurant is set up with it. Check the store id in Third-Party Integrations. The order has NOT been accepted.`,
+                });
+            } catch { /* alerting is best effort - the 5xx is what protects the order */ }
+            return Response.json({
+                error: 'Store not recognised',
+                code: 'STORE_NOT_MAPPED',
+                store_id: storeId || null,
+            }, { status: 503 });
         }
+        const restaurantId = matched.id;
 
         const mealDropOrder = {
             restaurant_id: restaurantId,
