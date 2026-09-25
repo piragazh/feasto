@@ -1,0 +1,34 @@
+{
+  "name": "Push Order Status to Uber Eats",
+  "description": "Tells Uber Eats when the kitchen accepts, marks ready, or cancels one of their orders. Without it an accepted order still looks unacknowledged to Uber and is auto-cancelled. Exactly-once per action via Order.uber_status_pushed; does nothing for non-Uber orders or when credentials are unset.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Order"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "push_order_status_to_uber_eats",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "uberEatsPushStatus",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

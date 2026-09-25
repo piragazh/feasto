@@ -21,6 +21,14 @@
       "type": "number",
       "description": "How many people are on the table. Used for seat numbering and for sales-per-cover."
     },
+    "uber_status_pushed": {
+      "type": "object",
+      "description": "Which Uber Eats actions have been sent for this order, and when, e.g. { accept: '...', ready: '...' }. Makes the status push exactly-once: the workflow fires on every order change, and accepting the same order twice is an error on Uber's side."
+    },
+    "uber_push_error": {
+      "type": "string",
+      "description": "Last failure when telling Uber Eats about a status change. An order Uber never hears about is auto-cancelled on their side, so this needs to be visible rather than silent."
+    },
     "loyalty_backfilled": {
       "type": "boolean",
       "description": "This order's points have been redistributed from the pooled service-account balance to the customer's phone. Stops a second backfill run crediting the same order twice."
