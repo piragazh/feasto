@@ -21,6 +21,10 @@
       "type": "number",
       "description": "How many people are on the table. Used for seat numbering and for sales-per-cover."
     },
+    "loyalty_backfilled": {
+      "type": "boolean",
+      "description": "This order's points have been redistributed from the pooled service-account balance to the customer's phone. Stops a second backfill run crediting the same order twice."
+    },
     "stock_applied": {
       "type": "boolean",
       "default": false,
