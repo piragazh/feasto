@@ -24,16 +24,43 @@
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-// ── Uber specifics: CONFIRM AGAINST YOUR PARTNER DOCUMENTATION ──────────────
+// ── Uber specifics ──────────────────────────────────────────────────────────
+// Sources: developer.uber.com/docs/eats — Authentication, Accept Order, Deny
+// Order, Sandbox.
+//
+// VERIFIED against those docs:
+//   token endpoint, scope, accept and deny paths, sandbox domains.
+//   (The token URL was previously login.uber.com, which is wrong: it is
+//   auth.uber.com for production and sandbox-login.uber.com for sandbox.)
+//
+// NOT YET VERIFIED — confirm before relying on them:
+//   the "ready" and "cancel" paths below. Accepting and denying are what stop an
+//   order auto-cancelling; these two are status niceties by comparison.
+//
+// Set UBER_EATS_SANDBOX=true to use Uber's test environment. Mixing sandbox
+// credentials with production domains is their most common integration error.
+const SANDBOX = String(Deno.env.get('UBER_EATS_SANDBOX') || '').toLowerCase() === 'true';
+
 const UBER_API = {
-    tokenUrl: 'https://login.uber.com/oauth/v2/token',
+    tokenUrl: SANDBOX
+        ? 'https://sandbox-login.uber.com/oauth/v2/token'
+        : 'https://auth.uber.com/oauth/v2/token',
     scope: 'eats.order',
-    base: 'https://api.uber.com/v1/eats',
-    // action -> how to call it for a given platform order id
+    base: SANDBOX ? 'https://test-api.uber.com/v1/eats' : 'https://api.uber.com/v1/eats',
     endpoints: {
-        accept: (id) => ({ path: `/orders/${id}/accept_pos_order`, body: {} }),
-        deny: (id, reason) => ({ path: `/orders/${id}/deny_pos_order`, body: { reason: { explanation: reason || 'Unable to fulfil', code: 'STORE_CLOSED' } } }),
+        // VERIFIED
+        accept: (id, _reason, ref) => ({
+            path: `/orders/${id}/accept_pos_order`,
+            body: { reason: 'Accepted in MealDrop POS', external_reference_id: ref || undefined },
+        }),
+        // VERIFIED
+        deny: (id, reason) => ({
+            path: `/orders/${id}/deny_pos_order`,
+            body: { reason: { explanation: reason || 'Unable to fulfil', code: 'STORE_CLOSED' } },
+        }),
+        // UNVERIFIED
         ready: (id) => ({ path: `/orders/${id}/restaurant_order_ready`, body: {} }),
+        // UNVERIFIED
         cancel: (id, reason) => ({ path: `/orders/${id}/cancel`, body: { reason: reason || 'Cancelled by restaurant' } }),
     },
 };
@@ -103,7 +130,7 @@ Deno.serve(async (req) => {
         if (pushed[action]) return Response.json({ skipped: `${action} already sent` });
 
         const reason = order.cancellation_reason || order.void_reason || '';
-        const { path, body: payload } = UBER_API.endpoints[action](order.third_party_order_id, reason);
+        const { path, body: payload } = UBER_API.endpoints[action](order.third_party_order_id, reason, order.order_number);
 
         // Claim it BEFORE sending. If the call then fails we retry via the
         // failure record rather than risk sending accept twice.
