@@ -94,6 +94,12 @@ Deno.serve(async (req) => {
             guest_name: uberOrder.eater
                 ? `${uberOrder.eater.first_name || ''} ${uberOrder.eater.last_name || ''}`.trim()
                 : 'Uber Eats Customer',
+            // The canonical channel field. It was never set, so marketplace orders
+            // showed no channel badge in the POS queue (which tests
+            // order_source === 'third_party') and every report that segments by
+            // channel miscounted them. third_party_platform says WHICH platform;
+            // this says it came from one at all.
+            order_source: 'third_party',
             third_party_platform: 'uber_eats',
             third_party_order_id: uberOrderId,  // dedup key — stored on create
             order_number: `UE-${String(uberOrderId).slice(-6).toUpperCase()}`,
