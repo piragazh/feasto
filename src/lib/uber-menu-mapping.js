@@ -48,7 +48,8 @@ export function toMinorUnits(amount) {
  * What to charge on the marketplace for one item.
  *
  * Order of preference:
- *   1. an explicit price for that platform (platform_prices.uber_eats)
+ *   1. an explicit price for that platform (platform_prices.uber_eats), or the
+ *      single marketplace price the editor sets (platform_prices.default)
  *   2. the normal price plus the restaurant's marketplace markup
  *   3. the normal price
  *
@@ -56,7 +57,11 @@ export function toMinorUnits(amount) {
  * choice, so it is honoured rather than silently marked up.
  */
 export function marketplacePrice(item, { platform = 'uber_eats', markupPercent = 0 } = {}) {
-    const explicit = item?.platform_prices?.[platform];
+    // A price set for THAT marketplace wins; otherwise the single "marketplace
+    // price" the menu editor offers, stored under `default`. One field covers
+    // every platform today, and a per-platform price can be added later without
+    // migrating anything.
+    const explicit = item?.platform_prices?.[platform] ?? item?.platform_prices?.default;
     if (explicit !== undefined && explicit !== null && Number(explicit) > 0) {
         return toMinorUnits(explicit);
     }

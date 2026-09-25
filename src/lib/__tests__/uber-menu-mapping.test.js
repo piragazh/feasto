@@ -157,3 +157,21 @@ describe('structure', () => {
         expect(Object.keys(menu).sort()).toEqual(['categories', 'items', 'menus', 'modifier_groups']);
     });
 });
+
+describe('the single marketplace price field', () => {
+    it('one field covers every platform', () => {
+        const item = { price: 6.49, platform_prices: { default: 7.99 } };
+        expect(marketplacePrice(item, { platform: 'uber_eats' })).toBe(799);
+        expect(marketplacePrice(item, { platform: 'deliveroo' })).toBe(799);
+    });
+
+    it('a platform-specific price overrides it', () => {
+        const item = { price: 6.49, platform_prices: { default: 7.99, deliveroo: 8.49 } };
+        expect(marketplacePrice(item, { platform: 'deliveroo' })).toBe(849);
+        expect(marketplacePrice(item, { platform: 'uber_eats' })).toBe(799);
+    });
+
+    it('falls back to the markup when the field is left empty', () => {
+        expect(marketplacePrice({ price: 10, platform_prices: {} }, { markupPercent: 20 })).toBe(1200);
+    });
+});
