@@ -138,6 +138,28 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
         }
     };
 
+    // Clear every job that is stuck and will not print. Clean up only ever removed
+    // finished jobs, so after a printer outage hundreds of pending jobs could only
+    // be removed by editing the database directly.
+    const [clearingStuck, setClearingStuck] = useState(false);
+    const stuckCount = (jobs || []).filter(j => j.status === 'pending' || j.status === 'processing').length;
+
+    const handleClearStuck = async () => {
+        if (!window.confirm(`Clear ${stuckCount} stuck print job${stuckCount === 1 ? '' : 's'}? They will not print. Any single ticket can still be retried afterwards.`)) return;
+        setClearingStuck(true);
+        try {
+            const res = await base44.functions.invoke('managePrintQueue', { action: 'clear_stuck', restaurant_id: restaurantId });
+            const data = res?.data ?? res;
+            if (data?.error) throw new Error(data.error);
+            toast.success(`Cleared ${data?.cleared || 0} stuck job${data?.cleared === 1 ? '' : 's'}`);
+            fetchJobs();
+        } catch (e) {
+            toast.error(e?.message || 'Could not clear stuck jobs');
+        } finally {
+            setClearingStuck(false);
+        }
+    };
+
     const handleCleanup = async () => {
         setCleaning(true);
         try {
@@ -329,6 +351,12 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                             <Button variant="outline" size="sm" onClick={handleCleanup} disabled={cleaning}>
                                 <X className="h-3.5 w-3.5 mr-1" />Clean up
                             </Button>
+                            {stuckCount > 0 && (
+                                <Button variant="outline" size="sm" onClick={handleClearStuck} disabled={clearingStuck}
+                                    className="border-red-300 text-red-700 hover:bg-red-50">
+                                    <X className="h-3.5 w-3.5 mr-1" />Clear stuck ({stuckCount})
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </CardHeader>
