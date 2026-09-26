@@ -90,6 +90,13 @@ Deno.serve(async (req) => {
         if (order.order_source !== 'kiosk') {
             return Response.json({ error: 'This is not a kiosk order' }, { status: 409 });
         }
+        // "Already paid" is checked FIRST. Taking payment changes payment_method
+        // from pay_at_counter to the tender used, so checking the method first
+        // told a staff member who double-tapped "not set to pay at the counter"
+        // - true, but useless - instead of "already paid".
+        if (order.payment_status === 'payment_confirmed' || order.payment_status === 'paid') {
+            return Response.json({ error: 'This order has already been paid.', code: 'ALREADY_HANDLED' }, { status: 409 });
+        }
         if (order.payment_method !== 'pay_at_counter') {
             return Response.json({ error: 'This order was not set to pay at the counter' }, { status: 409 });
         }
