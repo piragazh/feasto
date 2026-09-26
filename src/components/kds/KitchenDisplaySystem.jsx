@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { isAwaitingKioskPayment } from '@/lib/kiosk-payment';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import KDSColumn from '@/components/kds/KDSColumn';
@@ -55,7 +56,9 @@ export default function KitchenDisplaySystem({ restaurant }) {
                 const isActive = event.data?.order_source === 'kiosk'
                     ? KIOSK_ACTIVE_STATUSES.includes(event.data?.order_status)
                     : ACTIVE_STATUSES.includes(event.data?.status);
-                if (isActive) {
+                // An unpaid kiosk order is not kitchen work yet - it waits at the
+                // till. It appears here, with a sound, once it has been paid.
+                if (isActive && !isAwaitingKioskPayment(event.data)) {
                     setOrders(prev => [event.data, ...prev]);
                     // Only play sound if ready for prep (not awaiting payment)
                     if (canPrepareOrder(event.data)) {
@@ -63,19 +66,25 @@ export default function KitchenDisplaySystem({ restaurant }) {
                     }
                 }
             } else if (event.type === 'update') {
+                const isActive = event.data?.order_source === 'kiosk'
+                    ? KIOSK_ACTIVE_STATUSES.includes(event.data?.order_status)
+                    : ACTIVE_STATUSES.includes(event.data?.status);
+                const onBoard = isActive && !isAwaitingKioskPayment(event.data);
+                let arrived = false;
                 setOrders(prev => {
                     const exists = prev.find(o => o.id === event.id);
-                    const isActive = event.data?.order_source === 'kiosk'
-                        ? KIOSK_ACTIVE_STATUSES.includes(event.data?.order_status)
-                        : ACTIVE_STATUSES.includes(event.data?.status);
-                    if (isActive) {
+                    if (onBoard) {
                         if (exists) return prev.map(o => o.id === event.id ? event.data : o);
+                        arrived = true;
                         return [event.data, ...prev];
-                    } else {
-                        // Completed / cancelled — remove from board
-                        return prev.filter(o => o.id !== event.id);
                     }
+                    // Completed, cancelled - or still awaiting payment - off the board.
+                    return prev.filter(o => o.id !== event.id);
                 });
+                // A kiosk order joins the board by UPDATE when it is paid at the till.
+                // The sound used to play only on create, so a paid order would have
+                // appeared in silence - easy for a busy kitchen to miss.
+                if (arrived) playNewOrderSound();
             } else if (event.type === 'delete') {
                 setOrders(prev => prev.filter(o => o.id !== event.id));
             }
@@ -87,18 +96,18 @@ export default function KitchenDisplaySystem({ restaurant }) {
         try {
             const all = await base44.entities.Order.filter({ restaurant_id: restaurant.id });
             const active = all.filter(o => {
+                // Unpaid kiosk orders wait at the till, not here. They used to be
+                // shown red, marked URGENT and pushed to the top - with a disabled
+                // button. The kitchen could do nothing with them, and red told
+                // them to act now.
+                if (isAwaitingKioskPayment(o)) return false;
                 if (o.order_source === 'kiosk') {
                     return KIOSK_ACTIVE_STATUSES.includes(o.order_status);
                 }
                 return ACTIVE_STATUSES.includes(o.status);
             });
-            // Sort: unpaid kiosk first, then oldest first
-            active.sort((a, b) => {
-                const aUnpaid = a.order_source === 'kiosk' && a.payment_status === 'pending_payment' ? 0 : 1;
-                const bUnpaid = b.order_source === 'kiosk' && b.payment_status === 'pending_payment' ? 0 : 1;
-                if (aUnpaid !== bUnpaid) return aUnpaid - bUnpaid;
-                return new Date(a.created_date) - new Date(b.created_date);
-            });
+            // Oldest first: cook in the order it was placed.
+            active.sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
             setOrders(active);
         } catch (e) {
             console.error('KDS fetch error', e);
