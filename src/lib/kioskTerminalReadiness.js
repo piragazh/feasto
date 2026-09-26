@@ -86,7 +86,28 @@ export function getKioskPaymentOptions(kioskConfig) {
     const counterFallback = cardConfigEnabled && !readiness.configured;
 
     const showCard = cardConfigEnabled && readiness.configured && readiness.available;
-    const showCounter = counterConfigEnabled || counterFallback;
+    let showCounter = counterConfigEnabled || counterFallback;
 
-    return { showCard, showCounter, terminalReadiness: readiness };
+    // NEVER leave a customer with no way to pay.
+    //
+    // 5 of the 24 possible settings used to show NO payment option at all - most
+    // importantly a card-only kiosk whose reader goes offline mid-service: the
+    // customer builds a full basket, reaches payment, and has nothing to tap. If
+    // no option would show, paying at the counter is offered. That overrides an
+    // owner who switched counter payment off, deliberately: a kiosk that takes
+    // orders it cannot complete is worse than one that sends people to the till.
+    const noOption = !showCard && !showCounter;
+    if (noOption) showCounter = true;
+
+    return {
+        showCard,
+        showCounter,
+        // Card was meant to be offered but cannot be right now. Only then is the
+        // customer told card is unavailable - a kiosk that never offered card
+        // should not announce it as a fault on every order.
+        cardUnavailable: cardConfigEnabled && !showCard,
+        // Counter is showing only because nothing else could.
+        counterIsFallback: noOption,
+        terminalReadiness: readiness,
+    };
 }

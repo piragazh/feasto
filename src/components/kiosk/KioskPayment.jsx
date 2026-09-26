@@ -89,7 +89,7 @@ export default function KioskPayment({
     const terminalConfig = kioskConfig.card_terminal || null;
 
     // Derive payment options via shared readiness logic (same logic used in admin UI + tests)
-    const { showCard: allowCard, showCounter: allowCounter, terminalReadiness } = getKioskPaymentOptions(kioskConfig);
+    const { showCard: allowCard, showCounter: allowCounter, cardUnavailable, terminalReadiness } = getKioskPaymentOptions(kioskConfig);
 
     // On mount: detect if a prior payment was interrupted by a reload
     useEffect(() => {
@@ -584,7 +584,10 @@ export default function KioskPayment({
 
                 {/* Operational notices — customer-facing only, no technical details */}
                 <div className="w-full space-y-3 mb-4">
-                    {(!terminalReadiness.available && allowCounter) && (
+                    {/* Only when card was meant to be offered. It used to show whenever
+                        there was no reader - so a kiosk that never offered card told
+                        every customer "card is not available" as though it were a fault. */}
+                    {(cardUnavailable && allowCounter) && (
                         <StaffHelpBanner
                             icon={Banknote}
                             color="yellow"
