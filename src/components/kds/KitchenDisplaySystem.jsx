@@ -12,6 +12,11 @@ const KIOSK_ACTIVE_STATUSES = ['new', 'confirmed', 'preparing', 'ready'];
 
 export default function KitchenDisplaySystem({ restaurant }) {
     const [orders, setOrders] = useState([]);
+    // The current board, readable synchronously. A setState updater is not
+    // guaranteed to run immediately in React 18, so a flag set INSIDE one cannot
+    // be trusted straight afterwards - this is read instead.
+    const ordersRef = useRef([]);
+    useEffect(() => { ordersRef.current = orders; }, [orders]);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [lastOrderIds, setLastOrderIds] = useState(new Set());
     const [tick, setTick] = useState(0); // forces re-render every 30s for timer updates
@@ -70,12 +75,11 @@ export default function KitchenDisplaySystem({ restaurant }) {
                     ? KIOSK_ACTIVE_STATUSES.includes(event.data?.order_status)
                     : ACTIVE_STATUSES.includes(event.data?.status);
                 const onBoard = isActive && !isAwaitingKioskPayment(event.data);
-                let arrived = false;
+                const arrived = onBoard && !ordersRef.current.some(o => o.id === event.id);
                 setOrders(prev => {
                     const exists = prev.find(o => o.id === event.id);
                     if (onBoard) {
                         if (exists) return prev.map(o => o.id === event.id ? event.data : o);
-                        arrived = true;
                         return [event.data, ...prev];
                     }
                     // Completed, cancelled - or still awaiting payment - off the board.
