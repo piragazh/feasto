@@ -21,6 +21,10 @@
       "type": "number",
       "description": "How many people are on the table. Used for seat numbering and for sales-per-cover."
     },
+    "cancellation_reason": {
+      "type": "string",
+      "description": "Why the order was cancelled, in plain words - e.g. a kiosk order not paid at the counter in time. Staff need this when a customer comes back asking."
+    },
     "uber_status_pushed": {
       "type": "object",
       "description": "Which Uber Eats actions have been sent for this order, and when, e.g. { accept: '...', ready: '...' }. Makes the status push exactly-once: the workflow fires on every order change, and accepting the same order twice is an error on Uber's side."
