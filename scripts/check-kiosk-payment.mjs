@@ -28,11 +28,12 @@ function world({ order, manages = true, userRole = 'user' }) {
     finally { console.error = q; } };
   return { call, db };
 }
-const kiosk = (x = {}) => ({ id: 'k1', restaurant_id: 'r1', order_source: 'kiosk', payment_method: 'pay_at_counter', payment_status: 'pending_payment', status: 'pending', total: 12.5, order_number: 'K042', ...x });
+const kiosk = (x = {}) => ({ id: 'k1', restaurant_id: 'r1', order_status: 'new', order_source: 'kiosk', payment_method: 'pay_at_counter', payment_status: 'pending_payment', status: 'pending', total: 12.5, order_number: 'K042', ...x });
 const checks = []; const ck = (l, ok, d) => { checks.push(ok); console.log(`  ${ok ? '✓' : '✗ WRONG'}  ${l.padEnd(54)} ${d}`); };
 
 { const w = world({ order: kiosk() }); const r = await w.call({ order_id: 'k1', tender: 'cash', terminal: 1 }); const o = w.db.Order[0];
   ck('cash payment RELEASES the order to the kitchen', r.success && o.status === 'confirmed', `status ${o.status}`);
+  ck('and the KITCHEN display agrees (order_status)', o.order_status === 'confirmed', `order_status ${o.order_status}`);
   ck('and the cash DRAWER counts it', cashTakenForOrder(o).cash === 12.5, `drawer sees £${cashTakenForOrder(o).cash}`);
   ck('audited for the exceptions report', w.db.PosAuditLog.length === 1, w.db.PosAuditLog[0]?.action); }
 

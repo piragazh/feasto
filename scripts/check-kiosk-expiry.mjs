@@ -42,6 +42,9 @@ const checks = []; const ck = (l, ok, d) => { checks.push(ok); console.log(`  ${
 
 { const w = world([{ id: 'old', created_date: ago(20) }]); await w.run();
   ck('a walk-away after 20 minutes is cancelled', w.get('old').status === 'cancelled', w.get('old').status);
+  // The kitchen display reads order_status for kiosk orders. Cancelling only
+  // status left the order showing as 'new' there - and cookable.
+  ck('REGRESSION GUARD: the KITCHEN sees it cancelled too', w.get('old').order_status === 'cancelled', `order_status ${w.get('old').order_status}`);
   ck('with a reason staff can read', /Not paid at the counter within 15/.test(w.get('old').cancellation_reason || ''), (w.get('old').cancellation_reason || '').slice(0, 40));
   ck('and logged', w.db.PosAuditLog[0]?.action === 'kiosk.expired_unpaid', w.db.PosAuditLog[0]?.action); }
 
