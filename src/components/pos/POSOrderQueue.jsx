@@ -13,9 +13,10 @@ import ApplyPromotionDialog from './ApplyPromotionDialog';
 import VoidOrderDialog from './VoidOrderDialog';
 import usePermissionGate from '@/lib/usePermissionGate';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
+import POSKioskPaymentLane, { isAwaitingKioskPayment } from './POSKioskPaymentLane';
 import { PERMISSIONS } from '@/lib/posPermissions';
 
-export default function POSOrderQueue({ restaurantId, posTheme = 'dark', restaurant, activeStaffMember }) {
+export default function POSOrderQueue({ restaurantId, posTheme = 'dark', restaurant, activeStaffMember, terminal = null }) {
     const isDark = posTheme === 'dark';
     const t = {
         bg:         isDark ? 'bg-[#151720]'               : 'bg-white',
@@ -94,7 +95,9 @@ function SourceBadge({ order }) {
     });
 
     const statusGroups = {
-        pending: orders.filter(o => o.status === 'pending'),
+        // Unpaid kiosk orders are NOT pending kitchen work - they wait in their own
+        // lane above until paid, so they never look like something to cook.
+        pending: orders.filter(o => o.status === 'pending' && !isAwaitingKioskPayment(o)),
         confirmed: orders.filter(o => o.status === 'confirmed'),
         preparing: orders.filter(o => o.status === 'preparing'),
         ready: orders.filter(o => o.status === 'ready_for_collection'),
@@ -291,6 +294,16 @@ function SourceBadge({ order }) {
                 >
                     Clear Search
                 </Button>
+            )}
+
+            {searchResults === null && (
+                <POSKioskPaymentLane
+                    orders={orders}
+                    restaurantId={restaurantId}
+                    terminal={terminal}
+                    isDark={posTheme === 'dark'}
+                    onPaid={() => { if (typeof refetch === 'function') refetch(); }}
+                />
             )}
 
             {/* All five stages need to be visible at once during service.
