@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Bell, X, ArrowRight } from 'lucide-react';
 import { playAlert, getSoundSettings, primeAudioOnFirstGesture } from '@/lib/posSound';
+import { isAwaitingKioskPayment } from '@/lib/kiosk-payment';
 
 /**
  * Alerts the cashier when a NEW online order arrives.
@@ -10,7 +11,9 @@ import { playAlert, getSoundSettings, primeAudioOnFirstGesture } from '@/lib/pos
  *  - Runs at the POS root, not inside the Queue tab, because the whole point is
  *    to catch an order while the cashier is on some other screen.
  *  - Only orders that are BOTH pending and not from this till raise the alert
- *    (order_source 'pos' is excluded). POS and kiosk sales must never trigger it.
+ *    (order_source 'pos' is excluded). Kiosk orders alert ONLY while waiting to
+ *    be paid at the counter: a customer is standing at the till with an order
+ *    number. A kiosk order already paid by card never alerts.
  *  - The first poll only records what already exists; it does not alert. Without
  *    that, opening the POS mid-service would fire for every historic pending
  *    order at once.
@@ -65,10 +68,11 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
             const orders = await base44.entities.Order.filter(
                 { restaurant_id: restaurantId, status: 'pending' }, '-created_date', 50
             );
-            // Exclude anything raised at this till or the kiosk - only genuine
-            // inbound online/third-party orders need a cashier's attention.
+            // Inbound online / third-party orders, plus kiosk orders waiting to be
+            // paid at the counter. Nothing raised at this till, and no kiosk order
+            // already paid by card - neither needs a cashier.
             const inbound = (orders || []).filter(
-                o => o.order_source !== 'pos' && o.order_source !== 'kiosk'
+                o => (o.order_source !== 'pos' && o.order_source !== 'kiosk') || isAwaitingKioskPayment(o)
             );
 
             if (seenRef.current === null) {
@@ -149,6 +153,16 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
         setPendingOrders([]);
     };
 
+    // Say what the cashier actually has to do. A kiosk customer is standing at
+    // the counter waiting to pay; an online order needs accepting.
+    const kioskCount = pendingOrders.filter(isAwaitingKioskPayment).length;
+    const newestIsKiosk = isAwaitingKioskPayment(newest);
+    const title = kioskCount === count
+        ? (count === 1 ? 'Kiosk order \u2014 customer paying at counter' : `${count} kiosk orders to take payment for`)
+        : kioskCount === 0
+            ? (count === 1 ? 'New online order' : `${count} new online orders`)
+            : `${count} new orders (${kioskCount} to pay at counter)`;
+
     return (
         <div
             role="alert"
@@ -159,12 +173,14 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
                     <Bell className="h-6 w-6 text-white shrink-0" />
                     <div className="flex-1 min-w-0 text-white">
                         <p className="font-bold text-base leading-tight">
-                            {count === 1 ? 'New online order' : `${count} new online orders`}
+                            {title}
                         </p>
                         <p className="text-xs opacity-90 truncate">
                             {newest.order_number ? `#${newest.order_number} · ` : ''}
                             £{Number(newest.total || 0).toFixed(2)}
-                            {newest.order_type ? ` · ${String(newest.order_type).replace(/_/g, ' ')}` : ''}
+                            {newestIsKiosk
+                                ? ' · pay at counter'
+                                : (newest.order_type ? ` · ${String(newest.order_type).replace(/_/g, ' ')}` : '')}
                             {count > 1 ? ` (+${count - 1} more)` : ''}
                         </p>
                     </div>
@@ -173,7 +189,7 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
                         onClick={() => { onGoToQueue?.(); }}
                         className="h-11 px-4 rounded-xl bg-white text-red-700 font-bold text-sm flex items-center gap-1.5 hover:bg-red-50 transition-colors shrink-0"
                     >
-                        View in Queue <ArrowRight className="h-4 w-4" />
+                        {newestIsKiosk ? 'Take payment' : 'View in Queue'} <ArrowRight className="h-4 w-4" />
                     </button>
                     <button
                         type="button"
