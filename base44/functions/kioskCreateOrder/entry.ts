@@ -45,6 +45,50 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 // Maximum acceptable difference between terminal-authorized amount and server total (pence-level rounding)
 const AMOUNT_TOLERANCE_GBP = 0.01;
 
+
+/** Today's date in the UK, as YYYY-MM-DD. */
+function ukDay(date) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+}
+
+/** The number after the highest used today. Pure - tested on its own. */
+function nextSequence(numbersToday) {
+    let max = 0;
+    for (const n of numbersToday) {
+        const m = /^K-(\d{1,4})$/.exec(String(n || ''));
+        // Only this scheme's numbers count. Old random K-4821 style numbers are
+        // four digits from 1000 up and would jump the day's count to thousands.
+        if (m && m[1].length <= 3) max = Math.max(max, Number(m[1]));
+    }
+    const next = max + 1;
+    return `K-${String(next).padStart(3, '0')}`;
+}
+
+/**
+ * The next free kiosk number for this restaurant today.
+ *
+ * There is no atomic counter on this platform, so two kiosks placing an order at
+ * the same instant could compute the same number. The candidate is therefore
+ * checked against today's numbers and bumped until it is free.
+ */
+async function nextKioskOrderNumber(base44, restaurantId) {
+    const today = ukDay(new Date());
+    const recent = await base44.asServiceRole.entities.Order.filter(
+        { restaurant_id: restaurantId, order_source: 'kiosk' }, '-created_date', 500,
+    );
+    const todays = (recent || []).filter(o => {
+        const raw = String(o.created_date || '');
+        const d = new Date(/Z|[+-]\d\d:?\d\d$/.test(raw) ? raw : raw + 'Z');
+        return Number.isFinite(d.getTime()) && ukDay(d) === today;
+    });
+    const used = new Set(todays.map(o => o.order_number));
+    let candidate = nextSequence(todays.map(o => o.order_number));
+    for (let i = 0; i < 20 && used.has(candidate); i++) {
+        candidate = `K-${String(Number(candidate.slice(2)) + 1).padStart(3, '0')}`;
+    }
+    return candidate;
+}
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -300,8 +344,14 @@ Deno.serve(async (req) => {
             console.log(`[KIOSK-CARD] Authorization verified and redeemed: ref=${txRef} amount=£${trustedTxRecord.amount} restaurant=${restaurantId}`);
         }
 
-        // ── Generate order number ─────────────────────────────────────────────
-        const orderNum = `K-${Math.floor(1000 + Math.random() * 9000)}`;
+        // ── Order number: sequential per restaurant per UK day ────────────────
+        //
+        // This was K- plus a random number from 9,000, with no uniqueness check.
+        // At 200 kiosk orders a day there was roughly an 89% chance two customers
+        // shared a number - and with no receipt printer, the number on screen is
+        // the customer's ONLY record. Sequential numbers also read and shout more
+        // easily at collection, which is why kiosks count up.
+        const orderNum = await nextKioskOrderNumber(base44, restaurantId);
 
         // For card orders, use metadata from the trusted DB record (not request fields)
         const trustedTerminalLabel = trustedTxRecord?.terminal_label || terminalLabel || 'terminal';
