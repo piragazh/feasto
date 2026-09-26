@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { isAwaitingKioskPayment } from '@/lib/kiosk-payment';
-import { ACTIVE_STATUSES, KIOSK_ACTIVE_STATUSES, isOnKitchenBoard } from '@/lib/kds-board';
+import { ACTIVE_STATUSES, KIOSK_ACTIVE_STATUSES, isOnKitchenBoard, statusUpdateFor } from '@/lib/kds-board';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import KDSColumn from '@/components/kds/KDSColumn';
@@ -156,7 +156,9 @@ export default function KitchenDisplaySystem({ restaurant }) {
             if (newStatus === 'preparing' && order.payment_status === 'pending_payment') {
                 return;
             }
-            await base44.entities.Order.update(orderId, { order_status: newStatus });
+            // Write BOTH status fields. Writing only order_status left the till
+            // showing a finished kiosk order in Confirmed forever.
+            await base44.entities.Order.update(orderId, statusUpdateFor(order, { order_status: newStatus }));
         } else {
             // Legacy orders use status field
             await base44.entities.Order.update(orderId, { status: newStatus });

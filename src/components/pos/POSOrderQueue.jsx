@@ -14,6 +14,7 @@ import VoidOrderDialog from './VoidOrderDialog';
 import usePermissionGate from '@/lib/usePermissionGate';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
 import POSKioskPaymentLane, { isAwaitingKioskPayment } from './POSKioskPaymentLane';
+import { statusUpdateFor } from '@/lib/kds-board';
 import { PERMISSIONS } from '@/lib/posPermissions';
 
 export default function POSOrderQueue({ restaurantId, posTheme = 'dark', restaurant, activeStaffMember, terminal = null }) {
@@ -185,8 +186,10 @@ function SourceBadge({ order }) {
                     toast.error(result?.data?.message || 'Failed to cancel order');
                 }
             } else {
-                // Non-card or non-cancelled: use regular status update
-                await base44.entities.Order.update(orderId, { status: newStatus });
+                // Non-card or non-cancelled: use regular status update. For a kiosk
+                // order both status fields are written - writing only `status` left
+                // a collected kiosk order on the kitchen board forever.
+                await base44.entities.Order.update(orderId, statusUpdateFor(order, { status: newStatus }));
                 await releaseTableIfFinished(order, newStatus);
                 toast.success('Order status updated');
             }
