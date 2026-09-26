@@ -135,6 +135,10 @@ Deno.serve(async (req) => {
             // Release to the kitchen. A pending order moves to confirmed; one the
             // kitchen has somehow already started is left where it is.
             ...(order.status === 'pending' || !order.status ? { status: 'confirmed' } : {}),
+            // The kitchen display reads order_status for kiosk orders, so it is
+            // moved in step - otherwise the till and the kitchen disagree about
+            // whether this order is ready to cook.
+            ...(order.order_status === 'new' || !order.order_status ? { order_status: 'confirmed' } : {}),
         };
 
         // The tender, in the fields every other order uses - so the cash drawer

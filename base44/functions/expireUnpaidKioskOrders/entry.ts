@@ -66,6 +66,11 @@ Deno.serve(async (req) => {
 
             await base44.asServiceRole.entities.Order.update(order.id, {
                 status: 'cancelled',
+                // The kitchen display tracks kiosk orders by order_status, not
+                // status. Setting only status left a cancelled walk-away showing
+                // as 'new' - and, with its payment no longer "pending", as
+                // COOKABLE. Both fields must say cancelled.
+                order_status: 'cancelled',
                 payment_status: 'cancelled_payment',
                 cancellation_reason: `Not paid at the counter within ${limit} minutes of ordering at the kiosk.`,
             });
