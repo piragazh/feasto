@@ -160,6 +160,10 @@ export default function KioskPayment({
 
             if (!result?.success || !result?.order?.id) {
                 const errMsg = result?.error || 'Failed to place order. Please try again.';
+                // Release the guard so "Try again" works. The key is KEPT: if this
+                // attempt actually reached the server, the retry returns that same
+                // order instead of creating a second.
+                placingRef.current = false;
                 setPaymentState('failed');
                 setErrorMessage(errMsg);
                 return;
@@ -174,6 +178,9 @@ export default function KioskPayment({
             if (didPrinterFail) setPrinterWarning(true);
             onOrderPlaced(placedOrder, didPrinterFail);
         } catch (err) {
+            // A network error may still have created the order - the key is kept,
+            // so a retry is matched to it rather than duplicating it.
+            placingRef.current = false;
             setPaymentState('failed');
             setErrorMessage('Failed to place order. Please try again.');
         }
