@@ -3,6 +3,10 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Banknote, CreditCard, Monitor, Search, X, Loader2, Clock } from 'lucide-react';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
+import { isAwaitingKioskPayment } from '@/lib/kiosk-payment';
+
+// Re-exported so existing imports keep working.
+export { isAwaitingKioskPayment };
 
 /**
  * Kiosk orders waiting to be paid at the counter.
@@ -18,11 +22,6 @@ import { getStaffSessionToken } from '@/lib/posStaffSession';
  * yet; the search matches on the digits alone, so "42" finds "K042".
  */
 
-/** An order is waiting here while it is an unpaid kiosk counter order. */
-export const isAwaitingKioskPayment = (o) =>
-    o?.order_source === 'kiosk'
-    && o?.payment_status === 'pending_payment'
-    && !['cancelled', 'refunded'].includes(o?.status);
 
 const digits = (s) => String(s || '').replace(/\D/g, '');
 const minutesSince = (iso) => {

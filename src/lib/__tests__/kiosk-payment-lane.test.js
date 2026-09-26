@@ -6,7 +6,7 @@
  * twice.
  */
 import { describe, it, expect } from 'vitest';
-import { isAwaitingKioskPayment } from '../../components/pos/POSKioskPaymentLane.jsx';
+import { isAwaitingKioskPayment } from '../kiosk-payment.js';
 
 const kiosk = (x = {}) => ({ order_source: 'kiosk', payment_method: 'pay_at_counter', payment_status: 'pending_payment', status: 'pending', ...x });
 
