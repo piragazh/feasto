@@ -39,3 +39,28 @@ describe('the awaiting-payment lane', () => {
         expect(isAwaitingKioskPayment({})).toBe(false);
     });
 });
+
+import { needsCashierAttention } from '../kiosk-payment.js';
+
+describe('which orders alert the till', () => {
+    it('a kiosk order waiting to be paid alerts - a customer is at the counter', () => {
+        expect(needsCashierAttention(kiosk())).toBe(true);
+    });
+
+    it('REGRESSION GUARD: a kiosk order paid by card at the kiosk does NOT alert', () => {
+        expect(needsCashierAttention(kiosk({ payment_method: 'card', payment_status: 'paid_card' }))).toBe(false);
+    });
+
+    it('stops alerting once paid at the counter', () => {
+        expect(needsCashierAttention(kiosk({ payment_status: 'payment_confirmed' }))).toBe(false);
+    });
+
+    it('online and marketplace orders still alert', () => {
+        expect(needsCashierAttention({ order_source: 'online', status: 'pending' })).toBe(true);
+        expect(needsCashierAttention({ order_source: 'third_party', status: 'pending' })).toBe(true);
+    });
+
+    it('orders rung up at this till never alert', () => {
+        expect(needsCashierAttention({ order_source: 'pos', status: 'pending' })).toBe(false);
+    });
+});

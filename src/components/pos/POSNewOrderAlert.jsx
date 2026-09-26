@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Bell, X, ArrowRight } from 'lucide-react';
 import { playAlert, getSoundSettings, primeAudioOnFirstGesture } from '@/lib/posSound';
-import { isAwaitingKioskPayment } from '@/lib/kiosk-payment';
+import { isAwaitingKioskPayment, needsCashierAttention } from '@/lib/kiosk-payment';
 
 /**
  * Alerts the cashier when a NEW online order arrives.
@@ -71,9 +71,7 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
             // Inbound online / third-party orders, plus kiosk orders waiting to be
             // paid at the counter. Nothing raised at this till, and no kiosk order
             // already paid by card - neither needs a cashier.
-            const inbound = (orders || []).filter(
-                o => (o.order_source !== 'pos' && o.order_source !== 'kiosk') || isAwaitingKioskPayment(o)
-            );
+            const inbound = (orders || []).filter(needsCashierAttention);
 
             if (seenRef.current === null) {
                 // First run: prime the baseline, alert for nothing.
