@@ -85,6 +85,12 @@ export default function KioskPayment({
 
     const [printerWarning, setPrinterWarning] = useState(false);
 
+    // Double-order protection for pay-at-counter. See placeCashOrder.
+    const placingRef = useRef(false);
+    const idempotencyKeyRef = useRef(null);
+    // A different basket is a different order: it gets a fresh key.
+    useEffect(() => { idempotencyKeyRef.current = null; }, [cartTotal, cart?.length]);
+
     const kioskConfig = restaurant?.kiosk_config || {};
     const terminalConfig = kioskConfig.card_terminal || null;
 
@@ -115,10 +121,20 @@ export default function KioskPayment({
     // SECURITY: No direct entity write. kioskCreateOrder recomputes all prices
     // from the live menu server-side and enforces kiosk business rules.
     const placeCashOrder = async () => {
+        // Ignore a second tap IMMEDIATELY. setPaymentState('processing') hides
+        // the button, but only on the next render - two taps in the same frame
+        // both got through and created two identical orders.
+        if (placingRef.current) return;
+        placingRef.current = true;
         setPaymentState('processing');
         try {
-            // Generate idempotency key once — prevents double-order on rapid re-tap or retry
-            const iKey = `kiosk-pac-${restaurantId.slice(-8)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            // One key per basket, reused on every retry. It used to be generated
+            // here, fresh on every tap - so despite its comment it could never
+            // match, and the server's duplicate check never fired.
+            if (!idempotencyKeyRef.current) {
+                idempotencyKeyRef.current = `kiosk-pac-${restaurantId.slice(-8)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            }
+            const iKey = idempotencyKeyRef.current;
 
             const response = await base44.functions.invoke('kioskCreateOrder', {
                 restaurantId,
