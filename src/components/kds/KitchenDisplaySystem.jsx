@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { isAwaitingKioskPayment } from '@/lib/kiosk-payment';
+import { ACTIVE_STATUSES, KIOSK_ACTIVE_STATUSES, isOnKitchenBoard } from '@/lib/kds-board';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import KDSColumn from '@/components/kds/KDSColumn';
@@ -7,8 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UtensilsCrossed, Volume2, VolumeX, Maximize, RefreshCw, Clock, LogOut } from 'lucide-react';
 
-const ACTIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready_for_collection', 'out_for_delivery', 'new'];
-const KIOSK_ACTIVE_STATUSES = ['new', 'confirmed', 'preparing', 'ready'];
 
 export default function KitchenDisplaySystem({ restaurant }) {
     const [orders, setOrders] = useState([]);
@@ -71,10 +70,7 @@ export default function KitchenDisplaySystem({ restaurant }) {
                     }
                 }
             } else if (event.type === 'update') {
-                const isActive = event.data?.order_source === 'kiosk'
-                    ? KIOSK_ACTIVE_STATUSES.includes(event.data?.order_status)
-                    : ACTIVE_STATUSES.includes(event.data?.status);
-                const onBoard = isActive && !isAwaitingKioskPayment(event.data);
+                const onBoard = isOnKitchenBoard(event.data);
                 const arrived = onBoard && !ordersRef.current.some(o => o.id === event.id);
                 setOrders(prev => {
                     const exists = prev.find(o => o.id === event.id);
