@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 
 export default function RedeemRewardDialog({ reward, open, onOpenChange, onSuccess }) {
     const [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ export default function RedeemRewardDialog({ reward, open, onOpenChange, onSucce
             toast.success(response.data.message);
             onSuccess?.(response.data);
         } catch (error) {
-            toast.error(error.response?.data?.error || 'Failed to redeem reward');
+            toast.error(staffErrorMessage(error, 'Failed to redeem reward'));
         } finally {
             setLoading(false);
         }

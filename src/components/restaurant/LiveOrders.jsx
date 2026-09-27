@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
 import DriverLocationMap from '@/components/driver/DriverLocationMap';
+import { staffErrorMessage } from '@/lib/function-errors';
 
 // ── Canonical visibility helper ──────────────────────────────────────────
 // Maps kiosk (order_status) and legacy (status) to unified operational state
@@ -220,7 +221,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             if (context?.previous) {
                 queryClient.setQueryData(['live-orders', restaurantId], context.previous);
             }
-            const message = error?.message || error?.response?.data?.error || 'Failed to confirm payment';
+            const message = staffErrorMessage(error, 'Failed to confirm payment');
             toast.error(message);
             console.error('[confirmKioskPayment] Error:', message);
         },
@@ -292,7 +293,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             if (onOrderUpdate) onOrderUpdate();
         },
         onError: (error) => {
-            const message = error?.response?.data?.error || error?.message || 'Failed to update orders';
+            const message = staffErrorMessage(error, 'Failed to update orders');
             toast.error(message);
             console.error('[bulkUpdateStatus] Error:', message);
         },
@@ -325,7 +326,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             if (onOrderUpdate) onOrderUpdate();
         },
         onError: (error) => {
-            const message = error?.response?.data?.error || error?.message || 'Failed to update order';
+            const message = staffErrorMessage(error, 'Failed to update order');
             toast.error(message);
             console.error('[updateOrderStatus] Error:', message);
         },
@@ -412,7 +413,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                 toast.success('Order rejected and customer notified');
             }
         } catch (error) {
-            const message = error?.response?.data?.error || error?.message || 'Failed to reject order';
+            const message = staffErrorMessage(error, 'Failed to reject order');
             toast.error(message);
             console.error('[handleReject] Error:', message);
         }
@@ -435,7 +436,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
             if (onOrderUpdate) onOrderUpdate();
         },
         onError: (error) => {
-            const message = error?.response?.data?.error || error?.message || 'Failed to assign driver';
+            const message = staffErrorMessage(error, 'Failed to assign driver');
             toast.error(message);
             console.error('[assignDriver] Error:', message);
         },

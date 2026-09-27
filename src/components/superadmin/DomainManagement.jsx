@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Globe, CheckCircle, XCircle, Edit, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 
 export default function DomainManagement() {
     const [showDialog, setShowDialog] = useState(false);
@@ -40,7 +41,7 @@ export default function DomainManagement() {
             setDomain('');
         },
         onError: (error) => {
-            const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error occurred';
+            const errorMessage = staffErrorMessage(error, 'Unknown error occurred');
             toast.error(`Failed to update domain: ${errorMessage}`);
         }
     });
