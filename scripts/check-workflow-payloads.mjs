@@ -57,6 +57,25 @@ for (const [fn, name, direct] of [
     ck(`awardLoyaltyPoints: "${msg.slice(0, 26)}..." is a skip, not a failure`, m && m[1] === 'skipped' && m[2] === '200', m ? `${m[1]} ${m[2]}` : 'not found');
   } }
 
+// Every workflow triggered by a record change that calls a function must hand it
+// the record: newer workflows send ONLY their args (an empty {} sent nothing -
+// 'Order ID required' on every run). Old migrated ones get the legacy payload.
+{ const dir = new URL('../base44/workflows/', import.meta.url);
+  const bad = [];
+  let n = 0;
+  for (const name of fs.readdirSync(dir).filter(x => x.endsWith('.jsonc'))) {
+    const wf = JSON.parse(fs.readFileSync(new URL(name, dir), 'utf8').replace(/^\s*\/\/.*$/gm, ''));
+    if (wf.trigger?.config?.trigger_type !== 'entity') continue;
+    const legacy = !!wf['x-base44-migrated-from-automation'];
+    for (const step of wf.definition?.do || []) for (const t of Object.values(step)) {
+      if (t?.call !== 'invoke_backend_function') continue;
+      n++;
+      const args = JSON.stringify(t.with?.args || {});
+      if (!legacy && !args.includes('.trigger.entity_id')) bad.push(`${wf.name} -> ${t.with?.function_name}`);
+    }
+  }
+  ck('every record-triggered workflow passes the record to its function', bad.length === 0, bad.length ? 'EMPTY: ' + bad.join('; ') : `${n} checked`); }
+
 const good = checks.filter(Boolean).length;
 console.log(`\n  ${good}/${checks.length} correct`);
 process.exit(good === checks.length ? 0 : 1);
