@@ -102,7 +102,12 @@ Deno.serve(async (req) => {
         }
 
         const body = await req.json();
-        const orderId = body.orderId || body.event?.entity_id;
+        // Workflows send the order two ways: those created before Sep 2026 send
+        // { event: { entity_id } }, newer ones send { entity_id, data } at the top level.
+        // Reading only event.entity_id made every newer workflow fail ("Order ID
+        // required") - stock never deducted, Uber never told. Accept both, and a
+        // direct call's orderId / order_id.
+        const orderId = body.orderId || body.order_id || body.entity_id || body.event?.entity_id || body.data?.id;
 
         if (!orderId) {
             return new Response(JSON.stringify({ error: 'Order ID required' }), { status: 400 });
@@ -124,7 +129,9 @@ Deno.serve(async (req) => {
         const order = orders[0];
 
         if (order.status !== 'delivered' && order.status !== 'collected') {
-            return new Response(JSON.stringify({ error: 'Order not yet completed' }), { status: 400 });
+            // Not an error: this runs on every order update. A 400 counted as a workflow
+            // failure, and enough in a row makes the platform switch the workflow off.
+            return new Response(JSON.stringify({ skipped: 'Order not yet completed' }), { status: 200 });
         }
 
         // Fast idempotency exit
@@ -149,7 +156,7 @@ Deno.serve(async (req) => {
 
         const identifier = getLoyaltyIdentifier(order);
         if (!identifier) {
-            return new Response(JSON.stringify({ error: 'No identifier for loyalty (no email or phone)' }), { status: 400 });
+            return new Response(JSON.stringify({ skipped: 'No identifier for loyalty (no email or phone)' }), { status: 200 });
         }
 
         const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: order.restaurant_id });

@@ -105,7 +105,12 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         const body = await req.json().catch(() => ({}));
-        const orderId = body.orderId || body.event?.entity_id;
+        // Workflows send the order two ways: those created before Sep 2026 send
+        // { event: { entity_id } }, newer ones send { entity_id, data } at the top level.
+        // Reading only event.entity_id made every newer workflow fail ("Order ID
+        // required") - stock never deducted, Uber never told. Accept both, and a
+        // direct call's orderId / order_id.
+        const orderId = body.orderId || body.order_id || body.entity_id || body.event?.entity_id || body.data?.id;
         if (!orderId) return Response.json({ error: 'Order ID required' }, { status: 400 });
 
         const clientId = Deno.env.get('UBER_EATS_CLIENT_ID');

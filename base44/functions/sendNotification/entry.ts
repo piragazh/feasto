@@ -6,8 +6,14 @@ Deno.serve(async (req) => {
         const body = await req.json();
 
         // Handle automation event payload
-        if (body.event && body.event.type === 'update' && body.event.entity_name === 'Order') {
-            const orderId = body.event.entity_id;
+        // Workflows send the order two ways: those created before Sep 2026 send
+        // { event: { entity_id } }, newer ones send { entity_id, data } at the top level.
+        // Reading only event.entity_id made every newer workflow fail ("Order ID
+        // required") - stock never deducted, Uber never told. Accept both, and a
+        // direct call's orderId / order_id.
+        const ev = body.event || { type: body.event_type, entity_name: body.entity_name, entity_id: body.entity_id };
+        if (ev && ev.type === 'update' && ev.entity_name === 'Order') {
+            const orderId = ev.entity_id;
             const order = body.data;
             const oldOrder = body.old_data;
 

@@ -7,7 +7,12 @@ Deno.serve(async (req) => {
 
         // Support both direct call with order_id and automation payload (event + data)
         const body = await req.json();
-        const order_id = body.order_id || body.event?.entity_id;
+        // Workflows send the order two ways: those created before Sep 2026 send
+        // { event: { entity_id } }, newer ones send { entity_id, data } at the top level.
+        // Reading only event.entity_id made every newer workflow fail ("Order ID
+        // required") - stock never deducted, Uber never told. Accept both, and a
+        // direct call's orderId / order_id.
+        const order_id = body.orderId || body.order_id || body.entity_id || body.event?.entity_id || body.data?.id;
         const restaurant_phone = body.restaurant_phone; // optional override
 
         if (!order_id) {
