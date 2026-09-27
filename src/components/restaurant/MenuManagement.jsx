@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, EyeOff, ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, Wand2, RefreshCw, Copy, Clipboard } from 'lucide-react';
 import { toast } from 'sonner';
 import ScheduleWindowsEditor from './ScheduleWindowsEditor';
-import { ScheduleSection, AllergensSection, NutritionSection, SubcategorySection, MenuItemBadges } from './MenuItemAdvancedFields';
+import { AllergensSection, NutritionSection, SubcategorySection, MenuItemBadges } from './MenuItemAdvancedFields';
 import AIFoodImageEnhancer from './AIFoodImageEnhancer';
 import ImportFromJustEat from './ImportFromJustEat';
 import AIMenuInsights from './AIMenuInsights';
@@ -77,7 +77,6 @@ export default function MenuManagement({ restaurantId }) {
         is_available: true,
         show_in_cart_quick_add: false,
         customization_options: [],
-        availability_schedule: { enabled: false, days: ['mon','tue','wed','thu','fri','sat','sun'], time_from: '', time_until: '', label: '' },
         allergens: [],
         nutrition: {}
     });
@@ -583,7 +582,6 @@ CRITICAL REQUIREMENTS:
             is_available: true,
             show_in_cart_quick_add: false,
             customization_options: [],
-            availability_schedule: { enabled: false, days: ['mon','tue','wed','thu','fri','sat','sun'], time_from: '', time_until: '', label: '' },
             allergens: [],
             nutrition: {}
         });
@@ -624,7 +622,6 @@ CRITICAL REQUIREMENTS:
             is_available: item.is_available !== false,
             show_in_cart_quick_add: item.show_in_cart_quick_add || false,
             customization_options: customizations,
-            availability_schedule: item.availability_schedule || { enabled: false, days: ['mon','tue','wed','thu','fri','sat','sun'], time_from: '', time_until: '', label: '' },
             allergens: item.allergens || [],
             nutrition: item.nutrition || {}
         });
