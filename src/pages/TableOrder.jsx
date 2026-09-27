@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, ShoppingCart, X, ChevronRight, CheckCircle, Search } from 'lucide-react';
 
+// tableCreateOrder charges the POS price when set (dine-in is served in store),
+// so the menu and cart must show that price, not the online one.
+const tablePrice = (item) => Number(item?.pos_price != null ? item.pos_price : item?.price) || 0;
+
 // ─── Standalone QR Ordering Page ───────────────────────────────────────────────
 // Completely independent from the MealDrop ordering flow.
 // Accessed via: /TableOrder?restaurant_id=...&table_id=...
@@ -76,7 +80,7 @@ export default function TableOrder() {
         setCart(prev => {
             const existing = prev.find(c => c.id === item.id);
             if (existing) return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c);
-            return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1 }];
+            return [...prev, { id: item.id, name: item.name, price: tablePrice(item), qty: 1 }];
         });
     }, []);
 
@@ -337,7 +341,7 @@ export default function TableOrder() {
                                 {item.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.description}</p>}
                             </div>
                             <div className="flex items-center justify-between mt-2">
-                                <span className="font-bold text-gray-900">£{item.price.toFixed(2)}</span>
+                                <span className="font-bold text-gray-900">£{tablePrice(item).toFixed(2)}</span>
                                 {getQty(item.id) === 0 ? (
                                     <button
                                         onClick={() => addToCart(item)}
