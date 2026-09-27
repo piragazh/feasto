@@ -310,15 +310,15 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                                 <p className="text-blue-700">POST /functions/managePrintQueue</p>
                                 <p className="text-gray-500">Header: x-api-key: YOUR_KEY</p>
                                 <p className="text-gray-500">{'Body: {"action":"poll","restaurant_id":"...","agent_id":"android-1"}'}</p>
-                                <p className="text-green-700">{'← {"jobs":[{"id":"...","action":"print_receipt","order_data":{...}}]}'}</p>
+                                <p className="text-green-700">{'← {"job":{"id":"...","action":"print_receipt","order_data":{...}}]}'}</p>
                             </div>
                             <div className="bg-white border rounded-lg p-2 space-y-1">
                                 <p className="text-gray-400 font-sans font-medium">2. Mark job complete</p>
-                                <p className="text-blue-700">{'Body: {"action":"complete","job_id":"...","restaurant_id":"..."}'}</p>
+                                <p className="text-blue-700">{'Body: {"action":"complete","job_id":"...","restaurant_id":"...","agent_id":"android-1"}'}</p>
                             </div>
                             <div className="bg-white border rounded-lg p-2 space-y-1">
                                 <p className="text-gray-400 font-sans font-medium">3. Mark job failed</p>
-                                <p className="text-blue-700">{'Body: {"action":"fail","job_id":"...","restaurant_id":"...","error_message":"..."}'}</p>
+                                <p className="text-blue-700">{'Body: {"action":"fail","job_id":"...","restaurant_id":"...","agent_id":"android-1","error_message":"..."}'}</p>
                             </div>
                             <div className="bg-white border rounded-lg p-2 space-y-1">
                                 <p className="text-gray-400 font-sans font-medium">4. Heartbeat (send with every poll)</p>
