@@ -47,6 +47,20 @@ function findDuplicateJob(jobs, want, nowMs) {
         && nowMs - toMs(j.created_date) < DUPLICATE_WINDOW_MS) || null;
 }
 
+// An agent that checked in this recently is running: removing its record is
+// pointless (it re-registers on its next poll) and hides a live device.
+const AGENT_ONLINE_MS = 5 * 60 * 1000;
+
+/** Staff session check: admin, or an active manager of THIS restaurant. */
+async function canManageRestaurant(base44, restaurantId) {
+    const user = await base44.auth.me().catch(() => null);
+    if (!user) return { status: 401, error: 'Unauthorized' };
+    if (user.role === 'admin') return { user };
+    const managers = await base44.asServiceRole.entities.RestaurantManager.filter({ user_email: user.email, is_active: true });
+    if (!managers.some(m => (m.restaurant_ids || []).includes(restaurantId))) return { status: 403, error: 'Forbidden' };
+    return { user };
+}
+
 // Helper: authenticate Android agent via API key (used by agent-facing actions)
 function authenticateApiKey(req, body) {
     const apiKey = req.headers.get('x-api-key') || body.api_key;
@@ -411,12 +425,42 @@ Deno.serve(async (req) => {
 
         // ── LIST_AGENTS: Dashboard fetches all known agents and their last-seen timestamps
         if (action === 'list_agents') {
-            const user = await base44.auth.me().catch(() => null);
-            if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
+            // Was: any logged-in user could list ANY restaurant's agents and printer IPs.
+            const who = await canManageRestaurant(base44, restaurant_id);
+            if (who.error) return Response.json({ error: who.error }, { status: who.status });
 
             const agents = await base44.asServiceRole.entities.AgentHeartbeat.filter({ restaurant_id });
             return Response.json({ agents });
+        }
+
+        // ── REMOVE_AGENT: forget a device that is no longer used (dashboard).
+        // There was no way to do this: a replaced tablet stayed listed as
+        // "Offline" forever (Tilbury's "pktablet", last seen May).
+        if (action === 'remove_agent') {
+            if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
+            if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
+            const who = await canManageRestaurant(base44, restaurant_id);
+            if (who.error) return Response.json({ error: who.error }, { status: who.status });
+
+            const rows = (await base44.asServiceRole.entities.AgentHeartbeat.filter({ restaurant_id, agent_id }))
+                .filter(r => r.restaurant_id === restaurant_id && r.agent_id === agent_id);
+            if (!rows.length) return Response.json({ error: 'Agent not found' }, { status: 404 });
+
+            const lastSeen = Math.max(...rows.map(r => toMs(r.last_seen)).filter(Number.isFinite), 0);
+            if (Date.now() - lastSeen < AGENT_ONLINE_MS) {
+                return Response.json({
+                    error: 'This agent checked in during the last 5 minutes, so it is still running and would reappear. Turn it off on the device first.',
+                }, { status: 409 });
+            }
+            // Any ticket it was holding goes back to the queue for the agents still here.
+            const held = (await base44.asServiceRole.entities.PrintJob.filter({ restaurant_id, status: 'processing' }))
+                .filter(j => j.agent_id === agent_id);
+            for (const j of held) {
+                await base44.asServiceRole.entities.PrintJob.update(j.id, { status: 'pending', agent_id: null });
+            }
+            for (const r of rows) await base44.asServiceRole.entities.AgentHeartbeat.delete(r.id);
+            return Response.json({ success: true, removed: rows.length, released_jobs: held.length });
         }
 
         // ── LIST: Dashboard fetches jobs — pending/processing always shown, done/failed last 24h
