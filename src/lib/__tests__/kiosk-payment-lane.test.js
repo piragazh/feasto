@@ -152,3 +152,54 @@ describe('finding the order the cashier typed', () => {
         expect(findByOrderNumber(lane, undefined)).toEqual(lane);
     });
 });
+
+import { paymentFailureNotice } from '../kiosk-payment.js';
+
+/** A request whose connection drops, through the real SDK - no response at all. */
+async function sdkDrop() {
+    const client = createAxiosClient({ baseURL: 'http://test.invalid' });
+    client.defaults.adapter = async (config) => { throw new AxiosError('Network Error', 'ERR_NETWORK', config, {}); };
+    try { await client.post('/apps/x/functions/confirmKioskPayment', {}); } catch (e) { return e; }
+    throw new Error('expected the request to fail');
+}
+
+describe('telling the cashier what happened when taking payment fails', () => {
+    it('REGRESSION GUARD: already paid says ALREADY PAID, never "NOT recorded"', async () => {
+        const err = await sdkFailure(409, { error: 'This order has already been paid.', code: 'ALREADY_HANDLED' });
+        const n = paymentFailureNotice(err, 'Order K-003');
+        expect(n.kind).toBe('already_paid');
+        expect(n.message).toMatch(/K-003 is ALREADY PAID/);
+        expect(n.message).not.toMatch(/NOT recorded/);
+        expect(n.refresh).toBe(true);
+    });
+
+    it('REGRESSION GUARD: no answer never claims "NOT recorded" - it may have been', async () => {
+        for (const err of [await sdkDrop(), await sdkFailure(500, { error: 'Failed to confirm payment. Please try again.' }), await sdkFailure(502, '<html>')]) {
+            const n = paymentFailureNotice(err, 'Order K-003');
+            expect(n.kind).toBe('unknown');
+            expect(n.message).toMatch(/MAY have been recorded/);
+            expect(n.message).not.toMatch(/NOT recorded/);
+            expect(n.refresh).toBe(true);
+        }
+    });
+
+    it('a definite refusal says NOT recorded, with the server reason', async () => {
+        const n = paymentFailureNotice(await sdkFailure(409, { error: 'This order has been cancelled.' }), 'Order K-003');
+        expect(n).toEqual({ kind: 'refused', refresh: true, message: 'Payment NOT recorded: This order has been cancelled.' });
+        const p = paymentFailureNotice(await sdkFailure(403, { error: 'Access denied' }));
+        expect(p.kind).toBe('refused');
+        expect(p.message).toBe('Payment NOT recorded: Access denied');
+        expect(p.refresh).toBe(false);
+    });
+
+    it('a 2xx that still carries an error is a refusal (as the lane throws it)', () => {
+        const n = paymentFailureNotice(Object.assign(new Error('Nope'), { status: 400, data: { error: 'Nope' } }));
+        expect(n.kind).toBe('refused');
+        expect(n.message).toBe('Payment NOT recorded: Nope');
+    });
+
+    it('anything unrecognised is treated as unknown, the safe side', () => {
+        expect(paymentFailureNotice(undefined).kind).toBe('unknown');
+        expect(paymentFailureNotice(new TypeError('Failed to fetch')).kind).toBe('unknown');
+    });
+});
