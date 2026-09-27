@@ -129,7 +129,7 @@ const checks=[]; const ck=(l,ok,d)=>{checks.push(ok);console.log(`  ${ok?'✓':'
 // The websocket route had the same endless reset; it must count attempts too.
 { const ws = fs.readFileSync(new URL('../base44/functions/printAgentWS/entry.ts', import.meta.url),'utf8');
   const rec = ws.slice(ws.indexOf('for (const j of stuckJobs)'), ws.indexOf('// ── Fetch pending jobs'));
-  ck('printAgentWS stuck recovery counts attempts and gives up', /retry_count: attempts/.test(rec) && /attempts > MAX_RETRIES/.test(rec) && /status: 'failed'/.test(rec), ''); }
+  ck('printAgentWS stuck recovery counts attempts and gives up', /const attempts = \(j\.retry_count \|\| 0\) \+ 1;/.test(rec) && /retry_count: attempts/.test(rec) && /attempts > MAX_RETRIES/.test(rec) && /status: 'failed'/.test(rec), ''); }
 
 const good=checks.filter(Boolean).length;
 console.log(`\n  ${good}/${checks.length} correct`);
