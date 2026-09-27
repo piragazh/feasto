@@ -23,7 +23,8 @@ function world(jobs) {
     })),
     update: async (id,d) => { const r=db.PrintJob.find(x=>x.id===id); Object.assign(r,d); return r; },
     delete: async (id) => { db.PrintJob = db.PrintJob.filter(x=>x.id!==id); },
-    create: async (d) => { const r={id:'new',...d}; db.PrintJob.push(r); return r; },
+    // Like the platform: every record gets an id and a created_date (UTC, no Z).
+    create: async (d) => { const r={id:'job'+(db.PrintJob.length+1),created_date:naive(0),...d}; db.PrintJob.push(r); return r; },
   }, PrintAgent: { filter: async()=>[], update: async()=>({}), create: async()=>({}) } };
   let handler;
   new Function('Deno','createClientFromRequest',src)(
@@ -75,6 +76,60 @@ const checks=[]; const ck=(l,ok,d)=>{checks.push(ok);console.log(`  ${ok?'✓':'
   const left = w.db.PrintJob.filter(j=>j.status==='pending'||j.status==='processing').length;
   ck('clears all 300 stuck jobs in one action', r.cleared===300 && left===0, `cleared ${r.cleared}, still stuck ${left}`);
   ck('keeps a record of what did not print', w.db.PrintJob.length===300, `${w.db.PrintJob.length} records kept`); }
+
+// ── TILBURY, 27 Sep: an agent built from the setup screen sends "complete" WITHOUT
+// agent_id. It was refused every time, the job was reset as stuck, and the same
+// receipt printed every 2 minutes for 30 minutes.
+{ const w = world([]);
+  const q = await w.call({ action:'enqueue', order_data:{ id:'o1' }, printer_ip:'192.168.0.224', config:{ role:'receipt' } });
+  let printed = 0;
+  for (let cycle = 0; cycle < 10; cycle++) {
+    const r = await w.call({ action:'poll', agent_id:'android-agent-1' });
+    if (r.job) { printed++; await w.call({ action:'complete', job_id: r.job.id }); }   // as documented: no agent_id
+    for (const j of w.db.PrintJob) j.updated_date = naive(3*60000);                     // 3 minutes pass
+  }
+  const j = w.db.PrintJob.find(x => x.id === q.job_id);
+  ck('REGRESSION GUARD: a receipt prints ONCE when complete omits agent_id', printed===1 && j.status==='done', `printed ${printed}x, ${j.status}`); }
+
+{ const w = world([{ id:'j1', status:'processing', agent_id:'a1', created_date: naive(60000) }]);
+  const r = await w.call({ action:'complete', job_id:'j1', agent_id:'someone-else' });
+  ck('a DIFFERENT agent still cannot complete it', r.error==='Not your job' && w.db.PrintJob[0].status==='processing', r.error||w.db.PrintJob[0].status); }
+
+{ const w = world([{ id:'j1', status:'pending', agent_id:null, retry_count:1, created_date: naive(60000) }]);
+  await w.call({ action:'complete', job_id:'j1', agent_id:'a1' });
+  ck('a late "printed" after a stuck-reset lands - no reprint', w.db.PrintJob[0].status==='done', w.db.PrintJob[0].status); }
+
+{ const w = world([{ id:'j1', status:'failed', error_message:'Cancelled by boss', created_date: naive(60000) }]);
+  await w.call({ action:'complete', job_id:'j1', agent_id:'a1' });
+  await w.call({ action:'fail', job_id:'j1', agent_id:'a1', error_message:'x' });
+  ck('a cancelled job stays cancelled (late complete or fail)', w.db.PrintJob[0].status==='failed' && /Cancelled/.test(w.db.PrintJob[0].error_message), w.db.PrintJob[0].status); }
+
+{ const w = world([{ id:'j1', status:'done', created_date: naive(60000) }]);
+  await w.call({ action:'fail', job_id:'j1', agent_id:'a1', error_message:'late' });
+  ck('a late failure report never queues a printed job again', w.db.PrintJob[0].status==='done', w.db.PrintJob[0].status); }
+
+// TILBURY, 26 Sep: one order became jobs at 18:31:20, :22 and :25 - one per open dashboard.
+{ const w = world([]);
+  const body = { action:'enqueue', order_data:{ id:'o1' }, printer_ip:'192.168.0.224', config:{ role:'receipt' } };
+  const ids = [];
+  for (let i = 0; i < 3; i++) ids.push((await w.call(body)).job_id);
+  ck('REGRESSION GUARD: 3 dashboards auto-printing one order make ONE job', w.db.PrintJob.length===1 && new Set(ids).size===1, `${w.db.PrintJob.length} jobs`);
+  w.db.PrintJob[0].status = 'done';
+  await w.call(body);
+  ck('a deliberate reprint after it printed is NOT merged', w.db.PrintJob.length===2, `${w.db.PrintJob.length} jobs`);
+  await w.call({ ...body, config:{ role:'kitchen' } });
+  await w.call({ ...body, printer_ip:'192.168.0.99' });
+  ck('the kitchen ticket and a second printer still get their own jobs', w.db.PrintJob.length===4, `${w.db.PrintJob.length} jobs`);
+  w.db.PrintJob.forEach(j => { if (j.status==='pending') j.created_date = naive(3*60000); });
+  const before = w.db.PrintJob.length; await w.call({ ...body, config:{ role:'kitchen' } });
+  ck('an old unprinted job (over 2 min) is not reused', w.db.PrintJob.length===before+1, `${w.db.PrintJob.length - before} new`);
+  const t = w.db.PrintJob.length; await w.call({ action:'enqueue', print_action:'test' }); await w.call({ action:'enqueue', print_action:'test' });
+  ck('test prints (no order) are never merged', w.db.PrintJob.length===t+2, `${w.db.PrintJob.length - t} new`); }
+
+// The websocket route had the same endless reset; it must count attempts too.
+{ const ws = fs.readFileSync(new URL('../base44/functions/printAgentWS/entry.ts', import.meta.url),'utf8');
+  const rec = ws.slice(ws.indexOf('for (const j of stuckJobs)'), ws.indexOf('// ── Fetch pending jobs'));
+  ck('printAgentWS stuck recovery counts attempts and gives up', /retry_count: attempts/.test(rec) && /attempts > MAX_RETRIES/.test(rec) && /status: 'failed'/.test(rec), ''); }
 
 const good=checks.filter(Boolean).length;
 console.log(`\n  ${good}/${checks.length} correct`);
