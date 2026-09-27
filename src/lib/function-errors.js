@@ -45,18 +45,15 @@ const TRANSPORT = [
 ];
 
 /**
- * For STAFF screens. The function's reason if it gave one; else the platform's
- * body message (e.g. an entity validation error); else the error's own message
- * when it is ours (`throw new Error("Role 'x' cannot confirm payments")`);
- * else the fallback. Transport noise is never shown.
+ * For STAFF screens. The function's reason if it gave one; else the error's
+ * own message - which covers both our throws (`throw new Error("Role 'x'
+ * cannot confirm payments")`) and platform body messages such as an entity
+ * validation error, because the SDK copies body.message/detail into
+ * err.message; else the fallback. Transport noise is never shown.
  */
 export function staffErrorMessage(err, fallback) {
     const explicit = explicitError(err);
     if (explicit) return explicit;
-    for (const b of bodiesOf(err)) {
-        const m = text(b?.message) || text(b?.detail);
-        if (m && !TRANSPORT.some(re => re.test(m))) return m;
-    }
     const own = text(err?.message);
     if (own && !TRANSPORT.some(re => re.test(own))) return own;
     return fallback;
