@@ -117,6 +117,67 @@ function counterIsFull(orders, kioskConfig) {
     return (orders || []).filter(isAwaitingCounterPayment).length >= maxAwaitingCounter(kioskConfig);
 }
 
+// Copied verbatim from src/lib/item-pricing.js - check-item-pricing.mjs compares.
+// ── ITEM PRICING (shared - keep identical in every copy) ─────────────────────
+const OPTION_QTY_MAX = 99;
+
+/**
+ * Unit price for one item: base (POS price, else online price) plus options.
+ * Walks the LIVE menu's option groups, never the client's keys, so a caller
+ * cannot add groups or prices the menu does not have.
+ * Returns { unit } in pounds rounded to the penny, or { error } to refuse.
+ */
+function priceSelection(menuItem, customizations, itemQuantities) {
+    const base = menuItem?.pos_price != null ? Number(menuItem.pos_price) : Number(menuItem?.price);
+    if (!Number.isFinite(base) || base < 0) return { error: 'has no valid price' };
+    const picks = customizations && typeof customizations === 'object' ? customizations : {};
+    const qtys = itemQuantities && typeof itemQuantities === 'object' ? itemQuantities : {};
+    // A menu price may be negative on purpose ("no cheese -20p"); only non-numbers count as 0.
+    const priceOf = (o) => (typeof o?.price === 'number' && Number.isFinite(o.price) ? o.price : 0);
+    const find = (group, label) => (group?.options || []).find(o => o.label === label);
+    let total = base;
+
+    for (const group of menuItem?.customization_options || []) {
+        const picked = picks[group.name];
+        if (group.type === 'single' || group.type === 'meal_upgrade') {
+            if (picked == null || picked === '') continue;
+            const opt = find(group, picked);
+            if (!opt) return { error: `option "${picked}" is no longer available` };
+            total += priceOf(opt);
+            if (group.type !== 'meal_upgrade') continue;
+            const subs = group.meal_customizations || opt.meal_customizations || [];
+            for (const sub of subs) {
+                const subPicked = picks[`${group.name}_meal_${sub.name}`];
+                const labels = sub.type === 'multiple' ? (Array.isArray(subPicked) ? subPicked : [])
+                    : sub.type === 'single' ? (subPicked == null || subPicked === '' ? [] : [subPicked]) : [];
+                for (const label of labels) {
+                    const subOpt = find(sub, label);
+                    if (!subOpt) return { error: `option "${label}" is no longer available` };
+                    total += priceOf(subOpt);
+                }
+            }
+        } else if (group.type === 'multiple') {
+            if (!Array.isArray(picked)) continue;
+            for (const label of picked) {
+                const opt = find(group, label);
+                if (!opt) return { error: `option "${label}" is no longer available` };
+                // The kiosk's key. Missing or 0 means one - the kiosk's own rule.
+                const raw = qtys[`${group.name}_${label}`];
+                let qty = 1;
+                if (raw != null && raw !== 0) {
+                    qty = Number(raw);
+                    if (!Number.isInteger(qty) || qty < 1 || qty > OPTION_QTY_MAX) {
+                        return { error: `has an invalid quantity for "${label}"` };
+                    }
+                }
+                total += priceOf(opt) * qty;
+            }
+        }
+    }
+    return { unit: Math.round(total * 100) / 100 };
+}
+// ── END ITEM PRICING ─────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -268,27 +329,12 @@ Deno.serve(async (req) => {
                 }, { status: 400 });
             }
 
-            // Compute server-side item price:
-             // Use pos_price if available, fallback to online price
-             let serverItemPrice = menuItem.pos_price != null ? menuItem.pos_price : menuItem.price;
-
-            // Add customization prices from live menu option definitions
-            if (cartItem.customizations && typeof cartItem.customizations === 'object') {
-                for (const [optionGroupName, selectedValue] of Object.entries(cartItem.customizations)) {
-                    const optGroup = menuItem.customization_options?.find(g => g.name === optionGroupName);
-                    if (!optGroup) continue; // unknown option group — silently skip (non-blocking)
-
-                    const valuesToCheck = Array.isArray(selectedValue) ? selectedValue : [selectedValue];
-                    for (const val of valuesToCheck) {
-                        const opt = optGroup.options?.find(o => o.label === val);
-                        if (opt?.price) {
-                            // For multiple-choice, respect itemQuantities
-                            const itemQty = cartItem.itemQuantities?.[val] ?? 1;
-                            serverItemPrice += opt.price * itemQty;
-                        }
-                    }
-                }
+            // Unit price from the LIVE menu - the same rule the kiosk screen shows.
+            const priced = priceSelection(menuItem, cartItem.customizations, cartItem.itemQuantities);
+            if (priced.error) {
+                return Response.json({ error: `"${menuItem.name}" ${priced.error}. Please remove it and add it again.`, success: false }, { status: 400 });
             }
+            const serverItemPrice = priced.unit;
 
             verifiedItems.push({
                 menu_item_id: cartItem.menu_item_id,
