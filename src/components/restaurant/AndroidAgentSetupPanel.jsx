@@ -7,9 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
     Smartphone, CheckCircle2, AlertCircle, Clock, RefreshCw,
-    Copy, Wifi, WifiOff, Circle, RotateCcw, X
+    Copy, Wifi, WifiOff, Circle, RotateCcw, X, Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
+
+/** "45s", "12 min", "3 h", "142 days" - seconds alone read as noise after a few minutes. */
+export function agoLabel(seconds) {
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    if (s < 60) return `${s}s`;
+    if (s < 3600) return `${Math.floor(s / 60)} min`;
+    if (s < 86400) return `${Math.floor(s / 3600)} h`;
+    const d = Math.floor(s / 86400);
+    return `${d} day${d === 1 ? '' : 's'}`;
+}
 
 function JobStatusBadge({ job }) {
     const { status, retry_count, next_retry_at } = job;
@@ -128,6 +139,24 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
         }
     };
 
+    // Forget a device that is no longer used. Only offline agents offer this;
+    // the server refuses one seen in the last 5 minutes (it would just reappear).
+    const [removingAgent, setRemovingAgent] = useState(null);
+    const handleRemoveAgent = async (agentId) => {
+        if (!window.confirm(`Remove "${agentId}" from this restaurant?\n\nDo this only for a device you no longer use. If it is switched on again it will reappear by itself.`)) return;
+        setRemovingAgent(agentId);
+        try {
+            await base44.functions.invoke('managePrintQueue', { action: 'remove_agent', restaurant_id: restaurantId, agent_id: agentId });
+            setAgentHeartbeats(prev => { const next = { ...prev }; delete next[agentId]; return next; });
+            toast.success(`Removed ${agentId}`);
+            fetchJobs();
+        } catch (e) {
+            toast.error('Could not remove agent: ' + staffErrorMessage(e, 'please try again'));
+        } finally {
+            setRemovingAgent(null);
+        }
+    };
+
     const handleCancelJob = async (jobId) => {
         try {
             await base44.functions.invoke('managePrintQueue', { action: 'cancel', job_id: jobId, restaurant_id: restaurantId });
@@ -228,7 +257,7 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                                         <p className={`text-[10px] mt-0.5 ${isOnline ? 'text-green-600' : 'text-red-600'}`}>
                                             {isOnline
                                                 ? secondsAgo < 5 ? 'Just now' : `${secondsAgo}s ago`
-                                                : `Offline — last seen ${secondsAgo}s ago`}
+                                                : `Offline — last seen ${agoLabel(secondsAgo)} ago`}
                                         </p>
                                         {connectionMode && (
                                             <p className="text-[10px] text-gray-400 mt-0.5">
@@ -242,6 +271,18 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                                     <Badge className={`ml-1 text-[10px] px-1.5 py-0 ${isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                         {isOnline ? 'Online' : 'Offline'}
                                     </Badge>
+                                    {!isOnline && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveAgent(agentId)}
+                                            disabled={removingAgent === agentId}
+                                            title="Remove this device - for one you no longer use"
+                                            aria-label={`Remove agent ${agentId}`}
+                                            className="ml-auto self-center p-2 -m-1 rounded text-red-500 hover:text-red-700 hover:bg-red-100 disabled:opacity-40"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>
