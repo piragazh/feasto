@@ -6,16 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, Leaf, AlertTriangle, Activity, Sparkles, Loader2 } from 'lucide-react';
 import { base44 } from "@/api/base44Client";
-
-const DAYS = [
-    { id: 'mon', label: 'Mon' },
-    { id: 'tue', label: 'Tue' },
-    { id: 'wed', label: 'Wed' },
-    { id: 'thu', label: 'Thu' },
-    { id: 'fri', label: 'Fri' },
-    { id: 'sat', label: 'Sat' },
-    { id: 'sun', label: 'Sun' },
-];
+import { isItemAvailableNow } from '@/lib/pos-schedule-logic';
 
 const ALL_ALLERGENS = [
     'gluten', 'crustaceans', 'eggs', 'fish', 'peanuts', 'soya',
@@ -27,93 +18,6 @@ const ALLERGEN_ICONS = {
     soya: '🫘', milk: '🥛', nuts: '🌰', celery: '🥬', mustard: '🌿',
     sesame: '🌱', sulphites: '🍷', lupin: '🌸', molluscs: '🐚'
 };
-
-// ── Schedule Section ───────────────────────────────────────────────────────────
-export function ScheduleSection({ value = {}, onChange }) {
-    const schedule = { enabled: false, days: ['mon','tue','wed','thu','fri','sat','sun'], time_from: '', time_until: '', label: '', ...value };
-
-    const update = (patch) => onChange({ ...schedule, ...patch });
-
-    const toggleDay = (day) => {
-        const days = schedule.days.includes(day)
-            ? schedule.days.filter(d => d !== day)
-            : [...schedule.days, day];
-        update({ days });
-    };
-
-    return (
-        <div className="space-y-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <span className="font-semibold text-sm text-blue-900">Availability Schedule</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-blue-600">{schedule.enabled ? 'Restricted' : 'Always available'}</span>
-                    <Switch
-                        checked={schedule.enabled}
-                        onCheckedChange={(v) => update({ enabled: v })}
-                    />
-                </div>
-            </div>
-
-            {schedule.enabled && (
-                <>
-                    <div>
-                        <Label className="text-xs text-blue-800 mb-2 block">Available Days</Label>
-                        <div className="flex gap-1.5 flex-wrap">
-                            {DAYS.map(d => (
-                                <button
-                                    key={d.id}
-                                    type="button"
-                                    onClick={() => toggleDay(d.id)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                                        schedule.days.includes(d.id)
-                                            ? 'bg-blue-600 text-white border-blue-600'
-                                            : 'bg-white text-blue-600 border-blue-200 hover:border-blue-400'
-                                    }`}
-                                >
-                                    {d.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <Label className="text-xs text-blue-800 mb-1 block">From</Label>
-                            <Input
-                                type="time"
-                                value={schedule.time_from}
-                                onChange={(e) => update({ time_from: e.target.value })}
-                                className="h-9 text-sm"
-                            />
-                        </div>
-                        <div>
-                            <Label className="text-xs text-blue-800 mb-1 block">Until</Label>
-                            <Input
-                                type="time"
-                                value={schedule.time_until}
-                                onChange={(e) => update({ time_until: e.target.value })}
-                                className="h-9 text-sm"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <Label className="text-xs text-blue-800 mb-1 block">Display Label (optional)</Label>
-                        <Input
-                            value={schedule.label}
-                            onChange={(e) => update({ label: e.target.value })}
-                            placeholder="e.g. Breakfast until 11:00, Lunch special"
-                            className="h-9 text-sm"
-                        />
-                    </div>
-                </>
-            )}
-        </div>
-    );
-}
 
 // ── Allergens Section ─────────────────────────────────────────────────────────
 export function AllergensSection({ value = [], onChange, itemName = '', itemDescription = '',
@@ -359,25 +263,24 @@ export function SubcategorySection({ value = '', onChange, suggestions = [] }) {
 
 // ── Compact display badges for the item card ──────────────────────────────────
 export function MenuItemBadges({ item }) {
-    const now = new Date();
-    const day = ['sun','mon','tue','wed','thu','fri','sat'][now.getDay()];
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-
-    const schedule = item.availability_schedule;
-    const scheduleActive = schedule?.enabled
-        && (schedule.days?.length && !schedule.days.includes(day)
-            || (schedule.time_from && timeStr < schedule.time_from)
-            || (schedule.time_until && timeStr > schedule.time_until));
+    // Same rule the till and posCreateOrder enforce (UK time, days, past-midnight).
+    const windows = Array.isArray(item.availability_windows) ? item.availability_windows : [];
+    const offNow = windows.length > 0 && !isItemAvailableNow(item);
+    const windowLabel = windows.length === 1
+        ? `${windows[0].start}–${windows[0].end}`
+        : `${windows.length} time windows`;
 
     return (
         <div className="flex flex-wrap gap-1 mt-1">
             {item.subcategory && (
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.subcategory}</Badge>
             )}
-            {schedule?.enabled && (
-                <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${scheduleActive ? 'border-red-300 text-red-600' : 'border-blue-300 text-blue-600'}`}>
+            {windows.length > 0 && (
+                <Badge variant="outline"
+                    title={offNow ? 'Outside its time window - not on sale at the till right now' : 'On sale now - limited hours'}
+                    className={`text-[10px] px-1.5 py-0 ${offNow ? 'border-red-300 text-red-600' : 'border-blue-300 text-blue-600'}`}>
                     <Clock className="h-2.5 w-2.5 mr-0.5" />
-                    {schedule.label || `${schedule.time_from}–${schedule.time_until}`}
+                    {windowLabel}{offNow ? ' · off now' : ''}
                 </Badge>
             )}
             {item.allergens?.length > 0 && (
