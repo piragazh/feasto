@@ -23,6 +23,30 @@ function jobExpiry(job) {
     return Number.isFinite(t) ? t + MAX_JOB_AGE_MINUTES * 60 * 1000 : Infinity;
 }
 
+// ── Duplicate tickets ─────────────────────────────────────────────────────────
+// One order produced several jobs at Tilbury (18:31:20, :22, :25): every open
+// dashboard auto-prints, and each enqueued its own copy. A job for the same
+// order, printer, action and ticket type that has NOT printed yet (pending or
+// processing) and is under 2 minutes old IS this ticket - reuse it. A deliberate
+// reprint after the first one printed is never merged: done jobs don't match.
+const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
+/** Platform timestamps are UTC without a zone marker. */
+function toMs(ts) {
+    if (!ts) return NaN;
+    const s = String(ts);
+    return Date.parse(/Z$|[+-]\d\d:\d\d$/.test(s) ? s : s + 'Z');
+}
+function findDuplicateJob(jobs, want, nowMs) {
+    if (!want?.orderId) return null;                // test prints etc. are never merged
+    return (jobs || []).find(j =>
+        (j.status === 'pending' || j.status === 'processing')
+        && j.order_data?.id === want.orderId
+        && (j.action || 'print_receipt') === want.action
+        && (j.printer_ip || '') === (want.printerIp || '')
+        && (j.config?.role || 'receipt') === want.role
+        && nowMs - toMs(j.created_date) < DUPLICATE_WINDOW_MS) || null;
+}
+
 // Helper: authenticate Android agent via API key (used by agent-facing actions)
 function authenticateApiKey(req, body) {
     const apiKey = req.headers.get('x-api-key') || body.api_key;
@@ -56,6 +80,21 @@ Deno.serve(async (req) => {
                     const authorized = managers.some(m => (m.restaurant_ids || []).includes(body.restaurant_id));
                     if (!authorized) return Response.json({ error: 'Forbidden' }, { status: 403 });
                 }
+            }
+
+            const want = {
+                orderId: body.order_data?.id,
+                action: body.print_action || 'print_receipt',
+                printerIp: body.printer_ip,
+                role: body.config?.role || 'receipt',
+            };
+            if (want.orderId) {
+                const recent = await base44.asServiceRole.entities.PrintJob.filter({
+                    restaurant_id: body.restaurant_id,
+                    created_date: { $gte: new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString() },
+                });
+                const dup = findDuplicateJob(recent, want, Date.now());
+                if (dup) return Response.json({ success: true, job_id: dup.id, duplicate: true });
             }
 
             const job = await base44.asServiceRole.entities.PrintJob.create({
@@ -189,14 +228,22 @@ Deno.serve(async (req) => {
             const auth = authenticateApiKey(req, body);
             if (auth.error) return Response.json({ error: auth.error }, { status: 401 });
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
-            if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
+            // agent_id is OPTIONAL here. The setup screen documented "complete"
+            // without it, so agents built from it were refused ("agent_id
+            // required") on every ticket: the job never reached done, was reset
+            // as stuck, and REPRINTED every 2 minutes - Tilbury, 27 Sep. The API
+            // key already proves it is our agent; a DIFFERENT agent is still refused.
 
             // Filter by id only — multi-field AND not guaranteed; verify restaurant_id in JS
             const completeJobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
             const job = completeJobs.find(j => j.restaurant_id === restaurant_id);
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
-            if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
+            if (agent_id && job.agent_id && job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
+            if (job.status === 'done') return Response.json({ success: true, already: 'done' });
+            // Cancelled by staff (or given up) stays that way - but a late "printed"
+            // for a job reset to pending still lands, so it is not printed again.
+            if (job.status === 'failed') return Response.json({ success: true, ignored: 'job was cancelled or had failed' });
 
             await base44.asServiceRole.entities.PrintJob.update(job_id, {
                 status: 'done',
@@ -211,14 +258,17 @@ Deno.serve(async (req) => {
             const auth = authenticateApiKey(req, body);
             if (auth.error) return Response.json({ error: auth.error }, { status: 401 });
             if (!job_id) return Response.json({ error: 'job_id required' }, { status: 400 });
-            if (!agent_id) return Response.json({ error: 'agent_id required' }, { status: 400 });
             if (!restaurant_id) return Response.json({ error: 'restaurant_id required' }, { status: 400 });
+            // agent_id optional, as for complete (see there).
 
             // Filter by id only — multi-field AND not guaranteed; verify restaurant_id in JS
             const failJobs = await base44.asServiceRole.entities.PrintJob.filter({ id: job_id });
             const job = failJobs.find(j => j.restaurant_id === restaurant_id);
             if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
-            if (job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
+            if (agent_id && job.agent_id && job.agent_id !== agent_id) return Response.json({ error: 'Not your job' }, { status: 403 });
+            // Only a job this agent is printing can fail. A late report for a job
+            // already done, cancelled, or reset must not queue it to print again.
+            if (job.status !== 'processing') return Response.json({ success: true, ignored: `job is ${job.status}` });
 
             const retryCount = (job.retry_count || 0) + 1;
 
