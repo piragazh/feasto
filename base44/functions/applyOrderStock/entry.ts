@@ -105,7 +105,11 @@ Deno.serve(async (req) => {
         // direct call's orderId / order_id.
         const orderId = body.orderId || body.order_id || body.entity_id || body.event?.entity_id || body.data?.id;
         if (!orderId || typeof orderId !== 'string') {
-            return Response.json({ error: 'Order ID required' }, { status: 400 });
+            // Say what arrived (key names only, never values) - a workflow's error
+            // message is the only place its request body can be seen.
+            const shape = (v) => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).slice(0, 12) : typeof v;
+            return Response.json({ error: 'Order ID required', received: shape(body),
+                nested: Object.fromEntries(Object.entries(body || {}).filter(([, v]) => v && typeof v === 'object' && !Array.isArray(v)).slice(0, 4).map(([k, v]) => [k, shape(v)])) }, { status: 400 });
         }
 
         const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
