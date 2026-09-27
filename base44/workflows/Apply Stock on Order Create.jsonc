@@ -19,7 +19,13 @@
           "then": "end",
           "with": {
             "args": {
-              "orderId": "${ .entity_id }"
+              "p1_dot_entity_id": "${ .entity_id }",
+              "p2_workflow_input_entity_id": "${ $workflow.input.entity_id }",
+              "p3_input_entity_id": "${ $input.entity_id }",
+              "p4_dot_data_id": "${ .data.id }",
+              "p5_workflow_input_data_id": "${ $workflow.input.data.id }",
+              "p6_dot": "${ . }",
+              "p7_workflow_input": "${ $workflow.input }"
             },
             "function_name": "applyOrderStock"
           }
@@ -30,7 +36,7 @@
       "dsl": "1.0.0",
       "name": "apply_stock_on_order_create",
       "namespace": "base44",
-      "version": "1.1"
+      "version": "1.2-probe"
     }
   }
 }
