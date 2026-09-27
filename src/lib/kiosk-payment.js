@@ -28,3 +28,26 @@ export const isAwaitingKioskPayment = (o) =>
  */
 export const needsCashierAttention = (o) =>
     (o?.order_source !== 'pos' && o?.order_source !== 'kiosk') || isAwaitingKioskPayment(o);
+
+const digitsOf = (s) => String(s ?? '').replace(/\D/g, '');
+
+/**
+ * Find the order a cashier typed, from the digits alone.
+ *
+ * An exact number wins: "3", "03" and "K3" all mean K-003, and must NOT also
+ * list K-013 or K-023 - the cashier would take payment for the wrong customer.
+ * Only when nothing matches exactly does it fall back to a partial match, so
+ * a half-typed or old-style number (K-4821 from "482") is still found.
+ *
+ * Keeps the list's order. An empty query returns the whole list.
+ */
+export function findByOrderNumber(list = [], query = '') {
+    const q = digitsOf(query);
+    if (!q) return list;
+    const exact = list.filter(o => {
+        const d = digitsOf(o?.order_number);
+        return d !== '' && Number(d) === Number(q);
+    });
+    if (exact.length) return exact;
+    return list.filter(o => digitsOf(o?.order_number).includes(q));
+}
