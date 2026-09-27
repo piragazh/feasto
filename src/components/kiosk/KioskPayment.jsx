@@ -185,7 +185,7 @@ export default function KioskPayment({
             // functions.invoke THROWS on any non-2xx, so the server's reason
             // ("closed", "X is unavailable", "counter is very busy") arrives here,
             // not in result.error above. It was being replaced by the generic text.
-            setErrorMessage(err?.response?.data?.error || 'Failed to place order. Please try again.');
+            setErrorMessage(functionErrorMessage(err, 'Failed to place order. Please try again.'));
         }
     };
 
