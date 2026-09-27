@@ -28,6 +28,7 @@ import { StaffHelpBanner } from './KioskStaffHelp';
 import { toast } from 'sonner';
 import { printWithCentralizedConfig } from '@/lib/printUtils';
 import { getKioskPaymentOptions } from '@/lib/kioskTerminalReadiness';
+import { functionErrorMessage } from '@/lib/kiosk-payment';
 
 // Hard timeout: if terminal hasn't responded in 90 seconds, treat as timeout
 const TERMINAL_TIMEOUT_MS = 90_000;
