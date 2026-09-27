@@ -108,7 +108,10 @@ Deno.serve(async (req) => {
             // Say what arrived (key names only, never values) - a workflow's error
             // message is the only place its request body can be seen.
             const shape = (v) => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).slice(0, 12) : typeof v;
+            // Types (and ID-likeness) of each top-level value - never the values.
+            const kind = (v) => v === null ? 'null' : v === '' ? 'empty' : typeof v === 'string' ? (/^[0-9a-f]{24}$/.test(v) ? 'id' : `string(${v.length})`) : Array.isArray(v) ? 'array' : typeof v;
             return Response.json({ error: 'Order ID required', received: shape(body),
+                types: Object.fromEntries(Object.entries(body || {}).slice(0, 12).map(([k, v]) => [k, kind(v)])),
                 nested: Object.fromEntries(Object.entries(body || {}).filter(([, v]) => v && typeof v === 'object' && !Array.isArray(v)).slice(0, 4).map(([k, v]) => [k, shape(v)])) }, { status: 400 });
         }
 
