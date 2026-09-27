@@ -29,6 +29,24 @@ export const isAwaitingKioskPayment = (o) =>
 export const needsCashierAttention = (o) =>
     (o?.order_source !== 'pos' && o?.order_source !== 'kiosk') || isAwaitingKioskPayment(o);
 
+/**
+ * The reason a backend function gave for refusing, fit to show a customer.
+ *
+ * functions.invoke THROWS on any non-2xx. The SDK (0.8.x) wraps the failure in
+ * a Base44Error that carries the body on err.data - NOT err.response.data - and
+ * whose err.message is axios's "Request failed with status code 429", which is
+ * never shown to a customer. Older axios-shaped errors are still understood.
+ */
+export function functionErrorMessage(err, fallback) {
+    const bodies = [err?.data, err?.originalError?.response?.data, err?.response?.data];
+    for (const b of bodies) {
+        const e = b?.error;
+        if (typeof e === 'string' && e.trim()) return e;
+        if (typeof e?.message === 'string' && e.message.trim()) return e.message;
+    }
+    return fallback;
+}
+
 const digitsOf = (s) => String(s ?? '').replace(/\D/g, '');
 
 /**
