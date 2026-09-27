@@ -810,6 +810,33 @@ CRITICAL REQUIREMENTS:
                         </DialogHeader>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2 pt-4 border-t border-gray-200 first:pt-0 first:border-t-0">
+                                    <h3 className="text-sm font-semibold text-gray-900">Basics</h3>
+                                </div>
+                                <div className="col-span-2">
+                                    <Label>Item Name *</Label>
+                                    <Input
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Category</Label>
+                                    <select
+                                        value={formData.category}
+                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    >
+                                        <option value="">Select a category</option>
+                                        {categories.map((cat) => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                    {categories.length === 0 && (
+                                        <p className="text-xs text-gray-500 mt-1">Add categories first to organize your menu</p>
+                                    )}
+                                </div>
                                 <div>
                                     <Label>Item Number</Label>
                                     <Input
@@ -822,95 +849,10 @@ CRITICAL REQUIREMENTS:
                                     </p>
                                 </div>
                                 <div className="col-span-2">
-                                    <Label>POS Tile Colour</Label>
-                                    <div className="flex flex-wrap gap-2 mt-1.5" role="radiogroup" aria-label="POS tile colour">
-                                        {[
-                                            ['none', 'bg-gray-100 border-gray-300'],
-                                            ['red', 'bg-red-500'], ['orange', 'bg-orange-500'], ['amber', 'bg-amber-500'],
-                                            ['green', 'bg-green-500'], ['teal', 'bg-teal-500'], ['blue', 'bg-blue-500'],
-                                            ['purple', 'bg-purple-500'], ['pink', 'bg-pink-500'],
-                                        ].map(([c, cls]) => (
-                                            <button
-                                                key={c}
-                                                type="button"
-                                                role="radio"
-                                                aria-checked={formData.pos_tile_color === c}
-                                                aria-label={c === 'none' ? 'No colour' : c}
-                                                title={c === 'none' ? 'No colour' : c}
-                                                onClick={() => setFormData({ ...formData, pos_tile_color: c })}
-                                                className={`h-9 w-9 rounded-lg border-2 ${cls} ${
-                                                    formData.pos_tile_color === c ? 'ring-2 ring-offset-2 ring-gray-900 border-white' : 'border-transparent'
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Group items by colour so staff recognise them at a glance &mdash; e.g. all drinks blue, all sides amber.
-                                    </p>
-                                </div>
-                                <div className="col-span-2 pt-2 border-t border-gray-100">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={!!formData.track_stock}
-                                            onChange={e => setFormData({ ...formData, track_stock: e.target.checked })}
-                                            className="h-5 w-5 rounded" />
-                                        <span className="font-medium text-sm">Track stock for this item</span>
-                                    </label>
-                                    <p className="text-xs text-gray-500 mt-1 mb-2">
-                                        When it reaches zero it comes off sale everywhere at once &mdash; till, online, kiosk and QR.
-                                    </p>
-                                    {formData.track_stock && (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <Label className="text-xs">In stock (portions)</Label>
-                                                <Input type="number" min="0" step="1" value={formData.stock_quantity}
-                                                    onChange={e => setFormData({ ...formData, stock_quantity: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <Label className="text-xs">Warn when down to</Label>
-                                                <Input type="number" min="0" step="1" value={formData.low_stock_threshold}
-                                                    onChange={e => setFormData({ ...formData, low_stock_threshold: e.target.value })}
-                                                    placeholder="Optional" />
-                                            </div>
-                                            {formData.auto_86ed && (
-                                                <p className="col-span-2 text-xs text-amber-700">
-                                                    This sold out automatically. Setting stock above zero puts it back on sale.
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="col-span-2 pt-2 border-t border-gray-100">
-                                    <Label>When is this available?</Label>
-                                    <p className="text-xs text-gray-500 mb-2">
-                                        Leave empty to sell it all day. Add a window for breakfast, lunch or late menus &mdash;
-                                        outside these times it disappears from the till automatically.
-                                    </p>
-                                    <ScheduleWindowsEditor
-                                        value={formData.availability_windows}
-                                        onChange={(v) => setFormData({ ...formData, availability_windows: v })}
-                                        emptyHint="Available all day."
-                                    />
-                                </div>
-                                <div className="col-span-2 pt-2 border-t border-gray-100">
-                                    <Label>Timed prices (happy hour)</Label>
-                                    <p className="text-xs text-gray-500 mb-2">
-                                        A lower price during set hours. It switches on and off by itself, and the till shows the
-                                        offer so staff can tell customers.
-                                    </p>
-                                    <ScheduleWindowsEditor
-                                        withPrice
-                                        basePrice={formData.pos_price !== '' ? Number(formData.pos_price) : (formData.price !== '' ? Number(formData.price) : null)}
-                                        value={formData.price_windows}
-                                        onChange={(v) => setFormData({ ...formData, price_windows: v })}
-                                        emptyHint="No timed prices."
-                                    />
-                                </div>
-                                <div>
-                                    <Label>Item Name *</Label>
-                                    <Input
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
+                                    <SubcategorySection
+                                        value={formData.subcategory}
+                                        onChange={(v) => setFormData({ ...formData, subcategory: v })}
+                                        suggestions={[...new Set(menuItems.filter(i => i.subcategory).map(i => i.subcategory))]}
                                     />
                                 </div>
                                 <div className="col-span-2">
@@ -952,6 +894,9 @@ CRITICAL REQUIREMENTS:
                                         </select>
                                     </div>
                                 </div>
+                                <div className="col-span-2 pt-4 border-t border-gray-200 first:pt-0 first:border-t-0">
+                                    <h3 className="text-sm font-semibold text-gray-900">Prices</h3>
+                                </div>
                                 <div>
                                     <Label>Online Price (£) *</Label>
                                     <Input
@@ -988,6 +933,30 @@ CRITICAL REQUIREMENTS:
                                     </p>
                                 </div>
                                 <div className="col-span-2">
+                                    <Label>Timed prices (happy hour)</Label>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                        A lower price during set hours. It switches on and off by itself, and the till shows the
+                                        offer so staff can tell customers.
+                                    </p>
+                                    <ScheduleWindowsEditor
+                                        withPrice
+                                        basePrice={formData.pos_price !== '' ? Number(formData.pos_price) : (formData.price !== '' ? Number(formData.price) : null)}
+                                        value={formData.price_windows}
+                                        onChange={(v) => setFormData({ ...formData, price_windows: v })}
+                                        emptyHint="No timed prices."
+                                    />
+                                </div>
+                                <div className="col-span-2 pt-4 border-t border-gray-200 first:pt-0 first:border-t-0">
+                                    <h3 className="text-sm font-semibold text-gray-900">Where &amp; when it sells</h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={formData.is_available}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, is_available: checked })}
+                                    />
+                                    <Label>Available (on sale)</Label>
+                                </div>
+                                <div className="col-span-2">
                                     <Label>Availability Channel</Label>
                                     <select
                                         value={formData.availability_channel}
@@ -999,34 +968,68 @@ CRITICAL REQUIREMENTS:
                                         <option value="pos_only">In-Store POS Only</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <Label>Category</Label>
-                                    <select
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    >
-                                        <option value="">Select a category</option>
-                                        {categories.map((cat) => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                    {categories.length === 0 && (
-                                        <p className="text-xs text-gray-500 mt-1">Add categories first to organize your menu</p>
+                                <div className="col-span-2">
+                                    <Label>When is this available?</Label>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                        Leave empty to sell it all day. Add a window for breakfast, lunch or late menus &mdash;
+                                        outside these times it disappears from the till automatically.
+                                    </p>
+                                    <ScheduleWindowsEditor
+                                        value={formData.availability_windows}
+                                        onChange={(v) => setFormData({ ...formData, availability_windows: v })}
+                                        emptyHint="Available all day."
+                                    />
+                                </div>
+                                <div className="col-span-2 pt-4 border-t border-gray-200 first:pt-0 first:border-t-0">
+                                    <h3 className="text-sm font-semibold text-gray-900">Stock</h3>
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={!!formData.track_stock}
+                                            onChange={e => setFormData({ ...formData, track_stock: e.target.checked })}
+                                            className="h-5 w-5 rounded" />
+                                        <span className="font-medium text-sm">Track stock for this item</span>
+                                    </label>
+                                    <p className="text-xs text-gray-500 mt-1 mb-2">
+                                        When it reaches zero it comes off sale everywhere at once &mdash; till, online, kiosk and QR.
+                                    </p>
+                                    {formData.track_stock && (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <Label className="text-xs">In stock (portions)</Label>
+                                                <Input type="number" min="0" step="1" value={formData.stock_quantity}
+                                                    onChange={e => setFormData({ ...formData, stock_quantity: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs">Warn when down to</Label>
+                                                <Input type="number" min="0" step="1" value={formData.low_stock_threshold}
+                                                    onChange={e => setFormData({ ...formData, low_stock_threshold: e.target.value })}
+                                                    placeholder="Optional" />
+                                            </div>
+                                            {formData.auto_86ed && (
+                                                <p className="col-span-2 text-xs text-amber-700">
+                                                    This sold out automatically. Setting stock above zero puts it back on sale.
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
-                                <div className="col-span-2">
-                                    <SubcategorySection
-                                        value={formData.subcategory}
-                                        onChange={(v) => setFormData({ ...formData, subcategory: v })}
-                                        suggestions={[...new Set(menuItems.filter(i => i.subcategory).map(i => i.subcategory))]}
-                                    />
+                                <div className="col-span-2 pt-4 border-t border-gray-200 first:pt-0 first:border-t-0">
+                                    <h3 className="text-sm font-semibold text-gray-900">Dietary &amp; allergens</h3>
                                 </div>
-                                <div className="col-span-2">
-                                    <ScheduleSection
-                                        value={formData.availability_schedule}
-                                        onChange={(v) => setFormData({ ...formData, availability_schedule: v })}
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={formData.is_vegetarian}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, is_vegetarian: checked })}
                                     />
+                                    <Label>Vegetarian</Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={formData.is_spicy}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, is_spicy: checked })}
+                                    />
+                                    <Label>Spicy</Label>
                                 </div>
                                 <div className="col-span-2">
                                     <AllergensSection
@@ -1047,6 +1050,9 @@ CRITICAL REQUIREMENTS:
                                         itemName={formData.name}
                                         itemDescription={formData.description}
                                     />
+                                </div>
+                                <div className="col-span-2 pt-4 border-t border-gray-200 first:pt-0 first:border-t-0">
+                                    <h3 className="text-sm font-semibold text-gray-900">Image</h3>
                                 </div>
                                 <div className="col-span-2">
                                     <div className="flex items-center justify-between mb-2">
@@ -1155,33 +1161,15 @@ CRITICAL REQUIREMENTS:
                                         )}
                                     </div>
                                 </div>
+                                <div className="col-span-2 pt-4 border-t border-gray-200 first:pt-0 first:border-t-0">
+                                    <h3 className="text-sm font-semibold text-gray-900">Display</h3>
+                                </div>
                                 <div className="flex items-center gap-2">
                                     <Switch
                                         checked={formData.is_popular}
                                         onCheckedChange={(checked) => setFormData({ ...formData, is_popular: checked })}
                                     />
                                     <Label>Popular Item</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Switch
-                                        checked={formData.is_vegetarian}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, is_vegetarian: checked })}
-                                    />
-                                    <Label>Vegetarian</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Switch
-                                        checked={formData.is_spicy}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, is_spicy: checked })}
-                                    />
-                                    <Label>Spicy</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Switch
-                                        checked={formData.is_available}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, is_available: checked })}
-                                    />
-                                    <Label>Available</Label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Switch
@@ -1192,6 +1180,33 @@ CRITICAL REQUIREMENTS:
                                         <Label>Show in Cart Quick-Add</Label>
                                         <p className="text-xs text-gray-500">Display in quick-add section on cart screen</p>
                                     </div>
+                                </div>
+                                <div className="col-span-2">
+                                    <Label>POS Tile Colour</Label>
+                                    <div className="flex flex-wrap gap-2 mt-1.5" role="radiogroup" aria-label="POS tile colour">
+                                        {[
+                                            ['none', 'bg-gray-100 border-gray-300'],
+                                            ['red', 'bg-red-500'], ['orange', 'bg-orange-500'], ['amber', 'bg-amber-500'],
+                                            ['green', 'bg-green-500'], ['teal', 'bg-teal-500'], ['blue', 'bg-blue-500'],
+                                            ['purple', 'bg-purple-500'], ['pink', 'bg-pink-500'],
+                                        ].map(([c, cls]) => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={formData.pos_tile_color === c}
+                                                aria-label={c === 'none' ? 'No colour' : c}
+                                                title={c === 'none' ? 'No colour' : c}
+                                                onClick={() => setFormData({ ...formData, pos_tile_color: c })}
+                                                className={`h-9 w-9 rounded-lg border-2 ${cls} ${
+                                                    formData.pos_tile_color === c ? 'ring-2 ring-offset-2 ring-gray-900 border-white' : 'border-transparent'
+                                                }`}
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Group items by colour so staff recognise them at a glance &mdash; e.g. all drinks blue, all sides amber.
+                                    </p>
                                 </div>
                                     </div>
 
