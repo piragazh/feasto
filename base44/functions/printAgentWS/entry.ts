@@ -99,9 +99,17 @@ async function pollForJobs() {
                 for (const j of stuckJobs) {
                     const updatedAt = j.updated_date || j.created_date;
                     if (updatedAt < stuckCutoff && !isJobInFlightAnywhere(j.id)) {
-                        await serviceRole.entities.PrintJob.update(j.id, {
-                            status: 'pending',
-                            agent_id: null,
+                        // Counts as an attempt and gives up, exactly as managePrintQueue's
+                        // poll does. Resetting WITHOUT counting reprinted a ticket every
+                        // 2 minutes for as long as the agent never confirmed it.
+                        const attempts = (j.retry_count || 0) + 1;
+                        await serviceRole.entities.PrintJob.update(j.id, attempts > MAX_RETRIES ? {
+                            status: 'failed', agent_id: null, retry_count: attempts, next_retry_at: null,
+                            completed_at: new Date().toISOString(),
+                            error_message: `Printer did not confirm after ${MAX_RETRIES} attempts - check whether it printed before using Retry.`,
+                        } : {
+                            status: 'pending', agent_id: null, retry_count: attempts,
+                            error_message: `Printer did not confirm (attempt ${attempts} of ${MAX_RETRIES}).`,
                         });
                     }
                 }
@@ -323,6 +331,12 @@ Deno.serve(async (req) => {
                 }
                 if (job.agent_id && job.agent_id !== registeredAgentId) {
                     socket.send(JSON.stringify({ type: 'error', message: `Job ${job_id} is owned by agent ${job.agent_id}, not ${registeredAgentId}` }));
+                    return;
+                }
+                // Cancelled by staff or given up stays that way.
+                if (job.status === 'failed') {
+                    getAgentInFlight(registeredAgentId).delete(job_id);
+                    socket.send(JSON.stringify({ type: 'job_ack', job_id, status: 'failed' }));
                     return;
                 }
                 await connectionServiceRole.entities.PrintJob.update(job_id, {
