@@ -39,7 +39,8 @@ const OPTION_QTY_MAX = 99;
  * Returns { unit } in pounds rounded to the penny, or { error } to refuse.
  */
 function priceSelection(menuItem, customizations, itemQuantities) {
-    const base = menuItem?.pos_price != null ? Number(menuItem.pos_price) : Number(menuItem?.price);
+    const rawBase = menuItem?.pos_price != null ? menuItem.pos_price : menuItem?.price;
+    const base = rawBase == null || rawBase === '' ? NaN : Number(rawBase);
     if (!Number.isFinite(base) || base < 0) return { error: 'has no valid price' };
     const picks = customizations && typeof customizations === 'object' ? customizations : {};
     const qtys = itemQuantities && typeof itemQuantities === 'object' ? itemQuantities : {};
