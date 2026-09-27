@@ -4,7 +4,6 @@ import { getApiUrl } from '@/lib/api-origin';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Smartphone, CheckCircle2, AlertCircle, Clock, RefreshCw,
     Copy, Wifi, WifiOff, Circle, RotateCcw, X, Trash2
@@ -108,9 +107,11 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
             const heartbeatMap = {};
             dbAgents.forEach(a => { heartbeatMap[a.agent_id] = a; });
 
-            // Also seed from job activity as fallback for agents that never sent a heartbeat
+            // Also seed from job activity as fallback for agents that never sent a
+            // heartbeat - but only from a job an agent is holding NOW. Finished jobs
+            // keep their agent_id for 24h, which brought a removed agent straight back.
             fetchedJobs.forEach(j => {
-                if (!j.agent_id || heartbeatMap[j.agent_id]) return;
+                if (!j.agent_id || heartbeatMap[j.agent_id] || j.status !== 'processing') return;
                 const t = j.updated_date || j.created_date;
                 if (t) heartbeatMap[j.agent_id] = { agent_id: j.agent_id, last_seen: t, connection_mode: 'polling' };
             });
