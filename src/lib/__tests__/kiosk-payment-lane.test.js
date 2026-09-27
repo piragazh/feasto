@@ -65,7 +65,52 @@ describe('which orders alert the till', () => {
     });
 });
 
-import { findByOrderNumber } from '../kiosk-payment.js';
+import { findByOrderNumber, functionErrorMessage } from '../kiosk-payment.js';
+import { AxiosError } from 'axios';
+import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client.js';
+
+/**
+ * Fail a request through the REAL SDK client, so the test sees exactly the
+ * error functions.invoke throws - not a shape we guessed.
+ */
+async function sdkFailure(status, body) {
+    const client = createAxiosClient({ baseURL: 'http://test.invalid' });
+    client.defaults.adapter = async (config) => {
+        const response = { data: body, status, statusText: '', headers: {}, config, request: {} };
+        throw new AxiosError(`Request failed with status code ${status}`, 'ERR_BAD_REQUEST', config, {}, response);
+    };
+    try { await client.post('/apps/x/functions/kioskCreateOrder', {}); }
+    catch (e) { return e; }
+    throw new Error('expected the request to fail');
+}
+
+describe('showing the kiosk why an order was refused', () => {
+    const fallback = 'Failed to place order. Please try again.';
+
+    it('REGRESSION GUARD: the real SDK error carries the server reason, and we show it', async () => {
+        const err = await sdkFailure(429, { error: 'The counter is very busy right now. Please order at the counter.', code: 'counter_queue_full', success: false });
+        expect(err.response).toBeUndefined();          // why err.response.data.error never worked
+        expect(err.message).toMatch(/status code 429/); // and why err.message must not be shown
+        expect(functionErrorMessage(err, fallback)).toBe('The counter is very busy right now. Please order at the counter.');
+    });
+
+    it('shows existing refusals too - closed, unavailable item', async () => {
+        expect(functionErrorMessage(await sdkFailure(400, { error: 'Restaurant is currently closed', success: false }), fallback)).toBe('Restaurant is currently closed');
+        expect(functionErrorMessage(await sdkFailure(400, { error: '"Chips" is currently unavailable', success: false }), fallback)).toBe('"Chips" is currently unavailable');
+    });
+
+    it('falls back to the generic text for a network failure or an empty body', async () => {
+        expect(functionErrorMessage(new TypeError('Failed to fetch'), fallback)).toBe(fallback);
+        expect(functionErrorMessage(await sdkFailure(502, '<html>Bad gateway</html>'), fallback)).toBe(fallback);
+        expect(functionErrorMessage(await sdkFailure(400, { error: '   ' }), fallback)).toBe(fallback);
+        expect(functionErrorMessage(undefined, fallback)).toBe(fallback);
+    });
+
+    it('still understands a plain axios-shaped error', () => {
+        expect(functionErrorMessage({ response: { data: { error: 'Closed' } } }, fallback)).toBe('Closed');
+        expect(functionErrorMessage({ data: { error: { message: 'Nested' } } }, fallback)).toBe('Nested');
+    });
+});
 
 describe('finding the order the cashier typed', () => {
     const lane = ['K-003', 'K-013', 'K-023', 'K-030', 'K-4821'].map(n => kiosk({ order_number: n }));
