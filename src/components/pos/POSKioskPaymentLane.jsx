@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Banknote, CreditCard, Monitor, Search, X, Loader2, Clock } from 'lucide-react';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
-import { isAwaitingKioskPayment, findByOrderNumber } from '@/lib/kiosk-payment';
+import { isAwaitingKioskPayment, findByOrderNumber, paymentFailureNotice } from '@/lib/kiosk-payment';
 
 // Re-exported so existing imports keep working.
 export { isAwaitingKioskPayment };
@@ -61,15 +61,19 @@ export default function POSKioskPaymentLane({ orders = [], restaurantId, termina
                 staff_session: getStaffSessionToken(restaurantId),
             });
             const data = res?.data ?? res;
-            if (data?.error) throw new Error(data.error);
+            // A 2xx that still says no is a definite refusal, never an unknown.
+            if (data?.error) throw Object.assign(new Error(data.error), { status: 400, data });
             toast.success(`Order ${selected.order_number} paid by ${tender} \u2014 sent to the kitchen`);
             setSelected(null);
             setQuery('');
             onPaid?.();
         } catch (e) {
-            // Deliberately plain: staff must never assume a payment went
-            // through when it did not.
-            toast.error(`Payment NOT recorded: ${e?.message || 'please try again'}`);
+            // Already paid / refused / no answer each need different words -
+            // the wrong ones invite charging a customer twice. See paymentFailureNotice.
+            const notice = paymentFailureNotice(e, `Order ${selected.order_number}`);
+            if (notice.kind === 'already_paid') toast.warning(notice.message, { duration: 10000 });
+            else toast.error(notice.message, { duration: notice.kind === 'unknown' ? 15000 : 8000 });
+            if (notice.refresh) { setSelected(null); onPaid?.(); }
         } finally {
             setPaying(null);
         }

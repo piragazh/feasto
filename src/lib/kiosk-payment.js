@@ -8,6 +8,8 @@
  */
 
 /** An order is waiting at the till while it is an unpaid kiosk counter order. */
+import { functionErrorMessage as reasonFrom } from './function-errors.js';
+
 export const isAwaitingKioskPayment = (o) =>
     o?.order_source === 'kiosk'
     && o?.payment_status === 'pending_payment'
@@ -31,7 +33,6 @@ export const needsCashierAttention = (o) =>
 
 // Kept exported here so existing imports keep working; the one copy lives in function-errors.js.
 export { functionErrorMessage } from './function-errors.js';
-import { functionErrorMessage as reasonFrom } from './function-errors.js';
 
 /**
  * What the cashier must be told when taking a kiosk payment fails.
