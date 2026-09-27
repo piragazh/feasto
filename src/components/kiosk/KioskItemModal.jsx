@@ -1,6 +1,7 @@
 import AllergenNotice from '@/components/shared/AllergenNotice';
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { priceSelection } from '@/lib/item-pricing';
 
 function MealSubCustomizations({ opt, selectedUpgrade, customizations, setCustomizations, setError }) {
     if (!selectedUpgrade) return null;
@@ -125,45 +126,13 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
 
     const basePrice = item.pos_price != null ? item.pos_price : item.price;
 
-    const calculateTotal = () => {
-        let total = basePrice;
-        if (item.customization_options) {
-            item.customization_options.forEach(opt => {
-                if (opt.type === 'single' && customizations[opt.name]) {
-                    const sel = opt.options?.find(o => o.label === customizations[opt.name]);
-                    if (sel?.price) total += sel.price;
-                } else if (opt.type === 'multiple' && Array.isArray(customizations[opt.name])) {
-                    customizations[opt.name].forEach(choice => {
-                        const qty = itemQuantities[`${opt.name}_${choice}`] || 1;
-                        const sel = opt.options?.find(o => o.label === choice);
-                        if (sel?.price) total += sel.price * qty;
-                    });
-                } else if (opt.type === 'meal_upgrade' && customizations[opt.name]) {
-                    const sel = opt.options?.find(o => o.label === customizations[opt.name]);
-                    if (sel?.price) total += sel.price;
-                    // Add sub-customization prices
-                    const mealCustomizations = opt.meal_customizations ||
-                        sel?.meal_customizations;
-                    if (mealCustomizations) {
-                        mealCustomizations.forEach(mealOpt => {
-                            const key = `${opt.name}_meal_${mealOpt.name}`;
-                            const val = customizations[key];
-                            if (mealOpt.type === 'single' && val) {
-                                const mc = mealOpt.options?.find(o => o.label === val);
-                                if (mc?.price) total += mc.price;
-                            } else if (mealOpt.type === 'multiple' && Array.isArray(val)) {
-                                val.forEach(chosen => {
-                                    const mc = mealOpt.options?.find(o => o.label === chosen);
-                                    if (mc?.price) total += mc.price;
-                                });
-                            }
-                        });
-                    }
-                }
-            });
-        }
-        return total * quantity;
+    // The SAME rule kioskCreateOrder charges by (src/lib/item-pricing.js), so the
+    // price on screen is the price at the till and on the card terminal.
+    const unitPrice = () => {
+        const priced = priceSelection(item, customizations, itemQuantities);
+        return priced.unit ?? basePrice;
     };
+    const calculateTotal = () => Math.round(unitPrice() * quantity * 100) / 100;
 
     const handleAdd = () => {
         setError('');
@@ -203,7 +172,7 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
         }
         onAdd({
             ...item,
-            price: calculateTotal() / quantity,
+            price: unitPrice(),
             quantity,
             customizations,
             itemQuantities,
