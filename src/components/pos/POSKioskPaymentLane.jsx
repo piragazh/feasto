@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Banknote, CreditCard, Monitor, Search, X, Loader2, Clock } from 'lucide-react';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
-import { isAwaitingKioskPayment } from '@/lib/kiosk-payment';
+import { isAwaitingKioskPayment, findByOrderNumber } from '@/lib/kiosk-payment';
 
 // Re-exported so existing imports keep working.
 export { isAwaitingKioskPayment };
@@ -19,11 +19,11 @@ export { isAwaitingKioskPayment };
  * Oldest first: that is the order customers reach the counter in.
  *
  * Staff type the number rather than scanning, because the kiosk has no printer
- * yet; the search matches on the digits alone, so "42" finds "K042".
+ * yet. The search matches on the digits alone and an exact number wins, so
+ * "3" finds K-003 only - not K-013 or K-023 (see findByOrderNumber).
  */
 
 
-const digits = (s) => String(s || '').replace(/\D/g, '');
 const minutesSince = (iso) => {
     const t = new Date(iso).getTime();
     return Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 60000)) : 0;
@@ -44,8 +44,7 @@ export default function POSKioskPaymentLane({ orders = [], restaurantId, termina
     const waiting = useMemo(() => {
         const list = orders.filter(isAwaitingKioskPayment)
             .sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
-        const q = digits(query);
-        return q ? list.filter(o => digits(o.order_number).includes(q)) : list;
+        return findByOrderNumber(list, query);
     }, [orders, query]);
 
     const total = orders.filter(isAwaitingKioskPayment).length;
