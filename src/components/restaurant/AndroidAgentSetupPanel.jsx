@@ -310,7 +310,7 @@ export default function AndroidAgentSetupPanel({ restaurantId }) {
                                 <p className="text-blue-700">POST /functions/managePrintQueue</p>
                                 <p className="text-gray-500">Header: x-api-key: YOUR_KEY</p>
                                 <p className="text-gray-500">{'Body: {"action":"poll","restaurant_id":"...","agent_id":"android-1"}'}</p>
-                                <p className="text-green-700">{'← {"job":{"id":"...","action":"print_receipt","order_data":{...}}]}'}</p>
+                                <p className="text-green-700">{'← {"job":{"id":"...","action":"print_receipt","order_data":{...}}}'}</p>
                             </div>
                             <div className="bg-white border rounded-lg p-2 space-y-1">
                                 <p className="text-gray-400 font-sans font-medium">2. Mark job complete</p>
