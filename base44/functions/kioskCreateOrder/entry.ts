@@ -89,6 +89,34 @@ async function nextKioskOrderNumber(base44, restaurantId) {
     return candidate;
 }
 
+/**
+ * SYNC RULE: mirrors isAwaitingKioskPayment in src/lib/kiosk-payment.js
+ * (functions cannot import from src/). check-kiosk-counter-cap.mjs compares them.
+ */
+function isAwaitingCounterPayment(o) {
+    return o?.order_source === 'kiosk'
+        && o?.payment_status === 'pending_payment'
+        && !['cancelled', 'refunded'].includes(o?.status);
+}
+
+const DEFAULT_MAX_AWAITING_COUNTER = 25;
+
+/** The cap for this restaurant: kiosk_config.max_awaiting_payment, else 25. */
+function maxAwaitingCounter(kioskConfig) {
+    const n = Number(kioskConfig?.max_awaiting_payment);
+    return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAX_AWAITING_COUNTER;
+}
+
+/**
+ * Is the counter queue full? This endpoint is public with no rate limit, and
+ * every pay-at-counter order sounds the till alert and sits in the lane - so
+ * without a cap, a script (or a child on the kiosk) can bury the till in fake
+ * orders. Real customers pay within minutes; unpaid ones expire after 15.
+ */
+function counterIsFull(orders, kioskConfig) {
+    return (orders || []).filter(isAwaitingCounterPayment).length >= maxAwaitingCounter(kioskConfig);
+}
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -173,6 +201,24 @@ Deno.serve(async (req) => {
                     error: 'Pay at counter is not available on this kiosk',
                     success: false,
                 }, { status: 400 });
+            }
+
+            // ── Counter queue cap ─────────────────────────────────────────────
+            // After the idempotency check on purpose: a retry of an order that
+            // was already accepted still gets it back, even when the queue is full.
+            const waitingNow = await base44.asServiceRole.entities.Order.filter(
+                { restaurant_id: restaurantId, order_source: 'kiosk', payment_status: 'pending_payment' },
+                '-created_date', 200,
+            );
+            if (counterIsFull(waitingNow, kioskConfig)) {
+                console.warn(`[KIOSK-ORDER] Counter queue full: ${maxAwaitingCounter(kioskConfig)} waiting, refused new pay-at-counter order. restaurant=${restaurantId}`);
+                return Response.json({
+                    error: kioskConfig.payment_card_enabled === true
+                        ? 'The counter is very busy right now. Please pay by card, or order at the counter.'
+                        : 'The counter is very busy right now. Please order at the counter.',
+                    code: 'counter_queue_full',
+                    success: false,
+                }, { status: 429 });
             }
         }
 
