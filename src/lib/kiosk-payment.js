@@ -31,6 +31,34 @@ export const needsCashierAttention = (o) =>
 
 // Kept exported here so existing imports keep working; the one copy lives in function-errors.js.
 export { functionErrorMessage } from './function-errors.js';
+import { functionErrorMessage as reasonFrom } from './function-errors.js';
+
+/**
+ * What the cashier must be told when taking a kiosk payment fails.
+ *
+ * The three outcomes need different words, because the wrong words cost money:
+ *  - already_paid: another till (or a double tap) got there first. Saying
+ *    "NOT recorded" here invites charging the customer twice.
+ *  - refused: the server answered no (cancelled, not a kiosk order...). The
+ *    payment definitely was NOT recorded.
+ *  - unknown: no answer, or the server failed. It may have recorded the
+ *    payment before the connection dropped - say so, never guess "not".
+ * `refresh` is true whenever the lane may be out of date.
+ */
+export function paymentFailureNotice(err, orderNumber = 'This order') {
+    const status = Number(err?.status ?? err?.originalError?.response?.status ?? err?.response?.status);
+    const code = err?.data?.code ?? err?.originalError?.response?.data?.code ?? err?.response?.data?.code;
+    if (code === 'ALREADY_HANDLED') {
+        return { kind: 'already_paid', refresh: true,
+            message: `${orderNumber} is ALREADY PAID - do not take payment again.` };
+    }
+    if (status >= 400 && status < 500) {
+        return { kind: 'refused', refresh: status === 409,
+            message: `Payment NOT recorded: ${reasonFrom(err, 'the order could not be paid')}` };
+    }
+    return { kind: 'unknown', refresh: true,
+        message: `Could not confirm ${orderNumber}. The payment MAY have been recorded - check the order before taking payment again.` };
+}
 
 const digitsOf = (s) => String(s ?? '').replace(/\D/g, '');
 
