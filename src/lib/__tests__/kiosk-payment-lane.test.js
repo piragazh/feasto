@@ -203,3 +203,20 @@ describe('telling the cashier what happened when taking payment fails', () => {
         expect(paymentFailureNotice(new TypeError('Failed to fetch')).kind).toBe('unknown');
     });
 });
+
+import { readFileSync } from 'node:fs';
+
+describe('the payment lane uses these words', () => {
+    // Comments stripped, so a comment mentioning it cannot pass.
+    const lane = readFileSync(new URL('../../components/pos/POSKioskPaymentLane.jsx', import.meta.url), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+    const catchBlock = lane.slice(lane.indexOf('} catch (e) {'), lane.indexOf('} finally {'));
+
+    it('REGRESSION GUARD: the lane words failures through paymentFailureNotice', () => {
+        expect(catchBlock).toMatch(/paymentFailureNotice\(e,/);
+        expect(catchBlock).not.toMatch(/NOT recorded/);   // its own blanket wording is gone
+    });
+    it('a refusal returned as 2xx is thrown as a refusal, not an unknown', () => {
+        expect(lane).toMatch(/if \(data\?\.error\) throw Object\.assign\(new Error\(data\.error\), \{ status: 400, data \}\)/);
+    });
+});
