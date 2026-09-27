@@ -182,7 +182,10 @@ export default function KioskPayment({
             // so a retry is matched to it rather than duplicating it.
             placingRef.current = false;
             setPaymentState('failed');
-            setErrorMessage('Failed to place order. Please try again.');
+            // functions.invoke THROWS on any non-2xx, so the server's reason
+            // ("closed", "X is unavailable", "counter is very busy") arrives here,
+            // not in result.error above. It was being replaced by the generic text.
+            setErrorMessage(err?.response?.data?.error || 'Failed to place order. Please try again.');
         }
     };
 
