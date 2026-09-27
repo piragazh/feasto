@@ -64,3 +64,46 @@ describe('which orders alert the till', () => {
         expect(needsCashierAttention({ order_source: 'pos', status: 'pending' })).toBe(false);
     });
 });
+
+import { findByOrderNumber } from '../kiosk-payment.js';
+
+describe('finding the order the cashier typed', () => {
+    const lane = ['K-003', 'K-013', 'K-023', 'K-030', 'K-4821'].map(n => kiosk({ order_number: n }));
+    const nums = (list) => list.map(o => o.order_number);
+
+    it('REGRESSION GUARD: typing 3 finds K-003 only, not K-013 / K-023 / K-030', () => {
+        expect(nums(findByOrderNumber(lane, '3'))).toEqual(['K-003']);
+    });
+
+    it('leading zeros and the K prefix make no difference', () => {
+        for (const q of ['03', '003', 'K3', 'k-003', ' 3 ']) {
+            expect(nums(findByOrderNumber(lane, q))).toEqual(['K-003']);
+        }
+    });
+
+    it('a two-digit number is exact too', () => {
+        expect(nums(findByOrderNumber(lane, '13'))).toEqual(['K-013']);
+        expect(nums(findByOrderNumber(lane, '30'))).toEqual(['K-030']);
+    });
+
+    it('falls back to a partial match when nothing matches exactly', () => {
+        expect(nums(findByOrderNumber(lane, '482'))).toEqual(['K-4821']);
+        expect(nums(findByOrderNumber(lane, '2'))).toEqual(['K-023', 'K-4821']);
+    });
+
+    it('shows nothing when nothing matches at all', () => {
+        expect(findByOrderNumber(lane, '99')).toEqual([]);
+    });
+
+    it('an empty or non-numeric query shows the whole lane, in its order', () => {
+        expect(nums(findByOrderNumber(lane, ''))).toEqual(nums(lane));
+        expect(nums(findByOrderNumber(lane, 'K-'))).toEqual(nums(lane));
+    });
+
+    it('is safe with missing numbers and missing input', () => {
+        const withBlank = [kiosk({ order_number: undefined }), ...lane];
+        expect(nums(findByOrderNumber(withBlank, '3'))).toEqual(['K-003']);
+        expect(findByOrderNumber(undefined, '3')).toEqual([]);
+        expect(findByOrderNumber(lane, undefined)).toEqual(lane);
+    });
+});
