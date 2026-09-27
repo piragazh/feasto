@@ -13,6 +13,7 @@ import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils/index.ts';
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { pendingPayment } from '@/lib/pendingPayment';
+import { functionErrorMessage } from '@/lib/function-errors';
 
 export function useCreateOrder({
     // Cart & restaurant
@@ -309,7 +310,9 @@ export function useCreateOrder({
             }, 2000);
         } catch (error) {
             console.error('Order creation error:', error);
-            const errorMessage = error?.message || 'Failed to place order. Please check your connection and try again.';
+            // Customer-facing: only a reason the server gave on purpose ("Coupon
+            // expired"), never axios's "status code 400" or an internal error.
+            const errorMessage = functionErrorMessage(error, 'Failed to place order. Please check your connection and try again.');
             toast.error(errorMessage);
         } finally {
             setIsSubmitting(false);

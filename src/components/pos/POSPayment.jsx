@@ -14,6 +14,7 @@ import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { TIP_PRESETS, tipFromPercent } from '@/lib/pos-money-logic';
 import { POS_RADIUS, POS_TEXT, POS_TOUCH, POS_FOCUS, POS_TRANSITION } from '@/lib/posDesign';
 import { playSuccess, playError, playAlert } from '@/lib/posSound';
+import { staffErrorMessage } from '@/lib/function-errors';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
     AlertDialogContent, AlertDialogDescription,
@@ -325,11 +326,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 tip_method: tipAmount > 0 ? (dominantTipMethod(paymentSummary) || 'cash') : undefined,
                 staff_session: getStaffSessionToken(restaurantId),
             });
-            // invoke() does NOT throw on a 4xx - it resolves with the error body.
-            // Ignoring the response meant a server rejection (discount over the
-            // manager limit, invalid coupon, failed validation) completed the
-            // payment flow with NO ORDER CREATED and nothing shown on screen:
-            // money taken, order lost. Surface it so staff can fix and retry.
+            // invoke() THROWS on a 4xx (SDK 0.8 - see pos-network-errors.test.js):
+            // a refusal (discount over the manager limit, invalid coupon, failed
+            // validation) lands in the catch below, never here. This check stays
+            // for a 2xx that still carries an error, which must never complete
+            // the payment with NO ORDER CREATED.
             const payload = res?.data ?? res;
             if (payload?.error) {
                 throw new Error(payload.error);
@@ -474,7 +475,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             }
         } catch (e) {
             playError();
-            toast.error('Payment failed: ' + (e?.message || 'Unknown error'));
+            // The server's reason ("Discount over your limit..."), not axios's
+            // "Request failed with status code 400".
+            toast.error('Payment failed: ' + staffErrorMessage(e, 'Unknown error'));
         } finally {
             setIsProcessing(false);
         }
@@ -555,7 +558,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             }
         } catch (error) {
             if (terminalCancelRef.current) return;
-            setTerminalError('Failed to communicate with terminal: ' + (error.message || 'Unknown error'));
+            setTerminalError('Failed to communicate with terminal: ' + staffErrorMessage(error, 'Unknown error'));
             setTerminalStep('failed');
         }
     };
