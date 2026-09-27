@@ -51,7 +51,7 @@ const iIdem = at('idempotency_key })'), iCounter = at("payment_counter_enabled")
 ck('the cap is actually called by the handler', iCap > 0);
 ck('it runs after the idempotency check (retries still get their order)', iCap > iIdem && iIdem > 0);
 ck('it runs only on the pay-at-counter branch, not for card', iCap > iCounter && iCounter > iCard && iCap < iMenu);
-ck('a refusal returns 429 with a reason the kiosk can show', /counterIsFull\([\s\S]{0,400}error:[\s\S]{0,300}status: 429/.test(code));
+ck('a refusal returns 429 with a reason the kiosk can show', /counterIsFull\([\s\S]{0,400}return Response\.json\(\{\s*error:[^}]{0,600}\}, \{ status: 429 \}\)/.test(code));
 
 const good = checks.filter(Boolean).length;
 console.log(`\n  ${good}/${checks.length} correct`);
