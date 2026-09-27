@@ -12,23 +12,25 @@
     }
   },
   "definition": {
-    "document": {
-      "dsl": "1.0.0",
-      "name": "apply_stock_on_order_create",
-      "version": "1.0",
-      "namespace": "base44"
-    },
     "do": [
       {
         "run_function": {
           "call": "invoke_backend_function",
+          "then": "end",
           "with": {
-            "function_name": "applyOrderStock",
-            "args": {}
-          },
-          "then": "end"
+            "args": {
+              "orderId": "${ .entity_id }"
+            },
+            "function_name": "applyOrderStock"
+          }
         }
       }
-    ]
+    ],
+    "document": {
+      "dsl": "1.0.0",
+      "name": "apply_stock_on_order_create",
+      "namespace": "base44",
+      "version": "1.1"
+    }
   }
 }
