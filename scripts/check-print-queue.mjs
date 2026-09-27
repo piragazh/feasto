@@ -14,8 +14,15 @@ const src = fs.readFileSync(new URL('../base44/functions/managePrintQueue/entry.
 // Timestamps exactly as the platform returns them: UTC, no Z, microseconds.
 const naive = (msAgo) => new Date(Date.now() - msAgo).toISOString().replace('Z','').replace(/(\.\d{3})$/, '$1000');
 
-function world(jobs) {
-  const db = { PrintJob: jobs.map(j => ({ restaurant_id:'r1', retry_count:0, ...j })) };
+// user: who is signed in. managers: RestaurantManager rows (boss@x.com manages r1 by default).
+function world(jobs, { agents = [], user = { email:'boss@x.com' }, managers = [{ user_email:'boss@x.com', is_active:true, restaurant_ids:['r1'] }] } = {}) {
+  const db = { PrintJob: jobs.map(j => ({ restaurant_id:'r1', retry_count:0, ...j })),
+               AgentHeartbeat: agents.map((a, i) => ({ id:'hb'+i, restaurant_id:'r1', ...a })) };
+  const tbl = (name) => ({
+    filter: async (q={}) => db[name].filter(r => Object.entries(q).every(([k,v]) => (v && typeof v === 'object' && '$gte' in v) ? true : r[k] === v)),
+    update: async (id,d) => { const r=db[name].find(x=>x.id===id); Object.assign(r,d); return r; },
+    delete: async (id) => { db[name] = db[name].filter(x=>x.id!==id); },
+  });
   const ents = { PrintJob: {
     filter: async (q={}) => db.PrintJob.filter(r => Object.entries(q).every(([k,v]) => {
       if (v && typeof v === 'object' && '$gte' in v) return true;
@@ -25,11 +32,13 @@ function world(jobs) {
     delete: async (id) => { db.PrintJob = db.PrintJob.filter(x=>x.id!==id); },
     // Like the platform: every record gets an id and a created_date (UTC, no Z).
     create: async (d) => { const r={id:'job'+(db.PrintJob.length+1),created_date:naive(0),...d}; db.PrintJob.push(r); return r; },
-  }, PrintAgent: { filter: async()=>[], update: async()=>({}), create: async()=>({}) } };
+  }, PrintAgent: { filter: async()=>[], update: async()=>({}), create: async()=>({}) },
+     AgentHeartbeat: tbl('AgentHeartbeat'),
+     RestaurantManager: { filter: async (q={}) => managers.filter(m => Object.entries(q).every(([k,v]) => m[k] === v)) } };
   let handler;
   new Function('Deno','createClientFromRequest',src)(
     { serve: f=>{handler=f;}, env:{ get:()=> 'KEY' } },
-    () => ({ auth:{ me: async()=>({email:'boss@x.com'}) }, asServiceRole:{ entities: ents } }));
+    () => ({ auth:{ me: async()=>user }, asServiceRole:{ entities: ents } }));
   const call = async (body) => { const q=[console.log,console.error,console.warn]; console.log=console.error=console.warn=()=>{};
     try { const r = await handler(new Request('http://x',{method:'POST',headers:{'x-api-key':'KEY'},body:JSON.stringify({restaurant_id:'r1',api_key:'KEY',...body})})); return await r.json(); }
     finally { [console.log,console.error,console.warn]=q; } };
@@ -130,6 +139,31 @@ const checks=[]; const ck=(l,ok,d)=>{checks.push(ok);console.log(`  ${ok?'✓':'
 { const ws = fs.readFileSync(new URL('../base44/functions/printAgentWS/entry.ts', import.meta.url),'utf8');
   const rec = ws.slice(ws.indexOf('for (const j of stuckJobs)'), ws.indexOf('// ── Fetch pending jobs'));
   ck('printAgentWS stuck recovery counts attempts and gives up', /const attempts = \(j\.retry_count \|\| 0\) \+ 1;/.test(rec) && /retry_count: attempts/.test(rec) && /attempts > MAX_RETRIES/.test(rec) && /status: 'failed'/.test(rec), ''); }
+
+// ── Removing a device that is no longer used (Tilbury: "pktablet", last seen 8 May) ──
+{ const w = world([{ id:'held', status:'processing', agent_id:'pktablet', created_date: naive(60000) }], { agents: [
+    { agent_id:'pktablet', last_seen:'2026-05-08T19:41:24.076Z' },
+    { agent_id:'android-agent-1', last_seen: new Date(Date.now() - 20000).toISOString() } ] });
+  const r = await w.call({ action:'remove_agent', agent_id:'pktablet' });
+  const left = w.db.AgentHeartbeat.map(a => a.agent_id);
+  ck('REGRESSION GUARD: an old agent can be removed', r.success && left.join()==='android-agent-1', left.join());
+  ck('a ticket it was holding goes back to the queue', w.db.PrintJob[0].status==='pending' && w.db.PrintJob[0].agent_id===null, w.db.PrintJob[0].status);
+  const live = await w.call({ action:'remove_agent', agent_id:'android-agent-1' });
+  ck('a RUNNING agent (seen < 5 min) is refused - it would reappear', /still running/.test(live.error||'') && w.db.AgentHeartbeat.length===1, live.error ? 'refused' : 'REMOVED'); }
+
+{ const w = world([], { agents: [{ agent_id:'old', last_seen:'2026-05-08T19:41:24Z' }], user: { email:'other@x.com' },
+    managers: [{ user_email:'other@x.com', is_active:true, restaurant_ids:['r2'] }] });
+  const r = await w.call({ action:'remove_agent', agent_id:'old' });
+  ck("another restaurant's manager cannot remove it", r.error==='Forbidden' && w.db.AgentHeartbeat.length===1, r.error||'removed');
+  const l = await w.call({ action:'list_agents' });
+  ck("nor list this restaurant's agents and printer IPs", l.error==='Forbidden' && !l.agents, l.error||'LISTED'); }
+
+{ const w = world([], { agents: [{ agent_id:'old', last_seen:'2026-05-08T19:41:24Z' }], user: { email:'admin@x.com', role:'admin' }, managers: [] });
+  const r = await w.call({ action:'remove_agent', agent_id:'old' });
+  const l = await w.call({ action:'list_agents' });
+  ck('an admin can remove agents anywhere', r.success && Array.isArray(l.agents) && l.agents.length===0, r.error||'ok');
+  const n = await w.call({ action:'remove_agent', agent_id:'nope' });
+  ck('removing an unknown agent says so', n.error==='Agent not found', n.error||''); }
 
 const good=checks.filter(Boolean).length;
 console.log(`\n  ${good}/${checks.length} correct`);
