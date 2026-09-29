@@ -78,7 +78,12 @@ export default function MenuItemsGrid({
                                     )}
                                 </div>
                                 <div className="flex items-start justify-between mb-2">
-                                    <h3 className="font-semibold">{item.name}</h3>
+                                    <h3 className="font-semibold">
+                                        {item.menu_item_no ? (
+                                            <span className="font-mono text-sm text-gray-500 mr-1.5" title="Item number">#{item.menu_item_no}</span>
+                                        ) : null}
+                                        {item.name}
+                                    </h3>
                                     {item.is_available === false && (
                                         <Badge variant="destructive" className="text-xs">
                                             <EyeOff className="h-3 w-3 mr-1" />
@@ -93,10 +98,13 @@ export default function MenuItemsGrid({
                                     </span>
                                 )}
                                 <p className="text-sm text-gray-600 mb-2 line-clamp-2 mt-1">{item.description}</p>
-                                <div className="flex items-baseline gap-2 mb-3">
-                                    <p className="text-lg font-bold text-orange-600">£{item.price.toFixed(2)}</p>
+                                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mb-3">
+                                    <p className="text-lg font-bold text-orange-600" title="Online price">£{Number(item.price || 0).toFixed(2)}</p>
                                     {item.pos_price != null && item.pos_price !== item.price && (
-                                        <p className="text-sm text-purple-600 font-medium">POS: £{item.pos_price.toFixed(2)}</p>
+                                        <p className="text-sm text-purple-600 font-medium">POS: £{Number(item.pos_price).toFixed(2)}</p>
+                                    )}
+                                    {item.platform_prices?.default != null && (
+                                        <p className="text-sm text-emerald-700 font-medium" title="Price on Just Eat, Deliveroo and Uber Eats">Marketplace: £{Number(item.platform_prices.default).toFixed(2)}</p>
                                     )}
                                 </div>
                                 {item.customization_options?.length > 0 && (
