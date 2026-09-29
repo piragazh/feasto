@@ -89,6 +89,15 @@ function whyNotSellable(item, where, date) {
     if (!inHours(item, date)) return 'hours';
     return null;
 }
+/**
+ * When an order is FOR: a future scheduled slot, else now. A scheduled order is
+ * checked against the time it will be made, not the time it was placed.
+ */
+function forTime(isScheduled, scheduledFor, now = new Date()) {
+    const t = isScheduled !== false && scheduledFor ? new Date(scheduledFor) : null;
+    return t && Number.isFinite(t.getTime()) && t.getTime() > now.getTime() ? t : now;
+}
+
 /** Customer-facing wording for a refusal (servers use the same words). */
 function notSellableMessage(name, why) {
     const n = `"${name || 'An item'}"`;
@@ -120,4 +129,4 @@ function nextOpening(item, from = new Date()) {
     return null;
 }
 
-export { SELLS_AT, channelOf, sellsAt, inHours, whyNotSellable, nextOpening, notSellableMessage };
+export { SELLS_AT, channelOf, sellsAt, inHours, whyNotSellable, nextOpening, notSellableMessage, forTime };

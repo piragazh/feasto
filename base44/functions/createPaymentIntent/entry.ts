@@ -91,6 +91,91 @@ function serializeItemsMeta(items) {
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
+// Copied verbatim from src/lib/item-availability.js - check-item-availability.mjs compares.
+// ── ITEM AVAILABILITY (shared - keep identical in every copy) ────────────────
+const AVAILABILITY_TZ = 'Europe/London';
+const SELLS_AT = {
+    till: ['both', 'pos_only'],
+    online: ['both', 'online_only'],
+    kiosk: ['both'],
+    qr: ['both'],
+};
+const WEEKDAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+/** An unknown or missing setting means "both" - never hide a menu by accident. */
+function channelOf(item) {
+    const c = item?.availability_channel;
+    return c === 'online_only' || c === 'pos_only' ? c : 'both';
+}
+
+function sellsAt(item, where) {
+    return (SELLS_AT[where] || []).includes(channelOf(item));
+}
+
+/** Weekday and minute-of-day in the UK, whatever the device's own zone. */
+function ukClock(date) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: AVAILABILITY_TZ, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const get = (t) => parts.find(p => p.type === t)?.value;
+    return { day: WEEKDAYS[get('weekday')], minutes: Number(get('hour')) * 60 + Number(get('minute')) };
+}
+
+function hhmmToMinutes(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
+    if (!m) return null;
+    const h = Number(m[1]), min = Number(m[2]);
+    return h > 23 || min > 59 ? null : h * 60 + min;
+}
+
+/** Same rule as the till: days, late menus past midnight, start === end is all day. */
+function inWindow(w, date) {
+    if (!w) return false;
+    const start = hhmmToMinutes(w.start), end = hhmmToMinutes(w.end);
+    if (start === null || end === null) return false;
+    const { day, minutes } = ukClock(date);
+    const days = Array.isArray(w.days) && w.days.length ? w.days : [0, 1, 2, 3, 4, 5, 6];
+    if (start === end) return days.includes(day);
+    if (start < end) return days.includes(day) && minutes >= start && minutes < end;
+    if (minutes >= start) return days.includes(day);           // evening part of a late menu
+    return minutes < end && days.includes((day + 6) % 7);       // after midnight: yesterday's window
+}
+
+/** No windows (or an empty list) means always - scheduling is opt-in. */
+function inHours(item, date) {
+    const ws = item?.availability_windows;
+    if (!Array.isArray(ws) || ws.length === 0) return true;
+    return ws.some(w => inWindow(w, date));
+}
+
+/**
+ * Why this item cannot be sold here at `date`, or null if it can.
+ * 'unavailable' - switched off; 'channel' - not sold here; 'hours' - outside its times.
+ */
+function whyNotSellable(item, where, date) {
+    if (!item || item.is_available === false) return 'unavailable';
+    if (!sellsAt(item, where)) return 'channel';
+    if (!inHours(item, date)) return 'hours';
+    return null;
+}
+/**
+ * When an order is FOR: a future scheduled slot, else now. A scheduled order is
+ * checked against the time it will be made, not the time it was placed.
+ */
+function forTime(isScheduled, scheduledFor, now = new Date()) {
+    const t = isScheduled !== false && scheduledFor ? new Date(scheduledFor) : null;
+    return t && Number.isFinite(t.getTime()) && t.getTime() > now.getTime() ? t : now;
+}
+
+/** Customer-facing wording for a refusal (servers use the same words). */
+function notSellableMessage(name, why) {
+    const n = `"${name || 'An item'}"`;
+    if (why === 'channel') return `${n} isn't sold here. Please remove it.`;
+    if (why === 'hours') return `${n} isn't available at this time. Please remove it.`;
+    return `${n} is currently unavailable. Please remove it.`;
+}
+// ── END ITEM AVAILABILITY ────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
     const requestId = `pi_req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -159,6 +244,25 @@ Deno.serve(async (req) => {
         }
         if (!Array.isArray(items) || items.length === 0) {
             return errorResponse('INVALID_ITEMS', 'items must be a non-empty array');
+        }
+
+        // ── 4b. Every item can be sold ONLINE at the time the order is for ───
+        // Payment is taken BEFORE verifyAndCreateOrder checks the basket, so an
+        // item that is POS-only, switched off, or outside its hours must be
+        // refused HERE - otherwise the card is charged and the order refunded.
+        // Same rule the online menu hides by (item-availability.js).
+        {
+            const sb = createClientFromRequest(req).asServiceRole;
+            const menu = await sb.entities.MenuItem.filter({ restaurant_id });
+            const byId = new Map((menu || []).map(m => [m.id, m]));
+            const at = forTime(is_scheduled, scheduled_for);
+            for (const it of items) {
+                const id = String(it?.menu_item_id || it?.id || '');
+                if (!id || id.startsWith('deal_')) continue;       // meal deals are validated by verifyAndCreateOrder
+                const dbItem = byId.get(id);
+                const why = dbItem ? whyNotSellable(dbItem, 'online', at) : 'unavailable';
+                if (why) return errorResponse(`ITEM_${why.toUpperCase()}`, notSellableMessage(dbItem?.name || it?.name, why));
+            }
         }
 
         // ── 5. Math integrity check — ENFORCED (not optional) ────────────────

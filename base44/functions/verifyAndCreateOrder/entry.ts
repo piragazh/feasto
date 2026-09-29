@@ -397,12 +397,6 @@ async function hasActivePromotion(base44, restaurantId, promotionCodes) {
     });
 }
 
-/** When the order is FOR: a future scheduled slot, else now. */
-function orderTimeFor(orderData) {
-    const t = orderData?.is_scheduled !== false && orderData?.scheduled_for ? new Date(orderData.scheduled_for) : null;
-    return t && Number.isFinite(t.getTime()) && t.getTime() > Date.now() ? t : new Date();
-}
-
 async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS, couponCodes = [], promotionCodes = [], customerPhone = '', customerAccount = '', customerEmail = '', availableAt = new Date() }) {
     const regularItems = items.filter(i => !String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const dealItems = items.filter(i => String(i.menu_item_id || i.id || '').startsWith('deal_'));
@@ -650,6 +644,15 @@ function whyNotSellable(item, where, date) {
     if (!inHours(item, date)) return 'hours';
     return null;
 }
+/**
+ * When an order is FOR: a future scheduled slot, else now. A scheduled order is
+ * checked against the time it will be made, not the time it was placed.
+ */
+function forTime(isScheduled, scheduledFor, now = new Date()) {
+    const t = isScheduled !== false && scheduledFor ? new Date(scheduledFor) : null;
+    return t && Number.isFinite(t.getTime()) && t.getTime() > now.getTime() ? t : now;
+}
+
 /** Customer-facing wording for a refusal (servers use the same words). */
 function notSellableMessage(name, why) {
     const n = `"${name || 'An item'}"`;
@@ -772,7 +775,7 @@ Deno.serve(async (req) => {
                     customerPhone: orderData.phone ?? orderData.customer_phone ?? '',
                     customerAccount: orderData.created_by ?? '',
                     customerEmail: orderData.customer_email ?? '',
-                    availableAt: orderTimeFor(orderData),
+                    availableAt: forTime(orderData?.is_scheduled, orderData?.scheduled_for),
                 });
             } catch (valErr) {
                 console.error(`${LOG} VALIDATION_ERROR - accepting order unvalidated (fail-safe) pi=${paymentIntentId || 'none'}: ${valErr?.message}`, valErr?.stack);
