@@ -7,6 +7,7 @@ import { Clock, Leaf, AlertTriangle, Activity, Sparkles, Loader2 } from 'lucide-
 import { base44 } from "@/api/base44Client";
 import { toast } from 'sonner';
 import { staffErrorMessage } from '@/lib/function-errors';
+import { normalizeAllergens } from '@/lib/allergens';
 import { isItemAvailableNow } from '@/lib/pos-schedule-logic';
 import { describeWindows } from '@/lib/item-availability';
 
@@ -15,28 +16,6 @@ const ALL_ALLERGENS = [
     'milk', 'nuts', 'celery', 'mustard', 'sesame', 'sulphites', 'lupin', 'molluscs'
 ];
 
-// How the AI (or anyone) may name the 14 - "Gluten", "dairy", "tree nuts",
-// "sulphur dioxide". A strict lowercase match silently DROPPED these.
-const ALLERGEN_ALIASES = {
-    wheat: 'gluten', 'cereals containing gluten': 'gluten',
-    crustacean: 'crustaceans', shellfish: 'crustaceans', prawns: 'crustaceans', shrimp: 'crustaceans',
-    egg: 'eggs', peanut: 'peanuts', groundnuts: 'peanuts',
-    soy: 'soya', soybeans: 'soya', soybean: 'soya',
-    dairy: 'milk', lactose: 'milk',
-    'tree nuts': 'nuts', 'tree nut': 'nuts', nut: 'nuts',
-    'sesame seeds': 'sesame', 'sulphur dioxide': 'sulphites', 'sulfur dioxide': 'sulphites', sulfites: 'sulphites',
-    lupine: 'lupin', mollusc: 'molluscs', mollusks: 'molluscs', mollusk: 'molluscs',
-};
-/** Any naming -> the 14 canonical keys, de-duplicated, in the standard order. */
-export function normalizeAllergens(list) {
-    const found = new Set();
-    for (const raw of Array.isArray(list) ? list : []) {
-        const k = String(raw || '').toLowerCase().trim().replace(/\s+/g, ' ');
-        const key = ALL_ALLERGENS.includes(k) ? k : ALLERGEN_ALIASES[k];
-        if (key) found.add(key);
-    }
-    return ALL_ALLERGENS.filter(a => found.has(a));
-}
 
 const ALLERGEN_ICONS = {
     gluten: '🌾', crustaceans: '🦞', eggs: '🥚', fish: '🐟', peanuts: '🥜',
