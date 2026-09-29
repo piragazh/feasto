@@ -7,14 +7,10 @@ import { Clock, Leaf, AlertTriangle, Activity, Sparkles, Loader2 } from 'lucide-
 import { base44 } from "@/api/base44Client";
 import { toast } from 'sonner';
 import { staffErrorMessage } from '@/lib/function-errors';
-import { normalizeAllergens } from '@/lib/allergens';
+import { ALL_ALLERGENS, normalizeAllergens } from '@/lib/allergens';
 import { isItemAvailableNow } from '@/lib/pos-schedule-logic';
 import { describeWindows } from '@/lib/item-availability';
 
-const ALL_ALLERGENS = [
-    'gluten', 'crustaceans', 'eggs', 'fish', 'peanuts', 'soya',
-    'milk', 'nuts', 'celery', 'mustard', 'sesame', 'sulphites', 'lupin', 'molluscs'
-];
 
 
 const ALLERGEN_ICONS = {
