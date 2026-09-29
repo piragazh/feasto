@@ -382,19 +382,11 @@ Deno.serve(async (req) => {
                 }, { status: 400 });
             }
 
-            if (menuItem.is_available === false) {
-                return Response.json({
-                    error: `"${menuItem.name}" is currently unavailable`,
-                    success: false,
-                }, { status: 400 });
-            }
-
-            // Items marked pos_only should not be orderable from the kiosk
-            if (menuItem.availability_channel === 'pos_only') {
-                return Response.json({
-                    error: `"${menuItem.name}" is not available for self-service ordering`,
-                    success: false,
-                }, { status: 400 });
+            // Switched off, not sold at the kiosk (POS-only or online-only), or
+            // outside its time windows - the same rule the kiosk screen hides by.
+            const whyNot = whyNotSellable(menuItem, 'kiosk', new Date());
+            if (whyNot) {
+                return Response.json({ error: notSellableMessage(menuItem.name, whyNot), code: `ITEM_${whyNot.toUpperCase()}`, success: false }, { status: 400 });
             }
 
             // Quantity validation

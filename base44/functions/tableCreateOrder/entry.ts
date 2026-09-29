@@ -225,14 +225,11 @@ Deno.serve(async (req) => {
                     success: false,
                 }, { status: 400 });
             }
-            if (menuItem.is_available === false) {
-                return Response.json({ error: `"${menuItem.name}" is currently unavailable`, success: false }, { status: 400 });
-            }
-            if (menuItem.availability_channel === 'pos_only') {
-                return Response.json({
-                    error: `"${menuItem.name}" can only be ordered at the counter`,
-                    success: false,
-                }, { status: 400 });
+            // Switched off, not sold by QR (POS-only or online-only), or outside
+            // its time windows - the same rule the QR menu hides by.
+            const whyNot = whyNotSellable(menuItem, 'qr', new Date());
+            if (whyNot) {
+                return Response.json({ error: notSellableMessage(menuItem.name, whyNot), code: `ITEM_${whyNot.toUpperCase()}`, success: false }, { status: 400 });
             }
 
             const quantity = Number(cartItem.quantity);

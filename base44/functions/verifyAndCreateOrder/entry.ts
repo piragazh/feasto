@@ -397,7 +397,13 @@ async function hasActivePromotion(base44, restaurantId, promotionCodes) {
     });
 }
 
-async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS, couponCodes = [], promotionCodes = [], customerPhone = '', customerAccount = '', customerEmail = '' }) {
+/** When the order is FOR: a future scheduled slot, else now. */
+function orderTimeFor(orderData) {
+    const t = orderData?.is_scheduled !== false && orderData?.scheduled_for ? new Date(orderData.scheduled_for) : null;
+    return t && Number.isFinite(t.getTime()) && t.getTime() > Date.now() ? t : new Date();
+}
+
+async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS, couponCodes = [], promotionCodes = [], customerPhone = '', customerAccount = '', customerEmail = '', availableAt = new Date() }) {
     const regularItems = items.filter(i => !String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const dealItems = items.filter(i => String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const requiredIds = [...new Set(regularItems.map(i => i.menu_item_id || i.id).filter(Boolean))];
@@ -434,6 +440,11 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
         const dbItem = menuMap.get(itemId);
         if (!dbItem) return { valid: false, error: `Item no longer available: ${orderItem.name}`, code: 'ITEM_NOT_FOUND', compensatable: true };
         if (dbItem.is_available === false) return { valid: false, error: `Item is currently unavailable: ${orderItem.name}`, code: 'ITEM_UNAVAILABLE', compensatable: true };
+        // Channel (a POS-only item can't be bought online) and time windows, at
+        // the time the order is FOR - a scheduled order is checked at its slot.
+        // Same rule the online menu hides by; this is the backstop.
+        const whyNot = whyNotSellable(dbItem, isPOS ? 'till' : 'online', availableAt);
+        if (whyNot) return { valid: false, error: notSellableMessage(dbItem.name || orderItem.name, whyNot), code: `ITEM_${whyNot.toUpperCase()}`, compensatable: true };
 
         const quantity = Number(orderItem.quantity || 1);
         const { serverPrice: serverUnitPrice, breakdown } = calcItemServerPrice(dbItem, orderItem, isPOS);
@@ -761,6 +772,7 @@ Deno.serve(async (req) => {
                     customerPhone: orderData.phone ?? orderData.customer_phone ?? '',
                     customerAccount: orderData.created_by ?? '',
                     customerEmail: orderData.customer_email ?? '',
+                    availableAt: orderTimeFor(orderData),
                 });
             } catch (valErr) {
                 console.error(`${LOG} VALIDATION_ERROR - accepting order unvalidated (fail-safe) pi=${paymentIntentId || 'none'}: ${valErr?.message}`, valErr?.stack);
