@@ -89,6 +89,13 @@ function whyNotSellable(item, where, date) {
     if (!inHours(item, date)) return 'hours';
     return null;
 }
+/** Customer-facing wording for a refusal (servers use the same words). */
+function notSellableMessage(name, why) {
+    const n = `"${name || 'An item'}"`;
+    if (why === 'channel') return `${n} isn't sold here. Please remove it.`;
+    if (why === 'hours') return `${n} isn't available at this time. Please remove it.`;
+    return `${n} is currently unavailable. Please remove it.`;
+}
 // ── END ITEM AVAILABILITY ────────────────────────────────────────────────────
 
 /**
@@ -111,14 +118,6 @@ function nextOpening(item, from = new Date()) {
         }
     }
     return null;
-}
-
-/** Customer-facing wording for a refusal (servers use the same words). */
-function notSellableMessage(name, why) {
-    const n = `"${name || 'An item'}"`;
-    if (why === 'channel') return `${n} isn't sold here. Please remove it.`;
-    if (why === 'hours') return `${n} isn't available at this time. Please remove it.`;
-    return `${n} is currently unavailable. Please remove it.`;
 }
 
 export { SELLS_AT, channelOf, sellsAt, inHours, whyNotSellable, nextOpening, notSellableMessage };
