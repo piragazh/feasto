@@ -129,4 +129,36 @@ function nextOpening(item, from = new Date()) {
     return null;
 }
 
-export { SELLS_AT, channelOf, sellsAt, inHours, whyNotSellable, nextOpening, notSellableMessage, forTime };
+/**
+ * A window in words, UK week order: "Mon–Fri 17:00–19:00", "Mon, Wed–Sun 17:00–19:00",
+ * "Sat, Sun all day", "Every day 11:30–14:30". Runs of 3+ days collapse to a range,
+ * so a missing day stands out. For owners reading their menu list.
+ */
+function describeWindow(w) {
+    const NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const WEEK = [1, 2, 3, 4, 5, 6, 0];                        // Monday first
+    const raw = Array.isArray(w?.days) && w.days.length ? w.days.map(Number) : [0, 1, 2, 3, 4, 5, 6];
+    const on = WEEK.filter(d => raw.includes(d));
+    let days;
+    if (on.length === 7) days = 'Every day';
+    else {
+        const runs = [];
+        for (const d of on) {
+            const last = runs[runs.length - 1];
+            if (last && WEEK.indexOf(d) === WEEK.indexOf(last[last.length - 1]) + 1) last.push(d);
+            else runs.push([d]);
+        }
+        days = runs.map(r => r.length >= 3 ? `${NAMES[r[0]]}\u2013${NAMES[r[r.length - 1]]}` : r.map(d => NAMES[d]).join(', ')).join(', ');
+    }
+    const s = hhmmToMinutes(w?.start), e = hhmmToMinutes(w?.end);
+    if (s === null || e === null) return `${days} (times not set)`;
+    return s === e ? `${days} all day` : `${days} ${w.start}\u2013${w.end}`;
+}
+
+/** Every window of an item, joined; '' when it has none (sold all day). */
+function describeWindows(item) {
+    const ws = item?.availability_windows;
+    return Array.isArray(ws) && ws.length ? ws.map(describeWindow).join('; ') : '';
+}
+
+export { SELLS_AT, channelOf, sellsAt, inHours, whyNotSellable, nextOpening, notSellableMessage, forTime, describeWindow, describeWindows };
