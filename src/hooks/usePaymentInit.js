@@ -16,6 +16,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { base44 } from '@/api/base44Client';
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { getPaymentErrorMessage } from '@/lib/paymentErrorMessages';
+import { functionErrorMessage } from '@/lib/function-errors';
 
 // ── Module-level Stripe singleton ─────────────────────────────────────────────
 let _stripeInitState = { instance: null, promise: null, initialized: false };
@@ -214,8 +215,29 @@ export function usePaymentInit({
                     setClientSecret(response.data.clientSecret);
                     setShowStripeForm(true);
                 } else {
-                    const errorCode = response?.data?.code || 'UNKNOWN';
-                    const rawMsg = response?.data?.error || 'Failed to initialize payment.';
+                    handleInitFailure(response?.data?.code, response?.data?.error);
+                }
+            } catch (error) {
+                // functions.invoke THROWS on any non-2xx (SDK 0.8): a refusal -
+                // "Chips isn't available at this time", an idempotency conflict -
+                // lands HERE with its body on error.data, never in the branch
+                // above. It used to show only "Failed to initialize payment" and
+                // the conflict retry never ran.
+                checkoutTrace.error('create_payment_intent_exception', { error: error.message, code: error?.data?.code });
+                console.error('[usePaymentInit] Exception:', error.message);
+                if (error?.data?.code || error?.data?.error) {
+                    handleInitFailure(error.data.code, functionErrorMessage(error, 'Failed to initialize payment.'));
+                } else {
+                    toast.error('Failed to initialize payment. Please refresh and try again.');
+                }
+            } finally {
+                paymentInitInFlightRef.current = false;
+                setInitializingPayment(false);
+            }
+
+            function handleInitFailure(code, message) {
+                    const errorCode = code || 'UNKNOWN';
+                    const rawMsg = message || 'Failed to initialize payment.';
                     const userMsg = getPaymentErrorMessage(errorCode, rawMsg);
 
                     checkoutTrace.error('create_payment_intent_failed', { code: errorCode, attempt: attemptCount + 1 });
@@ -235,14 +257,7 @@ export function usePaymentInit({
                     } else {
                         toast.error(userMsg);
                     }
-                }
-            } catch (error) {
-                checkoutTrace.error('create_payment_intent_exception', { error: error.message });
-                console.error('[usePaymentInit] Exception:', error.message);
-                toast.error('Failed to initialize payment. Please refresh and try again.');
-            } finally {
-                paymentInitInFlightRef.current = false;
-                setInitializingPayment(false);
+            }
             }
         };
 
