@@ -83,7 +83,15 @@ ck('tableCreateOrder refuses with the QR rule, now', /whyNotSellable\(menuItem, 
 // ── 5. every screen shows only what it may sell ──────────────────────────────
 { const r = strip(read('src/pages/Restaurant.jsx'));
   ck('online menu: its own query key, online rule', /queryKey: \['menuItems', 'online', restaurantId\]/.test(r) && /sellsAt\(item, 'online'\)/.test(r));
-  ck('online menu: off-hours items greyed and cannot be added', /offHours=\{offHours\}/.test(r) && /if \(offHours\.has\(item\?\.id\)\)/.test(r)); }
+  ck('online menu: outside its hours HIDDEN unless the owner chose to show it',
+    /onlineItems\.filter\(i => i\.show_outside_hours === true \|\| inHours\(i, menuNow\)\)/.test(r));
+  ck('online menu: shown-outside-hours items are greyed', /menuItems\.filter\(i => !inHours\(i, menuNow\)\)/.test(r) && /offHours=\{offHours\}/.test(r));
+  ck('REGRESSION GUARD: nothing outside its hours can be added online', /if \(item && !inHours\(item, menuNow\)\)[\s\S]{0,200}return;/.test(r)); }
+{ const sch = JSON.parse(read('base44/entities/MenuItem.jsonc').replace(/^\s*\/\/.*$/gm, '')).properties.show_outside_hours;
+  const form = strip(read('src/components/restaurant/MenuManagement.jsx'));
+  ck('the owner\'s toggle: saved per item, OFF (hidden) by default', sch?.type === 'boolean' && sch?.default === false
+    && /show_outside_hours: item\.show_outside_hours === true/.test(form)
+    && /checked=\{!!formData\.show_outside_hours\}[\s\S]{0,120}show_outside_hours: v/.test(form)); }
 { // the shared-key bug: nothing else may cache items under the online menu's key shape
   const users = [];
   (function walk(d) { for (const e of fs.readdirSync(new URL(`../${d}`, import.meta.url), { withFileTypes: true })) {
