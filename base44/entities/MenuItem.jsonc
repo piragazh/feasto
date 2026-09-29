@@ -47,6 +47,11 @@
       "default": false,
       "description": "True when the item was taken off sale AUTOMATICALLY by reaching zero stock. Distinguishes it from a manager switching it off by hand, so a void or restock can bring an auto-86ed item back without overriding a deliberate decision."
     },
+    "show_outside_hours": {
+      "type": "boolean",
+      "default": false,
+      "description": "Online menu only, for items with availability_windows: outside those hours, false = hide the item (default, as the delivery apps do); true = show it greyed out with 'Available from 17:00' so customers know it exists. It can never be ordered outside its hours either way - kiosk and QR always hide it, the till never sells it."
+    },
     "availability_windows": {
       "type": "array",
       "description": "When this item can be ordered, e.g. breakfast 07:00-11:30. Empty means always available - scheduling is opt-in so existing menus are unaffected. Times are the restaurant's LOCAL time (Europe/London); see src/lib/pos-schedule-logic.js for why this matters across BST.",
