@@ -54,6 +54,7 @@ export default function MenuManagement({ restaurantId }) {
         menu_item_no: '',
         pos_tile_color: 'none',
         availability_windows: [],
+        show_outside_hours: false,
         price_windows: [],
         allergens_confirmed: false,
         allergens_source: null,
@@ -559,6 +560,7 @@ CRITICAL REQUIREMENTS:
             menu_item_no: '',
             pos_tile_color: 'none',
             availability_windows: [],
+            show_outside_hours: false,
             price_windows: [],
             allergens_confirmed: false,
             allergens_source: null,
@@ -598,6 +600,7 @@ CRITICAL REQUIREMENTS:
             menu_item_no: item.menu_item_no || '',
             pos_tile_color: item.pos_tile_color || 'none',
             availability_windows: item.availability_windows || [],
+            show_outside_hours: item.show_outside_hours === true,
             price_windows: item.price_windows || [],
             allergens_confirmed: Boolean(item.allergens_confirmed),
             allergens_source: item.allergens_source || null,
@@ -968,13 +971,31 @@ CRITICAL REQUIREMENTS:
                                     <Label>When is this available?</Label>
                                     <p className="text-xs text-gray-500 mb-2">
                                         Leave empty to sell it all day. Add a window for breakfast, lunch or late menus &mdash;
-                                        outside these times it disappears from the till automatically.
+                                        outside these times it can't be ordered anywhere: till, online, kiosk or QR.
                                     </p>
                                     <ScheduleWindowsEditor
                                         value={formData.availability_windows}
                                         onChange={(v) => setFormData({ ...formData, availability_windows: v })}
                                         emptyHint="Available all day."
                                     />
+                                    {(formData.availability_windows || []).length > 0 && (
+                                        <div className="mt-3 flex items-start justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <div>
+                                                <Label htmlFor="show_outside_hours" className="cursor-pointer">Show on the online menu outside these hours</Label>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    {formData.show_outside_hours
+                                                        ? 'Customers see it greyed out with "Available from…" so they know it exists, but can\u2019t order it.'
+                                                        : 'Hidden from the online menu until it\u2019s available, as on the delivery apps.'}
+                                                    {' '}The kiosk and QR menus always hide it.
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                id="show_outside_hours"
+                                                checked={!!formData.show_outside_hours}
+                                                onCheckedChange={(v) => setFormData({ ...formData, show_outside_hours: v })}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="col-span-2 pt-4 border-t border-gray-200 first:pt-0 first:border-t-0">
                                     <h3 className="text-sm font-semibold text-gray-900">Stock</h3>
