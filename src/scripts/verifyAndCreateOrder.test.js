@@ -95,3 +95,43 @@ describe('tampered orders are refused', () => {
         expect((await run([line('gone', 4)])).code).toBe('ITEM_UNAVAILABLE');
     });
 });
+
+// 27 Sep: a POS-only item could be bought online, and time windows were
+// enforced at the till only. validateOrderPricing now applies the shared rule
+// (src/lib/item-availability.js) for the time the order is FOR.
+describe('channel and time windows', () => {
+    MENU.staffmeal = { id: 'staffmeal', name: 'Staff meal', price: 3, is_available: true, availability_channel: 'pos_only', customization_options: [] };
+    MENU.webdeal = { id: 'webdeal', name: 'Web bundle', price: 9, is_available: true, availability_channel: 'online_only', customization_options: [] };
+    MENU.dinner = { id: 'dinner', name: 'Dinner platter', price: 10, is_available: true,
+        availability_windows: [{ days: [0, 1, 2, 3, 4, 5, 6], start: '17:00', end: '22:00' }], customization_options: [] };
+    const go = (items, { isPOS = false, when } = {}) => {
+        const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+        return validateOrderPricing(base44, {
+            items, restaurantId: 'r1', clientSubtotal: subtotal, clientTotal: subtotal + 2.99,
+            deliveryFee: 2.99, smallOrderSurcharge: 0, discount: 0, isPOS, availableAt: when,
+        });
+    };
+    const SIX_PM_UK = new Date('2026-09-29T17:00:00Z');   // 18:00 BST
+    const NOON_UK = new Date('2026-09-29T11:00:00Z');     // 12:00 BST
+
+    it('REGRESSION GUARD: a POS-only item cannot be bought online', async () => {
+        const r = await go([line('staffmeal', 3)], { when: SIX_PM_UK });
+        expect(r.valid).toBe(false);
+        expect(r.code).toBe('ITEM_CHANNEL');
+        expect(r.compensatable).toBe(true);          // a card already charged is refunded
+    });
+    it('the till can still sell it, and cannot sell an online-only item', async () => {
+        expect((await go([line('staffmeal', 3)], { isPOS: true, when: SIX_PM_UK })).valid).toBe(true);
+        expect((await go([line('webdeal', 9)], { isPOS: true, when: SIX_PM_UK })).code).toBe('ITEM_CHANNEL');
+        expect((await go([line('webdeal', 9)], { when: SIX_PM_UK })).valid).toBe(true);
+    });
+    it('REGRESSION GUARD: a dinner item is refused at noon UK, with a reason naming it', async () => {
+        const r = await go([line('dinner', 10)], { when: NOON_UK });
+        expect(r.valid).toBe(false);
+        expect(r.code).toBe('ITEM_HOURS');
+        expect(r.error).toMatch(/Dinner platter/);
+    });
+    it('and accepted at 18:00 UK', async () => {
+        expect((await go([line('dinner', 10)], { when: SIX_PM_UK })).valid).toBe(true);
+    });
+});
