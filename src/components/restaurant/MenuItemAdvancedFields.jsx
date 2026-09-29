@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, Leaf, AlertTriangle, Activity, Sparkles, Loader2 } from 'lucide-react';
 import { base44 } from "@/api/base44Client";
+import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 import { isItemAvailableNow } from '@/lib/pos-schedule-logic';
 import { describeWindows } from '@/lib/item-availability';
 
@@ -12,6 +14,29 @@ const ALL_ALLERGENS = [
     'gluten', 'crustaceans', 'eggs', 'fish', 'peanuts', 'soya',
     'milk', 'nuts', 'celery', 'mustard', 'sesame', 'sulphites', 'lupin', 'molluscs'
 ];
+
+// How the AI (or anyone) may name the 14 - "Gluten", "dairy", "tree nuts",
+// "sulphur dioxide". A strict lowercase match silently DROPPED these.
+const ALLERGEN_ALIASES = {
+    wheat: 'gluten', 'cereals containing gluten': 'gluten',
+    crustacean: 'crustaceans', shellfish: 'crustaceans', prawns: 'crustaceans', shrimp: 'crustaceans',
+    egg: 'eggs', peanut: 'peanuts', groundnuts: 'peanuts',
+    soy: 'soya', soybeans: 'soya', soybean: 'soya',
+    dairy: 'milk', lactose: 'milk',
+    'tree nuts': 'nuts', 'tree nut': 'nuts', nut: 'nuts',
+    'sesame seeds': 'sesame', 'sulphur dioxide': 'sulphites', 'sulfur dioxide': 'sulphites', sulfites: 'sulphites',
+    lupine: 'lupin', mollusc: 'molluscs', mollusks: 'molluscs', mollusk: 'molluscs',
+};
+/** Any naming -> the 14 canonical keys, de-duplicated, in the standard order. */
+export function normalizeAllergens(list) {
+    const found = new Set();
+    for (const raw of Array.isArray(list) ? list : []) {
+        const k = String(raw || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        const key = ALL_ALLERGENS.includes(k) ? k : ALLERGEN_ALIASES[k];
+        if (key) found.add(key);
+    }
+    return ALL_ALLERGENS.filter(a => found.has(a));
+}
 
 const ALLERGEN_ICONS = {
     gluten: '🌾', crustaceans: '🦞', eggs: '🥚', fish: '🐟', peanuts: '🥜',
@@ -35,6 +60,7 @@ export function AllergensSection({ value = [], onChange, itemName = '', itemDesc
     const fillWithAI = async () => {
         if (!itemName) return;
         setLoading(true);
+        try {
         const result = await base44.integrations.Core.InvokeLLM({
             prompt: `Identify allergens for this menu item based on UK food allergen regulations (14 major allergens).
 Item name: "${itemName}"
@@ -48,13 +74,20 @@ Return ONLY the allergens present from this exact list: gluten, crustaceans, egg
                 }
             }
         });
-        const detected = (result.allergens || []).filter(a => ALL_ALLERGENS.includes(a));
+        const detected = normalizeAllergens(result?.allergens);
         onChange(detected);
         // A SUGGESTION, not a declaration: it stays hidden from customers until
         // someone ticks the confirmation below.
         onSourceChange?.('ai_suggested');
         onConfirmedChange?.(false);
-        setLoading(false);
+        toast.success(detected.length
+            ? `Suggested: ${detected.join(', ')} - check against the recipe, then confirm.`
+            : 'No allergens suggested - check the recipe; an empty list is not "safe" until confirmed.');
+        } catch (e) {
+            toast.error('Could not suggest allergens: ' + staffErrorMessage(e, 'please try again'));
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -153,6 +186,7 @@ export function NutritionSection({ value = {}, onChange, itemName = '', itemDesc
     const fillWithAI = async () => {
         if (!itemName) return;
         setLoading(true);
+        try {
         const result = await base44.integrations.Core.InvokeLLM({
             prompt: `Estimate the nutritional information per serving for this restaurant menu item.
 Item name: "${itemName}"
@@ -174,8 +208,12 @@ Provide realistic estimates typical for a restaurant portion of this dish.`,
                 }
             }
         });
-        onChange({ ...value, ...result });
-        setLoading(false);
+        onChange({ ...value, ...(result && typeof result === 'object' ? result : {}) });
+        } catch (e) {
+            toast.error('Could not estimate nutrition: ' + staffErrorMessage(e, 'please try again'));
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

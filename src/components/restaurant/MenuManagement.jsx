@@ -1049,21 +1049,25 @@ CRITICAL REQUIREMENTS:
                                     <Label>Spicy</Label>
                                 </div>
                                 <div className="col-span-2">
+                                    {/* FUNCTIONAL updates: the section calls these in a row (list,
+                                        then source, then confirmed). Spreading the render-time
+                                        formData made each overwrite the last - the AI's list and
+                                        every manual tick were lost, and confirming never stuck. */}
                                     <AllergensSection
                                         value={formData.allergens}
-                                        onChange={(v) => setFormData({ ...formData, allergens: v })}
+                                        onChange={(v) => setFormData(prev => ({ ...prev, allergens: v }))}
                                         itemName={formData.name}
                                         itemDescription={formData.description}
                                         confirmed={formData.allergens_confirmed}
                                         source={formData.allergens_source}
-                                        onConfirmedChange={(v) => setFormData({ ...formData, allergens_confirmed: v })}
-                                        onSourceChange={(v) => setFormData({ ...formData, allergens_source: v })}
+                                        onConfirmedChange={(v) => setFormData(prev => ({ ...prev, allergens_confirmed: v }))}
+                                        onSourceChange={(v) => setFormData(prev => ({ ...prev, allergens_source: v }))}
                                     />
                                 </div>
                                 <div className="col-span-2">
                                     <NutritionSection
                                         value={formData.nutrition}
-                                        onChange={(v) => setFormData({ ...formData, nutrition: v })}
+                                        onChange={(v) => setFormData(prev => ({ ...prev, nutrition: v }))}
                                         itemName={formData.name}
                                         itemDescription={formData.description}
                                     />
