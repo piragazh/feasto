@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { ShoppingCart, Search, ArrowLeft, ChevronRight, X, WifiOff } from 'lucide-react';
 import KioskItemModal from './KioskItemModal';
 import { StaffHelpScreen } from './KioskStaffHelp';
+import { sellsAt, inHours } from '@/lib/item-availability';
 
 export default function KioskMenu({
     restaurant, restaurantId, cart, cartTotal, cartCount,
@@ -13,11 +14,13 @@ export default function KioskMenu({
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedItem, setSelectedItem] = useState(null);
 
-    const { data: menuItems = [], isLoading: menuLoading, isError: menuError, refetch: refetchMenu } = useQuery({
+    const { data: kioskItems = [], isLoading: menuLoading, isError: menuError, refetch: refetchMenu } = useQuery({
         queryKey: ['kiosk-menu', restaurantId],
         queryFn: async () => {
             const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId, is_available: true });
-            return items.filter(i => !i.availability_channel || i.availability_channel !== 'online_only');
+            // Kiosk sells 'both' items only - POS-only items were shown here and
+            // then refused by kioskCreateOrder. Same rule as the server.
+            return items.filter(i => sellsAt(i, 'kiosk'));
         },
         enabled: !!restaurantId,
         retry: 3,
@@ -25,6 +28,16 @@ export default function KioskMenu({
         staleTime: 60_000,
         gcTime: 5 * 60_000,
     });
+
+    // Only what can be ordered NOW: items outside their time windows are hidden,
+    // re-checked every minute so a lunch menu goes and a dinner menu arrives on
+    // time without anyone touching the kiosk. kioskCreateOrder enforces the same.
+    const [kioskNow, setKioskNow] = useState(() => new Date());
+    useEffect(() => {
+        const t = setInterval(() => setKioskNow(new Date()), 60 * 1000);
+        return () => clearInterval(t);
+    }, []);
+    const menuItems = useMemo(() => kioskItems.filter(i => inHours(i, kioskNow)), [kioskItems, kioskNow]);
 
     const getOrderedCategories = () => {
         const order = restaurant?.category_order || [];
