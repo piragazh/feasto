@@ -47,7 +47,9 @@ export default function PromotionManagement({ restaurantId }) {
     });
 
     const { data: menuItems = [] } = useQuery({
-        queryKey: ['menuItems', restaurantId],
+        // 'all' = every channel (a promotion can target a POS-only item). The online
+        // menu uses ['menuItems', 'online', id]; sharing a key leaked items (27 Sep).
+        queryKey: ['menuItems', 'all', restaurantId],
         queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
         enabled: !!restaurantId,
     });
