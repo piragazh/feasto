@@ -166,7 +166,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     // Its OWN query key. PopularItems cached ALL items (POS-only included) under
     // ['menuItems', id] on this same page, so whichever loaded last decided what
     // this menu showed - and POS-only items appeared online (27 Sep).
-    const { data: menuItems = [], isLoading: menuLoading } = useQuery({
+    const { data: onlineItems = [], isLoading: menuLoading } = useQuery({
     queryKey: ['menuItems', 'online', restaurantId],
     queryFn: async () => {
         const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId });
@@ -178,6 +178,23 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         staleTime: 10 * 60 * 1000,
         gcTime: 15 * 60 * 1000,
     });
+
+    // Time windows, re-checked every minute so items come and go on the hour
+    // without a reload. Outside its hours an item is HIDDEN (as on the delivery
+    // apps) unless the owner ticked "Show on the online menu outside these
+    // hours" - then it shows greyed with "Available from 17:00". Either way it
+    // cannot be added; checkout and the server refuse it too.
+    const [menuNow, setMenuNow] = useState(() => new Date());
+    useEffect(() => {
+        const t = setInterval(() => setMenuNow(new Date()), 60 * 1000);
+        return () => clearInterval(t);
+    }, []);
+    const menuItems = useMemo(
+        () => onlineItems.filter(i => i.show_outside_hours === true || inHours(i, menuNow)),
+        [onlineItems, menuNow]);
+    const offHours = useMemo(() => new Map(
+        menuItems.filter(i => !inHours(i, menuNow)).map(i => [i.id, nextOpening(i, menuNow) || ''])
+    ), [menuItems, menuNow]);
 
     const { data: mealDeals = [], error: dealsError } = useQuery({
         queryKey: ['mealDeals', restaurantId],
@@ -390,21 +407,11 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         });
     }, [promotions]);
 
-    // Time windows: re-checked every minute so items come and go on the hour
-    // without a reload. Off-hours items stay visible (greyed, "Available from
-    // 17:00") but cannot be added - checkout and the server would refuse them.
-    const [menuNow, setMenuNow] = useState(() => new Date());
-    useEffect(() => {
-        const t = setInterval(() => setMenuNow(new Date()), 60 * 1000);
-        return () => clearInterval(t);
-    }, []);
-    const offHours = useMemo(() => new Map(
-        menuItems.filter(i => !inHours(i, menuNow)).map(i => [i.id, nextOpening(i, menuNow) || ''])
-    ), [menuItems, menuNow]);
-
     const handleItemClick = (item) => {
-        if (offHours.has(item?.id)) {
-            const at = offHours.get(item.id);
+        // Nothing outside its hours can be added, shown greyed or not (a search
+        // result, a deal, a stale screen) - checkout and the server refuse it.
+        if (item && !inHours(item, menuNow)) {
+            const at = nextOpening(item, menuNow);
             toast.error(at ? `${item.name} is available from ${at}` : `${item.name} isn't available right now`);
             return;
         }
