@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Leaf, AlertTriangle, Activity, Sparkles, Loader2 } from 'lucide-react';
 import { base44 } from "@/api/base44Client";
 import { isItemAvailableNow } from '@/lib/pos-schedule-logic';
+import { describeWindows } from '@/lib/item-availability';
 
 const ALL_ALLERGENS = [
     'gluten', 'crustaceans', 'eggs', 'fish', 'peanuts', 'soya',
@@ -265,9 +266,9 @@ export function MenuItemBadges({ item }) {
     // Same rule the till and posCreateOrder enforce (UK time, days, past-midnight).
     const windows = Array.isArray(item.availability_windows) ? item.availability_windows : [];
     const offNow = windows.length > 0 && !isItemAvailableNow(item);
-    const windowLabel = windows.length === 1
-        ? `${windows[0].start}–${windows[0].end}`
-        : `${windows.length} time windows`;
+    // Days AND times in words ("Mon, Wed–Sun 17:00–19:00"), so a missing day is visible
+    // from the list without opening the item.
+    const windowLabel = describeWindows(item);
 
     return (
         <div className="flex flex-wrap gap-1 mt-1">
@@ -277,9 +278,9 @@ export function MenuItemBadges({ item }) {
             {windows.length > 0 && (
                 <Badge variant="outline"
                     title={offNow ? 'Outside its time window - not on sale at the till right now' : 'On sale now - limited hours'}
-                    className={`text-[10px] px-1.5 py-0 ${offNow ? 'border-red-300 text-red-600' : 'border-blue-300 text-blue-600'}`}>
+                    className={`text-[10px] px-1.5 py-0 whitespace-normal text-left ${offNow ? 'border-red-300 text-red-600' : 'border-blue-300 text-blue-600'}`}>
                     <Clock className="h-2.5 w-2.5 mr-0.5" />
-                    {windowLabel}{offNow ? ' · off now' : ''}
+                    {windowLabel}{offNow ? ' · off now' : ''}{item.show_outside_hours === true ? ' · shown greyed online' : ''}
                 </Badge>
             )}
             {item.allergens?.length > 0 && (
