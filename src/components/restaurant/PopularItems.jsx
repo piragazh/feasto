@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Plus, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function PopularItems({ restaurantId, onItemClick }) {
+export default function PopularItems({ restaurantId, menuItems = [], offHours, onItemClick }) {
     const scrollRef = React.useRef(null);
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);
     const [canScrollNext, setCanScrollNext] = React.useState(false);
@@ -44,11 +44,10 @@ export default function PopularItems({ restaurantId, onItemClick }) {
         enabled: !!restaurantId,
     });
 
-    const { data: menuItems = [], isLoading } = useQuery({
-        queryKey: ['menuItems', restaurantId],
-        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
-        enabled: !!restaurantId,
-    });
+    // The page's own list - already filtered to what is sold ONLINE. This used
+    // to fetch ALL items itself under the page's query key, which put POS-only
+    // items in this rail and, through the shared cache, on the menu (27 Sep).
+    const isLoading = false;
 
     const popularItems = React.useMemo(() => {
         const counts = {};
@@ -59,10 +58,10 @@ export default function PopularItems({ restaurantId, onItemClick }) {
         });
         return menuItems
             .map(item => ({ ...item, orderCount: counts[item.id] || 0 }))
-            .filter(item => item.orderCount > 0 && item.is_available !== false)
+            .filter(item => item.orderCount > 0 && item.is_available !== false && !offHours?.has(item.id))
             .sort((a, b) => b.orderCount - a.orderCount)
             .slice(0, 8);
-    }, [menuItems, orders]);
+    }, [menuItems, orders, offHours]);
 
     if (isLoading) {
         return (
