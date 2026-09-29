@@ -258,7 +258,6 @@ export function usePaymentInit({
                         toast.error(userMsg);
                     }
             }
-            }
         };
 
         runInit();
