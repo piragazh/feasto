@@ -17,6 +17,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSectionErrorBoundary';
 import TemporaryClosureBanner from '@/components/restaurant/TemporaryClosureBanner';
+import { sellsAt, inHours, nextOpening } from '@/lib/item-availability';
 
 // Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
@@ -162,12 +163,15 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         gcTime: 15 * 60 * 1000,
     });
 
+    // Its OWN query key. PopularItems cached ALL items (POS-only included) under
+    // ['menuItems', id] on this same page, so whichever loaded last decided what
+    // this menu showed - and POS-only items appeared online (27 Sep).
     const { data: menuItems = [], isLoading: menuLoading } = useQuery({
-    queryKey: ['menuItems', restaurantId],
+    queryKey: ['menuItems', 'online', restaurantId],
     queryFn: async () => {
         const items = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId });
-        return Array.isArray(items) ? items.filter(item => 
-            item.is_available !== false && item.availability_channel !== 'pos_only'
+        return Array.isArray(items) ? items.filter(item =>
+            item.is_available !== false && sellsAt(item, 'online')
         ) : [];
     },
         enabled: !!restaurantId,
@@ -386,7 +390,24 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         });
     }, [promotions]);
 
+    // Time windows: re-checked every minute so items come and go on the hour
+    // without a reload. Off-hours items stay visible (greyed, "Available from
+    // 17:00") but cannot be added - checkout and the server would refuse them.
+    const [menuNow, setMenuNow] = useState(() => new Date());
+    useEffect(() => {
+        const t = setInterval(() => setMenuNow(new Date()), 60 * 1000);
+        return () => clearInterval(t);
+    }, []);
+    const offHours = useMemo(() => new Map(
+        menuItems.filter(i => !inHours(i, menuNow)).map(i => [i.id, nextOpening(i, menuNow) || ''])
+    ), [menuItems, menuNow]);
+
     const handleItemClick = (item) => {
+        if (offHours.has(item?.id)) {
+            const at = offHours.get(item.id);
+            toast.error(at ? `${item.name} is available from ${at}` : `${item.name} isn't available right now`);
+            return;
+        }
         // Block adding items if restaurant has temporarily paused orders
         if (restaurant?.temporary_closure?.enabled) {
             toast.error('This restaurant is not currently accepting orders');
@@ -1234,7 +1255,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 {/* Popular Items */}
                 <RestaurantSectionErrorBoundary sectionName="popular-items">
                     <Suspense fallback={<Skeleton className="h-40 w-full mb-8" />}>
-                        <PopularItems restaurantId={restaurantId} onItemClick={handleItemClick} />
+                        <PopularItems restaurantId={restaurantId} menuItems={menuItems} offHours={offHours} onItemClick={handleItemClick} />
                     </Suspense>
                 </RestaurantSectionErrorBoundary>
 
@@ -1386,6 +1407,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                                      layout={restaurant?.menu_layout || 'list'}
                                      getPromotion={getActivePromotionForItem}
                                      onAddToCart={handleItemClick}
+                                     offHours={offHours}
                                  />
                              </div>
                          );
