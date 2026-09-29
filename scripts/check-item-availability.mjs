@@ -11,7 +11,8 @@
 import fs from 'node:fs';
 import * as A from '../src/lib/item-availability.js';
 import { isItemAvailableNow } from '../src/lib/pos-schedule-logic.js';
-import { TARGETS } from './sync-item-availability.mjs';
+// Same list as sync-item-availability.mjs (importing it would RUN the sync).
+const TARGETS = ['kioskCreateOrder', 'tableCreateOrder', 'verifyAndCreateOrder', 'createPaymentIntent'];
 
 const checks = []; const ck = (l, ok, d = '') => { checks.push(!!ok); console.log(`  ${ok ? '✓' : '✗ WRONG'}  ${l.padEnd(66)} ${d}`); };
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
