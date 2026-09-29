@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, ShoppingCart, X, ChevronRight, CheckCircle, Search } from 'lucide-react';
+import { sellsAt, inHours } from '@/lib/item-availability';
 
 // tableCreateOrder charges the POS price when set (dine-in is served in store),
 // so the menu and cart must show that price, not the online one.
@@ -63,10 +64,13 @@ export default function TableOrder() {
 
             setRestaurant(r);
             setTable(t);
-            setMenuItems(items || []);
+            // QR sells 'both' items only - POS-only items were listed here and then
+            // refused by tableCreateOrder. Same rule as the server.
+            const sellable = (items || []).filter(i => sellsAt(i, 'qr'));
+            setMenuItems(sellable);
 
             // Build categories
-            const cats = ['all', ...new Set((items || []).map(i => i.category).filter(Boolean))];
+            const cats = ['all', ...new Set(sellable.map(i => i.category).filter(Boolean))];
             setCategories(cats);
 
             setStep('menu');
@@ -98,7 +102,16 @@ export default function TableOrder() {
     const cartTotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
     const cartCount = cart.reduce((s, c) => s + c.qty, 0);
 
-    const filteredItems = menuItems.filter(item => {
+    // Items outside their time windows are hidden, re-checked every minute.
+    // tableCreateOrder enforces the same.
+    const [qrNow, setQrNow] = useState(() => new Date());
+    useEffect(() => {
+        const t = setInterval(() => setQrNow(new Date()), 60 * 1000);
+        return () => clearInterval(t);
+    }, []);
+    const inHoursItems = useMemo(() => menuItems.filter(i => inHours(i, qrNow)), [menuItems, qrNow]);
+
+    const filteredItems = inHoursItems.filter(item => {
         const matchCat = activeCategory === 'all' || item.category === activeCategory;
         const matchSearch = !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.description?.toLowerCase().includes(search.toLowerCase());
         return matchCat && matchSearch;
