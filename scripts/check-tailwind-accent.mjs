@@ -59,7 +59,10 @@ ck('REGRESSION GUARD: no key is defined twice in tailwind.config.js', dups.lengt
 
 // ── 2. the resolved config ──────────────────────────────────────────────────
 const { default: resolveConfig } = await import('tailwindcss/resolveConfig.js');
-const cfg = resolveConfig((await import(cfgPath)).default);
+// Tailwind's own loader (jiti), exactly as the build reads it - the config
+// mixes import syntax with require(), which plain Node refuses.
+const { default: loadConfig } = await import('tailwindcss/loadConfig.js');
+const cfg = resolveConfig(loadConfig(cfgPath));
 const accent = cfg.theme.colors.accent || {};
 const SHADES = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
 const missing = SHADES.filter(s => !String(accent[s] || '').includes(`--pos-accent-${s}`));
