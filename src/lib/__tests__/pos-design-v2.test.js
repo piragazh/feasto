@@ -135,8 +135,8 @@ describe('stage 2: the sales screen', () => {
         it(`${key}: buttons, prices and accent text pass 4.5:1 after the remap`, () => {
             const r = pal.ramp;
             expect(ratio(WHITE, rgb(r[700])), 'white on filled button').toBeGreaterThanOrEqual(4.5);
-            expect(ratio(rgb(r[700]), WHITE), 'price on white tile').toBeGreaterThanOrEqual(4.5);
-            expect(ratio(rgb(r[700]), LIGHT_GROUND), 'accent text on light ground').toBeGreaterThanOrEqual(4.5);
+            expect(ratio(rgb(r[800]), WHITE), 'price on white tile').toBeGreaterThanOrEqual(4.5);
+            expect(ratio(rgb(r[800]), LIGHT_GROUND), 'accent text on light ground').toBeGreaterThanOrEqual(4.5);
             expect(ratio(rgb(r[400]), DARK_SURFACE), 'accent text on dark').toBeGreaterThanOrEqual(4.5);
             expect(ratio(rgb(r[400]), DARK_TILE), 'accent text on dark tile').toBeGreaterThanOrEqual(4.5);
         });
@@ -145,7 +145,7 @@ describe('stage 2: the sales screen', () => {
         const css = read('index.css');
         expect(css).toMatch(/\[data-pos-v2\] \.bg-accent-500 \{ background-color: rgb\(var\(--pos-accent-700/);
         expect(css).toMatch(/\[data-pos-v2\] \.hover\\:bg-accent-600:hover \{/);
-        expect(css).toMatch(/\[data-pos-v2="light"\] \.text-accent-500/);
+        expect(css).toMatch(/\[data-pos-v2="light"\] \.text-accent-400 \{ color: rgb\(var\(--pos-accent-800/);
         expect(css).toMatch(/\[data-pos-v2="dark"\] \.text-accent-500 \{ color: rgb\(var\(--pos-accent-400/);
         expect(css).not.toMatch(/^\.bg-accent-500 \{/m);            // never unscoped
     });
