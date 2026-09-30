@@ -29,6 +29,17 @@ function writeCache(key, data) {
     } catch {}
 }
 
+// Returns the same array instance while the list's items are unchanged, so
+// periodic schedule re-checks don't reset rotation timers.
+const listSignature = (list) =>
+    (list || []).map((c) => `${c.id}:${c.updated_date || ''}`).join('|');
+
+function useStableList(list) {
+    const sig = listSignature(list);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return useMemo(() => list, [sig]);
+}
+
 const TRANSITION_DURATION = 700; // ms
 const VIDEO_STALL_GUARD_MS = 15 * 60 * 1000; // advance if a video never fires 'ended'
 const FAILED_MEDIA_RETRY_MS = 5 * 60 * 1000; // retry media that failed to load
@@ -203,10 +214,10 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         retry: 2,
     });
 
-    const wallContent = useMemo(
+    const wallContent = useStableList(useMemo(
         () => (wallEnabled ? filterActiveContent(rawWallContent) : []),
         [rawWallContent, wallEnabled, scheduleTick]
-    );
+    ));
 
     const { data: rawContent = [], isLoading: contentLoading } = useQuery({
         queryKey: ['screen-content', restaurantId, screenName],
@@ -229,14 +240,14 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     });
 
     // Schedule-filtered, stably sorted content with failed media skipped
-    const scheduledContent = useMemo(
+    const scheduledContent = useStableList(useMemo(
         () => filterActiveContent(rawContent),
         [rawContent, scheduleTick]
-    );
-    const content = useMemo(
+    ));
+    const content = useStableList(useMemo(
         () => scheduledContent.filter((c) => !failedIds.has(c.id)),
         [scheduledContent, failedIds]
-    );
+    ));
     const allMediaFailed = scheduledContent.length > 0 && content.length === 0;
 
     // Fetch widget configs for inline widget playlist items
