@@ -1,0 +1,83 @@
+{
+  "name": "ScreenDeviceSession",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paired",
+        "revoked"
+      ],
+      "default": "pending",
+      "description": "pending = showing a pairing code, paired = bound to a screen, revoked = access removed"
+    },
+    "pairing_code": {
+      "type": "string",
+      "description": "6-digit code shown on the device while pending"
+    },
+    "code_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the pairing code stops working"
+    },
+    "token_hash": {
+      "type": "string",
+      "description": "SHA-256 of the device secret (the secret itself is only stored on the device)"
+    },
+    "screen_id": {
+      "type": "string",
+      "description": "Screen this device is paired to"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant of the paired screen"
+    },
+    "paired_by": {
+      "type": "string",
+      "description": "Email of the manager who paired the device"
+    },
+    "paired_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_seen": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "device_info": {
+      "type": "object",
+      "description": "Browser, resolution and platform reported by the device"
+    }
+  },
+  "required": [
+    "status",
+    "token_hash"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
