@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Clock, Cloud, CloudRain, Sun, Package, CheckCircle2, Timer } from 'lucide-react';
 import { format } from 'date-fns';
+import { useScreenManifest } from './ScreenManifestContext';
 
 export default function CustomContentWidget({ restaurantId, widgetType, config = {} }) {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -12,15 +13,17 @@ export default function CustomContentWidget({ restaurantId, widgetType, config =
         return () => clearInterval(interval);
     }, []);
 
-    // Fetch restaurant for location
-    const { data: restaurant } = useQuery({
+    // Fetch restaurant for location (paired screens already have it in the manifest)
+    const manifest = useScreenManifest();
+    const { data: queriedRestaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: async () => {
             const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
             return restaurants[0];
         },
-        enabled: !!restaurantId && widgetType === 'weather'
+        enabled: !!restaurantId && widgetType === 'weather' && !manifest
     });
+    const restaurant = manifest ? manifest.restaurant : queriedRestaurant;
 
     // Fetch weather data
     const { data: weather } = useQuery({
