@@ -8,23 +8,32 @@ import MenuWidget from './widgets/MenuWidget';
 
 // ─── Built-in Weather Widget ─────────────────────────────────────────────────
 
-function WeatherWidget({ config = {}, className = '' }) {
-    const { location = 'London, UK', units = 'metric', show_forecast = false, theme = 'dark' } = config;
+function WeatherWidget({ config = {}, restaurantId, className = '' }) {
+    const { location = '', units = 'metric', show_forecast = false, theme = 'dark' } = config;
     const [weather, setWeather] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadWeather = async () => {
             try {
-                const res = await base44.functions.invoke('getWeather', { location, units });
-                if (res.data) setWeather(res.data);
+                // Configured place name wins; otherwise use the restaurant's own coordinates
+                let params = null;
+                if (location) {
+                    params = { location, units };
+                } else if (restaurantId) {
+                    const r = await base44.entities.Restaurant.filter({ id: restaurantId }).then(x => x[0]);
+                    if (r?.latitude && r?.longitude) params = { lat: r.latitude, lng: r.longitude, units };
+                }
+                if (!params) params = { location: 'London, UK', units };
+                const res = await base44.functions.invoke('getWeather', params);
+                if (res?.data && res.data.temperature != null) setWeather(res.data);
             } catch {}
             finally { setLoading(false); }
         };
         loadWeather();
         const interval = setInterval(loadWeather, 10 * 60 * 1000);
         return () => clearInterval(interval);
-    }, [location, units]);
+    }, [location, units, restaurantId]);
 
     const getIcon = (desc = '') => {
         const d = desc.toLowerCase();
@@ -61,7 +70,7 @@ function WeatherWidget({ config = {}, className = '' }) {
             <div className="text-blue-400">{getIcon(weather.description)}</div>
             <div className={`text-4xl font-black ${t.text}`}>{Math.round(weather.temperature)}°{units === 'metric' ? 'C' : 'F'}</div>
             <div className={`text-sm font-medium capitalize ${t.sub}`}>{weather.description}</div>
-            <div className={`text-xs ${t.sub}`}>{location}</div>
+            <div className={`text-xs ${t.sub}`}>{location || weather.location_name}</div>
             {weather.humidity && <div className={`text-xs ${t.sub}`}>Humidity: {weather.humidity}%</div>}
         </div>
     );
@@ -104,22 +113,36 @@ function ClockWidget({ config = {}, className = '' }) {
 
 // ─── Built-in Orders Widget ───────────────────────────────────────────────────
 
+// Public screen: only order numbers + status are shown. Customer names are never
+// displayed (show_customer_name is ignored) and only recent orders in the
+// requested statuses are fetched, not the restaurant's full order history.
+const RECENT_ORDER_WINDOW_MS = 12 * 60 * 60 * 1000;
+
 function OrdersWidget({ config = {}, restaurantId, className = '' }) {
-    const { display_mode = 'preparing', max_orders = 5, show_customer_name = false, auto_refresh_interval = 30 } = config;
+    const { display_mode = 'preparing', max_orders = 5, auto_refresh_interval = 30 } = config;
     const [orders, setOrders] = useState([]);
 
     useEffect(() => {
         const load = async () => {
             if (!restaurantId) return;
             try {
-                const all = await base44.entities.Order.filter({ restaurant_id: restaurantId });
                 const statusMap = { recent: ['delivered', 'collected'], pending: ['pending'], preparing: ['preparing', 'confirmed'] };
-                const filtered = all.filter(o => (statusMap[display_mode] || ['preparing']).includes(o.status)).slice(0, max_orders);
+                const statuses = statusMap[display_mode] || ['preparing'];
+                const rows = await base44.entities.Order.filter(
+                    { restaurant_id: restaurantId, status: { $in: statuses } },
+                    '-created_date',
+                    50
+                );
+                const cutoff = Date.now() - RECENT_ORDER_WINDOW_MS;
+                const filtered = rows
+                    .filter(o => !o.created_date || new Date(o.created_date).getTime() >= cutoff)
+                    .slice(0, max_orders)
+                    .map(o => ({ id: o.id, order_number: o.order_number, status: o.status }));
                 setOrders(filtered);
             } catch {}
         };
         load();
-        const interval = setInterval(load, auto_refresh_interval * 1000);
+        const interval = setInterval(load, Math.max(10, Number(auto_refresh_interval) || 30) * 1000);
         return () => clearInterval(interval);
     }, [restaurantId, display_mode, max_orders, auto_refresh_interval]);
 
@@ -130,7 +153,6 @@ function OrdersWidget({ config = {}, restaurantId, className = '' }) {
                 {orders.map(o => (
                     <div key={o.id} className="bg-gray-800 rounded-lg px-3 py-2 flex items-center justify-between">
                         <span className="text-white text-sm font-mono">#{o.order_number || o.id?.slice(-4)}</span>
-                        {show_customer_name && o.guest_name && <span className="text-gray-400 text-xs truncate mx-2">{o.guest_name}</span>}
                         <span className={`text-xs font-semibold ${o.status === 'preparing' ? 'text-amber-400' : 'text-blue-400'}`}>{o.status}</span>
                     </div>
                 ))}
@@ -145,7 +167,7 @@ function OrdersWidget({ config = {}, restaurantId, className = '' }) {
 export default function WidgetRenderer({ widgetType, config = {}, restaurantId, className = '' }) {
     switch (widgetType) {
         case 'weather':
-            return <WeatherWidget config={config} className={className} />;
+            return <WeatherWidget config={config} restaurantId={restaurantId} className={className} />;
         case 'clock':
             return <ClockWidget config={config} className={className} />;
         case 'orders':
