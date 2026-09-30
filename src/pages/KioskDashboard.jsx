@@ -10,7 +10,7 @@
  * Only an authenticated admin action can rebind the device.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +21,7 @@ import KioskPayment from '@/components/kiosk/KioskPayment';
 import KioskConfirmation from '@/components/kiosk/KioskConfirmation';
 import KioskAdminPanel from '@/components/kiosk/KioskAdminPanel';
 import KioskIdleMediaOverlay from '@/components/kiosk/KioskIdleMediaOverlay';
+import { useKioskPromo } from '@/components/kiosk/useKioskPromo';
 import { resolveRestaurantId } from '@/lib/kioskDeviceBinding';
 
 // SCREENS: welcome → menu → cart → payment → confirmation
@@ -47,6 +48,13 @@ export default function KioskDashboard() {
 
     // Resolve restaurant ID from binding (localStorage-first, URL only for first setup)
     const { restaurantId } = resolveRestaurantId();
+
+    // Idle promo playlist — prefetched in the background so it appears instantly.
+    // If there is nothing to show, the kiosk simply stays on the welcome screen.
+    const idlePromoEnabled = !!restaurant && restaurant.kiosk_config?.kiosk_idle_media_enabled !== false;
+    const kioskPromo = useKioskPromo(restaurantId, idlePromoEnabled);
+    const hasPromoRef = useRef(false);
+    hasPromoRef.current = kioskPromo.hasPlayableContent;
 
     // Persist cart to sessionStorage
     useEffect(() => {
@@ -101,6 +109,11 @@ export default function KioskDashboard() {
                 setOrderType('takeaway');
                 setSelectedTable(null);
                 setScreen('welcome');
+
+                // Nothing scheduled to show → stay on the welcome screen (never show
+                // customers a "no content configured" message)
+                if (!hasPromoRef.current) return;
+
                 setMode('idle_media');
                 
                 // Set order reset timer (if media is shown, full reset happens after this time)
@@ -270,8 +283,7 @@ export default function KioskDashboard() {
     if (mode === 'idle_media') {
         return (
             <KioskIdleMediaOverlay
-                restaurantId={restaurantId}
-                screenName={restaurant?.kiosk_config?.idle_media_screen_name || 'Kiosk Promo'}
+                manifest={kioskPromo.manifest}
                 onExit={() => {
                     setMode('ordering');
                     setScreen('welcome');
