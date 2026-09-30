@@ -1,57 +1,56 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Registers the service worker and instructs it to pre-cache all
- * media URLs extracted from the provided content array.
+ * Registers the service worker and tells it which media files this screen is
+ * showing, so they are stored for offline playback.
+ *
+ * On the standalone /MediaScreen page the full list is sent (SET_MEDIA_URLS),
+ * letting the worker also delete files no longer in use. Elsewhere (e.g. the
+ * kiosk idle overlay) files are only added (PRECACHE_URLS), never pruned.
  *
  * @param {Array}  content         - PromotionalContent records
  * @param {Array}  wallContent     - MediaWallContent records (optional)
  * @param {boolean} isOnline       - current online status
  */
-export function useMediaPrecache(content = [], wallContent = [], isOnline = true) {
-    const precachedRef = useRef(new Set());
-    const swReadyRef   = useRef(false);
+const MEDIA_TYPES = ['video', 'image', 'gif'];
 
-    // Register Service Worker once
+export function useMediaPrecache(content = [], wallContent = [], isOnline = true) {
+    const lastSentRef = useRef('');
+
+    // Register Service Worker once (same file/scope as pwa-lifecycle — harmless if already registered)
     useEffect(() => {
         if (!('serviceWorker' in navigator)) return;
-
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then((reg) => {
-                swReadyRef.current = true;
-                console.log('[Precache] Service worker registered, scope:', reg.scope);
-            })
-            .catch((err) => {
-                console.warn('[Precache] SW registration failed:', err);
-            });
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
+            console.warn('[Precache] SW registration failed:', err);
+        });
     }, []);
 
-    // Whenever content changes AND we're online, send new URLs to the SW
     useEffect(() => {
         if (!isOnline) return;
         if (!('serviceWorker' in navigator)) return;
 
-        const allItems = [...content, ...wallContent];
-        const newUrls = allItems
-            .filter(item => item?.media_url && (item.media_type === 'video' || item.media_type === 'image' || item.media_type === 'gif'))
-            .map(item => item.media_url)
-            .filter(url => !precachedRef.current.has(url));
+        const urls = [...new Set(
+            [...(content || []), ...(wallContent || [])]
+                .filter(item => item?.media_url && MEDIA_TYPES.includes(item.media_type))
+                .map(item => item.media_url)
+        )].sort();
 
-        if (!newUrls.length) return;
+        const signature = urls.join('|');
+        if (!urls.length || signature === lastSentRef.current) return;
 
-        const send = (controller) => {
-            controller.postMessage({ type: 'PRECACHE_URLS', urls: newUrls });
-            newUrls.forEach(url => precachedRef.current.add(url));
-            console.log('[Precache] Sent', newUrls.length, 'URL(s) to service worker');
+        const prune = /^\/MediaScreen/i.test(window.location.pathname);
+        const message = { type: prune ? 'SET_MEDIA_URLS' : 'PRECACHE_URLS', urls };
+
+        const send = (worker) => {
+            if (!worker) return;
+            worker.postMessage(message);
+            lastSentRef.current = signature;
         };
 
         if (navigator.serviceWorker.controller) {
             send(navigator.serviceWorker.controller);
         } else {
-            // Wait for the SW to claim this page
-            navigator.serviceWorker.ready.then((reg) => {
-                if (reg.active) send(reg.active);
-            });
+            navigator.serviceWorker.ready.then((reg) => send(reg.active)).catch(() => {});
         }
     }, [content, wallContent, isOnline]);
 }
