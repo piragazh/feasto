@@ -243,6 +243,16 @@ export default function POSDashboard() {
     // UI (dialogs, popovers, toasts) mounts to document.body and would otherwise
     // miss the accent variables entirely - see applyPaletteToDocument.
     useEffect(() => applyPaletteToDocument(posPalette), [posPalette]);
+    // New POS design: mark the page itself while the POS is open, so dialogs
+    // (item options, payment...) - rendered outside the POS root - get the new
+    // font, tokens and contrast too. Removed when the switch goes off or the
+    // POS closes, so no other page is affected.
+    useEffect(() => {
+        const html = document.documentElement;
+        if (newDesign) html.setAttribute('data-pos-v2', isDark ? 'dark' : 'light');
+        else html.removeAttribute('data-pos-v2');
+        return () => html.removeAttribute('data-pos-v2');
+    }, [newDesign, isDark]);
 
     // Flag the document while the POS is mounted, so accessibility styles reach
     // portalled dialogs (see index.css) without affecting the customer site.

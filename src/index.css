@@ -319,3 +319,19 @@
 [data-pos-v2="light"] .text-accent-500,
 [data-pos-v2="light"] .text-accent-400 { color: rgb(var(--pos-accent-800, 154 52 18) / var(--tw-text-opacity, 1)); }
 [data-pos-v2="dark"] .text-accent-500 { color: rgb(var(--pos-accent-400, 251 146 60) / var(--tw-text-opacity, 1)); }
+
+/* ── New POS design (stage 2b): every screen and dialog in the palette ────────
+   The POS's 62 files paint surfaces with four hard-coded darks (74 uses) and
+   greys that fail contrast (text-gray-400 on white is 2.5:1, text-gray-500 on
+   dark 3.6:1). Inside the new design they map to the tokens, so Queue, Tables,
+   Reports and every dialog match the sales screen without touching 62 files.
+   Dialogs render outside the POS root, so POSDashboard also marks <html>
+   while the new design is on (removed when the POS closes). */
+[data-pos-v2="dark"] .bg-\[\#0c0e16\], [data-pos-v2="dark"] .bg-\[\#0f1117\] { background-color: rgb(var(--pos-ground)); }
+[data-pos-v2="dark"] .bg-\[\#151720\] { background-color: rgb(var(--pos-surface)); }
+[data-pos-v2="dark"] .bg-\[\#1a1d27\], [data-pos-v2="dark"] .bg-\[\#1a1d29\] { background-color: rgb(var(--pos-raised)); }
+[data-pos-v2="dark"] .text-gray-500, [data-pos-v2="dark"] .text-gray-600 { color: rgb(var(--pos-muted)); }
+[data-pos-v2="light"] .bg-gray-100 { background-color: rgb(var(--pos-ground)); }
+[data-pos-v2="light"] .bg-gray-50 { background-color: rgb(var(--pos-raised)); }
+[data-pos-v2="light"] .border-gray-200, [data-pos-v2="light"] .border-gray-100 { border-color: rgb(var(--pos-line)); }
+[data-pos-v2="light"] .text-gray-400, [data-pos-v2="light"] .text-gray-500 { color: rgb(var(--pos-muted)); }
