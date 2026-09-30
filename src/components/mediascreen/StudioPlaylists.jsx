@@ -68,6 +68,17 @@ export default function StudioPlaylists({ restaurantId }) {
         enabled: !!restaurantId,
     });
 
+    // Screen licence limit (only enforced when set on the restaurant)
+    const { data: restaurantLimits } = useQuery({
+        queryKey: ['restaurant-screen-limit', restaurantId],
+        queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }).then(r => r[0] || null),
+        enabled: !!restaurantId,
+    });
+    const maxScreens = Number(restaurantLimits?.max_screens_allowed) > 0
+        ? Number(restaurantLimits.max_screens_allowed)
+        : null;
+    const atScreenLimit = maxScreens !== null && screens.length >= maxScreens;
+
     useEffect(() => {
         if (screens.length > 0 && !selectedScreen) {
             setSelectedScreen(screens[0]);
@@ -176,6 +187,10 @@ export default function StudioPlaylists({ restaurantId }) {
 
     const handleAddScreen = async () => {
         if (!newScreenName.trim()) return;
+        if (atScreenLimit) {
+            toast.error(`Screen limit reached (${maxScreens}). Contact MealDrop support to add more screens.`);
+            return;
+        }
         if (screens.some(s => s.screen_name === newScreenName.trim())) {
             toast.error('Screen name already exists');
             return;
