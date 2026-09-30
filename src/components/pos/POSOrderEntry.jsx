@@ -29,9 +29,35 @@ import { isNetworkError } from '@/lib/networkStatus';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { isItemAvailableNow, scheduledPrice } from '@/lib/pos-schedule-logic';
 
-export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, onReplaceItem, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount, terminal }) {
+/** The sales screen in the new POS design - the same keys as the classic t. */
+export const T_V2 = {
+    panel:          'bg-pos-surface border-pos-line',
+    panelHead:      'border-pos-line',
+    text:           'text-pos-text',
+    textMuted:      'text-pos-muted',
+    textSub:        'text-pos-muted',
+    catBtn:         'text-pos-text font-semibold hover:bg-pos-ground',
+    catCount:       'bg-pos-ground text-pos-muted',
+    itemCard:       'bg-pos-surface border-pos-line hover:border-accent-500/60 hover:shadow-md',
+    itemImg:        'bg-pos-ground',
+    itemName:       'text-pos-text font-semibold',
+    cartItem:       'bg-pos-raised border-pos-line',
+    qtyMinus:       'bg-pos-ground hover:bg-pos-line text-pos-text',
+    qtyPlus:        'bg-accent-500 hover:bg-accent-600 text-white',
+    searchBg:       'bg-pos-surface border-pos-line text-pos-text placeholder:text-pos-muted focus:border-accent-500',
+    emptyIcon:      'text-pos-line',
+    emptyText:      'text-pos-muted',
+    emptySub:       'text-pos-muted',
+    bottomBar:      'bg-pos-surface border-pos-line',
+    tableContainer: 'bg-pos-surface border-pos-line',
+    payBack:        'bg-pos-ground hover:bg-pos-line border-pos-line text-pos-text',
+    floorBack:      'bg-blue-600/10 hover:bg-blue-600/20 border-blue-600/30 text-blue-700',
+    bg:             'bg-pos-ground',
+};
+
+export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, onReplaceItem, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount, terminal, newDesign = false }) {
     const isDark = posTheme === 'dark';
-    const t = {
+    const tClassic = {
         panel:          isDark ? 'bg-[#151720] border-white/[0.06]'                                          : 'bg-white border-gray-200',
         panelHead:      isDark ? 'border-white/[0.06]'                                                        : 'border-gray-100',
         text:           isDark ? 'text-white'                                                                 : 'text-gray-900',
@@ -55,6 +81,10 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         floorBack:      isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400'      : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600',
         bg:             isDark ? 'bg-[#0c0e16]'                                                               : 'bg-gray-50',
     };
+    // New POS design (per-till switch): same keys, new tokens. Every piece of
+    // the sales screen reads its look from t, so this restyles them all with no
+    // change to what they do. The tokens follow light/dark themselves.
+    const t = newDesign ? T_V2 : tClassic;
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
