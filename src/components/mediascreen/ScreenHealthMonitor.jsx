@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
+import { getScreenHealth, functionErrorMessage } from './screenHealth';
 
 export default function ScreenHealthMonitor({ restaurantId, wallName }) {
     const queryClient = useQueryClient();
@@ -88,17 +89,8 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
                 const lastHeartbeat = screen.last_heartbeat ? new Date(screen.last_heartbeat) : null;
                 const heartbeatInterval = screen.heartbeat_interval || 60;
                 
-                let status = 'offline';
-                if (lastHeartbeat) {
-                    const secondsSinceHeartbeat = (now - lastHeartbeat) / 1000;
-                    if (secondsSinceHeartbeat <= heartbeatInterval * 2) {
-                        status = 'online';
-                    } else if (secondsSinceHeartbeat <= heartbeatInterval * 4) {
-                        status = 'warning';
-                    } else {
-                        status = 'offline';
-                    }
-                }
+                // Shared health rules (screenHealth.js)
+                let status = getScreenHealth(screen, now.getTime());
                 
                 const unresolvedErrors = (screen.errors || []).filter(e => !e.resolved);
                 const unresolvedWarnings = (screen.warnings || []).filter(w => !w.resolved);
@@ -154,22 +146,17 @@ export default function ScreenHealthMonitor({ restaurantId, wallName }) {
             const screen = screens.find(s => s.id === screenId);
             if (!screen) throw new Error('Screen not found');
 
-            // Update screen with pending command
-            await base44.entities.Screen.update(screenId, {
-                pending_command: command,
-                command_timestamp: new Date().toISOString()
-            });
-
-            // Log the command
-            await base44.entities.ScreenCommandLog.create({
-                screen_id: screenId,
-                restaurant_id: screen.restaurant_id,
-                screen_name: screen.screen_name,
-                command,
-                command_params: params,
-                issued_by: user?.email || 'unknown',
-                status: 'pending'
-            });
+            // Queued + logged server-side (permission-checked); delivered to paired
+            // devices via heartbeat and to legacy URL screens via pending_command.
+            try {
+                const res = await base44.functions.invoke('screenDevice', {
+                    action: 'send_command', screen_ids: [screenId], command
+                });
+                const data = res?.data ?? res;
+                if (!data?.ok) throw new Error('Command was not accepted');
+            } catch (error) {
+                throw new Error(functionErrorMessage(error, 'Failed to send command'));
+            }
 
             return { screenId, command };
         },

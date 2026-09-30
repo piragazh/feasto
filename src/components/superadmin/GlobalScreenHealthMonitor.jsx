@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import moment from 'moment';
 import ScreenHealthMonitor from '../mediascreen/ScreenHealthMonitor';
+import { getScreenHealth } from '@/components/mediascreen/screenHealth';
 
 export default function GlobalScreenHealthMonitor() {
     const [selectedRestaurant, setSelectedRestaurant] = useState('all');
@@ -53,17 +54,8 @@ export default function GlobalScreenHealthMonitor() {
                 const lastHeartbeat = screen.last_heartbeat ? new Date(screen.last_heartbeat) : null;
                 const heartbeatInterval = screen.heartbeat_interval || 60;
                 
-                let status = 'offline';
-                if (lastHeartbeat) {
-                    const secondsSinceHeartbeat = (now - lastHeartbeat) / 1000;
-                    if (secondsSinceHeartbeat <= heartbeatInterval * 2) {
-                        status = 'online';
-                    } else if (secondsSinceHeartbeat <= heartbeatInterval * 4) {
-                        status = 'warning';
-                    } else {
-                        status = 'offline';
-                    }
-                }
+                // Shared health rules (screenHealth.js)
+                let status = getScreenHealth(screen, now.getTime());
                 
                 const unresolvedErrors = (screen.errors || []).filter(e => !e.resolved);
                 const unresolvedWarnings = (screen.warnings || []).filter(w => !w.resolved);

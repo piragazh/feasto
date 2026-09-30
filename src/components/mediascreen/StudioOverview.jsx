@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Monitor, Play, Image as ImageIcon, Palette, Zap, Plus, ExternalLink, Film, TrendingUp } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import moment from 'moment';
+import { getScreenHealth } from './screenHealth';
 
 export default function StudioOverview({ restaurantId, onNavigate }) {
     const { data: screens = [] } = useQuery({
@@ -26,12 +27,10 @@ export default function StudioOverview({ restaurantId, onNavigate }) {
         enabled: !!restaurantId,
     });
 
+    // Shared health rules (screenHealth.js); 'warning' is shown as "idle" here
     const getScreenStatus = (screen) => {
-        if (!screen.last_heartbeat) return 'offline';
-        const mins = moment().diff(moment(screen.last_heartbeat), 'minutes');
-        if (mins < 2) return 'online';
-        if (mins < 10) return 'idle';
-        return 'offline';
+        const h = getScreenHealth(screen);
+        return h === 'warning' ? 'idle' : h;
     };
 
     const onlineCount = screens.filter(s => getScreenStatus(s) === 'online').length;
