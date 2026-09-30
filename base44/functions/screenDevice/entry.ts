@@ -9,6 +9,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  *   heartbeat  → check-in: returns queued commands, server time and the
  *                screen manifest (only when it changed since known_version)
  *   time       → server time (used by media walls for clock sync)
+ *   kiosk_promo → read-only promo playlist for a kiosk's idle screen. Only the
+ *                screen named in the restaurant's kiosk settings, only active
+ *                promo content — no heartbeat, no commands.
  *
  * Manager actions (require a logged-in admin or manager of the restaurant):
  *   claim         { code, screen_id }      pair a device to a screen
@@ -70,10 +73,10 @@ async function findSession(sr, secret) {
     return rows[0] || null;
 }
 
-async function buildManifest(sr, screen) {
+async function buildManifest(sr, screen, { includeWall = true } = {}) {
     const restaurantRows = await sr.entities.Restaurant.filter({ id: screen.restaurant_id });
     const r = restaurantRows[0] || {};
-    const wall = screen.media_wall_config?.enabled && screen.media_wall_config?.wall_name
+    const wall = includeWall && screen.media_wall_config?.enabled && screen.media_wall_config?.wall_name
         ? screen.media_wall_config.wall_name : null;
 
     const [content, widgetConfigs, playlists, wallContent] = await Promise.all([
@@ -118,6 +121,37 @@ Deno.serve(async (req) => {
         // ── time ────────────────────────────────────────────────────────────
         if (action === 'time') {
             return json({ server_time: nowIso });
+        }
+
+        // kiosk_promo: read-only idle promo playlist for a kiosk
+        if (action === 'kiosk_promo') {
+            const restaurantId = typeof body.restaurant_id === 'string' ? body.restaurant_id : '';
+            if (!restaurantId) return json({ error: 'restaurant_id required' }, 400);
+            const rows = await sr.entities.Restaurant.filter({ id: restaurantId });
+            const restaurant = rows[0];
+            if (!restaurant) return json({ error: 'Restaurant not found' }, 404);
+
+            const cfg = restaurant.kiosk_config || {};
+            if (cfg.kiosk_idle_media_enabled === false) {
+                return json({ enabled: false, server_time: nowIso });
+            }
+            // Only the promo screen this restaurant configured for its kiosks
+            const screenName = cfg.idle_media_screen_name || 'Kiosk Promo';
+
+            const screens = await sr.entities.Screen.filter({ restaurant_id: restaurantId, screen_name: screenName });
+            const s = screens[0];
+            const screen = {
+                id: s?.id || null,
+                restaurant_id: restaurantId,
+                screen_name: screenName,
+                is_active: s ? s.is_active !== false : true,
+                orientation: 'landscape',          // the kiosk page is already the right way up
+                media_wall_config: null,            // walls never run on a kiosk
+                layout_template: s?.layout_template || null,
+                heartbeat_interval: s?.heartbeat_interval,
+            };
+            const manifest = await buildManifest(sr, screen, { includeWall: false });
+            return json({ enabled: true, manifest, server_time: nowIso });
         }
 
         // ── start ───────────────────────────────────────────────────────────
