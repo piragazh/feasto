@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
 import WidgetRenderer from './WidgetRenderer';
+import { filterActiveContent } from './scheduleUtils';
 
-function ZoneRenderer({ zone, restaurant, content, weather, widgetConfigs, restaurantId }) {
+function ZoneRenderer({ zone, restaurant, content, widgetConfigs, restaurantId }) {
     const [carouselIndex, setCarouselIndex] = useState(0);
-    const [currentTime, setCurrentTime] = useState(new Date());
     const [videoLoopCount, setVideoLoopCount] = useState(0);
 
     const zoneType = zone.type || zone.content_type || 'media';
 
-    // Clock tick
-    useEffect(() => {
-        if (zoneType === 'clock') {
-            const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-            return () => clearInterval(timer);
-        }
-    }, [zoneType]);
-
     useEffect(() => { setVideoLoopCount(0); }, [carouselIndex]);
+
+    // Keep the index valid if the content list shrinks
+    useEffect(() => {
+        if (content.length > 0 && carouselIndex >= content.length) setCarouselIndex(0);
+    }, [content.length, carouselIndex]);
+
+    const skipToNext = () => {
+        if (content.length > 1) setCarouselIndex(i => (i + 1) % content.length);
+    };
 
     const handleVideoEnd = (item) => {
         if (content.length <= 1) return;
@@ -44,15 +44,6 @@ function ZoneRenderer({ zone, restaurant, content, weather, widgetConfigs, resta
             }
         }
     }, [zoneType, content.length, carouselIndex]);
-
-    const getWeatherIcon = (desc = '') => {
-        const d = desc.toLowerCase();
-        if (d.includes('rain')) return <CloudRain className="h-8 w-8" />;
-        if (d.includes('snow')) return <CloudSnow className="h-8 w-8" />;
-        if (d.includes('cloud')) return <Cloud className="h-8 w-8" />;
-        if (d.includes('wind')) return <Wind className="h-8 w-8" />;
-        return <Sun className="h-8 w-8" />;
-    };
 
     // Find matching widget config for this zone type
     const getWidgetConfig = (type) => {
@@ -90,9 +81,9 @@ function ZoneRenderer({ zone, restaurant, content, weather, widgetConfigs, resta
                 return (
                     <div className="relative w-full h-full">
                         {item.media_type === 'video' ? (
-                            <video key={`${item.id}-${carouselIndex}`} src={item.media_url} autoPlay muted loop={content.length === 1} onEnded={() => handleVideoEnd(item)} className="w-full h-full object-cover" />
+                            <video key={`${item.id}-${carouselIndex}`} src={item.media_url} autoPlay muted playsInline loop={content.length === 1} onEnded={() => handleVideoEnd(item)} onError={skipToNext} className="w-full h-full object-cover" />
                         ) : (
-                            <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                            <img src={item.media_url} alt={item.title} onError={skipToNext} className="w-full h-full object-cover" />
                         )}
                         {zoneType === 'carousel' && content.length > 1 && (
                             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
@@ -186,20 +177,31 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
         staleTime: 60000,
     });
 
-    const { data: allContent = [] } = useQuery({
-        queryKey: ['screen-content', restaurantId, screenName],
-        queryFn: async () => {
-            const content = await base44.entities.PromotionalContent.filter({
-                restaurant_id: restaurantId,
-                screen_name: screenName,
-                is_active: true
-            });
-            return content.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-        },
+    const { data: rawContent = [] } = useQuery({
+        // Own cache key: ScreenDisplay stores differently-shaped data under
+        // ['screen-content', ...] and the two used to overwrite each other.
+        queryKey: ['zone-content', restaurantId, screenName],
+        queryFn: () => base44.entities.PromotionalContent.filter({
+            restaurant_id: restaurantId,
+            screen_name: screenName,
+            is_active: true
+        }),
         enabled: !!restaurantId && !!screenName,
         staleTime: 60000,
         refetchInterval: 60000,
     });
+
+    // Re-check schedules every 30s
+    const [scheduleTick, setScheduleTick] = useState(0);
+    useEffect(() => {
+        const t = setInterval(() => setScheduleTick(n => n + 1), 30000);
+        return () => clearInterval(t);
+    }, []);
+
+    const scheduled = useMemo(() => filterActiveContent(rawContent), [rawContent, scheduleTick]);
+    const sig = scheduled.map(c => `${c.id}:${c.updated_date || ''}`).join('|');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const allContent = useMemo(() => scheduled, [sig]);
 
     // Fetch all widget configurations for this restaurant
     const { data: widgetConfigs = [] } = useQuery({
@@ -208,18 +210,6 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
         enabled: !!restaurantId,
         staleTime: 60000,
         refetchInterval: 120000,
-    });
-
-    const { data: weather } = useQuery({
-        queryKey: ['weather', restaurant?.latitude, restaurant?.longitude],
-        queryFn: async () => {
-            if (!restaurant?.latitude || !restaurant?.longitude) return null;
-            const res = await base44.functions.invoke('getWeather', { latitude: restaurant.latitude, longitude: restaurant.longitude });
-            return res?.data ?? res;
-        },
-        enabled: !!restaurant?.latitude && !!restaurant?.longitude,
-        staleTime: 600000,
-        refetchInterval: 600000,
     });
 
     if (!layout?.zones || layout.zones.length === 0) {
@@ -238,7 +228,6 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
                     zone={zone}
                     restaurant={restaurant}
                     content={allContent}
-                    weather={weather}
                     widgetConfigs={widgetConfigs}
                     restaurantId={restaurantId}
                 />
