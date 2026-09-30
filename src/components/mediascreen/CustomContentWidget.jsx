@@ -41,14 +41,19 @@ export default function CustomContentWidget({ restaurantId, widgetType, config =
     const { data: activeOrders = [] } = useQuery({
         queryKey: ['active-orders', restaurantId],
         queryFn: async () => {
+            // $in (a plain array matched nothing), newest first, capped — not the full history
             const orders = await base44.entities.Order.filter({
                 restaurant_id: restaurantId,
-                status: ['preparing', 'ready_for_collection']
-            });
-            return orders.filter(o => o.order_type === 'collection');
+                status: { $in: ['preparing', 'ready_for_collection'] }
+            }, '-created_date', 50);
+            const cutoff = Date.now() - 12 * 60 * 60 * 1000;
+            return orders
+                .filter(o => o.order_type === 'collection')
+                .filter(o => !o.created_date || new Date(o.created_date).getTime() >= cutoff)
+                .map(o => ({ id: o.id, order_number: o.order_number, status: o.status }));
         },
         enabled: !!restaurantId && widgetType === 'orders',
-        refetchInterval: 5000
+        refetchInterval: 10000
     });
 
     if (widgetType === 'time') {
@@ -118,11 +123,8 @@ export default function CustomContentWidget({ restaurantId, widgetType, config =
                             <div className="grid grid-cols-2 gap-4">
                                 {readyOrders.slice(0, 6).map(order => (
                                     <div key={order.id} className="bg-green-500/20 backdrop-blur border-2 border-green-400 rounded-2xl p-6 text-center">
-                                        <div className="text-5xl font-bold mb-2">
+                                        <div className="text-5xl font-bold">
                                             {order.order_number || `#${order.id.slice(-4)}`}
-                                        </div>
-                                        <div className="text-xl opacity-80">
-                                            {order.guest_name || 'Customer'}
                                         </div>
                                     </div>
                                 ))}
