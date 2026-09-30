@@ -24,11 +24,23 @@
  * OFFLINE SUPPORT:
  *   - Partial: app shell / menu browsing only
  *   - Payment / order submission / POS / admin will fail offline — this is correct
+ *   - Media screens: the players send the list of images/videos they are showing
+ *     (SET_MEDIA_URLS / PRECACHE_URLS). Those files are kept in MEDIA_CACHE and
+ *     served cache-first, with byte-range support so cached videos can play.
  */
 
 const CACHE_VERSION = 'v1';
 const STATIC_CACHE = `mealdrop-static-${CACHE_VERSION}`;
 const FONT_CACHE   = `mealdrop-fonts-${CACHE_VERSION}`;
+const MEDIA_CACHE  = 'mealdrop-media-v1';
+const DEV_LOG = false;
+
+// URLs currently held in MEDIA_CACHE (rebuilt whenever the worker starts)
+const mediaUrls = new Set();
+const mediaIndexReady = caches.open(MEDIA_CACHE)
+  .then((cache) => cache.keys())
+  .then((keys) => keys.forEach((k) => mediaUrls.add(k.url)))
+  .catch(() => {});
 
 // Routes that must NEVER be served from cache
 const NEVER_CACHE_PATTERNS = [
@@ -66,7 +78,7 @@ self.addEventListener('install', (event) => {
   // Activate immediately — don't wait for old clients to close
   self.skipWaiting();
 
-  if (process?.env?.NODE_ENV !== 'production') {
+  if (DEV_LOG) {
     console.log('[SW] install — activating immediately');
   }
 });
@@ -78,7 +90,7 @@ self.addEventListener('activate', (event) => {
       // Delete any caches from previous versions
       const allKeys = await caches.keys();
       const oldKeys = allKeys.filter(
-        (k) => k.startsWith('mealdrop-') && k !== STATIC_CACHE && k !== FONT_CACHE
+        (k) => k.startsWith('mealdrop-') && k !== STATIC_CACHE && k !== FONT_CACHE && k !== MEDIA_CACHE
       );
       await Promise.all(oldKeys.map((k) => caches.delete(k)));
 
@@ -108,6 +120,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip chrome-extension and non-http requests
   if (!request.url.startsWith('http')) return;
+
+  // ── Media-screen files: served from MEDIA_CACHE when we have them ──────────
+  if (mediaUrls.has(request.url)) {
+    event.respondWith(serveMedia(request));
+    return;
+  }
 
   // ── Never-cache routes: always go to network ──────────────────────────────
   if (isNeverCache(request.url)) {
@@ -144,9 +162,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ── Navigation requests (HTML): network-first, fall back to cached index ──
+  // The latest app shell is saved on every successful load so pages such as
+  // /MediaScreen can start after a reboot even while the internet is down.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html'))
+      fetch(request)
+        .then((response) => {
+          if (response.ok && response.type === 'basic') {
+            const copy = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put('/index.html', copy)).catch(() => {});
+          }
+          return response;
+        })
+        .catch(async () => (await caches.match('/index.html')) || Response.error())
     );
     return;
   }
