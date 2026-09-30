@@ -92,7 +92,7 @@ function ClockWeatherOverlay({ weather }) {
     );
 }
 
-export default function ScreenDisplay({ restaurantId, screenName }) {
+export default function ScreenDisplay({ restaurantId, screenName, embedded = false }) {
     // Paired-device mode: all data comes from the manifest (no direct entity reads)
     const manifest = useScreenManifest();
     const paired = !!manifest;
@@ -519,7 +519,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     // Stall detection: if a rotating playlist hasn't moved for 20 minutes, tell the
     // page guardian (MediaScreen page only — the kiosk overlay doesn't listen).
-    const rotationExpected = !usePlaylistSync && (
+    const rotationExpected = !embedded && !usePlaylistSync && (
         (wallEnabled && wallContent.length > 1) || (!wallEnabled && content.length > 1)
     );
     useEffect(() => {
@@ -646,12 +646,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
-    const orientationRotation = {
+    const orientationRotation = embedded ? 0 : ({
         landscape: 0,
         portrait: 90,
         portrait_flipped: 270,
         landscape_flipped: 180
-    }[screen?.orientation || 'landscape'] || 0;
+    }[screen?.orientation || 'landscape'] || 0);
 
     // For portrait rotation on a landscape screen: swap width/height so after rotation it fills the full viewport
     const isRotated = orientationRotation === 90 || orientationRotation === 270;
@@ -785,7 +785,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 })}
             </div>
 
-            {content.length > 1 && (
+            {content.length > 1 && !embedded && (
                 <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
                     {content.map((item, index) => (
                         <div
