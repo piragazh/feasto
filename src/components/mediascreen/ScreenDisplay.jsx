@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
@@ -6,8 +6,11 @@ import MultiZoneDisplay from './MultiZoneDisplay';
 import SyncedMediaWallDisplay from './SyncedMediaWallDisplay';
 import WidgetRenderer from './WidgetRenderer';
 import { useMediaPrecache } from '@/hooks/useMediaPrecache';
+import { filterActiveContent, filterActivePlaylists, clearScreenCache } from './scheduleUtils';
 
 // --- localStorage cache helpers ---
+// The cache stores RAW records; schedules are applied at display time so an
+// offline / cold start can never play expired or not-yet-started content.
 const CACHE_VERSION = 'v1';
 const cacheKey = (key) => `screen_cache_${CACHE_VERSION}_${key}`;
 
@@ -26,16 +29,67 @@ function writeCache(key, data) {
     } catch {}
 }
 
+const TRANSITION_DURATION = 700; // ms
+const VIDEO_STALL_GUARD_MS = 15 * 60 * 1000; // advance if a video never fires 'ended'
+const FAILED_MEDIA_RETRY_MS = 5 * 60 * 1000; // retry media that failed to load
+
+const getWeatherIcon = (description) => {
+    const desc = description?.toLowerCase() || '';
+    if (desc.includes('rain')) return <CloudRain className="h-6 w-6" />;
+    if (desc.includes('snow')) return <CloudSnow className="h-6 w-6" />;
+    if (desc.includes('cloud')) return <Cloud className="h-6 w-6" />;
+    if (desc.includes('wind')) return <Wind className="h-6 w-6" />;
+    return <Sun className="h-6 w-6" />;
+};
+
+// Clock + weather overlay has its own 1s timer so the rest of the player
+// (and every mounted media item) no longer re-renders every second.
+function ClockWeatherOverlay({ weather }) {
+    const [now, setNow] = useState(new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+        <div className="absolute top-0 right-0 z-10 p-6">
+            <div className="flex items-center justify-end">
+                <div className="flex items-center gap-6 text-white">
+                    <div className="text-right">
+                        <div className="text-2xl font-bold">
+                            {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="text-sm opacity-80">
+                            {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+                        </div>
+                    </div>
+
+                    {weather?.temperature != null && (
+                        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                            {getWeatherIcon(weather.description)}
+                            <div>
+                                <div className="text-xl font-bold">{weather.temperature}°C</div>
+                                <div className="text-xs opacity-80 capitalize">{weather.description}</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function ScreenDisplay({ restaurantId, screenName }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [prevIndex, setPrevIndex] = useState(null);
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const [currentTime, setCurrentTime] = useState(new Date());
     const [videoLoopCount, setVideoLoopCount] = useState(0);
     const [wallContentIndex, setWallContentIndex] = useState(0);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [scheduleTick, setScheduleTick] = useState(0);
+    const [failedIds, setFailedIds] = useState(() => new Set());
     const heartbeatIntervalRef = useRef(null);
     const commandCheckIntervalRef = useRef(null);
+    const transitionTimerRef = useRef(null);
     const videoRefs = useRef({});
 
     useEffect(() => {
@@ -48,6 +102,22 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             window.removeEventListener('offline', handleOffline);
         };
     }, []);
+
+    // Re-evaluate schedules every 30s, even when offline
+    useEffect(() => {
+        const t = setInterval(() => setScheduleTick((n) => n + 1), 30000);
+        return () => clearInterval(t);
+    }, []);
+
+    // Give failed media another chance periodically (e.g. file re-uploaded, network back)
+    useEffect(() => {
+        const t = setInterval(() => {
+            setFailedIds((prev) => (prev.size ? new Set() : prev));
+        }, FAILED_MEDIA_RETRY_MS);
+        return () => clearInterval(t);
+    }, []);
+
+    useEffect(() => () => clearTimeout(transitionTimerRef.current), []);
 
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
@@ -67,7 +137,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     const { data: screen, refetch: refetchScreen, isLoading: screenLoading } = useQuery({
         queryKey: ['screen', restaurantId, screenName],
         queryFn: async () => {
-            const screens = await base44.entities.Screen.filter({ 
+            const screens = await base44.entities.Screen.filter({
                 restaurant_id: restaurantId,
                 screen_name: screenName
             });
@@ -83,147 +153,71 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         retry: 2,
     });
 
-    // Check if there's an active playlist for this media wall
-    const { data: activePlaylists = [] } = useQuery({
-        queryKey: ['active-playlists', restaurantId, screen?.media_wall_config?.wall_name],
-        queryFn: async () => {
-            if (!screen?.media_wall_config?.enabled || !screen?.media_wall_config?.wall_name) return [];
+    const wallName = screen?.media_wall_config?.wall_name;
+    const wallEnabled = !!screen?.media_wall_config?.enabled && !!wallName;
 
-            const playlists = await base44.entities.MediaWallPlaylist.filter({ 
+    // Raw playlists for this wall (own query key — SyncedMediaWallDisplay uses a different one)
+    const { data: rawPlaylists = [] } = useQuery({
+        queryKey: ['wall-playlists-raw', restaurantId, wallName],
+        queryFn: async () => {
+            const playlists = await base44.entities.MediaWallPlaylist.filter({
                 restaurant_id: restaurantId,
-                wall_name: screen.media_wall_config.wall_name,
+                wall_name: wallName,
                 is_active: true
             });
-            writeCache(`playlists_${restaurantId}_${screen.media_wall_config.wall_name}`, playlists);
-
-            const now = new Date();
-            return playlists.filter(playlist => {
-                if (!playlist.schedule?.enabled) return true;
-                
-                const schedule = playlist.schedule;
-                if (schedule.start_date && new Date(schedule.start_date) > now) return false;
-                if (schedule.end_date && new Date(schedule.end_date) < now) return false;
-                
-                if (schedule.recurring?.enabled) {
-                    const currentDay = now.getDay();
-                    const nowTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                    
-                    if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
-                    
-                    const inTimeRange = schedule.recurring.time_ranges?.some(range => {
-                        return nowTimeStr >= range.start_time && nowTimeStr <= range.end_time;
-                    });
-                    
-                    if (!inTimeRange) return false;
-                }
-                
-                return true;
-            }).sort((a, b) => (b.priority || 1) - (a.priority || 1));
+            writeCache(`playlists_${restaurantId}_${wallName}`, playlists);
+            return playlists;
         },
         refetchInterval: isOnline ? 60000 : false,
-        enabled: !!restaurantId && !!screen?.media_wall_config?.enabled,
+        enabled: !!restaurantId && wallEnabled,
         staleTime: 5 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
-        initialData: () => readCache(`playlists_${restaurantId}_${screen?.media_wall_config?.wall_name}`).data,
-        initialDataUpdatedAt: () => readCache(`playlists_${restaurantId}_${screen?.media_wall_config?.wall_name}`).ts,
+        initialData: () => readCache(`playlists_${restaurantId}_${wallName}`).data ?? [],
+        initialDataUpdatedAt: () => readCache(`playlists_${restaurantId}_${wallName}`).ts,
         retry: 2,
     });
 
+    const activePlaylists = useMemo(
+        () => (wallEnabled ? filterActivePlaylists(rawPlaylists) : []),
+        [rawPlaylists, wallEnabled, scheduleTick]
+    );
     const usePlaylistSync = activePlaylists.length > 0;
 
-    const { data: wallContent = [] } = useQuery({
-        queryKey: ['wall-content', restaurantId, screen?.media_wall_config?.wall_name],
+    const { data: rawWallContent = [] } = useQuery({
+        queryKey: ['wall-content', restaurantId, wallName],
         queryFn: async () => {
-            if (!screen?.media_wall_config?.enabled || !screen?.media_wall_config?.wall_name) return [];
-            
             const content = await base44.entities.MediaWallContent.filter({
                 restaurant_id: restaurantId,
-                wall_name: screen.media_wall_config.wall_name,
+                wall_name: wallName,
                 is_active: true
             });
-            
-            // Apply schedule filtering
-            const now = new Date();
-            const scheduledContent = content.filter(item => {
-                if (!item.schedule?.enabled) return true;
-                
-                const schedule = item.schedule;
-                if (schedule.start_date && new Date(schedule.start_date) > now) return false;
-                if (schedule.end_date && new Date(schedule.end_date) < now) return false;
-                
-                if (schedule.recurring?.enabled) {
-                    const currentDay = now.getDay();
-                    const nowTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                    
-                    if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
-                    
-                    const inTimeRange = schedule.recurring.time_ranges?.some(range => {
-                        return nowTimeStr >= range.start_time && nowTimeStr <= range.end_time;
-                    });
-                    
-                    if (!inTimeRange) return false;
-                }
-                
-                return true;
-            });
-            
-            return scheduledContent.sort((a, b) => {
-                const priorityDiff = (b.priority || 1) - (a.priority || 1);
-                if (priorityDiff !== 0) return priorityDiff;
-                return a.display_order - b.display_order;
-            });
+            writeCache(`wall_content_${restaurantId}_${wallName}`, content);
+            return content;
         },
-        enabled: !!restaurantId && !!screen?.media_wall_config?.enabled && !usePlaylistSync,
+        enabled: !!restaurantId && wallEnabled && !usePlaylistSync,
         staleTime: 5 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
         refetchInterval: isOnline ? 60000 : false,
+        initialData: () => readCache(`wall_content_${restaurantId}_${wallName}`).data ?? [],
+        initialDataUpdatedAt: () => readCache(`wall_content_${restaurantId}_${wallName}`).ts,
         retry: 2,
     });
 
-    const { data: content = [], isLoading: contentLoading } = useQuery({
+    const wallContent = useMemo(
+        () => (wallEnabled ? filterActiveContent(rawWallContent) : []),
+        [rawWallContent, wallEnabled, scheduleTick]
+    );
+
+    const { data: rawContent = [], isLoading: contentLoading } = useQuery({
         queryKey: ['screen-content', restaurantId, screenName],
         queryFn: async () => {
-            const allContent = await base44.entities.PromotionalContent.filter({ 
+            const allContent = await base44.entities.PromotionalContent.filter({
                 restaurant_id: restaurantId,
                 screen_name: screenName,
                 is_active: true
             });
             writeCache(`content_${restaurantId}_${screenName}`, allContent);
-            
-            // Filter by schedule and sort by priority, then display order
-            const now = new Date();
-            const scheduledContent = allContent.filter(item => {
-                if (!item.schedule?.enabled) return true;
-                
-                const schedule = item.schedule;
-                
-                // Check date range
-                if (schedule.start_date && new Date(schedule.start_date) > now) return false;
-                if (schedule.end_date && new Date(schedule.end_date) < now) return false;
-                
-                // Check recurring schedule
-                if (schedule.recurring?.enabled) {
-                    const currentDay = now.getDay();
-                    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                    
-                    if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
-                    
-                    const inTimeRange = schedule.recurring.time_ranges?.some(range => {
-                        return currentTimeStr >= range.start_time && currentTimeStr <= range.end_time;
-                    });
-                    
-                    if (!inTimeRange) return false;
-                }
-                
-                return true;
-            });
-            
-            // Sort by priority (descending) then display_order (ascending)
-            return scheduledContent.sort((a, b) => {
-                const priorityDiff = (b.priority || 1) - (a.priority || 1);
-                if (priorityDiff !== 0) return priorityDiff;
-                return a.display_order - b.display_order;
-            });
+            return allContent;
         },
         enabled: !!restaurantId && !!screenName,
         staleTime: 5 * 60 * 1000,
@@ -233,6 +227,17 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         initialDataUpdatedAt: () => readCache(`content_${restaurantId}_${screenName}`).ts,
         retry: 2,
     });
+
+    // Schedule-filtered, stably sorted content with failed media skipped
+    const scheduledContent = useMemo(
+        () => filterActiveContent(rawContent),
+        [rawContent, scheduleTick]
+    );
+    const content = useMemo(
+        () => scheduledContent.filter((c) => !failedIds.has(c.id)),
+        [scheduledContent, failedIds]
+    );
+    const allMediaFailed = scheduledContent.length > 0 && content.length === 0;
 
     // Fetch widget configs for inline widget playlist items
     const { data: widgetConfigs = [] } = useQuery({
@@ -256,8 +261,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         queryFn: async () => {
             if (!restaurant?.latitude || !restaurant?.longitude) return null;
             const resp = await base44.functions.invoke('getWeather', {
-                latitude: restaurant.latitude,
-                longitude: restaurant.longitude
+                lat: restaurant.latitude,
+                lng: restaurant.longitude
             });
             // Normalise to just the data payload so cache and live data are consistent
             const payload = resp?.data ?? resp;
@@ -272,11 +277,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         initialDataUpdatedAt: () => readCache(`weather_${restaurantId}`).ts,
         retry: 1,
     });
-
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
 
     // Heartbeat mechanism
     useEffect(() => {
@@ -297,10 +297,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             }
         };
 
-        // Send initial heartbeat
         if (isOnline) sendHeartbeat();
 
-        // Send heartbeat every 60 seconds
         heartbeatIntervalRef.current = setInterval(() => {
             if (isOnline) sendHeartbeat();
         }, 60000);
@@ -318,28 +316,28 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
         const checkCommands = async () => {
             try {
-                const screens = await base44.entities.Screen.filter({ 
+                const screens = await base44.entities.Screen.filter({
                     id: screen.id
                 });
                 const currentScreen = screens[0];
 
                 if (currentScreen?.pending_command) {
                     const command = currentScreen.pending_command;
-                    
-                    // Clear the command immediately
+
+                    // Clear the command so it doesn't run twice
                     await base44.entities.Screen.update(screen.id, {
                         pending_command: null,
                         command_timestamp: null
                     });
 
-                    // Update command log status
+                    // Mark the matching command log as executed
                     try {
                         const logs = await base44.entities.ScreenCommandLog.filter({
                             screen_id: screen.id,
                             command: command,
                             status: 'pending'
                         }, '-created_date', 1);
-                        
+
                         if (logs[0]) {
                             await base44.entities.ScreenCommandLog.update(logs[0].id, {
                                 status: 'executed',
@@ -350,7 +348,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                         console.error('Failed to update command log:', logError);
                     }
 
-                    // Execute command
                     switch (command) {
                         case 'refresh_content':
                             refetchScreen();
@@ -361,8 +358,9 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                             window.location.reload();
                             break;
                         case 'clear_cache':
-                            localStorage.clear();
-                            sessionStorage.clear();
+                            // Only this player's cached data — never auth tokens,
+                            // kiosk settings or anything else on the device.
+                            clearScreenCache();
                             window.location.reload();
                             break;
                         default:
@@ -374,7 +372,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             }
         };
 
-        // Check for commands every 10 seconds (skip when offline)
         commandCheckIntervalRef.current = setInterval(() => {
             if (isOnline) checkCommands();
         }, 10000);
@@ -389,7 +386,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     // Pre-cache all media assets for offline resilience
     useMediaPrecache(content, wallContent, isOnline);
 
-    // Clamp currentIndex if content shrinks after a refetch — use useEffect to avoid setState-during-render
     const safeIndex = content.length > 0 ? Math.min(currentIndex, content.length - 1) : 0;
 
     useEffect(() => {
@@ -398,15 +394,50 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         }
     }, [content.length]);
 
-    // Play active video, pause others — runs when index changes OR content loads
+    // Active layout: per-item override takes priority over screen default
+    const currentItem = content[safeIndex];
+    const isPerItemLayout = currentItem?.layout_template?.zones?.length > 0;
+    const activeLayout = isPerItemLayout ? currentItem.layout_template : screen?.layout_template;
+    const isLayoutMode = !!(activeLayout?.zones && activeLayout.zones.length > 0);
+
+    const advance = useCallback(() => {
+        setCurrentIndex((prev) => {
+            const len = content.length || 1;
+            return (prev + 1) % len;
+        });
+    }, [content.length]);
+
+    // Track the outgoing item for transitions (side effects kept out of setState updaters)
+    const lastIndexRef = useRef(safeIndex);
+    useEffect(() => {
+        if (lastIndexRef.current === safeIndex) return;
+        setPrevIndex(lastIndexRef.current);
+        lastIndexRef.current = safeIndex;
+        clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = setTimeout(() => setPrevIndex(null), TRANSITION_DURATION + 100);
+    }, [safeIndex]);
+
+    // Mark a media item as failed and move on instead of stalling on it
+    const handleMediaError = useCallback((item) => {
+        if (!item?.id) return;
+        console.warn('[MediaScreen] Media failed to load, skipping:', item.media_url);
+        setFailedIds((prev) => {
+            if (prev.has(item.id)) return prev;
+            const next = new Set(prev);
+            next.add(item.id);
+            return next;
+        });
+    }, []);
+
+    // Play active video, pause others
     useEffect(() => {
         setVideoLoopCount(0);
-        if (content.length === 0) return;
-        // Small delay to let the DOM update before attempting play
+        if (content.length === 0 || isLayoutMode) return;
+        const activeId = content[safeIndex]?.id;
         const t = setTimeout(() => {
-            Object.entries(videoRefs.current).forEach(([idx, video]) => {
+            Object.entries(videoRefs.current).forEach(([id, video]) => {
                 if (!video) return;
-                if (parseInt(idx) === currentIndex) {
+                if (id === activeId) {
                     video.currentTime = 0;
                     video.play().catch(() => {});
                 } else {
@@ -416,52 +447,34 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             });
         }, 50);
         return () => clearTimeout(t);
-    }, [currentIndex, content]);
-
-    const TRANSITION_DURATION = 700; // ms
-
-    const advanceIndex = (currentLen) => {
-        setCurrentIndex(prev => {
-            const next = (prev + 1) % currentLen;
-            setPrevIndex(prev);
-            setIsTransitioning(true);
-            setTimeout(() => {
-                setPrevIndex(null);
-                setIsTransitioning(false);
-            }, TRANSITION_DURATION + 100);
-            return next;
-        });
-    };
+    }, [safeIndex, content, isLayoutMode]);
 
     const handleVideoEnd = (item) => {
         if (content.length <= 1) return;
-        
         const targetLoops = item.video_loop_count || 1;
         setVideoLoopCount(prev => {
             const newCount = prev + 1;
             if (newCount >= targetLoops) {
-                setTimeout(() => advanceIndex(content.length), 100);
+                setTimeout(advance, 100);
                 return 0;
             }
             return newCount;
         });
     };
 
+    // Rotation timer
     useEffect(() => {
-        if (content.length === 0) return;
+        if (content.length <= 1) return;
+        const item = content[safeIndex];
+        // In layout mode videos are not rendered by this component, so 'ended'
+        // can never fire here — use the item's duration instead of waiting forever.
+        const waitsForVideoEnd = item?.media_type === 'video' && !isLayoutMode;
+        const duration = waitsForVideoEnd ? VIDEO_STALL_GUARD_MS : (item?.duration || 10) * 1000;
+        const timer = setTimeout(advance, duration);
+        return () => clearTimeout(timer);
+    }, [safeIndex, content, isLayoutMode, advance]);
 
-        const currentContent = content[currentIndex];
-        
-        if (currentContent?.media_type !== 'video') {
-            const duration = (currentContent?.duration || 10) * 1000;
-            const timer = setTimeout(() => {
-                advanceIndex(content.length);
-            }, duration);
-            return () => clearTimeout(timer);
-        }
-    }, [currentIndex, content]);
-
-    // Wall content rotation (must be at top level, not inside conditional)
+    // Wall content rotation
     useEffect(() => {
         if (!screen?.media_wall_config?.enabled || wallContent.length <= 1) return;
         const currentWallContent = wallContent[wallContentIndex % wallContent.length];
@@ -472,15 +485,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         return () => clearTimeout(timer);
     }, [wallContentIndex, wallContent, screen?.media_wall_config?.enabled]);
 
-    const getWeatherIcon = (description) => {
-        const desc = description?.toLowerCase() || '';
-        if (desc.includes('rain')) return <CloudRain className="h-6 w-6" />;
-        if (desc.includes('snow')) return <CloudSnow className="h-6 w-6" />;
-        if (desc.includes('cloud')) return <Cloud className="h-6 w-6" />;
-        if (desc.includes('wind')) return <Wind className="h-6 w-6" />;
-        return <Sun className="h-6 w-6" />;
-    };
-
     if (!restaurantId || !screenName) {
         return (
             <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -489,7 +493,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
-    // Show loading state while data is being fetched
     if (screenLoading || contentLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-gray-900">
@@ -501,12 +504,11 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
-    // Use synced playlist display if playlist is active
-    if (screen?.media_wall_config?.enabled && usePlaylistSync) {
+    if (wallEnabled && usePlaylistSync) {
         return (
             <SyncedMediaWallDisplay
                 restaurantId={restaurantId}
-                wallName={screen.media_wall_config.wall_name}
+                wallName={wallName}
                 screenPosition={screen.media_wall_config.position}
                 gridSize={screen.media_wall_config.grid_size}
                 bezelCompensation={screen.media_wall_config.bezel_compensation || 0}
@@ -514,27 +516,31 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         );
     }
 
-    // If screen is part of a media wall and has wall content, render wall content
-    if (screen?.media_wall_config?.enabled && wallContent.length > 0) {
+    if (wallEnabled && wallContent.length > 0) {
         const currentWallContent = wallContent[wallContentIndex % wallContent.length];
         const wallConfig = screen.media_wall_config;
-        
-        // Calculate position offset based on grid position
+
         const { row, col } = wallConfig.position || { row: 0, col: 0 };
         const { rows, cols } = wallConfig.grid_size || { rows: 2, cols: 2 };
         const bezel = wallConfig.bezel_compensation || 0;
-        
+
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        
-        // Calculate the portion of the full image this screen should display
+
         const offsetX = -(col * screenWidth) - (col * bezel);
         const offsetY = -(row * screenHeight) - (row * bezel);
         const totalWidth = (screenWidth * cols) + (bezel * (cols - 1));
         const totalHeight = (screenHeight * rows) + (bezel * (rows - 1));
-        
+        const wallMediaStyle = {
+            left: `${offsetX}px`,
+            top: `${offsetY}px`,
+            width: `${totalWidth}px`,
+            height: `${totalHeight}px`,
+            objectFit: 'cover'
+        };
+
         return (
-            <div 
+            <div
                 className="h-screen w-screen bg-black overflow-hidden relative"
                 style={{ transform: `rotate(${wallConfig.rotation || 0}deg)` }}
             >
@@ -545,14 +551,9 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                         autoPlay
                         muted
                         loop
+                        playsInline
                         className="absolute"
-                        style={{
-                            left: `${offsetX}px`,
-                            top: `${offsetY}px`,
-                            width: `${totalWidth}px`,
-                            height: `${totalHeight}px`,
-                            objectFit: 'cover'
-                        }}
+                        style={wallMediaStyle}
                     />
                 ) : (
                     <img
@@ -560,32 +561,18 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                         src={currentWallContent.media_url}
                         alt={currentWallContent.title}
                         className="absolute"
-                        style={{
-                            left: `${offsetX}px`,
-                            top: `${offsetY}px`,
-                            width: `${totalWidth}px`,
-                            height: `${totalHeight}px`,
-                            objectFit: 'cover'
-                        }}
+                        style={wallMediaStyle}
+                        onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
                     />
                 )}
             </div>
         );
     }
 
-    // Determine active layout: per-item override takes priority over screen default
-    const currentItem = content[safeIndex];
-    const activeLayout = currentItem?.layout_template?.zones?.length > 0
-        ? currentItem.layout_template
-        : screen?.layout_template;
-
-    // If there's an active multi-zone layout, use MultiZoneDisplay
-    // When using per-item templates, ScreenDisplay still drives the index timer (above),
-    // so each item's duration controls how long its template shows before the next item.
-    if (activeLayout?.zones && activeLayout.zones.length > 0) {
+    if (isLayoutMode) {
         return (
             <MultiZoneDisplay
-                key={`layout-${safeIndex}-${activeLayout.name}`}
+                key={isPerItemLayout ? `item-layout-${currentItem.id}` : 'screen-layout'}
                 restaurantId={restaurantId}
                 screenName={screenName}
                 layout={activeLayout}
@@ -599,17 +586,17 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 <div className="text-center space-y-4">
                     <h1 className="text-4xl font-bold">{restaurant?.name || 'Restaurant'}</h1>
                     <p className="text-xl">
-                        {!isOnline ? '🌐 Waiting for connection…' : '📺 No content configured for this screen'}
+                        {!isOnline
+                            ? '🌐 Waiting for connection…'
+                            : allMediaFailed
+                                ? '📺 Content temporarily unavailable'
+                                : '📺 No content configured for this screen'}
                     </p>
-                    <p className="text-sm opacity-80">
-                        Screen: {screenName} | Restaurant: {restaurantId}
-                    </p>
+                    <p className="text-sm opacity-80">Screen: {screenName}</p>
                 </div>
             </div>
         );
     }
-
-    const currentContent = content[safeIndex];
 
     const orientationRotation = {
         landscape: 0,
@@ -635,7 +622,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         transformOrigin: 'center center',
     } : undefined;
 
-    // Get CSS style for each item based on its state (active / prev / inactive)
     const getItemStyle = (index) => {
         const isActive = index === safeIndex;
         const isPrev = index === prevIndex;
@@ -649,18 +635,16 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         }
 
         if (transition === 'fade') {
-            const opacity = isActive ? 1 : 0;
-            const z = isActive ? 2 : isPrev ? 1 : 0;
             return {
-                opacity,
-                zIndex: z,
+                opacity: isActive ? 1 : 0,
+                zIndex: isActive ? 2 : isPrev ? 1 : 0,
                 transition: `opacity ${dur}`,
                 pointerEvents: isActive ? 'auto' : 'none',
             };
         }
 
         if (transition === 'slide') {
-            let translateX = '100%'; // offscreen right (inactive)
+            let translateX = '100%';
             if (isActive) translateX = '0%';
             else if (isPrev) translateX = '-100%';
             return {
@@ -672,10 +656,9 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         }
 
         if (transition === 'zoom') {
-            const opacity = isActive ? 1 : 0;
             const scale = isActive ? 1 : isPrev ? 1.05 : 0.95;
             return {
-                opacity,
+                opacity: isActive ? 1 : 0,
                 transform: `scale(${scale})`,
                 zIndex: isActive ? 2 : isPrev ? 1 : 0,
                 transition: (isActive || isPrev) ? `opacity ${dur}, transform ${dur}` : 'none',
@@ -683,7 +666,6 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             };
         }
 
-        // fallback: fade
         return {
             opacity: isActive ? 1 : 0,
             zIndex: isActive ? 2 : 1,
@@ -697,38 +679,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             className="h-screen w-screen bg-black relative overflow-hidden"
             style={rotationStyle}
         >
-            <style>{``}</style>
-            <div className="absolute top-0 right-0 z-10 p-6">
-                <div className="flex items-center justify-end">
-                    <div className="flex items-center gap-6 text-white">
-                        <div className="text-right">
-                            <div className="text-2xl font-bold">
-                                {currentTime.toLocaleTimeString('en-GB', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                })}
-                            </div>
-                            <div className="text-sm opacity-80">
-                                {currentTime.toLocaleDateString('en-GB', { 
-                                    weekday: 'long',
-                                    day: 'numeric',
-                                    month: 'short'
-                                })}
-                            </div>
-                        </div>
-                        
-                        {weather?.temperature && (
-                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                                {getWeatherIcon(weather.description)}
-                                <div>
-                                    <div className="text-xl font-bold">{weather.temperature}°C</div>
-                                    <div className="text-xs opacity-80 capitalize">{weather.description}</div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <ClockWeatherOverlay weather={weather} />
 
             <div className="h-full w-full relative">
                 {/* All items always rendered — no unmounting = no black flash. CSS transitions handle animation. */}
@@ -756,8 +707,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                             ) : item.media_type === 'video' ? (
                                 <video
                                     ref={el => {
-                                        videoRefs.current[index] = el;
-                                        // If this is the active item and video just mounted, play it
+                                        if (el) videoRefs.current[item.id] = el;
+                                        else delete videoRefs.current[item.id];
                                         if (el && isActive) {
                                             el.play().catch(() => {});
                                         }
@@ -770,12 +721,14 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                                         if (isActive) e.target.play().catch(() => {});
                                     }}
                                     onEnded={() => isActive && handleVideoEnd(item)}
+                                    onError={() => handleMediaError(item)}
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
                                 <img
                                     src={item.media_url}
                                     alt={item.title}
+                                    onError={() => handleMediaError(item)}
                                     className="w-full h-full object-cover"
                                 />
                             )}
@@ -786,12 +739,12 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
             {content.length > 1 && (
                 <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
-                    {content.map((_, index) => (
+                    {content.map((item, index) => (
                         <div
-                            key={index}
+                            key={item.id}
                             className={`h-2 rounded-full transition-all ${
-                                index === safeIndex 
-                                    ? 'w-8 bg-white' 
+                                index === safeIndex
+                                    ? 'w-8 bg-white'
                                     : 'w-2 bg-white/50'
                             }`}
                         />
