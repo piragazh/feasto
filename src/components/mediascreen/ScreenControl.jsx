@@ -71,9 +71,29 @@ export default function ScreenControl({ restaurantId }) {
         );
     };
 
+    // Record every command so the screen can mark it executed and there's an audit trail
+    const logCommand = async (screenId, command) => {
+        try {
+            const screen = screens.find(s => s.id === screenId);
+            let issuedBy = 'unknown';
+            try { issuedBy = (await base44.auth.me())?.email || 'unknown'; } catch {}
+            await base44.entities.ScreenCommandLog.create({
+                screen_id: screenId,
+                restaurant_id: restaurantId,
+                screen_name: screen?.screen_name || '',
+                command,
+                issued_by: issuedBy,
+                status: 'pending'
+            });
+        } catch (error) {
+            console.error('Failed to log screen command:', error);
+        }
+    };
+
     const sendCommand = async (screenId, command) => {
         try {
             const timestamp = new Date().toISOString();
+            await logCommand(screenId, command);
             await updateScreenMutation.mutateAsync({
                 id: screenId,
                 data: {
@@ -96,6 +116,7 @@ export default function ScreenControl({ restaurantId }) {
         try {
             const timestamp = new Date().toISOString();
             for (const screenId of selectedScreens) {
+                await logCommand(screenId, command);
                 await updateScreenMutation.mutateAsync({
                     id: screenId,
                     data: {
