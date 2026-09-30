@@ -5,6 +5,7 @@ import StockTickerWidget from './widgets/StockTickerWidget';
 import QueueStatusWidget from './widgets/QueueStatusWidget';
 import CountdownTimerWidget from './widgets/CountdownTimerWidget';
 import MenuWidget from './widgets/MenuWidget';
+import { useScreenManifest } from './ScreenManifestContext';
 
 // ─── Built-in Weather Widget ─────────────────────────────────────────────────
 
@@ -12,6 +13,9 @@ function WeatherWidget({ config = {}, restaurantId, className = '' }) {
     const { location = '', units = 'metric', show_forecast = false, theme = 'dark' } = config;
     const [weather, setWeather] = useState(null);
     const [loading, setLoading] = useState(true);
+    const manifest = useScreenManifest();
+    const mLat = manifest?.restaurant?.latitude;
+    const mLng = manifest?.restaurant?.longitude;
 
     useEffect(() => {
         const loadWeather = async () => {
@@ -20,7 +24,9 @@ function WeatherWidget({ config = {}, restaurantId, className = '' }) {
                 let params = null;
                 if (location) {
                     params = { location, units };
-                } else if (restaurantId) {
+                } else if (mLat && mLng) {
+                    params = { lat: mLat, lng: mLng, units };
+                } else if (restaurantId && !manifest) {
                     const r = await base44.entities.Restaurant.filter({ id: restaurantId }).then(x => x[0]);
                     if (r?.latitude && r?.longitude) params = { lat: r.latitude, lng: r.longitude, units };
                 }
@@ -33,7 +39,7 @@ function WeatherWidget({ config = {}, restaurantId, className = '' }) {
         loadWeather();
         const interval = setInterval(loadWeather, 10 * 60 * 1000);
         return () => clearInterval(interval);
-    }, [location, units, restaurantId]);
+    }, [location, units, restaurantId, mLat, mLng]);
 
     const getIcon = (desc = '') => {
         const d = desc.toLowerCase();
