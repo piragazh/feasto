@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Monitor, Power, RefreshCw, Wifi, WifiOff, Send, CheckCircle, AlertCircle, RotateCw, Grid3x3, Tag, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
+import { getScreenHealth, functionErrorMessage } from './screenHealth';
 
 export default function ScreenControl({ restaurantId }) {
     const queryClient = useQueryClient();
@@ -31,14 +32,11 @@ export default function ScreenControl({ restaurantId }) {
         },
     });
 
+    // Shared health rules (screenHealth.js); 'warning' is shown as "idle" here
     const getScreenStatus = (screen) => {
         if (!screen.last_heartbeat) return 'unknown';
-        const lastSeen = moment(screen.last_heartbeat);
-        const minutesAgo = moment().diff(lastSeen, 'minutes');
-        
-        if (minutesAgo < 2) return 'online';
-        if (minutesAgo < 10) return 'idle';
-        return 'offline';
+        const h = getScreenHealth(screen);
+        return h === 'warning' ? 'idle' : h;
     };
 
     const getStatusColor = (status) => {
@@ -71,39 +69,24 @@ export default function ScreenControl({ restaurantId }) {
         );
     };
 
-    // Record every command so the screen can mark it executed and there's an audit trail
-    const logCommand = async (screenId, command) => {
-        try {
-            const screen = screens.find(s => s.id === screenId);
-            let issuedBy = 'unknown';
-            try { issuedBy = (await base44.auth.me())?.email || 'unknown'; } catch {}
-            await base44.entities.ScreenCommandLog.create({
-                screen_id: screenId,
-                restaurant_id: restaurantId,
-                screen_name: screen?.screen_name || '',
-                command,
-                issued_by: issuedBy,
-                status: 'pending'
-            });
-        } catch (error) {
-            console.error('Failed to log screen command:', error);
-        }
+    // Commands are queued + logged server-side (permission-checked). Paired devices
+    // receive them on their next check-in; legacy URL screens via pending_command.
+    const queueCommand = async (screenIds, command) => {
+        const res = await base44.functions.invoke('screenDevice', {
+            action: 'send_command', screen_ids: screenIds, command
+        });
+        const data = res?.data ?? res;
+        queryClient.invalidateQueries({ queryKey: ['screens-control', restaurantId] });
+        return data;
     };
 
     const sendCommand = async (screenId, command) => {
         try {
-            const timestamp = new Date().toISOString();
-            await logCommand(screenId, command);
-            await updateScreenMutation.mutateAsync({
-                id: screenId,
-                data: {
-                    pending_command: command,
-                    command_timestamp: timestamp
-                }
-            });
+            const data = await queueCommand([screenId], command);
+            if (!data?.ok) throw new Error('Command was not accepted');
             toast.success(`${command} command sent to screen`);
         } catch (error) {
-            toast.error('Failed to send command');
+            toast.error(functionErrorMessage(error, 'Failed to send command'));
         }
     };
 
@@ -114,21 +97,13 @@ export default function ScreenControl({ restaurantId }) {
         }
 
         try {
-            const timestamp = new Date().toISOString();
-            for (const screenId of selectedScreens) {
-                await logCommand(screenId, command);
-                await updateScreenMutation.mutateAsync({
-                    id: screenId,
-                    data: {
-                        pending_command: command,
-                        command_timestamp: timestamp
-                    }
-                });
-            }
-            toast.success(`${command} command sent to ${selectedScreens.length} screen(s)`);
+            const data = await queueCommand(selectedScreens, command);
+            const sent = (data?.results || []).filter(r => r.ok).length;
+            if (!sent) throw new Error('No commands were accepted');
+            toast.success(`${command} command sent to ${sent} screen(s)`);
             setSelectedScreens([]);
         } catch (error) {
-            toast.error('Failed to send bulk command');
+            toast.error(functionErrorMessage(error, 'Failed to send bulk command'));
         }
     };
 
