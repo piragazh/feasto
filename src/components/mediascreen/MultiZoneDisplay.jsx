@@ -200,7 +200,6 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
 
     const scheduled = useMemo(() => filterActiveContent(rawContent), [rawContent, scheduleTick]);
     const sig = scheduled.map(c => `${c.id}:${c.updated_date || ''}`).join('|');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const allContent = useMemo(() => scheduled, [sig]);
 
     // Fetch all widget configurations for this restaurant

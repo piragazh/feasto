@@ -36,7 +36,6 @@ const listSignature = (list) =>
 
 function useStableList(list) {
     const sig = listSignature(list);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     return useMemo(() => list, [sig]);
 }
 
