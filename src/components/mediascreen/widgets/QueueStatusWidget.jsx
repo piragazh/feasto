@@ -22,11 +22,18 @@ export default function QueueStatusWidget({ config = {}, restaurantId, className
             if (status_filter === 'ready') statuses = ['ready_for_collection'];
             else if (status_filter === 'all_active') statuses = ['preparing', 'confirmed', 'ready_for_collection'];
 
-            const allOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId });
-            const filtered = allOrders
-                .filter(o => statuses.includes(o.status))
+            // Only recent orders in the wanted statuses — never the full order history
+            const recent = await base44.entities.Order.filter(
+                { restaurant_id: restaurantId, status: { $in: statuses } },
+                '-created_date',
+                50
+            );
+            const cutoff = Date.now() - 12 * 60 * 60 * 1000;
+            const filtered = recent
+                .filter(o => !o.created_date || new Date(o.created_date).getTime() >= cutoff)
                 .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
-                .slice(0, max_display);
+                .slice(0, max_display)
+                .map(o => ({ id: o.id, order_number: o.order_number, status: o.status, created_date: o.created_date }));
 
             setOrders(filtered);
         } catch (e) {
