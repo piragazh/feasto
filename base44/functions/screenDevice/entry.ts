@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
         if (action === 'kiosk_promo') {
             const restaurantId = typeof body.restaurant_id === 'string' ? body.restaurant_id : '';
             if (!restaurantId) return json({ error: 'restaurant_id required' }, 400);
-            const rows = await sr.entities.Restaurant.filter({ id: restaurantId });
+            const rows = await sr.entities.Restaurant.filter({ id: restaurantId }).catch(() => []);
             const restaurant = rows[0];
             if (!restaurant) return json({ error: 'Restaurant not found' }, 404);
 
