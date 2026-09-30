@@ -20,6 +20,9 @@ import POSStaffManager from '@/components/pos/POSStaffManager.jsx';
 import POSStaffLogin from '@/components/pos/POSStaffLogin.jsx';
 import POSEndOfDay from '@/components/pos/POSEndOfDay.jsx';
 import QZTrayStatusBadge from '@/components/pos/QZTrayStatusBadge.jsx';
+import POSHeaderV2 from '@/components/pos/POSHeaderV2';
+import POSNewDesignSetting from '@/components/pos/POSNewDesignSetting';
+import { readNewDesign, writeNewDesign, NEW_DESIGN_EVENT } from '@/lib/posDesignV2';
 import POSPrinterSettings from '@/components/pos/POSPrinterSettings.jsx';
 import POSSoundSettings from '@/components/pos/POSSoundSettings.jsx';
 import POSQuickSaleSettings from '@/components/pos/POSQuickSaleSettings.jsx';
@@ -79,6 +82,14 @@ export default function POSDashboard() {
     const [accessDenied, setAccessDenied] = useState(false);
     const { isOnline, pendingCount, isSyncing } = useOfflineSyncState();
     const [posTheme, setPosTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
+    // New POS design, per till (src/lib/posDesignV2.js). Off = the classic POS, untouched.
+    const [newDesign, setNewDesign] = useState(() => readNewDesign());
+    useEffect(() => {
+        const sync = () => setNewDesign(readNewDesign());
+        window.addEventListener(NEW_DESIGN_EVENT, sync);
+        window.addEventListener('storage', sync);
+        return () => { window.removeEventListener(NEW_DESIGN_EVENT, sync); window.removeEventListener('storage', sync); };
+    }, []);
     // Accent palette. Stored on the restaurant record so every till at that site
     // matches. The localStorage mirror is keyed BY RESTAURANT - an operator can
     // run several restaurants from one device, and a shared key would paint one
@@ -366,8 +377,11 @@ export default function POSDashboard() {
     return (
         <div
             data-pos-root
-            className={`h-full min-h-0 ${t.bg} flex flex-col overflow-hidden`}
-            style={{ fontFamily: "'Inter', sans-serif", ...paletteStyle(posPalette) }}
+            data-pos-v2={newDesign ? (isDark ? 'dark' : 'light') : undefined}
+            className={`h-full min-h-0 ${newDesign ? 'bg-pos-ground text-pos-text' : t.bg} flex flex-col overflow-hidden`}
+            // The new design's font comes from [data-pos-v2] in index.css; an inline
+            // fontFamily would override it, so the classic font is set only for classic.
+            style={{ ...(newDesign ? {} : { fontFamily: "'Inter', sans-serif" }), ...paletteStyle(posPalette) }}
         >
             {/* Mounted at the POS root so an incoming order is caught whichever
                 tab the cashier is on, not only when Queue is already open. */}
@@ -376,6 +390,39 @@ export default function POSDashboard() {
                 onGoToQueue={() => setActiveTab('queue')}
                 onCountChange={setPendingOnlineCount}
             />
+            {newDesign ? (
+                <POSHeaderV2
+                    restaurant={restaurant}
+                    posName={posName}
+                    activeTab={activeTab}
+                    onTab={setActiveTab}
+                    orderTypes={ORDER_TYPES}
+                    orderType={orderType}
+                    onOrderType={setOrderType}
+                    isOnline={isOnline}
+                    isSyncing={isSyncing}
+                    pendingCount={pendingCount}
+                    menuAge={menuCachedAt ? formatCachedAt(menuCachedAt) : null}
+                    pendingOnlineCount={pendingOnlineCount}
+                    cartCount={cart.reduce((n, i) => n + i.quantity, 0)}
+                    cartTotal={cartTotal}
+                    isDark={isDark}
+                    onToggleTheme={toggleTheme}
+                    canSwitchTill={maxPos > 1}
+                    onSwitchTill={() => setPosNumber(null)}
+                    onCustomerDisplay={() => {
+                        publishCustomerDisplay({ status: 'idle', restaurantName: restaurant?.name, logoUrl: restaurant?.logo_url });
+                        window.open(createPageUrl('CustomerDisplay'), '_blank', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
+                    }}
+                    onKiosk={() => window.open(createPageUrl('KioskDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
+                    staff={activeStaffMember}
+                    onSwitchStaff={() => setShowStaffLogin(true)}
+                    onSignOut={() => base44.auth.logout()}
+                    onClassicDesign={() => writeNewDesign(false)}
+                    printerStatus={<QZTrayStatusBadge restaurant={restaurant} isDark={isDark} />}
+                    clock={<POSClock />}
+                />
+            ) : (<>
             {/* ── Header ── */}
             <header className={`${t.header} border-b ${t.border} sticky top-0 z-20 shadow-sm`}>
                 <div className="px-5 py-0 flex items-center justify-between h-16">
@@ -547,8 +594,10 @@ export default function POSDashboard() {
                 </div>
             </div>
 
+            </>)}
+
             {/* ── Content ── */}
-            <main className={`flex-1 min-h-0 p-4 overflow-hidden ${t.bg}`}>
+            <main className={`flex-1 min-h-0 p-4 overflow-hidden ${newDesign ? 'bg-pos-ground' : t.bg}`}>
                 {activeTab === 'order-entry' && (
                     <POSOrderEntry
                         restaurantId={restaurant.id} cart={cart} terminal={posNumber}
@@ -616,6 +665,7 @@ export default function POSDashboard() {
                                 restaurant={restaurant}
                                 onPaletteChange={setPosPalette}
                             />
+                            <POSNewDesignSetting />
                             <POSSoundSettings />
                             <POSQuickSaleSettings restaurantId={restaurant.id} restaurant={restaurant} />
                             <POSPermissionSettings restaurantId={restaurant.id} restaurant={restaurant} />
