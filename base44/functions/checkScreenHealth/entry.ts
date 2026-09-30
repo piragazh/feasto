@@ -128,8 +128,7 @@ Deno.serve(async (req) => {
     } catch (error) {
         console.error('Screen health check error:', error);
         return Response.json({ 
-            error: error.message,
-            stack: error.stack 
+            error: 'Screen health check failed'
         }, { status: 500 });
     }
 });
