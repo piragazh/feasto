@@ -1,0 +1,41 @@
+{
+  "name": "Screen Health Check \u2014 Every 5 Minutes",
+  "description": "Updates media screen online/offline status and 24h uptime, alerts restaurant managers when a screen goes offline, and times out screen commands nobody picked up.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "interval",
+      "cron_expression": null,
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": 5,
+      "interval_unit": "minutes",
+      "interval_anchor": "2026-09-30T22:00:00.000000",
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "screen_health_check_every_5_minutes",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkScreenHealth",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}
