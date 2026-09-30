@@ -3,6 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import WidgetRenderer from './WidgetRenderer';
 import { filterActiveContent } from './scheduleUtils';
+import { useScreenManifest } from './ScreenManifestContext';
+
+const EMPTY = [];
 
 function ZoneRenderer({ zone, restaurant, content, widgetConfigs, restaurantId }) {
     const [carouselIndex, setCarouselIndex] = useState(0);
@@ -170,14 +173,18 @@ function ZoneRenderer({ zone, restaurant, content, widgetConfigs, restaurantId }
 }
 
 export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
-    const { data: restaurant } = useQuery({
+    const manifest = useScreenManifest();
+    const paired = !!manifest;
+
+    const { data: queriedRestaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }).then(r => r[0]),
-        enabled: !!restaurantId,
+        enabled: !!restaurantId && !paired,
         staleTime: 60000,
     });
+    const restaurant = paired ? manifest.restaurant : queriedRestaurant;
 
-    const { data: rawContent = [] } = useQuery({
+    const { data: queriedContent = EMPTY } = useQuery({
         // Own cache key: ScreenDisplay stores differently-shaped data under
         // ['screen-content', ...] and the two used to overwrite each other.
         queryKey: ['zone-content', restaurantId, screenName],
@@ -186,10 +193,11 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
             screen_name: screenName,
             is_active: true
         }),
-        enabled: !!restaurantId && !!screenName,
+        enabled: !!restaurantId && !!screenName && !paired,
         staleTime: 60000,
         refetchInterval: 60000,
     });
+    const rawContent = paired ? (manifest.content || EMPTY) : queriedContent;
 
     // Re-check schedules every 30s
     const [scheduleTick, setScheduleTick] = useState(0);
@@ -203,13 +211,14 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
     const allContent = useMemo(() => scheduled, [sig]);
 
     // Fetch all widget configurations for this restaurant
-    const { data: widgetConfigs = [] } = useQuery({
+    const { data: queriedWidgetConfigs = EMPTY } = useQuery({
         queryKey: ['widget-configurations', restaurantId],
         queryFn: () => base44.entities.WidgetConfiguration.filter({ restaurant_id: restaurantId }),
-        enabled: !!restaurantId,
+        enabled: !!restaurantId && !paired,
         staleTime: 60000,
         refetchInterval: 120000,
     });
+    const widgetConfigs = paired ? (manifest.widget_configs || EMPTY) : queriedWidgetConfigs;
 
     if (!layout?.zones || layout.zones.length === 0) {
         return (
