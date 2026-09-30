@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import {
     Monitor, Plus, Trash2, GripVertical, Play, Image as ImageIcon,
     Film, Clock, Copy, ExternalLink, Edit, RotateCw, X,
-    Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer, Layout
+    Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer, Layout, Link2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
@@ -20,6 +20,7 @@ import InlinePhotoEditor from './InlinePhotoEditor';
 import VideoEditor from './VideoEditor';
 import { LAYOUT_TEMPLATES } from './layoutTemplates';
 import { TemplatePreview } from './StudioTemplateGallery';
+import ScreenPairingDialog from './ScreenPairingDialog';
 
 const WIDGET_TYPE_META = {
     weather: { label: 'Weather', icon: Cloud, color: 'text-sky-500' },
@@ -38,6 +39,7 @@ export default function StudioPlaylists({ restaurantId }) {
     const [schedulingContent, setSchedulingContent] = useState(null);
     const [showAddScreen, setShowAddScreen] = useState(false);
     const [newScreenName, setNewScreenName] = useState('');
+    const [showPairing, setShowPairing] = useState(false);
 
     const [editingPhoto, setEditingPhoto] = useState(null); // { id, media_url }
     const [editingVideo, setEditingVideo] = useState(null);
@@ -323,6 +325,10 @@ export default function StudioPlaylists({ restaurantId }) {
                                 </div>
                             </div>
                             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+                                <Button size="sm" onClick={() => setShowPairing(true)} className="h-8 w-8 p-0 md:w-auto md:px-3 bg-orange-500 hover:bg-orange-600 text-white" aria-label="Pair device">
+                                    <Link2 className="h-3.5 w-3.5" />
+                                    <span className="hidden md:inline ml-1.5">Pair device</span>
+                                </Button>
                                 <Button size="sm" variant="outline" onClick={() => copyScreenUrl(selectedScreen)} className="h-8 w-8 p-0 md:w-auto md:px-3">
                                     <Copy className="h-3.5 w-3.5" />
                                     <span className="hidden md:inline ml-1.5">Copy URL</span>
@@ -560,6 +566,14 @@ export default function StudioPlaylists({ restaurantId }) {
             </div>
 
             {/* Add Screen Dialog */}
+            {selectedScreen && (
+                <ScreenPairingDialog
+                    screen={selectedScreen}
+                    open={showPairing}
+                    onOpenChange={setShowPairing}
+                />
+            )}
+
             <Dialog open={showAddScreen} onOpenChange={setShowAddScreen}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
