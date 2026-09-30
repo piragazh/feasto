@@ -150,3 +150,34 @@ describe('stage 2: the sales screen', () => {
         expect(css).not.toMatch(/^\.bg-accent-500 \{/m);            // never unscoped
     });
 });
+
+describe('stage 2b: every screen and dialog in the new palette', () => {
+    const css = read('index.css');
+    const posFiles = [];
+    (function walk(d) {
+        for (const e of fs.readdirSync(new URL(`../../${d}`, import.meta.url), { withFileTypes: true })) {
+            const p = `${d}/${e.name}`;
+            if (e.isDirectory()) walk(p); else if (/\.jsx?$/.test(e.name)) posFiles.push(p);
+        }
+    })('components/pos');
+    posFiles.push('pages/POSDashboard.jsx');
+
+    it('REGRESSION GUARD: every hard-coded dark surface in the POS maps to a token', () => {
+        const hexes = new Set();
+        for (const f of posFiles) for (const m of read(f).matchAll(/bg-\[#([0-9a-fA-F]{6})\]/g)) hexes.add(m[1].toLowerCase());
+        const unmapped = [...hexes].filter(h => !css.includes(`[data-pos-v2="dark"] .bg-\\[\\#${h}\\]`));
+        expect(hexes.size).toBeGreaterThan(0);
+        expect(unmapped).toEqual([]);
+    });
+    it('greys that fail contrast read as the secondary-text token', () => {
+        expect(css).toMatch(/\[data-pos-v2="light"\] \.text-gray-400, \[data-pos-v2="light"\] \.text-gray-500 \{ color: rgb\(var\(--pos-muted\)\); \}/);
+        expect(css).toMatch(/\[data-pos-v2="dark"\] \.text-gray-500, \[data-pos-v2="dark"\] \.text-gray-600 \{ color: rgb\(var\(--pos-muted\)\); \}/);
+    });
+    it('REGRESSION GUARD: dialogs get the design - the page is marked, and unmarked on close', () => {
+        const d = strip(read('pages/POSDashboard.jsx'));
+        const eff = d.slice(d.indexOf("const html = document.documentElement;"), d.indexOf('}, [newDesign, isDark]);'));
+        expect(eff).toMatch(/if \(newDesign\) html\.setAttribute\('data-pos-v2', isDark \? 'dark' : 'light'\);/);
+        expect(eff).toMatch(/else html\.removeAttribute\('data-pos-v2'\);/);
+        expect(eff).toMatch(/return \(\) => html\.removeAttribute\('data-pos-v2'\);/);
+    });
+});
