@@ -7,6 +7,7 @@ import SyncedMediaWallDisplay from './SyncedMediaWallDisplay';
 import WidgetRenderer from './WidgetRenderer';
 import { useMediaPrecache } from '@/hooks/useMediaPrecache';
 import { filterActiveContent, filterActivePlaylists, clearScreenCache } from './scheduleUtils';
+import { useScreenManifest } from './ScreenManifestContext';
 
 // --- localStorage cache helpers ---
 // The cache stores RAW records; schedules are applied at display time so an
@@ -42,6 +43,8 @@ function useStableList(list) {
 const TRANSITION_DURATION = 700; // ms
 const VIDEO_STALL_GUARD_MS = 15 * 60 * 1000; // advance if a video never fires 'ended'
 const FAILED_MEDIA_RETRY_MS = 5 * 60 * 1000; // retry media that failed to load
+const ROTATION_STALL_MS = 20 * 60 * 1000; // no rotation for this long → ask the page to recover
+const EMPTY = [];
 
 const getWeatherIcon = (description) => {
     const desc = description?.toLowerCase() || '';
@@ -90,6 +93,10 @@ function ClockWeatherOverlay({ weather }) {
 }
 
 export default function ScreenDisplay({ restaurantId, screenName }) {
+    // Paired-device mode: all data comes from the manifest (no direct entity reads)
+    const manifest = useScreenManifest();
+    const paired = !!manifest;
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [prevIndex, setPrevIndex] = useState(null);
     const [videoLoopCount, setVideoLoopCount] = useState(0);
@@ -129,14 +136,14 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     useEffect(() => () => clearTimeout(transitionTimerRef.current), []);
 
-    const { data: restaurant } = useQuery({
+    const { data: queriedRestaurant } = useQuery({
         queryKey: ['restaurant', restaurantId],
         queryFn: async () => {
             const data = await base44.entities.Restaurant.filter({ id: restaurantId }).then(r => r[0]);
             writeCache(`restaurant_${restaurantId}`, data);
             return data;
         },
-        enabled: !!restaurantId && isOnline,
+        enabled: !!restaurantId && isOnline && !paired,
         staleTime: 5 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
         initialData: () => readCache(`restaurant_${restaurantId}`).data,
@@ -144,7 +151,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         retry: 2,
     });
 
-    const { data: screen, refetch: refetchScreen, isLoading: screenLoading } = useQuery({
+    const { data: queriedScreen, refetch: refetchScreen, isLoading: queriedScreenLoading } = useQuery({
         queryKey: ['screen', restaurantId, screenName],
         queryFn: async () => {
             const screens = await base44.entities.Screen.filter({
@@ -155,7 +162,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             writeCache(`screen_${restaurantId}_${screenName}`, data);
             return data;
         },
-        enabled: !!restaurantId && !!screenName && isOnline,
+        enabled: !!restaurantId && !!screenName && isOnline && !paired,
         staleTime: 5 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
         initialData: () => readCache(`screen_${restaurantId}_${screenName}`).data,
@@ -163,11 +170,15 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         retry: 2,
     });
 
+    const restaurant = paired ? manifest.restaurant : queriedRestaurant;
+    const screen = paired ? manifest.screen : queriedScreen;
+    const screenLoading = paired ? false : queriedScreenLoading;
+
     const wallName = screen?.media_wall_config?.wall_name;
     const wallEnabled = !!screen?.media_wall_config?.enabled && !!wallName;
 
     // Raw playlists for this wall (own query key — SyncedMediaWallDisplay uses a different one)
-    const { data: rawPlaylists = [] } = useQuery({
+    const { data: queriedPlaylists = EMPTY } = useQuery({
         queryKey: ['wall-playlists-raw', restaurantId, wallName],
         queryFn: async () => {
             const playlists = await base44.entities.MediaWallPlaylist.filter({
@@ -179,13 +190,14 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             return playlists;
         },
         refetchInterval: isOnline ? 60000 : false,
-        enabled: !!restaurantId && wallEnabled,
+        enabled: !!restaurantId && wallEnabled && !paired,
         staleTime: 5 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
         initialData: () => readCache(`playlists_${restaurantId}_${wallName}`).data ?? [],
         initialDataUpdatedAt: () => readCache(`playlists_${restaurantId}_${wallName}`).ts,
         retry: 2,
     });
+    const rawPlaylists = paired ? (manifest.playlists || EMPTY) : queriedPlaylists;
 
     const activePlaylists = useMemo(
         () => (wallEnabled ? filterActivePlaylists(rawPlaylists) : []),
@@ -193,7 +205,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     );
     const usePlaylistSync = activePlaylists.length > 0;
 
-    const { data: rawWallContent = [] } = useQuery({
+    const { data: queriedWallContent = EMPTY } = useQuery({
         queryKey: ['wall-content', restaurantId, wallName],
         queryFn: async () => {
             const content = await base44.entities.MediaWallContent.filter({
@@ -204,7 +216,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             writeCache(`wall_content_${restaurantId}_${wallName}`, content);
             return content;
         },
-        enabled: !!restaurantId && wallEnabled && !usePlaylistSync,
+        enabled: !!restaurantId && wallEnabled && !usePlaylistSync && !paired,
         staleTime: 5 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
         refetchInterval: isOnline ? 60000 : false,
@@ -212,13 +224,17 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         initialDataUpdatedAt: () => readCache(`wall_content_${restaurantId}_${wallName}`).ts,
         retry: 2,
     });
+    const rawWallContent = useMemo(
+        () => (paired ? (manifest.wall_content || EMPTY).filter(c => c.is_active !== false) : queriedWallContent),
+        [paired, manifest, queriedWallContent]
+    );
 
     const wallContent = useStableList(useMemo(
         () => (wallEnabled ? filterActiveContent(rawWallContent) : []),
         [rawWallContent, wallEnabled, scheduleTick]
     ));
 
-    const { data: rawContent = [], isLoading: contentLoading } = useQuery({
+    const { data: queriedContent = EMPTY, isLoading: queriedContentLoading } = useQuery({
         queryKey: ['screen-content', restaurantId, screenName],
         queryFn: async () => {
             const allContent = await base44.entities.PromotionalContent.filter({
@@ -229,7 +245,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
             writeCache(`content_${restaurantId}_${screenName}`, allContent);
             return allContent;
         },
-        enabled: !!restaurantId && !!screenName,
+        enabled: !!restaurantId && !!screenName && !paired,
         staleTime: 5 * 60 * 1000,
         gcTime: 24 * 60 * 60 * 1000,
         refetchInterval: isOnline ? 60000 : false,
@@ -237,6 +253,8 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         initialDataUpdatedAt: () => readCache(`content_${restaurantId}_${screenName}`).ts,
         retry: 2,
     });
+    const rawContent = paired ? (manifest.content || EMPTY) : queriedContent;
+    const contentLoading = paired ? false : queriedContentLoading;
 
     // Schedule-filtered, stably sorted content with failed media skipped
     const scheduledContent = useStableList(useMemo(
@@ -250,14 +268,14 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
     const allMediaFailed = scheduledContent.length > 0 && content.length === 0;
 
     // Fetch widget configs for inline widget playlist items
-    const { data: widgetConfigs = [] } = useQuery({
+    const { data: queriedWidgetConfigs = EMPTY } = useQuery({
         queryKey: ['widget-configurations', restaurantId],
         queryFn: async () => {
             const data = await base44.entities.WidgetConfiguration.filter({ restaurant_id: restaurantId });
             writeCache(`widgets_${restaurantId}`, data);
             return data;
         },
-        enabled: !!restaurantId && isOnline,
+        enabled: !!restaurantId && isOnline && !paired,
         staleTime: 10 * 60 * 1000,
         gcTime: 24 * 60 * 60 * 1000,
         refetchInterval: isOnline ? 5 * 60 * 1000 : false,
@@ -265,6 +283,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         initialDataUpdatedAt: () => readCache(`widgets_${restaurantId}`).ts,
         retry: 2,
     });
+    const widgetConfigs = paired ? (manifest.widget_configs || EMPTY) : queriedWidgetConfigs;
 
     const { data: weather } = useQuery({
         queryKey: ['weather', restaurant?.latitude, restaurant?.longitude],
@@ -288,9 +307,9 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         retry: 1,
     });
 
-    // Heartbeat mechanism
+    // Heartbeat mechanism (legacy URL mode only — paired devices check in via screenDevice)
     useEffect(() => {
-        if (!screen?.id) return;
+        if (!screen?.id || paired) return;
 
         const sendHeartbeat = async () => {
             try {
@@ -318,11 +337,11 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 clearInterval(heartbeatIntervalRef.current);
             }
         };
-    }, [screen?.id, isOnline]);
+    }, [screen?.id, isOnline, paired]);
 
-    // Command listener
+    // Command listener (legacy URL mode only)
     useEffect(() => {
-        if (!screen?.id) return;
+        if (!screen?.id || paired) return;
 
         const checkCommands = async () => {
             try {
@@ -391,7 +410,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
                 clearInterval(commandCheckIntervalRef.current);
             }
         };
-    }, [screen?.id, refetchScreen, isOnline]);
+    }, [screen?.id, refetchScreen, isOnline, paired]);
 
     // Pre-cache all media assets for offline resilience
     useMediaPrecache(content, wallContent, isOnline);
@@ -419,7 +438,9 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     // Track the outgoing item for transitions (side effects kept out of setState updaters)
     const lastIndexRef = useRef(safeIndex);
+    const lastProgressRef = useRef(Date.now());
     useEffect(() => {
+        lastProgressRef.current = Date.now();
         if (lastIndexRef.current === safeIndex) return;
         setPrevIndex(lastIndexRef.current);
         lastIndexRef.current = safeIndex;
@@ -486,6 +507,7 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
 
     // Wall content rotation
     useEffect(() => {
+        lastProgressRef.current = Date.now();
         if (!screen?.media_wall_config?.enabled || wallContent.length <= 1) return;
         const currentWallContent = wallContent[wallContentIndex % wallContent.length];
         const duration = (currentWallContent?.duration || 10) * 1000;
@@ -494,6 +516,22 @@ export default function ScreenDisplay({ restaurantId, screenName }) {
         }, duration);
         return () => clearTimeout(timer);
     }, [wallContentIndex, wallContent, screen?.media_wall_config?.enabled]);
+
+    // Stall detection: if a rotating playlist hasn't moved for 20 minutes, tell the
+    // page guardian (MediaScreen page only — the kiosk overlay doesn't listen).
+    const rotationExpected = !usePlaylistSync && (
+        (wallEnabled && wallContent.length > 1) || (!wallEnabled && content.length > 1)
+    );
+    useEffect(() => {
+        if (!rotationExpected) return;
+        lastProgressRef.current = Date.now();
+        const t = setInterval(() => {
+            if (Date.now() - lastProgressRef.current > ROTATION_STALL_MS) {
+                window.dispatchEvent(new CustomEvent('mediascreen:stalled'));
+            }
+        }, 60000);
+        return () => clearInterval(t);
+    }, [rotationExpected]);
 
     if (!restaurantId || !screenName) {
         return (
