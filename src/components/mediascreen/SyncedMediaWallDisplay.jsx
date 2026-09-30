@@ -1,8 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import CustomContentWidget from './CustomContentWidget';
 import { filterActivePlaylists, isScheduleActive } from './scheduleUtils';
+import { useScreenManifest } from './ScreenManifestContext';
+import { serverNow, syncServerClock } from '@/lib/screenDevice';
+
+const EMPTY = [];
 
 // How far a video may drift from the shared timeline before we correct it.
 const VIDEO_DRIFT_TOLERANCE_S = 1.5;
@@ -13,9 +17,26 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
     const videoRef = useRef(null);
     const currentIndexRef = useRef(-1);
     const itemOffsetRef = useRef(0);
+    const manifest = useScreenManifest();
+    const paired = !!manifest;
+
+    // Keep this device's clock aligned with the server so every wall screen
+    // computes the same position (paired devices sync on each heartbeat).
+    useEffect(() => {
+        if (paired) return;
+        syncServerClock(true);
+        const t = setInterval(() => syncServerClock(), 10 * 60 * 1000);
+        return () => clearInterval(t);
+    }, [paired]);
+
+    const [scheduleTick, setScheduleTick] = useState(0);
+    useEffect(() => {
+        const t = setInterval(() => setScheduleTick(n => n + 1), 30000);
+        return () => clearInterval(t);
+    }, []);
 
     // Active playlist (own cache key — ScreenDisplay keeps raw playlists under a different key)
-    const { data: playlists = [] } = useQuery({
+    const { data: queriedPlaylists = EMPTY } = useQuery({
         queryKey: ['synced-wall-playlists', restaurantId, wallName],
         queryFn: async () => {
             const allPlaylists = await base44.entities.MediaWallPlaylist.filter({
@@ -25,14 +46,18 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
             });
             return filterActivePlaylists(allPlaylists);
         },
-        enabled: !!restaurantId && !!wallName,
+        enabled: !!restaurantId && !!wallName && !paired,
         refetchInterval: 30000
     });
 
+    const playlists = useMemo(
+        () => (paired ? filterActivePlaylists(manifest.playlists || EMPTY) : queriedPlaylists),
+        [paired, manifest, queriedPlaylists, scheduleTick]
+    );
     const activePlaylist = playlists[0];
 
     // Content: playlist content_ids (in playlist order), otherwise all wall content
-    const { data: playlistContent = [] } = useQuery({
+    const { data: queriedPlaylistContent = EMPTY } = useQuery({
         queryKey: ['playlist-content', restaurantId, wallName, activePlaylist?.id],
         queryFn: async () => {
             const now = new Date();
@@ -53,9 +78,25 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
                 .filter(c => c && c.is_active !== false && isScheduleActive(c.schedule, now))
                 .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
         },
-        enabled: !!restaurantId && !!wallName,
+        enabled: !!restaurantId && !!wallName && !paired,
         refetchInterval: 30000
     });
+
+    const pairedContent = useMemo(() => {
+        if (!paired) return EMPTY;
+        const now = new Date();
+        const all = (manifest.wall_content || EMPTY).filter(c => c && c.is_active !== false && isScheduleActive(c.schedule, now));
+        if (activePlaylist?.content_ids?.length) {
+            const byId = new Map(all.map(c => [c.id, c]));
+            return activePlaylist.content_ids.map(id => byId.get(id)).filter(Boolean);
+        }
+        return [...all].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    }, [paired, manifest, activePlaylist, scheduleTick]);
+
+    const pairedSig = pairedContent.map(c => `${c.id}:${c.updated_date || ''}`).join('|');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const stablePairedContent = useMemo(() => pairedContent, [pairedSig]);
+    const playlistContent = paired ? stablePairedContent : queriedPlaylistContent;
 
     // Shared-timeline sync: every screen derives the same item + offset from the clock.
     // Only switches item when the index actually changes, and only seeks a video
@@ -66,7 +107,7 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
         const totalDuration = playlistContent.reduce((sum, c) => sum + (c.duration || 10), 0);
 
         const sync = () => {
-            const elapsedInCycle = (Date.now() / 1000) % totalDuration;
+            const elapsedInCycle = (serverNow() / 1000) % totalDuration;
             let accumulated = 0;
             let index = 0;
             let offset = 0;
