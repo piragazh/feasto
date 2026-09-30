@@ -32,8 +32,9 @@ export default function POSHeaderV2({
 }) {
     const nav = navState(activeTab);
     const status = tillStatus({ isOnline, isSyncing, pendingCount });
-    const statusColour = status.tone === 'offline' ? 'text-red-600 dark:text-red-400'
-        : status.tone === 'sync' ? 'text-blue-600' : 'text-pos-muted';
+    // Colours follow the POS theme (it uses data-pos-v2, not Tailwind's .dark class).
+    const statusColour = status.tone === 'offline' ? (isDark ? 'text-red-400' : 'text-red-700')
+        : status.tone === 'sync' ? (isDark ? 'text-blue-400' : 'text-blue-700') : 'text-pos-muted';
 
     return (
         <header className="h-16 flex-shrink-0 flex items-center gap-3 px-3 lg:px-4 bg-pos-surface border-b border-pos-line text-pos-text">
@@ -42,7 +43,7 @@ export default function POSHeaderV2({
                 {restaurant?.logo_url ? (
                     <img src={restaurant.logo_url} alt="" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
                 ) : (
-                    <div className="w-10 h-10 rounded-xl bg-accent-600 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                    <div className="w-10 h-10 rounded-xl bg-accent-700 flex items-center justify-center flex-shrink-0" aria-hidden="true">
                         <UtensilsCrossed className="h-5 w-5 text-white" />
                     </div>
                 )}
@@ -72,7 +73,7 @@ export default function POSHeaderV2({
                     return (
                         <button key={ot.id} type="button" aria-pressed={on} onClick={() => onOrderType(ot.id)}
                             className={`h-11 px-3 xl:px-4 rounded-xl text-sm font-bold whitespace-nowrap transition-colors active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
-                                on ? 'bg-accent-600 text-white shadow-sm' : 'text-pos-text hover:bg-pos-surface'}`}>
+                                on ? 'bg-accent-700 text-white shadow-sm' : 'text-pos-text hover:bg-pos-surface'}`}>
                             {ot.label}
                         </button>
                     );
@@ -84,7 +85,7 @@ export default function POSHeaderV2({
             {/* Cart summary, only when away from Sales: one tap back to the order */}
             {activeTab !== 'order-entry' && cartCount > 0 && (
                 <button type="button" onClick={() => onTab('order-entry')}
-                    className="h-11 px-3 rounded-xl border border-accent-500/40 bg-accent-500/10 text-accent-700 dark:text-accent-300 text-sm font-extrabold whitespace-nowrap flex items-center gap-2">
+                    className={`h-11 px-3 rounded-xl border border-accent-500/40 bg-accent-500/10 ${isDark ? "text-accent-300" : "text-accent-800"} text-sm font-extrabold whitespace-nowrap flex items-center gap-2`}>
                     <ShoppingCart className="h-4 w-4" aria-hidden="true" />{cartCount} · £{Number(cartTotal).toFixed(2)}
                 </button>
             )}
@@ -151,7 +152,7 @@ export default function POSHeaderV2({
             {staff && (
                 <button type="button" onClick={onSwitchStaff} aria-label={`Switch staff member. Currently: ${staff.full_name}`}
                     className="h-12 pl-1 pr-2 rounded-xl flex items-center gap-2 hover:bg-pos-ground focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
-                    <span className="w-10 h-10 rounded-full bg-accent-600 text-white text-sm font-extrabold flex items-center justify-center" aria-hidden="true">
+                    <span className="w-10 h-10 rounded-full bg-accent-700 text-white text-sm font-extrabold flex items-center justify-center" aria-hidden="true">
                         {staffInitials(staff.full_name)}
                     </span>
                     <span className="hidden xl:block text-sm font-bold">{String(staff.full_name).split(' ')[0]}</span>
