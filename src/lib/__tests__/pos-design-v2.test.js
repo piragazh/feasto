@@ -105,3 +105,48 @@ describe('the new design reads clearly', () => {
         expect(tillStatus({ isOnline: true, isSyncing: true }).tone).toBe('sync');
     });
 });
+
+import { POS_PALETTES } from '../posThemes.js';
+
+describe('stage 2: the sales screen', () => {
+    const oe = read('components/pos/POSOrderEntry.jsx');
+    const keysOf = (src, start) => {
+        const a = src.indexOf(start); const b = src.indexOf('};', a);
+        return [...src.slice(a, b).matchAll(/^\s+([a-zA-Z]+):\s/gm)].map(m => m[1]).sort();
+    };
+    it('REGRESSION GUARD: the new theme styles every part the classic one does', () => {
+        const classic = keysOf(oe, 'const tClassic = {');
+        const v2 = keysOf(oe, 'export const T_V2 = {');
+        expect(classic.length).toBeGreaterThan(15);
+        expect(v2).toEqual(classic);
+    });
+    it('switch on = the new theme; off = classic, untouched', () => {
+        expect(strip(oe)).toMatch(/const t = newDesign \? T_V2 : tClassic;/);
+        expect(strip(read('pages/POSDashboard.jsx'))).toMatch(/<POSOrderEntry[\s\S]{0,1500}newDesign=\{newDesign\}/);
+    });
+
+    const rgb = (s) => s.split(' ').map(Number);
+    const lum = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+        .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+    const WHITE = [255, 255, 255], LIGHT_GROUND = [243, 242, 239], DARK_SURFACE = [26, 29, 34], DARK_TILE = [34, 38, 45];
+
+    for (const [key, pal] of Object.entries(POS_PALETTES)) {
+        it(`${key}: buttons, prices and accent text pass 4.5:1 after the remap`, () => {
+            const r = pal.ramp;
+            expect(ratio(WHITE, rgb(r[700])), 'white on filled button').toBeGreaterThanOrEqual(4.5);
+            expect(ratio(rgb(r[700]), WHITE), 'price on white tile').toBeGreaterThanOrEqual(4.5);
+            expect(ratio(rgb(r[700]), LIGHT_GROUND), 'accent text on light ground').toBeGreaterThanOrEqual(4.5);
+            expect(ratio(rgb(r[400]), DARK_SURFACE), 'accent text on dark').toBeGreaterThanOrEqual(4.5);
+            expect(ratio(rgb(r[400]), DARK_TILE), 'accent text on dark tile').toBeGreaterThanOrEqual(4.5);
+        });
+    }
+    it('the remap is scoped to the new design, and covers fills, hovers and text', () => {
+        const css = read('index.css');
+        expect(css).toMatch(/\[data-pos-v2\] \.bg-accent-500 \{ background-color: rgb\(var\(--pos-accent-700/);
+        expect(css).toMatch(/\[data-pos-v2\] \.hover\\:bg-accent-600:hover \{/);
+        expect(css).toMatch(/\[data-pos-v2="light"\] \.text-accent-500/);
+        expect(css).toMatch(/\[data-pos-v2="dark"\] \.text-accent-500 \{ color: rgb\(var\(--pos-accent-400/);
+        expect(css).not.toMatch(/^\.bg-accent-500 \{/m);            // never unscoped
+    });
+});
