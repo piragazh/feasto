@@ -2,151 +2,120 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import CustomContentWidget from './CustomContentWidget';
+import { filterActivePlaylists, isScheduleActive } from './scheduleUtils';
+
+// How far a video may drift from the shared timeline before we correct it.
+const VIDEO_DRIFT_TOLERANCE_S = 1.5;
 
 export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenPosition = null, gridSize = null, bezelCompensation = 0 }) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
     const videoRef = useRef(null);
-    const imageRef = useRef(null);
-    // Use refs to track sync state to avoid re-creating the interval on every state change
-    const currentIndexRef = useRef(0);
-    const syncTimestampRef = useRef(null);
+    const currentIndexRef = useRef(-1);
+    const itemOffsetRef = useRef(0);
 
-    // Fetch active playlist
+    // Active playlist (own cache key — ScreenDisplay keeps raw playlists under a different key)
     const { data: playlists = [] } = useQuery({
-        queryKey: ['active-playlists', restaurantId, wallName],
+        queryKey: ['synced-wall-playlists', restaurantId, wallName],
         queryFn: async () => {
-            const allPlaylists = await base44.entities.MediaWallPlaylist.filter({ 
+            const allPlaylists = await base44.entities.MediaWallPlaylist.filter({
                 restaurant_id: restaurantId,
                 wall_name: wallName,
                 is_active: true
             });
-            
-            // Filter by schedule
-            const now = new Date();
-            return allPlaylists.filter(playlist => {
-                if (!playlist.schedule?.enabled) return true;
-                
-                const schedule = playlist.schedule;
-                if (schedule.start_date && new Date(schedule.start_date) > now) return false;
-                if (schedule.end_date && new Date(schedule.end_date) < now) return false;
-                
-                if (schedule.recurring?.enabled) {
-                    const currentDay = now.getDay();
-                    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                    
-                    if (!schedule.recurring.days_of_week?.includes(currentDay)) return false;
-                    
-                    const inTimeRange = schedule.recurring.time_ranges?.some(range => {
-                        return currentTime >= range.start_time && currentTime <= range.end_time;
-                    });
-                    
-                    if (!inTimeRange) return false;
-                }
-                
-                return true;
-            }).sort((a, b) => (b.priority || 1) - (a.priority || 1));
+            return filterActivePlaylists(allPlaylists);
         },
+        enabled: !!restaurantId && !!wallName,
         refetchInterval: 30000
     });
 
     const activePlaylist = playlists[0];
 
-    // Fetch content - use playlist content_ids if available, otherwise fetch all wall content directly
+    // Content: playlist content_ids (in playlist order), otherwise all wall content
     const { data: playlistContent = [] } = useQuery({
         queryKey: ['playlist-content', restaurantId, wallName, activePlaylist?.id],
         queryFn: async () => {
+            const now = new Date();
             if (activePlaylist?.content_ids?.length) {
                 const content = await Promise.all(
-                    activePlaylist.content_ids.map(id => 
+                    activePlaylist.content_ids.map(id =>
                         base44.entities.MediaWallContent.filter({ id })
                     )
                 );
-                return content.flat().filter(c => c && c.is_active !== false);
+                return content.flat().filter(c => c && c.is_active !== false && isScheduleActive(c.schedule, now));
             }
 
-            // Fallback: fetch all active content for this wall directly
-            const content = await base44.entities.MediaWallContent.filter({ 
+            const content = await base44.entities.MediaWallContent.filter({
                 restaurant_id: restaurantId,
                 wall_name: wallName
             });
             return content
-                .filter(c => c && c.is_active !== false)
+                .filter(c => c && c.is_active !== false && isScheduleActive(c.schedule, now))
                 .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
         },
         enabled: !!restaurantId && !!wallName,
         refetchInterval: 30000
     });
 
-    // Synchronization logic - use refs to avoid re-creating interval on every state change
+    // Shared-timeline sync: every screen derives the same item + offset from the clock.
+    // Only switches item when the index actually changes, and only seeks a video
+    // when it has drifted — previously the video was re-seeked every second.
     useEffect(() => {
         if (!playlistContent.length) return;
 
-        const calculateSyncPosition = () => {
-            const totalDuration = playlistContent.reduce((sum, c) => sum + (c.duration || 10), 0);
-            const now = Date.now();
-            const baseTime = Math.floor(now / 1000) * 1000;
-            const elapsedInCycle = (baseTime / 1000) % totalDuration;
-            
+        const totalDuration = playlistContent.reduce((sum, c) => sum + (c.duration || 10), 0);
+
+        const sync = () => {
+            const elapsedInCycle = (Date.now() / 1000) % totalDuration;
             let accumulated = 0;
+            let index = 0;
+            let offset = 0;
             for (let i = 0; i < playlistContent.length; i++) {
                 const duration = playlistContent[i].duration || 10;
                 if (elapsedInCycle < accumulated + duration) {
-                    return { index: i, offset: (elapsedInCycle - accumulated) * 1000, timestamp: baseTime };
+                    index = i;
+                    offset = elapsedInCycle - accumulated;
+                    break;
                 }
                 accumulated += duration;
             }
-            return { index: 0, offset: 0, timestamp: baseTime };
-        };
+            itemOffsetRef.current = offset;
 
-        const sync = () => {
-            const { index, offset, timestamp } = calculateSyncPosition();
-            
-            if (index !== currentIndexRef.current || !syncTimestampRef.current || timestamp !== syncTimestampRef.current) {
+            if (index !== currentIndexRef.current) {
                 currentIndexRef.current = index;
-                syncTimestampRef.current = timestamp;
                 setCurrentIndex(index);
-                
-                if (videoRef.current && playlistContent[index]?.media_type === 'video') {
-                    videoRef.current.currentTime = offset / 1000;
-                    videoRef.current.play().catch(() => {});
+                return; // the new <video> seeks itself on loadedmetadata
+            }
+
+            const video = videoRef.current;
+            if (video && playlistContent[index]?.media_type === 'video' && video.duration) {
+                const target = offset % video.duration;
+                if (Math.abs(video.currentTime - target) > VIDEO_DRIFT_TOLERANCE_S) {
+                    video.currentTime = target;
                 }
+                if (video.paused) video.play().catch(() => {});
             }
         };
 
+        currentIndexRef.current = -1;
         sync();
         const interval = setInterval(sync, 1000);
         return () => clearInterval(interval);
-    }, [playlistContent]); // Only re-run when content changes, not on every index/timestamp change
+    }, [playlistContent]);
 
-    // Auto-advance content
+    // Preload the next item
     useEffect(() => {
-        if (!playlistContent.length || currentIndex >= playlistContent.length) return;
-
-        const currentContent = playlistContent[currentIndex];
-        if (currentContent.media_type === 'video') return; // Videos auto-advance on end
-
-        // Preload next content
-        const nextIndex = (currentIndex + 1) % playlistContent.length;
-        const nextContent = playlistContent[nextIndex];
-        if (nextContent) {
-            if (nextContent.media_type === 'video') {
-                const preloadVideo = document.createElement('video');
-                preloadVideo.src = nextContent.media_url;
-                preloadVideo.preload = 'auto';
-            } else {
-                const preloadImg = new Image();
-                preloadImg.src = nextContent.media_url;
-            }
+        if (!playlistContent.length) return;
+        const nextContent = playlistContent[(currentIndex + 1) % playlistContent.length];
+        if (!nextContent?.media_url || nextContent.media_type?.startsWith('widget_')) return;
+        if (nextContent.media_type === 'video') {
+            const preloadVideo = document.createElement('video');
+            preloadVideo.preload = 'auto';
+            preloadVideo.src = nextContent.media_url;
+        } else {
+            const preloadImg = new Image();
+            preloadImg.src = nextContent.media_url;
         }
-
-        const duration = (currentContent.duration || 10) * 1000;
-        const timeout = setTimeout(() => {
-            setCurrentIndex(nextIndex);
-            setIsLoading(true);
-        }, duration);
-
-        return () => clearTimeout(timeout);
     }, [currentIndex, playlistContent]);
 
     if (!playlistContent.length) {
@@ -160,14 +129,12 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
         );
     }
 
-    const currentContent = playlistContent[currentIndex];
+    const currentContent = playlistContent[currentIndex % playlistContent.length];
     if (!currentContent) return null;
 
-    // Check if current content is a custom widget
     const isWidget = currentContent.media_type?.startsWith('widget_');
     const widgetType = isWidget ? currentContent.media_type.replace('widget_', '') : null;
 
-    // Calculate position offset for this screen's portion of the wall
     const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
     const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
     const hasPosition = screenPosition && gridSize;
@@ -186,11 +153,7 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
         width: `${totalWidth}px`,
         height: `${totalHeight}px`,
         objectFit: 'cover'
-    } : {
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover'
-    };
+    } : undefined;
 
     return (
         <div className="h-screen w-screen overflow-hidden bg-gray-900 relative">
@@ -206,42 +169,36 @@ export default function SyncedMediaWallDisplay({ restaurantId, wallName, screenP
                     ref={videoRef}
                     src={currentContent.media_url}
                     className={hasPosition ? 'absolute' : 'w-full h-full object-cover'}
-                    style={hasPosition ? mediaStyle : undefined}
+                    style={mediaStyle}
                     muted
                     autoPlay
                     playsInline
-                    onLoadedData={() => setIsLoading(false)}
-                    onWaiting={() => setIsLoading(true)}
-                    onPlaying={() => setIsLoading(false)}
-                    onEnded={() => {
-                        const nextIndex = (currentIndex + 1) % playlistContent.length;
-                        setCurrentIndex(nextIndex);
+                    loop
+                    onLoadedMetadata={(e) => {
+                        const v = e.currentTarget;
+                        if (v.duration) v.currentTime = itemOffsetRef.current % v.duration;
+                        v.play().catch(() => {});
                     }}
+                    onWaiting={() => setIsBuffering(true)}
+                    onPlaying={() => setIsBuffering(false)}
+                    onError={() => setIsBuffering(false)}
                 />
             ) : (
                 <img
                     key={currentContent.id}
-                    ref={imageRef}
                     src={currentContent.media_url}
                     alt={currentContent.title}
                     className={hasPosition ? 'absolute' : 'w-full h-full object-cover'}
-                    style={{ ...(hasPosition ? mediaStyle : {}) }}
-                    onLoad={() => setIsLoading(false)}
-                    onLoadStart={() => setIsLoading(true)}
+                    style={mediaStyle}
+                    onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
                 />
             )}
-            
-            {/* Loading indicator - only show when actually loading */}
-            {isLoading && (
+
+            {isBuffering && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50">
                     <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
             )}
-            
-            {/* Sync indicator */}
-            <div className="fixed bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded text-xs">
-                Synced: {currentIndex + 1}/{playlistContent.length}
-            </div>
         </div>
     );
 }
