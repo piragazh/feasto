@@ -56,6 +56,14 @@ export default function KioskDashboard() {
     const hasPromoRef = useRef(false);
     hasPromoRef.current = kioskPromo.hasPlayableContent;
 
+    // If the promos' schedule ends while idle, go back to the welcome screen
+    useEffect(() => {
+        if (mode === 'idle_media' && !kioskPromo.hasPlayableContent) {
+            setMode('ordering');
+            setScreen('welcome');
+        }
+    }, [mode, kioskPromo.hasPlayableContent]);
+
     // Persist cart to sessionStorage
     useEffect(() => {
         try {
