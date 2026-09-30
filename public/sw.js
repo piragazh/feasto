@@ -182,3 +182,97 @@ self.addEventListener('fetch', (event) => {
   // ── Everything else: network-only (don't cache API responses, manifests, etc.) ──
   // Intentional: we do not intercept, letting the browser handle normally.
 });
+
+// ─── Media-screen cache ───────────────────────────────────────────────────────
+
+async function serveMedia(request) {
+  try {
+    const cache = await caches.open(MEDIA_CACHE);
+    const cached = await cache.match(request.url);
+    if (!cached) return fetch(request);
+
+    const range = request.headers.get('range');
+    if (!range) return cached;
+
+    // Opaque (cross-origin, no CORS) entries can't be sliced: prefer the network,
+    // fall back to the whole cached file.
+    if (cached.type === 'opaque') {
+      try { return await fetch(request); } catch { return cached; }
+    }
+
+    const blob = await cached.blob();
+    const size = blob.size;
+    const match = /bytes=(\d*)-(\d*)/.exec(range);
+    let start = match && match[1] !== '' ? parseInt(match[1], 10) : 0;
+    let end = match && match[2] !== '' ? parseInt(match[2], 10) : size - 1;
+    if (match && match[1] === '' && match[2] !== '') {
+      // suffix range: last N bytes
+      start = Math.max(0, size - parseInt(match[2], 10));
+      end = size - 1;
+    }
+    if (start >= size || start > end) {
+      return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+    }
+    end = Math.min(end, size - 1);
+    return new Response(blob.slice(start, end + 1), {
+      status: 206,
+      statusText: 'Partial Content',
+      headers: {
+        'Content-Type': cached.headers.get('Content-Type') || blob.type || 'application/octet-stream',
+        'Content-Range': `bytes ${start}-${end}/${size}`,
+        'Content-Length': String(end - start + 1),
+        'Accept-Ranges': 'bytes',
+      },
+    });
+  } catch (err) {
+    return fetch(request);
+  }
+}
+
+async function cacheMediaUrl(cache, url) {
+  if (mediaUrls.has(url)) return;
+  let response = null;
+  try {
+    response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+    if (!response.ok) response = null;
+  } catch { response = null; }
+  if (!response) {
+    try { response = await fetch(url, { mode: 'no-cors', credentials: 'omit' }); } catch { response = null; }
+  }
+  if (!response || (response.type !== 'opaque' && !response.ok)) return;
+  await cache.put(url, response);
+  mediaUrls.add(url);
+}
+
+async function syncMediaCache(urls, prune) {
+  await mediaIndexReady;
+  const wanted = new Set((urls || []).filter((u) => typeof u === 'string' && u.startsWith('http')));
+  const cache = await caches.open(MEDIA_CACHE);
+
+  // Download sequentially — cheap signage players have little bandwidth/memory
+  for (const url of wanted) {
+    try { await cacheMediaUrl(cache, url); } catch {}
+  }
+
+  if (prune) {
+    const keys = await cache.keys();
+    for (const req of keys) {
+      if (!wanted.has(req.url)) {
+        await cache.delete(req);
+        mediaUrls.delete(req.url);
+      }
+    }
+  }
+}
+
+self.addEventListener('message', (event) => {
+  const data = event.data || {};
+  if (data.type === 'SET_MEDIA_URLS') {
+    event.waitUntil(syncMediaCache(data.urls, true));
+  } else if (data.type === 'PRECACHE_URLS') {
+    event.waitUntil(syncMediaCache(data.urls, false));
+  } else if (data.type === 'CLEAR_MEDIA_CACHE') {
+    mediaUrls.clear();
+    event.waitUntil(caches.delete(MEDIA_CACHE));
+  }
+});
