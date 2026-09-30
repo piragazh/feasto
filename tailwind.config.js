@@ -31,6 +31,16 @@ module.exports = {
   			 *
   			 * <alpha-value> keeps opacity modifiers (orange-500/20) working.
   			 */
+  			// New POS design surfaces (src/index.css [data-pos-v2]); follow light/dark.
+  			pos: {
+  				ground: 'rgb(var(--pos-ground) / <alpha-value>)',
+  				surface: 'rgb(var(--pos-surface) / <alpha-value>)',
+  				raised: 'rgb(var(--pos-raised) / <alpha-value>)',
+  				line: 'rgb(var(--pos-line) / <alpha-value>)',
+  				text: 'rgb(var(--pos-text) / <alpha-value>)',
+  				muted: 'rgb(var(--pos-muted) / <alpha-value>)',
+  				kbd: 'rgb(var(--pos-kbd) / <alpha-value>)'
+  			},
   			orange: {
   				50:  'rgb(var(--pos-accent-50, 255 247 237) / <alpha-value>)',
   				100: 'rgb(var(--pos-accent-100, 255 237 213) / <alpha-value>)',

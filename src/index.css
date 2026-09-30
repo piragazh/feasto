@@ -276,3 +276,31 @@
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
 }
+
+/* ── New POS design (stage 1: tokens) ─────────────────────────────────────────
+   Scoped to the POS root when the per-till "New POS design" switch is on
+   (src/lib/posDesignV2.js). Space-separated RGB so Tailwind's pos-* colours
+   take opacity (bg-pos-surface/80). Warm neutral ground, one accent (the
+   restaurant's palette, --pos-accent-*), text contrast at least 4.5:1. */
+[data-pos-v2="light"] {
+    --pos-ground: 243 242 239;
+    --pos-surface: 255 255 255;
+    --pos-raised: 250 250 248;
+    --pos-line: 227 225 220;
+    --pos-text: 27 26 24;
+    --pos-muted: 92 89 83;
+    --pos-kbd: 236 234 230;
+}
+[data-pos-v2="dark"] {
+    --pos-ground: 17 19 23;
+    --pos-surface: 26 29 34;
+    --pos-raised: 34 38 45;
+    --pos-line: 46 50 58;
+    --pos-text: 241 241 239;
+    --pos-muted: 169 173 182;
+    --pos-kbd: 46 50 58;
+}
+[data-pos-v2] {
+    font-family: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+}
