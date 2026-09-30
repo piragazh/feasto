@@ -30,12 +30,18 @@
       "type": "string",
       "enum": [
         "pending",
+        "delivered",
         "executed",
         "failed",
         "timeout"
       ],
       "default": "pending",
       "description": "Execution status of the command"
+    },
+    "delivered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When a paired device picked the command up"
     },
     "executed_at": {
       "type": "string",

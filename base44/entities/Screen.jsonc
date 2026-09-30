@@ -178,6 +178,15 @@
       "type": "object",
       "description": "Screen device info (browser, resolution, etc.)"
     },
+    "uptime_window": {
+      "type": "object",
+      "description": "Rolling 24h uptime sample counters maintained by checkScreenHealth",
+      "properties": {
+        "window_start": { "type": "string", "format": "date-time" },
+        "online_checks": { "type": "number" },
+        "total_checks": { "type": "number" }
+      }
+    },
     "pending_command": {
       "type": "string",
       "description": "Command waiting to be executed (refresh_content, reboot, etc.)"
