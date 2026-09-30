@@ -304,3 +304,17 @@
     font-family: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
 }
+
+/* ── New POS design (stage 2): accent that reads ─────────────────────────────
+   The POS uses bg-accent-500 behind white text in 96 places and text-accent-500
+   for prices; for the default orange that is 2.8:1 - under the 4.5:1 minimum.
+   Inside the new design only, those classes take the palette's darker shade
+   (700 for fills and light-theme text, 400 for text on dark), whichever palette
+   the restaurant chose. Classic POS unchanged. pos-design-v2.test.js checks
+   every palette clears 4.5:1 after this remap. */
+[data-pos-v2] .bg-accent-500 { background-color: rgb(var(--pos-accent-700, 194 65 12) / var(--tw-bg-opacity, 1)); }
+[data-pos-v2] .hover\:bg-accent-600:hover { background-color: rgb(var(--pos-accent-800, 154 52 18) / var(--tw-bg-opacity, 1)); }
+[data-pos-v2] .active\:bg-accent-700:active { background-color: rgb(var(--pos-accent-900, 124 45 18) / var(--tw-bg-opacity, 1)); }
+[data-pos-v2="light"] .text-accent-500,
+[data-pos-v2="light"] .text-accent-400 { color: rgb(var(--pos-accent-700, 194 65 12) / var(--tw-text-opacity, 1)); }
+[data-pos-v2="dark"] .text-accent-500 { color: rgb(var(--pos-accent-400, 251 146 60) / var(--tw-text-opacity, 1)); }
