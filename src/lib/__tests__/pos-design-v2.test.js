@@ -202,7 +202,7 @@ describe('stage 3: the option sheet', () => {
         expect(css).toMatch(/\[data-pos-v2\] \.pos-sheet-cta \{ height: 56px;/);
     });
     it('classic sheet unchanged: no style for the tags outside the new design', () => {
-        const rules = css.split('}').map(r => r.trim()).filter(r => /\.pos-(choice|sheet)/.test(r));
+        const rules = css.replace(/\/\*[\s\S]*?\*\//g, '').split('}').map(r => r.trim()).filter(r => /\.pos-(choice|sheet)/.test(r));
         expect(rules.length).toBeGreaterThan(3);
         expect(rules.every(r => r.split('{')[0].split(',').every(sel => sel.includes('[data-pos-v2'))) ).toBe(true);
     });
