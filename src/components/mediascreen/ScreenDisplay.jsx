@@ -8,6 +8,7 @@ import WidgetRenderer from './WidgetRenderer';
 import { useMediaPrecache } from '@/hooks/useMediaPrecache';
 import { filterActiveContent, filterActivePlaylists, clearScreenCache } from './scheduleUtils';
 import { useScreenManifest } from './ScreenManifestContext';
+import TakeoverScreen, { isTakeoverActive } from './TakeoverScreen';
 
 // --- localStorage cache helpers ---
 // The cache stores RAW records; schedules are applied at display time so an
@@ -104,6 +105,7 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [scheduleTick, setScheduleTick] = useState(0);
     const [failedIds, setFailedIds] = useState(() => new Set());
+    const [legacyTakeover, setLegacyTakeover] = useState(undefined);
     const heartbeatIntervalRef = useRef(null);
     const commandCheckIntervalRef = useRef(null);
     const transitionTimerRef = useRef(null);
@@ -173,6 +175,11 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
     const restaurant = paired ? manifest.restaurant : queriedRestaurant;
     const screen = paired ? manifest.screen : queriedScreen;
     const screenLoading = paired ? false : queriedScreenLoading;
+    // Takeover: paired screens get it in the manifest; legacy screens via the 10s command check.
+    // scheduleTick (30s) re-evaluates expiry.
+    const activeTakeover = paired
+        ? manifest.screen?.takeover
+        : (legacyTakeover !== undefined ? legacyTakeover : queriedScreen?.takeover);
 
     const wallName = screen?.media_wall_config?.wall_name;
     const wallEnabled = !!screen?.media_wall_config?.enabled && !!wallName;
@@ -349,6 +356,9 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                     id: screen.id
                 });
                 const currentScreen = screens[0];
+
+                // Priority message (emergency takeover) — picked up within 10s
+                setLegacyTakeover(currentScreen?.takeover || null);
 
                 if (currentScreen?.pending_command) {
                     const command = currentScreen.pending_command;
@@ -550,6 +560,11 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                 </div>
             </div>
         );
+    }
+
+    // Emergency / priority message replaces everything (never on the kiosk)
+    if (!embedded && isTakeoverActive(activeTakeover)) {
+        return <TakeoverScreen takeover={activeTakeover} orientation={screen?.orientation} />;
     }
 
     if (wallEnabled && usePlaylistSync) {
