@@ -79,6 +79,13 @@ export class ScreenErrorBoundary extends React.Component {
 }
 
 export function useScreenGuardian(enabled = true) {
+    // Ask the browser not to evict this screen's storage under disk pressure —
+    // eviction would wipe the pairing and the offline media cache.
+    useEffect(() => {
+        if (!enabled) return;
+        try { navigator.storage?.persist?.().catch(() => {}); } catch {}
+    }, [enabled]);
+
     // Stall recovery
     useEffect(() => {
         if (!enabled) return;
