@@ -182,9 +182,16 @@
       "type": "object",
       "description": "Rolling 24h uptime sample counters maintained by checkScreenHealth",
       "properties": {
-        "window_start": { "type": "string", "format": "date-time" },
-        "online_checks": { "type": "number" },
-        "total_checks": { "type": "number" }
+        "window_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "online_checks": {
+          "type": "number"
+        },
+        "total_checks": {
+          "type": "number"
+        }
       }
     },
     "pending_command": {
@@ -195,6 +202,40 @@
       "type": "string",
       "format": "date-time",
       "description": "When the command was issued"
+    },
+    "takeover": {
+      "type": "object",
+      "description": "Emergency/priority message that replaces all content on this screen until cleared or expired",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "style": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "emergency"
+          ]
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "set_by": {
+          "type": "string"
+        },
+        "set_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     }
   },
   "required": [

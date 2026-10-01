@@ -19,6 +19,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  *   list          { screen_id }            paired devices for a screen
  *   revoke        { session_id }           unpair a device
  *   send_command  { screen_ids, command }  queue a command
+ *   set_takeover / clear_takeover { restaurant_id, screen_ids?, title, message, style, duration_minutes }
  */
 
 const CODE_TTL_MS = 10 * 60 * 1000;
@@ -119,6 +120,7 @@ async function buildManifest(sr, screen, { includeWall = true } = {}) {
             media_wall_config: screen.media_wall_config || null,
             layout_template: screen.layout_template || null,
             heartbeat_interval: screen.heartbeat_interval,
+            takeover: screen.takeover || null,
         },
         content,
         widget_configs: widgetConfigs,
@@ -368,6 +370,36 @@ Deno.serve(async (req) => {
             if (!(await canManage(base44, user, session.restaurant_id))) return json({ error: 'Not allowed' }, 403);
             await sr.entities.ScreenDeviceSession.update(session.id, { status: 'revoked', revoked_at: nowIso });
             return json({ ok: true });
+        }
+
+        if (action === 'set_takeover' || action === 'clear_takeover') {
+            const restaurantId = body.restaurant_id;
+            if (!(await canManage(base44, user, restaurantId))) return json({ error: 'Not allowed' }, 403);
+            let screens = await sr.entities.Screen.filter({ restaurant_id: restaurantId });
+            if (Array.isArray(body.screen_ids) && body.screen_ids.length) {
+                const wanted = new Set(body.screen_ids);
+                screens = screens.filter(sc => wanted.has(sc.id));
+            }
+            if (!screens.length) return json({ error: 'No screens found' }, 404);
+
+            let takeover = null;
+            if (action === 'set_takeover') {
+                const message = String(body.message || '').trim().slice(0, 300);
+                const title = String(body.title || '').trim().slice(0, 80);
+                if (!message && !title) return json({ error: 'Enter a message' }, 400);
+                const minutes = Number(body.duration_minutes) || 0;
+                takeover = {
+                    active: true,
+                    title,
+                    message,
+                    style: ['info', 'warning', 'emergency'].includes(body.style) ? body.style : 'warning',
+                    expires_at: minutes > 0 ? new Date(now.getTime() + Math.min(minutes, 7 * 24 * 60) * 60000).toISOString() : null,
+                    set_by: user.email,
+                    set_at: nowIso,
+                };
+            }
+            await Promise.all(screens.map(sc => sr.entities.Screen.update(sc.id, { takeover })));
+            return json({ ok: true, screens: screens.length, takeover });
         }
 
         if (action === 'send_command') {
