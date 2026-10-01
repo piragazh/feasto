@@ -26,7 +26,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 const CODE_TTL_MS = 10 * 60 * 1000;
 const COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
 const HEARTBEAT_INTERVAL_S = 20;
-const ALLOWED_COMMANDS = ['refresh_content', 'reload', 'reboot', 'clear_cache'];
+const ALLOWED_COMMANDS = ['refresh_content', 'reload', 'reboot', 'clear_cache', 'screenshot'];
+const MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024;
 
 const json = (body, status = 200) => Response.json(body, { status });
 
@@ -55,6 +56,23 @@ function cleanDeviceInfo(info) {
         resolution: pick(info.resolution, 30),
         platform: pick(info.platform, 60),
         app_version: pick(info.app_version, 60),
+    };
+}
+
+function cleanNowShowing(n) {
+    if (!n || typeof n !== 'object') return null;
+    const str = (v, len = 200) => (typeof v === 'string' ? v.slice(0, len) : null);
+    return {
+        mode: str(n.mode, 20),
+        content_id: str(n.content_id, 60),
+        title: str(n.title, 120),
+        media_type: str(n.media_type, 20),
+        media_url: str(n.media_url, 500),
+        widget_type: str(n.widget_type, 40),
+        layout_name: str(n.layout_name, 60),
+        item_count: Number.isFinite(Number(n.item_count)) ? Number(n.item_count) : null,
+        failed_count: Number.isFinite(Number(n.failed_count)) ? Number(n.failed_count) : null,
+        native_app: str(n.native_app, 40),
     };
 }
 
@@ -277,6 +295,7 @@ Deno.serve(async (req) => {
                     last_heartbeat: nowIso,
                     health_status: 'online',
                     screen_info: { browser: info.user_agent, resolution: info.resolution, os: info.platform, app_version: info.app_version, paired: true },
+                    ...(body.now_showing ? { now_showing: { ...cleanNowShowing(body.now_showing), reported_at: nowIso } } : {}),
                 }),
                 sr.entities.ScreenDeviceSession.update(session.id, { last_seen: nowIso, device_info: info }),
             ]);
@@ -341,6 +360,38 @@ Deno.serve(async (req) => {
         }
 
         // ── Manager actions ─────────────────────────────────────────────────
+        // screenshot: a paired device uploads a capture of what it is showing
+        if (action === 'screenshot') {
+            const session = await findSession(sr, body.secret);
+            if (!session || session.status !== 'paired') return json({ status: session?.status || 'unknown' }, 401);
+            const b64 = typeof body.image_base64 === 'string' ? body.image_base64.replace(/^data:image\/\w+;base64,/, '') : '';
+            let bytes;
+            try {
+                const bin = atob(b64);
+                bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            } catch { return json({ error: 'Invalid image' }, 400); }
+            if (!bytes.length || bytes.length > MAX_SCREENSHOT_BYTES) return json({ error: 'Image too large or empty' }, 400);
+            const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+            const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+            if (!isJpeg && !isPng) return json({ error: 'Only JPEG or PNG' }, 400);
+
+            const file = new File([bytes], `screen-${session.screen_id}-${now.getTime()}.${isJpeg ? 'jpg' : 'png'}`, { type: isJpeg ? 'image/jpeg' : 'image/png' });
+            const uploaded = await sr.integrations.Core.UploadFile({ file });
+            const url = uploaded?.file_url;
+            if (!url) return json({ error: 'Upload failed' }, 500);
+            await sr.entities.Screen.update(session.screen_id, { last_screenshot_url: url, last_screenshot_at: nowIso });
+            if (body.command_id) {
+                try {
+                    const logRows = await sr.entities.ScreenCommandLog.filter({ id: body.command_id });
+                    if (logRows[0]?.screen_id === session.screen_id) {
+                        await sr.entities.ScreenCommandLog.update(body.command_id, { status: 'executed', executed_at: nowIso });
+                    }
+                } catch (e) { console.error('screenshot ack failed', e); }
+            }
+            return json({ ok: true, url });
+        }
+
         // order_board: ready/preparing order numbers for a paired screen
         if (action === 'order_board') {
             const session = await findSession(sr, body.secret);
@@ -496,6 +547,10 @@ Deno.serve(async (req) => {
                 });
                 // Screens still running the old URL-based player only watch this field
                 const paired = await sr.entities.ScreenDeviceSession.filter({ screen_id: screen.id, status: 'paired' });
+                if (command === 'screenshot' && !paired.length) {
+                    results.push({ screen_id: id, ok: false, reason: 'not_paired' });
+                    continue;
+                }
                 if (!paired.length) {
                     await sr.entities.Screen.update(screen.id, { pending_command: command, command_timestamp: nowIso });
                 }

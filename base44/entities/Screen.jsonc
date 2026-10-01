@@ -236,6 +236,18 @@
           "format": "date-time"
         }
       }
+    },
+    "now_showing": {
+      "type": "object",
+      "description": "What a paired screen reported it is showing at its last check-in"
+    },
+    "last_screenshot_url": {
+      "type": "string",
+      "description": "Most recent remote screenshot"
+    },
+    "last_screenshot_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [
