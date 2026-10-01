@@ -87,6 +87,26 @@ async function buildManifest(sr, screen, { includeWall = true } = {}) {
         wall ? sr.entities.MediaWallContent.filter({ restaurant_id: screen.restaurant_id, wall_name: wall }) : Promise.resolve([]),
     ]);
 
+    // Live menu board data — only for screens that show one. Display fields only,
+    // so routine stock-count changes don't force every screen to re-download.
+    const zonesOf = (lt) => (Array.isArray(lt?.zones) ? lt.zones : []);
+    const menuWidgetIds = new Set(widgetConfigs.filter(w => w.widget_type === 'menu_widget').map(w => w.id));
+    const needsMenu =
+        content.some(c => c.media_type === 'widget' && (c.widget_type === 'menu_widget' || menuWidgetIds.has(c.widget_config_id))) ||
+        zonesOf(screen.layout_template).some(z => (z.type || z.content_type) === 'menu') ||
+        content.some(c => zonesOf(c.layout_template).some(z => (z.type || z.content_type) === 'menu'));
+    let menuItems;
+    if (needsMenu) {
+        const items = await sr.entities.MenuItem.filter({ restaurant_id: screen.restaurant_id });
+        menuItems = items.map(i => ({
+            id: i.id, name: i.name, description: i.description, category: i.category, subcategory: i.subcategory,
+            menu_item_no: i.menu_item_no, image_url: i.image_url, price: i.price, pos_price: i.pos_price,
+            price_windows: i.price_windows, availability_windows: i.availability_windows,
+            availability_channel: i.availability_channel, is_available: i.is_available, auto_86ed: i.auto_86ed,
+            is_popular: i.is_popular, is_vegetarian: i.is_vegetarian, is_spicy: i.is_spicy, allergens: i.allergens,
+        }));
+    }
+
     const manifest = {
         restaurant: {
             id: r.id, name: r.name, logo_url: r.logo_url, description: r.description,
@@ -104,6 +124,7 @@ async function buildManifest(sr, screen, { includeWall = true } = {}) {
         widget_configs: widgetConfigs,
         playlists,
         wall_content: wallContent,
+        ...(menuItems ? { menu_items: menuItems } : {}),
     };
     const version = (await sha256Hex(JSON.stringify(manifest))).slice(0, 16);
     return { ...manifest, version };
