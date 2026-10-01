@@ -44,6 +44,7 @@ export default function OrderBoardWidget({ config = {}, restaurantId, className 
     const manifest = useScreenManifest();
     const [orders, setOrders] = useState(null);
     const readySinceRef = useRef(new Map());
+    const firstLoadRef = useRef(true);
     const [, setTick] = useState(0);
     const typesKey = (Array.isArray(order_types) ? order_types : []).join(',');
 
@@ -74,16 +75,18 @@ export default function OrderBoardWidget({ config = {}, restaurantId, className 
                 }
                 if (cancelled) return;
 
-                // Remember when each order first appeared as ready (for the highlight)
+                // Remember when each order first appeared as ready (for the highlight).
+                // Orders already ready on the first load aren't highlighted.
                 const seen = readySinceRef.current;
                 const readyIds = new Set();
                 for (const o of list) {
                     if (READY.includes(o.status)) {
                         readyIds.add(o.id);
-                        if (!seen.has(o.id)) seen.set(o.id, orders === null ? 0 : Date.now());
+                        if (!seen.has(o.id)) seen.set(o.id, firstLoadRef.current ? 0 : Date.now());
                     }
                 }
                 for (const id of [...seen.keys()]) if (!readyIds.has(id)) seen.delete(id);
+                firstLoadRef.current = false;
                 setOrders(list);
             } catch {
                 if (!cancelled) setOrders(prev => prev || []);
