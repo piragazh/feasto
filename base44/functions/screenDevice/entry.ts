@@ -537,6 +537,12 @@ Deno.serve(async (req) => {
                     results.push({ screen_id: id, ok: false });
                     continue;
                 }
+                const paired = await sr.entities.ScreenDeviceSession.filter({ screen_id: screen.id, status: 'paired' });
+                // Screenshots need the paired player (the old URL player can't upload)
+                if (command === 'screenshot' && !paired.length) {
+                    results.push({ screen_id: id, ok: false, reason: 'not_paired' });
+                    continue;
+                }
                 await sr.entities.ScreenCommandLog.create({
                     screen_id: screen.id,
                     restaurant_id: screen.restaurant_id,
@@ -546,11 +552,6 @@ Deno.serve(async (req) => {
                     status: 'pending',
                 });
                 // Screens still running the old URL-based player only watch this field
-                const paired = await sr.entities.ScreenDeviceSession.filter({ screen_id: screen.id, status: 'paired' });
-                if (command === 'screenshot' && !paired.length) {
-                    results.push({ screen_id: id, ok: false, reason: 'not_paired' });
-                    continue;
-                }
                 if (!paired.length) {
                     await sr.entities.Screen.update(screen.id, { pending_command: command, command_timestamp: nowIso });
                 }
