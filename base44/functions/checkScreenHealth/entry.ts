@@ -8,8 +8,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  *   warning  within 5 × interval
  *   offline  longer, or never
  *
- * Alerts managers only when a screen goes from online/warning → offline, so
- * screens that were already offline (old test screens) never trigger alerts.
+ * Alerts managers when a screen is offline DURING TRADING HOURS (restaurant
+ * opening_hours, UK time; no alerts in the last 15 minutes before closing, when
+ * screens are commonly switched off). A screen switched off overnight that is
+ * still dark at opening time alerts at opening. Screens not seen for over 24h
+ * (abandoned/test screens) never alert. One alert per offline spell.
  * Uptime = share of health checks that found the screen online in a rolling 24h window.
  */
 
@@ -17,6 +20,47 @@ const ONLINE_FACTOR = 2;
 const WARNING_FACTOR = 5;
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const LEGACY_COMMAND_TIMEOUT_MS = 30 * 60 * 1000;
+const ALERT_MAX_SILENCE_MS = 24 * 60 * 60 * 1000;
+const CLOSING_GRACE_MIN = 15;
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function ukClock(date) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/London', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const get = (t) => parts.find(p => p.type === t)?.value;
+    const day = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[get('weekday')];
+    return { day, minutes: Number(get('hour')) * 60 + Number(get('minute')) };
+}
+
+const hm = (s) => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '').trim());
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+
+/** Is the restaurant trading now? No opening hours set → treat as always trading. */
+export function isTradingNow(restaurant, date = new Date()) {
+    const hours = restaurant?.opening_hours;
+    if (!hours || typeof hours !== 'object') return true;
+    const { day, minutes } = ukClock(date);
+    const slot = (d) => {
+        const h = hours[DAYS[d]];
+        if (!h || h.closed) return null;
+        const open = hm(h.open), close = hm(h.close);
+        return open === null || close === null ? null : { open, close };
+    };
+    const today = slot(day);
+    if (today) {
+        if (today.close > today.open) {
+            if (minutes >= today.open && minutes < today.close - CLOSING_GRACE_MIN) return true;
+        } else if (minutes >= today.open) {
+            return true;                                   // evening part of an overnight day
+        }
+    }
+    const yesterday = slot((day + 6) % 7);                 // after midnight on an overnight day
+    if (yesterday && yesterday.close <= yesterday.open && minutes < yesterday.close - CLOSING_GRACE_MIN) return true;
+    return false;
+}
 
 function healthOf(screen, nowMs) {
     if (!screen.last_heartbeat) return 'offline';
@@ -42,6 +86,14 @@ Deno.serve(async (req) => {
 
         const sr = base44.asServiceRole;
         const screens = await sr.entities.Screen.filter({ is_active: true });
+        const restaurantCache = new Map();
+        const restaurantOf = async (id) => {
+            if (!restaurantCache.has(id)) {
+                const rows = await sr.entities.Restaurant.filter({ id }).catch(() => []);
+                restaurantCache.set(id, rows[0] || null);
+            }
+            return restaurantCache.get(id);
+        };
         const now = new Date();
         const nowMs = now.getTime();
         const nowIso = now.toISOString();
@@ -80,16 +132,17 @@ Deno.serve(async (req) => {
                     if (status === 'online') updates.notification_sent = false;
                 }
 
-                // Alert only on a real transition into offline
-                const justWentOffline = status === 'offline' && previous !== 'offline' && !!screen.last_heartbeat;
-                if (justWentOffline && !screen.notification_sent) {
+                // Alert once per offline spell, only while the restaurant is trading,
+                // and never for screens abandoned for over a day
+                const lastSeenMs = screen.last_heartbeat ? new Date(screen.last_heartbeat).getTime() : 0;
+                const recentlySeen = lastSeenMs > 0 && nowMs - lastSeenMs < ALERT_MAX_SILENCE_MS;
+                if (status === 'offline' && !screen.notification_sent && recentlySeen) {
+                    const restaurant = await restaurantOf(screen.restaurant_id);
+                    if (isTradingNow(restaurant, now)) {
                     wentOffline += 1;
                     try {
-                        const [managers, restaurants] = await Promise.all([
-                            sr.entities.RestaurantManager.filter({ restaurant_ids: screen.restaurant_id, is_active: true }),
-                            sr.entities.Restaurant.filter({ id: screen.restaurant_id }),
-                        ]);
-                        const restaurantName = restaurants[0]?.name || 'your restaurant';
+                        const managers = await sr.entities.RestaurantManager.filter({ restaurant_ids: screen.restaurant_id, is_active: true });
+                        const restaurantName = restaurant?.name || 'your restaurant';
                         const lastSeen = new Date(screen.last_heartbeat).toLocaleString('en-GB', { timeZone: 'Europe/London' });
                         for (const manager of managers) {
                             await sr.entities.Notification.create({
@@ -106,6 +159,7 @@ Deno.serve(async (req) => {
                         updates.notification_sent = true;
                     } catch (notifError) {
                         console.error('Failed to send notification:', notifError);
+                    }
                     }
                 }
 
