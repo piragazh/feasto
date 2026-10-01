@@ -134,6 +134,12 @@ export default function StudioPlaylists({ restaurantId }) {
         }
     });
 
+    // Media zones of this screen's layout (for per-zone playlists). Use the live
+    // screen record so a layout change shows up without re-selecting the screen.
+    const liveSelectedScreen = selectedScreen ? (screens.find(s => s.id === selectedScreen.id) || selectedScreen) : null;
+    const screenMediaZones = (liveSelectedScreen?.layout_template?.zones || [])
+        .filter(z => (z.type || z.content_type || 'media') === 'media');
+
     const screenPlaylist = selectedScreen
         ? [...allContent]
             .filter(c => c.screen_name === selectedScreen.screen_name)
