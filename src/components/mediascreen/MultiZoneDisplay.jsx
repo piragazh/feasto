@@ -121,18 +121,14 @@ function ZoneRenderer({ zone, restaurant, content, widgetConfigs, restaurantId }
                 );
 
             case 'menu':
+                // Live POS menu board (same prices/availability as the till)
                 return (
-                    <div className="w-full h-full overflow-hidden p-6 text-white bg-gray-900">
-                        <h3 className="text-2xl font-bold mb-4">Today's Specials</h3>
-                        <div className="space-y-3">
-                            {content.slice(0, 6).map((item, idx) => (
-                                <div key={idx} className="bg-white/10 rounded-lg p-3">
-                                    <h4 className="font-semibold">{item.title}</h4>
-                                    {item.description && <p className="text-sm opacity-80 mt-1">{item.description}</p>}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    <WidgetRenderer
+                        widgetType="menu_widget"
+                        config={{ max_items: 6, columns: 1, ...getWidgetConfig('menu_widget'), ...(zone.config || {}) }}
+                        restaurantId={restaurantId}
+                        className="w-full h-full"
+                    />
                 );
 
             case 'live_orders':
