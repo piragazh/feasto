@@ -156,6 +156,10 @@
     },
     "ai_prompt": {
       "type": "string"
+    },
+    "zone_id": {
+      "type": "string",
+      "description": "Layout zone this item plays in (e.g. 'left'). Empty = any media zone that has no items of its own."
     }
   },
   "required": [
