@@ -569,6 +569,26 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
         return () => { clearInterval(t); emit(0); };
     }, [paired, trackedId]);
 
+    // Remote view: describe what's on screen; PairedScreenPlayer sends it with
+    // each check-in so Live Control can show "Now showing".
+    const nowShowing = (() => {
+        if (isTakeoverActive(activeTakeover)) return { mode: 'message', title: activeTakeover.title || activeTakeover.message };
+        if (wallEnabled) return { mode: 'media_wall', title: wallName, item_count: wallContent.length };
+        if (isLayoutMode) return { mode: 'layout', layout_name: activeLayout?.name || 'Custom layout', item_count: content.length };
+        const item = content[safeIndex];
+        if (!item) return { mode: allMediaFailed ? 'media_failed' : 'empty', item_count: 0, failed_count: failedIds.size };
+        return {
+            mode: 'playlist', content_id: item.id, title: item.title || '', media_type: item.media_type,
+            media_url: item.media_type === 'widget' ? null : item.media_url, widget_type: item.widget_type || null,
+            item_count: content.length, failed_count: failedIds.size,
+        };
+    })();
+    const nowShowingKey = JSON.stringify(nowShowing);
+    useEffect(() => {
+        if (!paired || embedded) return;
+        window.dispatchEvent(new CustomEvent('mediascreen:nowshowing', { detail: JSON.parse(nowShowingKey) }));
+    }, [nowShowingKey, paired, embedded]);
+
     if (!restaurantId || !screenName) {
         return (
             <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
