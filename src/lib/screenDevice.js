@@ -1,4 +1,5 @@
 import { base44 } from '@/api/base44Client';
+import { nativeAppVersion } from '@/lib/screenCapture';
 
 /**
  * Client helpers for paired media-screen devices.
@@ -73,7 +74,7 @@ export function getDeviceInfo() {
         user_agent: navigator.userAgent,
         resolution: `${window.screen.width}x${window.screen.height}`,
         platform: navigator.userAgentData?.platform || navigator.platform || '',
-        app_version: 'mediascreen-2',
+        app_version: ['mediascreen-2', nativeAppVersion()].filter(Boolean).join('+'),
     };
 }
 
