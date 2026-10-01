@@ -543,6 +543,32 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
         return () => clearInterval(t);
     }, [rotationExpected]);
 
+    // Proof of play: one "play" each time an item comes on screen, plus the seconds
+    // it stayed there. Events are picked up by PairedScreenPlayer and sent with the
+    // next check-in (legacy URL screens and the kiosk don't report). Single-screen
+    // rotation only; layouts and media walls aren't counted yet.
+    const trackedItem = (!embedded && !isLayoutMode && !wallEnabled && !isTakeoverActive(activeTakeover))
+        ? content[safeIndex] : null;
+    const trackedId = trackedItem?.id || null;
+    const trackedItemRef = useRef(null);
+    trackedItemRef.current = trackedItem;
+    useEffect(() => {
+        if (!paired || !trackedId) return;
+        const item = trackedItemRef.current;
+        let since = Date.now();
+        const emit = (plays) => {
+            const seconds = Math.round((Date.now() - since) / 1000);
+            since = Date.now();
+            if (!plays && seconds <= 0) return;
+            window.dispatchEvent(new CustomEvent('mediascreen:played', {
+                detail: { content_id: item.id, title: item.title || '', media_type: item.media_type || '', plays, seconds },
+            }));
+        };
+        emit(1);
+        const t = setInterval(() => emit(0), 60000);
+        return () => { clearInterval(t); emit(0); };
+    }, [paired, trackedId]);
+
     if (!restaurantId || !screenName) {
         return (
             <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
