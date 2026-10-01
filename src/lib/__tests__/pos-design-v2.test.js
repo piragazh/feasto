@@ -236,3 +236,42 @@ describe('stage 4: taking payment', () => {
         expect(rules.every(r => r.split('{')[0].split(',').every(sel => sel.includes('[data-pos-v2')))).toBe(true);
     });
 });
+
+describe('stage 5: service screens', () => {
+    const queue = read('components/pos/POSOrderQueue.jsx');
+    const kds = read('components/kds/KitchenDisplaySystem.jsx');
+    const card = read('components/kds/KDSOrderCard.jsx');
+    const css = read('index.css');
+    it('REGRESSION GUARD: every 32px queue button is a 48px action', () => {
+        const small = [...queue.matchAll(/<Button[\s\S]*?className="([^"]*\bh-8\b[^"]*)"/g)].map(m => m[1]);
+        expect(small.length).toBe(4);
+        expect(small.filter(c => !c.includes('pos-action'))).toEqual([]);
+    });
+    it('kitchen: bump is an action; header icons and the chevron are 48px targets with names', () => {
+        expect(card).toMatch(/className=\{`pos-action w-full font-bold text-base h-11/);
+        const icons = [...kds.matchAll(/<Button variant="ghost" size="icon"[\s\S]*?>/g)].map(m => m[0]);
+        expect(icons.length).toBe(4);
+        for (const b of icons) { expect(b).toMatch(/pos-icon-btn/); expect(b).toMatch(/aria-label=/); }
+        expect(card).toMatch(/aria-expanded=\{expanded\}[\s\S]{0,80}className="pos-icon-btn/);
+    });
+    const lum = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]
+        .map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+        .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0); };
+    const onWhite = (hex) => 1.05 / (lum(hex) + 0.05);
+    it('white text on the status colours passes 4.5:1, and hover only ever goes darker', () => {
+        const fill = (cls) => (css.match(new RegExp(`\\[data-pos-v2\\] \\.${cls} \\{ background-color: (#[0-9a-f]{6}); \\}`)) || [])[1];
+        for (const c of ['bg-yellow-600', 'bg-green-600', 'bg-emerald-600']) {
+            const hex = fill(c);
+            expect(hex, c).toBeTruthy();
+            expect(onWhite(hex), c).toBeGreaterThanOrEqual(4.5);
+        }
+        expect(onWhite('#854d0e')).toBeGreaterThan(onWhite(fill('bg-yellow-600')));
+        expect(onWhite('#166534')).toBeGreaterThan(onWhite(fill('bg-green-600')));
+    });
+    it('only inside the new design (the standalone Kitchen Display page is untouched)', () => {
+        const rules = css.replace(/\/\*[\s\S]*?\*\//g, '').split('}').map(r => r.trim())
+            .filter(r => /\.pos-(action|icon-btn)|\.bg-(yellow|green|emerald)-600|bg-(yellow|green|emerald)-[57]00:hover/.test(r));
+        expect(rules.length).toBeGreaterThanOrEqual(8);
+        expect(rules.every(r => r.split('{')[0].split(',').every(sel => sel.includes('[data-pos-v2')))).toBe(true);
+    });
+});
