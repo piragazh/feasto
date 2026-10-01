@@ -249,7 +249,7 @@ describe('stage 5: service screens', () => {
     });
     it('kitchen: bump is an action; header icons and the chevron are 48px targets with names', () => {
         expect(card).toMatch(/className=\{`pos-action w-full font-bold text-base h-11/);
-        const icons = [...kds.matchAll(/<Button variant="ghost" size="icon"[\s\S]*?>/g)].map(m => m[0]);
+        const icons = [...kds.matchAll(/<Button variant="ghost" size="icon"[\s\S]*?title=[^>]*>/g)].map(m => m[0]);
         expect(icons.length).toBe(4);
         for (const b of icons) { expect(b).toMatch(/pos-icon-btn/); expect(b).toMatch(/aria-label=/); }
         expect(card).toMatch(/aria-expanded=\{expanded\}[\s\S]{0,80}className="pos-icon-btn/);
