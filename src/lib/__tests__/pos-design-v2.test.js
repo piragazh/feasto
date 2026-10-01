@@ -181,3 +181,29 @@ describe('stage 2b: every screen and dialog in the new palette', () => {
         expect(eff).toMatch(/return \(\) => html\.removeAttribute\('data-pos-v2'\);/);
     });
 });
+
+describe('stage 3: the option sheet', () => {
+    const sheet = read('components/pos/POSItemCustomization.jsx');
+    const css = read('index.css');
+    it('REGRESSION GUARD: every choice row is tagged, so none is left small and grey', () => {
+        const rows = (sheet.match(/className=\{`[^`]*flex items-center space-x-2 p-2/g) || []);
+        expect(rows.length).toBe(5);
+        expect(rows.every(r => r.includes('pos-choice'))).toBe(true);
+        expect(sheet).toMatch(/className=\{`pos-sheet /);
+        expect((sheet.match(/pos-sheet-cta/g) || []).length).toBe(2);       // Cancel and Add
+    });
+    it('a chosen option is visibly chosen: the controls really report data-state', () => {
+        expect(read('components/ui/checkbox.jsx')).toMatch(/@radix-ui\/react-checkbox/);
+        expect(read('components/ui/radio-group.jsx')).toMatch(/@radix-ui\/react-radio-group/);
+        expect(css).toMatch(/\[data-pos-v2\] \.pos-choice:has\(\[data-state="checked"\]\) \{/);
+    });
+    it('choices are at least 56px, the buttons too', () => {
+        expect(css).toMatch(/\[data-pos-v2\] \.pos-choice \{\s*min-height: 56px;/);
+        expect(css).toMatch(/\[data-pos-v2\] \.pos-sheet-cta \{ height: 56px;/);
+    });
+    it('classic sheet unchanged: no style for the tags outside the new design', () => {
+        const rules = css.split('}').map(r => r.trim()).filter(r => /\.pos-(choice|sheet)/.test(r));
+        expect(rules.length).toBeGreaterThan(3);
+        expect(rules.every(r => r.split('{')[0].split(',').every(sel => sel.includes('[data-pos-v2'))) ).toBe(true);
+    });
+});
