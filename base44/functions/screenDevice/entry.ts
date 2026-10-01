@@ -19,6 +19,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  *   list          { screen_id }            paired devices for a screen
  *   revoke        { session_id }           unpair a device
  *   send_command  { screen_ids, command }  queue a command
+ *   play_report   { restaurant_id, days }   proof-of-play totals
  *   set_takeover / clear_takeover { restaurant_id, screen_ids?, title, message, style, duration_minutes }
  */
 
@@ -55,6 +56,47 @@ function cleanDeviceInfo(info) {
         platform: pick(info.platform, 60),
         app_version: pick(info.app_version, 60),
     };
+}
+
+function ukDate(d = new Date()) {
+    // en-CA formats as YYYY-MM-DD
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
+async function recordPlays(sr, screen, plays, now) {
+    const list = Array.isArray(plays) ? plays.slice(0, 50) : [];
+    if (!list.length) return;
+    const date = ukDate(now);
+    // merge duplicates from the batch
+    const merged = new Map();
+    for (const p of list) {
+        if (!p?.content_id || typeof p.content_id !== 'string') continue;
+        const cur = merged.get(p.content_id) || { content_id: p.content_id, title: '', media_type: '', plays: 0, seconds: 0 };
+        cur.plays += Math.max(0, Math.min(1000, Math.round(Number(p.plays) || 0)));
+        cur.seconds += Math.max(0, Math.min(86400, Math.round(Number(p.seconds) || 0)));
+        if (p.title) cur.title = String(p.title).slice(0, 120);
+        if (p.media_type) cur.media_type = String(p.media_type).slice(0, 20);
+        merged.set(p.content_id, cur);
+    }
+    for (const p of merged.values()) {
+        if (!p.plays && !p.seconds) continue;
+        try {
+            const rows = await sr.entities.ScreenPlayStat.filter({ screen_id: screen.id, content_id: p.content_id, date });
+            if (rows[0]) {
+                await sr.entities.ScreenPlayStat.update(rows[0].id, {
+                    plays: (Number(rows[0].plays) || 0) + p.plays,
+                    seconds: (Number(rows[0].seconds) || 0) + p.seconds,
+                    ...(p.title ? { content_title: p.title } : {}),
+                });
+            } else {
+                await sr.entities.ScreenPlayStat.create({
+                    restaurant_id: screen.restaurant_id, screen_id: screen.id, screen_name: screen.screen_name,
+                    content_id: p.content_id, content_title: p.title, media_type: p.media_type,
+                    date, plays: p.plays, seconds: p.seconds,
+                });
+            }
+        } catch (e) { console.error('play stat failed', e); }
+    }
 }
 
 async function getUser(base44) {
@@ -255,6 +297,9 @@ Deno.serve(async (req) => {
                 } catch (e) { console.error('ack failed', e); }
             }
 
+            // Proof of play reported since the last check-in
+            await recordPlays(sr, screen, body.plays, now);
+
             // Time out commands a device picked up but never confirmed
             const delivered = await sr.entities.ScreenCommandLog.filter({ screen_id: screen.id, status: 'delivered' }, 'created_date', 20);
             await Promise.all(delivered
@@ -400,6 +445,31 @@ Deno.serve(async (req) => {
             }
             await Promise.all(screens.map(sc => sr.entities.Screen.update(sc.id, { takeover })));
             return json({ ok: true, screens: screens.length, takeover });
+        }
+
+        if (action === 'play_report') {
+            const restaurantId = body.restaurant_id;
+            if (!(await canManage(base44, user, restaurantId))) return json({ error: 'Not allowed' }, 403);
+            const days = Math.min(90, Math.max(1, Number(body.days) || 7));
+            const from = ukDate(new Date(now.getTime() - (days - 1) * 86400000));
+            const rows = await sr.entities.ScreenPlayStat.filter({ restaurant_id: restaurantId }, '-date', 2000);
+            const inRange = rows.filter(r => String(r.date) >= from);
+            const byContent = new Map();
+            const byScreen = new Map();
+            for (const r of inRange) {
+                const c = byContent.get(r.content_id) || { content_id: r.content_id, title: r.content_title, media_type: r.media_type, plays: 0, seconds: 0, screens: new Set() };
+                c.plays += Number(r.plays) || 0; c.seconds += Number(r.seconds) || 0; c.screens.add(r.screen_name || r.screen_id);
+                if (r.content_title) c.title = r.content_title;
+                byContent.set(r.content_id, c);
+                const sc = byScreen.get(r.screen_id) || { screen_id: r.screen_id, screen_name: r.screen_name, plays: 0, seconds: 0 };
+                sc.plays += Number(r.plays) || 0; sc.seconds += Number(r.seconds) || 0;
+                byScreen.set(r.screen_id, sc);
+            }
+            return json({
+                from, days,
+                content: [...byContent.values()].map(c => ({ ...c, screens: [...c.screens] })).sort((a, b) => b.seconds - a.seconds),
+                screens: [...byScreen.values()].sort((a, b) => b.seconds - a.seconds),
+            });
         }
 
         if (action === 'send_command') {
