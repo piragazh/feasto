@@ -8,8 +8,13 @@
  *  - stable sort: priority desc → display_order asc → created_date asc → id
  *    (items sharing a display_order no longer swap places between refreshes)
  *
- * Time is the display device's local clock (unchanged behaviour).
+ * Time is UK wall-clock time (Europe/London, DST-aware) — the same clock the
+ * till, kiosk and online ordering use (src/lib/pos-schedule-logic.js). Display
+ * sticks often ship set to UTC, which would put every daypart an hour out all
+ * summer if we trusted the device's own zone.
  */
+
+import { localClock, DEFAULT_TIMEZONE } from '@/lib/pos-schedule-logic';
 
 const toMinutes = (hhmm) => {
     if (typeof hhmm !== 'string') return null;
@@ -27,7 +32,7 @@ const inTimeRange = (nowMin, range) => {
     return nowMin >= start || nowMin < end;        // crosses midnight
 };
 
-export function isScheduleActive(schedule, now = new Date()) {
+export function isScheduleActive(schedule, now = new Date(), timeZone = DEFAULT_TIMEZONE) {
     if (!schedule?.enabled) return true;
 
     if (schedule.start_date && new Date(schedule.start_date) > now) return false;
@@ -37,8 +42,9 @@ export function isScheduleActive(schedule, now = new Date()) {
     if (rec?.enabled) {
         const days = Array.isArray(rec.days_of_week) ? rec.days_of_week.map(Number) : [];
         const ranges = Array.isArray(rec.time_ranges) ? rec.time_ranges : [];
-        const nowMin = now.getHours() * 60 + now.getMinutes();
-        const today = now.getDay();
+        const clock = localClock(now, timeZone);
+        const nowMin = clock.minutes;
+        const today = clock.day;
         const yesterday = (today + 6) % 7;
 
         if (ranges.length === 0) {
