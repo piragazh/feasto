@@ -216,6 +216,24 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
     });
     const widgetConfigs = paired ? (manifest.widget_configs || EMPTY) : queriedWidgetConfigs;
 
+    // Per-zone playlists: items assigned to a zone (zone_id) play only there.
+    // A media zone with nothing assigned plays the unassigned items, so screens
+    // set up before zone playlists existed behave exactly as before.
+    const contentByZone = useMemo(() => {
+        const map = new Map();
+        const unassigned = [];
+        const zoneIds = new Set((layout?.zones || []).map(z => z.id));
+        for (const item of allContent) {
+            if (item.zone_id && zoneIds.has(item.zone_id)) {
+                if (!map.has(item.zone_id)) map.set(item.zone_id, []);
+                map.get(item.zone_id).push(item);
+            } else {
+                unassigned.push(item);   // no zone, or a zone this layout doesn't have
+            }
+        }
+        return { map, unassigned };
+    }, [allContent, layout]);
+
     if (!layout?.zones || layout.zones.length === 0) {
         return (
             <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -231,7 +249,7 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
                     key={zone.id}
                     zone={zone}
                     restaurant={restaurant}
-                    content={allContent}
+                    content={contentByZone.map.get(zone.id) || contentByZone.unassigned}
                     widgetConfigs={widgetConfigs}
                     restaurantId={restaurantId}
                 />

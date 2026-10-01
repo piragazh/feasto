@@ -435,6 +435,20 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                                     }
                                                                                 </Badge>
                                                                             )}
+                                                                            {screenMediaZones.length > 1 && (
+                                                                                <select
+                                                                                    value={item.zone_id || ''}
+                                                                                    onChange={(e) => updateContentMutation.mutate({ id: item.id, data: { zone_id: e.target.value || null } })}
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                    aria-label="Layout zone"
+                                                                                    className="text-[10px] h-5 rounded border border-indigo-200 bg-indigo-50 text-indigo-700 px-1"
+                                                                                >
+                                                                                    <option value="">Any zone</option>
+                                                                                    {screenMediaZones.map(z => (
+                                                                                        <option key={z.id} value={z.id}>{z.label || z.id}</option>
+                                                                                    ))}
+                                                                                </select>
+                                                                            )}
                                                                             </div>
                                                                     </div>
                                                                     <div className="flex flex-col gap-1.5 flex-shrink-0 items-end">
