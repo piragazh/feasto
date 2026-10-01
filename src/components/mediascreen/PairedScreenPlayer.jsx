@@ -9,6 +9,27 @@ import {
 const PAIRING_POLL_MS = 4000;
 const DEFAULT_HEARTBEAT_S = 20;
 const RELOAD_COMMANDS = ['reload', 'reboot', 'refresh_content', 'clear_cache'];
+const PLAYS_KEY = 'mealdrop_screen_pending_plays';
+
+// Proof-of-play totals waiting to be sent (kept across reloads / offline spells)
+const pendingPlays = {
+    get: () => { try { return JSON.parse(localStorage.getItem(PLAYS_KEY) || '{}'); } catch { return {}; } },
+    add: (p) => {
+        const all = pendingPlays.get();
+        const cur = all[p.content_id] || { content_id: p.content_id, plays: 0, seconds: 0 };
+        cur.plays += p.plays || 0;
+        cur.seconds += p.seconds || 0;
+        cur.title = p.title || cur.title;
+        cur.media_type = p.media_type || cur.media_type;
+        all[p.content_id] = cur;
+        // cap: never let an offline device grow this without limit
+        const keys = Object.keys(all);
+        if (keys.length > 200) delete all[keys[0]];
+        try { localStorage.setItem(PLAYS_KEY, JSON.stringify(all)); } catch {}
+    },
+    take: () => { const all = pendingPlays.get(); try { localStorage.removeItem(PLAYS_KEY); } catch {} return Object.values(all); },
+    restore: (list) => list.forEach(p => pendingPlays.add(p)),
+};
 
 function PairingScreen({ code, expiresAt, error }) {
     const [, force] = useState(0);
@@ -129,6 +150,13 @@ export default function PairedScreenPlayer() {
         })();
     }, []);
 
+    // ── Proof of play: collect what the player reports ────────────────────────────
+    useEffect(() => {
+        const onPlayed = (e) => { if (e.detail?.content_id) pendingPlays.add(e.detail); };
+        window.addEventListener('mediascreen:played', onPlayed);
+        return () => window.removeEventListener('mediascreen:played', onPlayed);
+    }, []);
+
     // ── Heartbeat: check-in, pick up commands and manifest updates ─────────
     useEffect(() => {
         if (phase !== 'running') return;
@@ -140,6 +168,7 @@ export default function PairedScreenPlayer() {
             const secret = deviceSecret.get();
             if (!secret) { resetToPairing(); return; }
             if (navigator.onLine) {
+                const plays = pendingPlays.take();
                 try {
                     const acks = pendingAcks.get();
                     const data = await callScreenApi({
@@ -147,6 +176,7 @@ export default function PairedScreenPlayer() {
                         secret,
                         known_version: manifestVersionRef.current,
                         acks,
+                        plays,
                         device_info: getDeviceInfo(),
                     });
                     if (acks.length) pendingAcks.clear();
@@ -167,7 +197,8 @@ export default function PairedScreenPlayer() {
                         return;
                     }
                 } catch (e) {
-                    // Offline or server error: keep playing the cached manifest
+                    // Offline or server error: keep playing the cached manifest, keep the play counts
+                    pendingPlays.restore(plays);
                     console.warn('[MediaScreen] heartbeat failed', e?.message || e);
                 }
             }
