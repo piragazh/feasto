@@ -5,6 +5,7 @@ import { clearScreenCache } from './scheduleUtils';
 import {
     deviceSecret, cachedManifest, pendingAcks, callScreenApi, getDeviceInfo,
 } from '@/lib/screenDevice';
+import { captureScreen, nativeAppVersion } from '@/lib/screenCapture';
 
 const PAIRING_POLL_MS = 4000;
 const DEFAULT_HEARTBEAT_S = 20;
@@ -70,6 +71,8 @@ export default function PairedScreenPlayer() {
     const manifestVersionRef = useRef(manifest?.version || null);
     const heartbeatSecondsRef = useRef(DEFAULT_HEARTBEAT_S);
     const reloadingRef = useRef(false);
+    const nowShowingRef = useRef(null);
+    const capturingRef = useRef(false);
 
     const resetToPairing = useCallback(() => {
         deviceSecret.clear();
@@ -125,12 +128,31 @@ export default function PairedScreenPlayer() {
         return () => { cancelled = true; clearTimeout(timer); };
     }, [phase]);
 
+    // ── Remote screenshot (no reload) ───────────────────────────────────────────
+    const takeScreenshot = useCallback(async (commandId) => {
+        if (capturingRef.current) return;
+        capturingRef.current = true;
+        try {
+            const { image } = await captureScreen();
+            await callScreenApi({ action: 'screenshot', secret: deviceSecret.get(), image_base64: image, command_id: commandId });
+        } catch (e) {
+            console.warn('[MediaScreen] screenshot failed', e?.message || e);
+            if (commandId) pendingAcks.add({ id: commandId, status: 'failed', error_message: `Screenshot failed: ${e?.message || 'unknown'}` });
+        } finally {
+            capturingRef.current = false;
+        }
+    }, []);
+
     // ── Commands from the queue ─────────────────────────────────────────────
     const runCommands = useCallback((commands) => {
         if (!commands?.length || reloadingRef.current) return;
         let needsReload = false;
         let wipeCache = false;
         for (const c of commands) {
+            if (c.command === 'screenshot') {
+                takeScreenshot(c.id);   // acknowledged by the upload itself
+                continue;
+            }
             if (!RELOAD_COMMANDS.includes(c.command)) {
                 if (c.id) pendingAcks.add({ id: c.id, status: 'failed', error_message: 'Unsupported command' });
                 continue;
@@ -148,13 +170,18 @@ export default function PairedScreenPlayer() {
             }
             setTimeout(() => window.location.reload(), 500);
         })();
-    }, []);
+    }, [takeScreenshot]);
 
     // ── Proof of play: collect what the player reports ────────────────────────────
     useEffect(() => {
         const onPlayed = (e) => { if (e.detail?.content_id) pendingPlays.add(e.detail); };
+        const onNowShowing = (e) => { nowShowingRef.current = e.detail || null; };
         window.addEventListener('mediascreen:played', onPlayed);
-        return () => window.removeEventListener('mediascreen:played', onPlayed);
+        window.addEventListener('mediascreen:nowshowing', onNowShowing);
+        return () => {
+            window.removeEventListener('mediascreen:played', onPlayed);
+            window.removeEventListener('mediascreen:nowshowing', onNowShowing);
+        };
     }, []);
 
     // ── Heartbeat: check-in, pick up commands and manifest updates ─────────
@@ -177,6 +204,9 @@ export default function PairedScreenPlayer() {
                         known_version: manifestVersionRef.current,
                         acks,
                         plays,
+                        now_showing: nowShowingRef.current
+                            ? { ...nowShowingRef.current, native_app: nativeAppVersion() }
+                            : null,
                         device_info: getDeviceInfo(),
                     });
                     if (acks.length) pendingAcks.clear();
