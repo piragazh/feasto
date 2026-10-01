@@ -7,6 +7,7 @@ import { Monitor, Play, Image as ImageIcon, Palette, Zap, Plus, ExternalLink, Fi
 import { createPageUrl } from '@/utils';
 import moment from 'moment';
 import { getScreenHealth } from './screenHealth';
+import StudioPlayReport from './StudioPlayReport';
 
 export default function StudioOverview({ restaurantId, onNavigate }) {
     const { data: screens = [] } = useQuery({
@@ -188,6 +189,8 @@ export default function StudioOverview({ restaurantId, onNavigate }) {
                     </div>
                 )}
             </div>
+
+            <StudioPlayReport restaurantId={restaurantId} />
         </div>
     );
 }
