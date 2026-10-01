@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
     Plus, Trash2, Edit, Cloud, Clock, ShoppingBag,
-    TrendingUp, Users, Timer, Check, Eye, Zap, UtensilsCrossed
+    TrendingUp, Users, Timer, Check, Eye, Zap, UtensilsCrossed, BellRing
 } from 'lucide-react';
 import { toast } from 'sonner';
 import WidgetRenderer from './WidgetRenderer';
@@ -44,7 +44,8 @@ const WIDGET_TYPES = [
     { id: 'stock_ticker', label: 'Stock Ticker', icon: TrendingUp, desc: 'Live market price scrolling ticker', color: 'from-emerald-500 to-green-600' },
     { id: 'queue_status', label: 'Queue Status', icon: Users, desc: 'Customer queue & wait times', color: 'from-orange-500 to-red-500' },
     { id: 'countdown_timer', label: 'Countdown Timer', icon: Timer, desc: 'Promotional countdown to an event', color: 'from-pink-500 to-rose-600' },
-    { id: 'menu_widget', label: 'Menu Board', icon: UtensilsCrossed, desc: 'Live menu items — auto-syncs prices & availability', color: 'from-teal-500 to-cyan-600' },
+    { id: 'menu_widget', label: 'Menu Board', icon: UtensilsCrossed, desc: 'Live POS menu — till prices, deals and sold-out items update automatically', color: 'from-teal-500 to-cyan-600' },
+    { id: 'order_board', label: 'Order Ready Board', icon: BellRing, desc: 'Preparing / Ready for collection — order numbers only', color: 'from-green-500 to-emerald-600' },
 ];
 
 const DEFAULT_SETTINGS = {
@@ -54,7 +55,8 @@ const DEFAULT_SETTINGS = {
     stock_ticker: { symbols: ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN'], refresh_interval: 60, show_change: true, scroll_speed: 'medium', theme: 'dark' },
     queue_status: { queue_label: 'Now Serving', max_display: 6, show_wait_time: true, avg_wait_minutes: 10, status_filter: 'preparing', theme: 'dark' },
     countdown_timer: { target_date: '', title: 'Offer Ends In', subtitle: '', message_after: '🎉 Offer Ended!', theme: 'dark', show_seconds: true },
-    menu_widget: { title: 'Our Menu', category_filter: 'all', max_items: 12, columns: 2, show_prices: true, show_images: true, show_unavailable: false, theme: 'dark', refresh_interval: 60 },
+    menu_widget: { title: 'Our Menu', category_filter: 'all', max_items: 12, page_seconds: 12, columns: 2, show_prices: true, show_images: true, show_descriptions: true, show_unavailable: false, theme: 'dark', refresh_interval: 60 },
+    order_board: { title_preparing: 'Preparing', title_ready: 'Ready for collection', show_preparing: true, max_preparing: 12, max_ready: 12, order_types: ['collection', 'takeaway', 'dine_in'], refresh_seconds: 10, theme: 'dark' },
 };
 
 export default function StudioWidgets({ restaurantId }) {
@@ -409,7 +411,7 @@ export default function StudioWidgets({ restaurantId }) {
                                                 onChange={v => updateSetting('category_filter', v)}
                                             />
                                             <div className="grid grid-cols-3 gap-4">
-                                                <div><Label>Max Items</Label>
+                                                <div><Label>Items per page</Label>
                                                     <Input type="number" min={1} max={50} value={form.settings.max_items || 12} onChange={e => updateSetting('max_items', parseInt(e.target.value)||12)} className="mt-1.5" /></div>
                                                 <div><Label>Columns</Label>
                                                     <Select value={String(form.settings.columns || 2)} onValueChange={v => updateSetting('columns', parseInt(v))}>
@@ -417,6 +419,7 @@ export default function StudioWidgets({ restaurantId }) {
                                                         <SelectContent>
                                                             <SelectItem value="1">1 Column</SelectItem>
                                                             <SelectItem value="2">2 Columns</SelectItem>
+                                                            <SelectItem value="3">3 Columns</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -431,15 +434,66 @@ export default function StudioWidgets({ restaurantId }) {
                                                     </Select>
                                                 </div>
                                             </div>
-                                            <div><Label>Auto-refresh interval (seconds)</Label>
-                                                <Input type="number" min={10} value={form.settings.refresh_interval || 60} onChange={e => updateSetting('refresh_interval', parseInt(e.target.value)||60)} className="mt-1.5" /></div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><Label>Seconds per page</Label>
+                                                    <Input type="number" min={5} value={form.settings.page_seconds || 12} onChange={e => updateSetting('page_seconds', parseInt(e.target.value)||12)} className="mt-1.5" /></div>
+                                                <div><Label>Auto-refresh (seconds)</Label>
+                                                    <Input type="number" min={30} value={form.settings.refresh_interval || 60} onChange={e => updateSetting('refresh_interval', parseInt(e.target.value)||60)} className="mt-1.5" /></div>
+                                            </div>
+                                            <p className="text-xs text-gray-500">Prices, timed deals and sold-out items follow the POS automatically. Long menus page through on their own.</p>
                                             <div className="flex flex-wrap gap-6">
                                                 <div className="flex items-center gap-3"><Switch checked={form.settings.show_prices !== false} onCheckedChange={v => updateSetting('show_prices', v)} /><Label>Show Prices</Label></div>
                                                 <div className="flex items-center gap-3"><Switch checked={form.settings.show_images !== false} onCheckedChange={v => updateSetting('show_images', v)} /><Label>Show Images</Label></div>
-                                                <div className="flex items-center gap-3"><Switch checked={!!form.settings.show_unavailable} onCheckedChange={v => updateSetting('show_unavailable', v)} /><Label>Show Unavailable Items</Label></div>
+                                                <div className="flex items-center gap-3"><Switch checked={form.settings.show_descriptions !== false} onCheckedChange={v => updateSetting('show_descriptions', v)} /><Label>Show Descriptions</Label></div>
+                                                <div className="flex items-center gap-3"><Switch checked={!!form.settings.show_unavailable} onCheckedChange={v => updateSetting('show_unavailable', v)} /><Label>Show sold-out items (marked)</Label></div>
                                             </div>
                                         </div>
                                     )}
+
+                            {/* ORDER READY BOARD */}
+                            {form.widget_type === 'order_board' && (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><Label>"Preparing" heading</Label>
+                                            <Input value={form.settings.title_preparing || ''} onChange={e => updateSetting('title_preparing', e.target.value)} placeholder="Preparing" className="mt-1.5" /></div>
+                                        <div><Label>"Ready" heading</Label>
+                                            <Input value={form.settings.title_ready || ''} onChange={e => updateSetting('title_ready', e.target.value)} placeholder="Ready for collection" className="mt-1.5" /></div>
+                                    </div>
+                                    <div>
+                                        <Label>Order types shown</Label>
+                                        <div className="flex flex-wrap gap-4 mt-2">
+                                            {[['collection', 'Collection'], ['takeaway', 'Takeaway'], ['dine_in', 'Dine-in'], ['delivery', 'Delivery']].map(([val, text]) => {
+                                                const current = Array.isArray(form.settings.order_types) ? form.settings.order_types : ['collection', 'takeaway', 'dine_in'];
+                                                const on = current.includes(val);
+                                                return (
+                                                    <label key={val} className="flex items-center gap-2 text-sm">
+                                                        <Switch checked={on} onCheckedChange={v => updateSetting('order_types', v ? [...new Set([...current, val])] : current.filter(x => x !== val))} />
+                                                        {text}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div><Label>Max ready shown</Label>
+                                            <Input type="number" min={1} max={30} value={form.settings.max_ready || 12} onChange={e => updateSetting('max_ready', parseInt(e.target.value)||12)} className="mt-1.5" /></div>
+                                        <div><Label>Refresh (seconds)</Label>
+                                            <Input type="number" min={5} value={form.settings.refresh_seconds || 10} onChange={e => updateSetting('refresh_seconds', parseInt(e.target.value)||10)} className="mt-1.5" /></div>
+                                        <div><Label>Theme</Label>
+                                            <Select value={form.settings.theme || 'dark'} onValueChange={v => updateSetting('theme', v)}>
+                                                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="dark">Dark</SelectItem>
+                                                    <SelectItem value="light">Light</SelectItem>
+                                                    <SelectItem value="branded">Branded</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3"><Switch checked={form.settings.show_preparing !== false} onCheckedChange={v => updateSetting('show_preparing', v)} /><Label>Show "Preparing" column</Label></div>
+                                    <p className="text-xs text-gray-500">Only order numbers are shown — never customer names.</p>
+                                </div>
+                            )}
 
                              {/* COUNTDOWN TIMER */}
                             {form.widget_type === 'countdown_timer' && (

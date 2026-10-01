@@ -40,7 +40,9 @@
         "orders",
         "stock_ticker",
         "queue_status",
-        "countdown_timer"
+        "countdown_timer",
+        "menu_widget",
+        "order_board"
       ],
       "description": "Widget type \u2014 used when media_type is 'widget'"
     },

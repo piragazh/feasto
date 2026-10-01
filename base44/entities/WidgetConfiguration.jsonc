@@ -23,7 +23,8 @@
         "stock_ticker",
         "queue_status",
         "countdown_timer",
-        "menu_widget"
+        "menu_widget",
+        "order_board"
       ],
       "description": "Type of widget this configuration is for"
     },
@@ -276,6 +277,50 @@
               "type": "number",
               "default": 60,
               "description": "Auto-refresh interval in seconds"
+            },
+            "page_seconds": {
+              "type": "number"
+            },
+            "show_descriptions": {
+              "type": "boolean"
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "order_board": {
+          "type": "object",
+          "properties": {
+            "title_preparing": {
+              "type": "string"
+            },
+            "title_ready": {
+              "type": "string"
+            },
+            "show_preparing": {
+              "type": "boolean"
+            },
+            "max_preparing": {
+              "type": "number"
+            },
+            "max_ready": {
+              "type": "number"
+            },
+            "order_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "refresh_seconds": {
+              "type": "number"
+            },
+            "theme": {
+              "type": "string"
             }
           }
         }

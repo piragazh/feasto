@@ -5,6 +5,7 @@ import StockTickerWidget from './widgets/StockTickerWidget';
 import QueueStatusWidget from './widgets/QueueStatusWidget';
 import CountdownTimerWidget from './widgets/CountdownTimerWidget';
 import MenuWidget from './widgets/MenuWidget';
+import OrderBoardWidget from './widgets/OrderBoardWidget';
 import { useScreenManifest } from './ScreenManifestContext';
 
 // ─── Built-in Weather Widget ─────────────────────────────────────────────────
@@ -186,6 +187,8 @@ export default function WidgetRenderer({ widgetType, config = {}, restaurantId, 
             return <CountdownTimerWidget config={config} className={className} />;
         case 'menu_widget':
             return <MenuWidget config={config} restaurantId={restaurantId} className={className} />;
+        case 'order_board':
+            return <OrderBoardWidget config={config} restaurantId={restaurantId} className={className} />;
         default:
             return (
                 <div className="bg-gray-800 h-full flex items-center justify-center">

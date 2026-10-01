@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import {
     Monitor, Plus, Trash2, GripVertical, Play, Image as ImageIcon,
     Film, Clock, Copy, ExternalLink, Edit, RotateCw, X,
-    Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer, Layout, Link2
+    Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer, Layout, Link2, UtensilsCrossed, BellRing
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
@@ -29,6 +29,8 @@ const WIDGET_TYPE_META = {
     stock_ticker: { label: 'Stock Ticker', icon: TrendingUp, color: 'text-emerald-500' },
     queue_status: { label: 'Queue Status', icon: Users, color: 'text-orange-500' },
     countdown_timer: { label: 'Countdown', icon: Timer, color: 'text-pink-500' },
+    menu_widget: { label: 'Menu Board', icon: UtensilsCrossed, color: 'text-teal-500' },
+    order_board: { label: 'Order Ready Board', icon: BellRing, color: 'text-green-500' },
 };
 
 export default function StudioPlaylists({ restaurantId }) {
