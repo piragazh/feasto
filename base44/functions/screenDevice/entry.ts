@@ -9,6 +9,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  *   heartbeat  → check-in: returns queued commands, server time and the
  *                screen manifest (only when it changed since known_version)
  *   time       → server time (used by media walls for clock sync)
+ *   order_board → order numbers + status for an order-ready board (no customer data)
  *   kiosk_promo → read-only promo playlist for a kiosk's idle screen. Only the
  *                screen named in the restaurant's kiosk settings, only active
  *                promo content — no heartbeat, no commands.
@@ -272,6 +273,33 @@ Deno.serve(async (req) => {
         }
 
         // ── Manager actions ─────────────────────────────────────────────────
+        // order_board: ready/preparing order numbers for a paired screen
+        if (action === 'order_board') {
+            const session = await findSession(sr, body.secret);
+            if (!session || session.status !== 'paired') return json({ status: session?.status || 'unknown' }, 401);
+            const types = Array.isArray(body.order_types) && body.order_types.length
+                ? body.order_types.filter(t => ['collection', 'takeaway', 'dine_in', 'delivery'].includes(t))
+                : ['collection', 'takeaway', 'dine_in'];
+            const rows = await sr.entities.Order.filter(
+                { restaurant_id: session.restaurant_id, status: { $in: ['confirmed', 'preparing', 'ready_for_collection'] } },
+                '-created_date',
+                80
+            );
+            const cutoff = now.getTime() - 12 * 60 * 60 * 1000;
+            const orders = rows
+                .filter(o => types.includes(o.order_type || 'delivery'))
+                .filter(o => !o.created_date || new Date(o.created_date).getTime() >= cutoff)
+                .map(o => ({
+                    id: o.id,
+                    order_number: o.order_number || null,
+                    status: o.status,
+                    order_type: o.order_type,
+                    created_date: o.created_date,
+                    updated_date: o.updated_date,
+                }));
+            return json({ orders, server_time: nowIso });
+        }
+
         const user = await getUser(base44);
         if (!user) return json({ error: 'Login required' }, 401);
 
