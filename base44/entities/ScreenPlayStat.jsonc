@@ -1,0 +1,65 @@
+{
+  "name": "ScreenPlayStat",
+  "type": "object",
+  "description": "Proof of play: daily totals of how often and how long each piece of content was on screen (reported by paired screens)",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "screen_id": {
+      "type": "string"
+    },
+    "screen_name": {
+      "type": "string"
+    },
+    "content_id": {
+      "type": "string"
+    },
+    "content_title": {
+      "type": "string"
+    },
+    "media_type": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "description": "UK date, YYYY-MM-DD"
+    },
+    "plays": {
+      "type": "number",
+      "default": 0
+    },
+    "seconds": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "screen_id",
+    "content_id",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
