@@ -60,7 +60,7 @@ export default function NumericKeypad({ rawValue = '', onRawChange, onComplete, 
                     </Button>
                 ))}
                 <Button onClick={clear}
-                    className="h-12 text-sm font-bold bg-red-800 hover:bg-red-700 text-white border border-gray-600">
+                    className="pos-key h-12 text-sm font-bold bg-red-800 hover:bg-red-700 text-white border border-gray-600">
                     CLR
                 </Button>
 
@@ -76,7 +76,7 @@ export default function NumericKeypad({ rawValue = '', onRawChange, onComplete, 
                 </Button>
 
                 <Button onClick={() => append('0')}
-                    className={`col-span-2 h-12 text-xl font-bold border ${keyCls}`}>
+                    className={`pos-key col-span-2 h-12 text-xl font-bold border ${keyCls}`}>
                     0
                 </Button>
                 <Button onClick={() => append('00')}
