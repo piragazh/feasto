@@ -164,7 +164,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent 
                 hideClose
-                className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-0 flex flex-col max-h-[85dvh]`}
+                className={`pos-sheet ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-0 flex flex-col max-h-[85dvh]`}
                 style={{
                     maxWidth: columns === 1 ? '90vw' : columns === 2 ? '95vw' : '98vw'
                 }}
@@ -440,7 +440,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     <Button 
                         variant="outline" 
                         onClick={onClose}
-                        className={`flex-1 ${isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200'} font-bold rounded-lg h-12 text-sm`}
+                        className={`pos-sheet-cta flex-1 ${isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200'} font-bold rounded-lg h-12 text-sm`}
                     >
                         Cancel
                     </Button>

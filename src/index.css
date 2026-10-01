@@ -335,3 +335,26 @@
 [data-pos-v2="light"] .bg-gray-50 { background-color: rgb(var(--pos-raised)); }
 [data-pos-v2="light"] .border-gray-200, [data-pos-v2="light"] .border-gray-100 { border-color: rgb(var(--pos-line)); }
 [data-pos-v2="light"] .text-gray-400, [data-pos-v2="light"] .text-gray-500 { color: rgb(var(--pos-muted)); }
+
+/* ── New POS design (stage 3): the option sheet ──────────────────────────────
+   POSItemCustomization (the default option sheet) built every choice as a
+   ~36px grey row with no visible "chosen" state. In the new design each choice
+   is a 56px button, and a ticked one carries the accent border and tint - you
+   can see what's selected from arm's length. Hooks are class names only
+   (pos-sheet, pos-choice, pos-sheet-cta): the classic sheet is unchanged. */
+[data-pos-v2] .pos-sheet { background-color: rgb(var(--pos-surface)); border-color: rgb(var(--pos-line)); color: rgb(var(--pos-text)); border-radius: 20px; }
+[data-pos-v2] .pos-choice {
+    min-height: 56px; padding: 10px 14px; border-radius: 12px;
+    border: 2px solid rgb(var(--pos-line)); background-color: rgb(var(--pos-surface));
+    font-size: 15px; font-weight: 600;
+}
+[data-pos-v2] .pos-choice:hover { background-color: rgb(var(--pos-ground)); }
+[data-pos-v2] .pos-choice:has([data-state="checked"]) {
+    border-color: rgb(var(--pos-accent-600, 234 88 12));
+    background-color: rgb(var(--pos-accent-500, 249 115 22) / 0.12);
+}
+[data-pos-v2] .pos-sheet-cta { height: 56px; font-size: 17px; font-weight: 800; border-radius: 14px; }
+/* The rest of the POS's grey dark surfaces (sheets, panels) join the palette too. */
+[data-pos-v2="dark"] .bg-gray-800 { background-color: rgb(var(--pos-surface)); }
+[data-pos-v2="dark"] .bg-gray-700 { background-color: rgb(var(--pos-raised)); }
+[data-pos-v2="dark"] .border-gray-700, [data-pos-v2="dark"] .border-gray-600 { border-color: rgb(var(--pos-line)); }
