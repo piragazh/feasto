@@ -11,6 +11,7 @@ import { Monitor, Power, RefreshCw, Wifi, WifiOff, Send, CheckCircle, AlertCircl
 import { toast } from 'sonner';
 import moment from 'moment';
 import { getScreenHealth, functionErrorMessage } from './screenHealth';
+import TakeoverControl from './TakeoverControl';
 
 export default function ScreenControl({ restaurantId }) {
     const queryClient = useQueryClient();
@@ -185,6 +186,12 @@ export default function ScreenControl({ restaurantId }) {
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
+                <TakeoverControl
+                    restaurantId={restaurantId}
+                    screens={screens}
+                    selectedScreenIds={selectedScreens}
+                    onChanged={refetch}
+                />
                 <div className="flex flex-wrap items-center gap-3 p-3 bg-gray-50 rounded-lg border">
                     <div className="flex items-center gap-2">
                         <Filter className="h-4 w-4 text-gray-500" />
