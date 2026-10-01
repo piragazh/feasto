@@ -12,12 +12,14 @@ import { toast } from 'sonner';
 import moment from 'moment';
 import { getScreenHealth, functionErrorMessage } from './screenHealth';
 import TakeoverControl from './TakeoverControl';
+import ScreenRemoteView from './ScreenRemoteView';
 
 export default function ScreenControl({ restaurantId }) {
     const queryClient = useQueryClient();
     const [selectedScreens, setSelectedScreens] = useState([]);
     const [filterGroup, setFilterGroup] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [screenshotRequested, setScreenshotRequested] = useState({});
 
     const { data: screens = [], refetch } = useQuery({
         queryKey: ['screens-control', restaurantId],
@@ -105,6 +107,20 @@ export default function ScreenControl({ restaurantId }) {
             setSelectedScreens([]);
         } catch (error) {
             toast.error(functionErrorMessage(error, 'Failed to send bulk command'));
+        }
+    };
+
+    // Remote screenshot: the paired screen captures itself and uploads within ~20s
+    const requestScreenshot = async (screenId) => {
+        try {
+            const data = await queueCommand([screenId], 'screenshot');
+            if (data?.results?.[0]?.reason === 'not_paired') throw new Error('Pair this screen first');
+            if (!data?.ok) throw new Error('Request was not accepted');
+            setScreenshotRequested(r => ({ ...r, [screenId]: Date.now() }));
+            setTimeout(() => setScreenshotRequested(r => { const n = { ...r }; delete n[screenId]; return n; }), 60000);
+            toast.success('Screenshot requested — it appears here within about 20 seconds');
+        } catch (error) {
+            toast.error(functionErrorMessage(error, 'Could not request screenshot'));
         }
     };
 
@@ -396,6 +412,13 @@ export default function ScreenControl({ restaurantId }) {
                                                             </>
                                                         )}
                                                     </div>
+
+                                                    <ScreenRemoteView
+                                                        screen={screen}
+                                                        offline={status === 'offline'}
+                                                        requesting={!!screenshotRequested[screen.id] && (!screen.last_screenshot_at || new Date(screen.last_screenshot_at).getTime() < screenshotRequested[screen.id])}
+                                                        onScreenshot={() => requestScreenshot(screen.id)}
+                                                    />
 
                                                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                                                         <div className="flex items-center gap-1">

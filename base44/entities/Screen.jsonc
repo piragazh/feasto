@@ -111,7 +111,9 @@
       "enum": [
         "landscape",
         "portrait",
-        "auto"
+        "auto",
+        "portrait_flipped",
+        "landscape_flipped"
       ],
       "default": "landscape",
       "description": "Screen orientation mode"
