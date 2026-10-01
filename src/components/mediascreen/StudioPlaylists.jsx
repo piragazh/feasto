@@ -219,7 +219,7 @@ export default function StudioPlaylists({ restaurantId }) {
     };
 
     const openScreenUrl = (screen) => {
-        const url = `${window.location.origin}${createPageUrl('MediaScreen')}?restaurantId=${restaurantId}&screenName=${encodeURIComponent(screen.screen_name)}`;
+        const url = `${window.location.origin}${createPageUrl('MediaScreen')}?restaurantId=${restaurantId}&screenName=${encodeURIComponent(screen.screen_name)}&preview=1`;
         window.open(url, '_blank');
     };
 

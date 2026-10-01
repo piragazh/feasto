@@ -132,7 +132,7 @@ export default function StudioOverview({ restaurantId, onNavigate }) {
                         {screens.map(screen => {
                             const status = getScreenStatus(screen);
                             const screenContent = content.filter(c => c.screen_name === screen.screen_name).sort((a,b) => (a.display_order||0) - (b.display_order||0));
-                            const screenUrl = `${window.location.origin}${createPageUrl('MediaScreen')}?restaurantId=${restaurantId}&screenName=${encodeURIComponent(screen.screen_name)}`;
+                            const screenUrl = `${window.location.origin}${createPageUrl('MediaScreen')}?restaurantId=${restaurantId}&screenName=${encodeURIComponent(screen.screen_name)}&preview=1`;
 
                             return (
                                 <Card key={screen.id} className="border border-gray-200 shadow-none hover:shadow-md transition-shadow overflow-hidden">

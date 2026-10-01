@@ -93,7 +93,7 @@ function ClockWeatherOverlay({ weather }) {
     );
 }
 
-export default function ScreenDisplay({ restaurantId, screenName, embedded = false }) {
+export default function ScreenDisplay({ restaurantId, screenName, embedded = false, preview = false }) {
     // Paired-device mode: all data comes from the manifest (no direct entity reads)
     const manifest = useScreenManifest();
     const paired = !!manifest;
@@ -314,9 +314,10 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
         retry: 1,
     });
 
-    // Heartbeat mechanism (legacy URL mode only — paired devices check in via screenDevice)
+    // Heartbeat mechanism (legacy URL mode only — paired devices check in via screenDevice).
+    // A Studio preview tab is not a screen: it never reports in.
     useEffect(() => {
-        if (!screen?.id || paired) return;
+        if (!screen?.id || paired || preview) return;
 
         const sendHeartbeat = async () => {
             try {
@@ -344,7 +345,7 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                 clearInterval(heartbeatIntervalRef.current);
             }
         };
-    }, [screen?.id, isOnline, paired]);
+    }, [screen?.id, isOnline, paired, preview]);
 
     // Command listener (legacy URL mode only)
     useEffect(() => {
@@ -359,6 +360,9 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
 
                 // Priority message (emergency takeover) — picked up within 10s
                 setLegacyTakeover(currentScreen?.takeover || null);
+
+                // Preview tabs only watch; commands belong to the real screen
+                if (preview) return;
 
                 if (currentScreen?.pending_command) {
                     const command = currentScreen.pending_command;
@@ -420,7 +424,7 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                 clearInterval(commandCheckIntervalRef.current);
             }
         };
-    }, [screen?.id, refetchScreen, isOnline, paired]);
+    }, [screen?.id, refetchScreen, isOnline, paired, preview]);
 
     // Pre-cache all media assets for offline resilience
     useMediaPrecache(content, wallContent, isOnline);

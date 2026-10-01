@@ -12,8 +12,10 @@ import { ScreenErrorBoundary, useScreenGuardian } from '@/components/mediascreen
  */
 export default function MediaScreen() {
     const [mode, setMode] = useState(null);
+    const isPreview = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1';
 
-    useScreenGuardian();
+    // Unattended-screen protections — not in a manager's preview tab
+    useScreenGuardian(!isPreview);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -30,7 +32,16 @@ export default function MediaScreen() {
     return (
         <ScreenErrorBoundary>
             {mode.type === 'legacy'
-                ? <ScreenDisplay restaurantId={mode.restaurantId} screenName={mode.screenName} />
+                ? (
+                    <>
+                        <ScreenDisplay restaurantId={mode.restaurantId} screenName={mode.screenName} preview={isPreview} />
+                        {isPreview && (
+                            <div className="fixed top-3 left-3 z-[1000] rounded-full bg-black/70 text-white text-xs font-semibold px-3 py-1 pointer-events-none">
+                                Preview
+                            </div>
+                        )}
+                    </>
+                )
                 : <PairedScreenPlayer />}
         </ScreenErrorBoundary>
     );

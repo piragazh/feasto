@@ -258,7 +258,7 @@ export default function MediaWallManager({ restaurantId }) {
                                                     const firstScreen = wall.screens[0];
                                                     if (firstScreen) {
                                                         window.open(
-                                                            createPageUrl('MediaScreen') + `?restaurantId=${restaurantId}&screenName=${encodeURIComponent(firstScreen.screen_name)}`,
+                                                            createPageUrl('MediaScreen') + `?restaurantId=${restaurantId}&screenName=${encodeURIComponent(firstScreen.screen_name)}&preview=1`,
                                                             '_blank',
                                                             'width=1920,height=1080,toolbar=no,location=no,status=no,menubar=no'
                                                         );

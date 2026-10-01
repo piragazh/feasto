@@ -78,16 +78,18 @@ export class ScreenErrorBoundary extends React.Component {
     }
 }
 
-export function useScreenGuardian() {
+export function useScreenGuardian(enabled = true) {
     // Stall recovery
     useEffect(() => {
+        if (!enabled) return;
         const onStalled = () => recoverReload('rotation stalled');
         window.addEventListener('mediascreen:stalled', onStalled);
         return () => window.removeEventListener('mediascreen:stalled', onStalled);
-    }, []);
+    }, [enabled]);
 
     // Nightly refresh
     useEffect(() => {
+        if (!enabled) return;
         const check = () => {
             const now = new Date();
             if (now.getHours() !== NIGHTLY_HOUR) return;
@@ -102,10 +104,11 @@ export function useScreenGuardian() {
         };
         const t = setInterval(check, 5 * 60 * 1000);
         return () => clearInterval(t);
-    }, []);
+    }, [enabled]);
 
     // Wake lock
     useEffect(() => {
+        if (!enabled) return;
         let lock = null;
         const request = async () => {
             try {
@@ -121,12 +124,13 @@ export function useScreenGuardian() {
             document.removeEventListener('visibilitychange', onVisible);
             try { lock?.release(); } catch {}
         };
-    }, []);
+    }, [enabled]);
 
     // Hide cursor
     useEffect(() => {
+        if (!enabled) return;
         const prev = document.body.style.cursor;
         document.body.style.cursor = 'none';
         return () => { document.body.style.cursor = prev; };
-    }, []);
+    }, [enabled]);
 }
