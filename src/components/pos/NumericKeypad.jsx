@@ -35,27 +35,27 @@ export default function NumericKeypad({ rawValue = '', onRawChange, onComplete, 
     return (
         <div className="space-y-2">
             {/* Display */}
-            <div className={`${displayCls} rounded-lg px-4 py-3 text-right`}>
+            <div className={`pos-key-display ${displayCls} rounded-lg px-4 py-3 text-right`}>
                 <div className={`${labelCls} text-xs mb-0.5`}>Amount</div>
                 <div className={`text-3xl font-bold ${valueCls}`}>£{numericValue.toFixed(2)}</div>
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="pos-keypad grid grid-cols-4 gap-1.5">
                 {[1, 2, 3].map(k => (
                     <Button key={k} onClick={() => append(String(k))}
-                        className={`h-12 text-xl font-bold border ${keyCls}`}>
+                        className={`pos-key h-12 text-xl font-bold border ${keyCls}`}>
                         {k}
                     </Button>
                 ))}
                 <Button onClick={backspace}
-                    className={`h-12 text-xl font-bold border ${backspaceCls}`} aria-label="Delete last digit">
+                    className={`pos-key h-12 text-xl font-bold border ${backspaceCls}`} aria-label="Delete last digit">
                     <Delete className="h-5 w-5" />
                 </Button>
 
                 {[4, 5, 6].map(k => (
                     <Button key={k} onClick={() => append(String(k))}
-                        className={`h-12 text-xl font-bold border ${keyCls}`}>
+                        className={`pos-key h-12 text-xl font-bold border ${keyCls}`}>
                         {k}
                     </Button>
                 ))}
@@ -66,7 +66,7 @@ export default function NumericKeypad({ rawValue = '', onRawChange, onComplete, 
 
                 {[7, 8, 9].map(k => (
                     <Button key={k} onClick={() => append(String(k))}
-                        className={`h-12 text-xl font-bold border ${keyCls}`}>
+                        className={`pos-key h-12 text-xl font-bold border ${keyCls}`}>
                         {k}
                     </Button>
                 ))}
@@ -80,7 +80,7 @@ export default function NumericKeypad({ rawValue = '', onRawChange, onComplete, 
                     0
                 </Button>
                 <Button onClick={() => append('00')}
-                    className={`h-12 text-xl font-bold border ${keyCls}`}>
+                    className={`pos-key h-12 text-xl font-bold border ${keyCls}`}>
                     00
                 </Button>
             </div>

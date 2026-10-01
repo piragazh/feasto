@@ -358,3 +358,17 @@
 [data-pos-v2="dark"] .bg-gray-800 { background-color: rgb(var(--pos-surface)); }
 [data-pos-v2="dark"] .bg-gray-700 { background-color: rgb(var(--pos-raised)); }
 [data-pos-v2="dark"] .border-gray-700, [data-pos-v2="dark"] .border-gray-600 { border-color: rgb(var(--pos-line)); }
+
+/* ── New POS design (stage 4): taking payment ────────────────────────────────
+   Where a mis-tap costs money. The keypad had 48px keys 6px apart; Square and
+   Toast use ~64px. In the new design: 64px keys with 8px gaps and a larger
+   amount, 56px quick-cash and tender buttons. Class-name hooks only (pos-key,
+   pos-keypad, pos-key-display, pos-quick-cash, pos-tender) - payment logic and
+   the classic screen are untouched. Colour keeps its meaning: accent = money
+   and actions, amber = still owed, green = change due. */
+[data-pos-v2] .pos-keypad { gap: 8px; }
+[data-pos-v2] .pos-key { height: 64px; font-size: 26px; border-radius: 12px; }
+[data-pos-v2] .pos-key-display { padding: 14px 18px; border-radius: 14px; }
+[data-pos-v2] .pos-key-display .text-3xl { font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; }
+[data-pos-v2] .pos-quick-cash { height: 56px; font-size: 18px; font-weight: 800; border-radius: 12px; }
+[data-pos-v2] .pos-tender { height: 56px; font-size: 16px; border-radius: 12px; }

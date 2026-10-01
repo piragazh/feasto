@@ -811,7 +811,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     type="button"
                                     aria-pressed={tenderType === key}
                                     onClick={() => setTenderType(key)}
-                                    className={`${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-base font-bold flex items-center justify-center gap-2 ${POS_TRANSITION} ${POS_FOCUS} ${
+                                    className={`pos-tender ${POS_TOUCH.controlLarge} ${POS_RADIUS.control} text-base font-bold flex items-center justify-center gap-2 ${POS_TRANSITION} ${POS_FOCUS} ${
                                         tenderType === key ? t.segActive : t.segIdle
                                     }`}
                                 >
@@ -825,7 +825,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <p className={`${t.subtext} text-xs mb-2`}>Quick cash</p>
                         <div className="grid grid-cols-4 gap-2 mb-4">
                             {quickCash.map(amt => (
-                                <Button key={amt} disabled={blockedForPhoneDetails} onClick={() => handleQuickCash(amt)} className={`${POS_TOUCH.control} disabled:opacity-40 ${POS_RADIUS.control} text-base font-bold ${POS_TRANSITION} ${POS_FOCUS} ${t.inactBtn}`}>
+                                <Button key={amt} disabled={blockedForPhoneDetails} onClick={() => handleQuickCash(amt)} className={`pos-quick-cash ${POS_TOUCH.control} disabled:opacity-40 ${POS_RADIUS.control} text-base font-bold ${POS_TRANSITION} ${POS_FOCUS} ${t.inactBtn}`}>
                                     £{amt}
                                 </Button>
                             ))}
@@ -872,7 +872,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <div className="grid grid-cols-4 gap-1.5 mb-1">
                             {quickCash.map(amt => (
                                 <Button key={amt} onClick={() => setRawValue(String(amt * 100))}
-                                    className={`${POS_TOUCH.control} ${POS_RADIUS.control} text-sm font-bold ${numericInput === amt ? 'bg-green-600 text-white border-green-600' : t.inactBtn}`}>
+                                    className={`pos-quick-cash ${POS_TOUCH.control} ${POS_RADIUS.control} text-sm font-bold ${numericInput === amt ? 'bg-green-600 text-white border-green-600' : t.inactBtn}`}>
                                     £{amt}
                                 </Button>
                             ))}
