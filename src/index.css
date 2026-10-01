@@ -373,3 +373,19 @@
 [data-pos-v2] .pos-quick-cash { height: 56px; font-size: 18px; font-weight: 800; border-radius: 12px; }
 [data-pos-v2] .pos-tender { height: 56px; font-size: 16px; border-radius: 12px; }
 [data-pos-v2] .pos-key.text-sm { font-size: 17px; }   /* word keys ("Clear") stay readable, not digit-sized */
+
+/* ── New POS design (stage 5): service screens ───────────────────────────────
+   Orders queue and Kitchen: the buttons hit all service long. Queue status
+   buttons were 32px with 12px text, the kitchen's header icons 40px and its
+   expand chevron a bare 16px icon. In the new design: 48px actions and icon
+   targets. White text on yellow/green/emerald-600 was 2.9-3.8:1, so those
+   fills take the 700 shade (hover goes darker, never lighter). Class-name hooks
+   (pos-action, pos-icon-btn) only; status changes are untouched. */
+[data-pos-v2] .pos-action { height: 48px; font-size: 15px; font-weight: 800; border-radius: 12px; }
+[data-pos-v2] .pos-icon-btn { min-width: 48px; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; }
+[data-pos-v2] .bg-yellow-600 { background-color: #a16207; }
+[data-pos-v2] .bg-green-600 { background-color: #15803d; }
+[data-pos-v2] .bg-emerald-600 { background-color: #047857; }
+[data-pos-v2] .hover\:bg-yellow-700:hover { background-color: #854d0e; }
+[data-pos-v2] .hover\:bg-green-700:hover, [data-pos-v2] .hover\:bg-green-500:hover { background-color: #166534; }
+[data-pos-v2] .hover\:bg-emerald-700:hover { background-color: #065f46; }

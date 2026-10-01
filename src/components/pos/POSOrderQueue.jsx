@@ -425,7 +425,7 @@ function SourceBadge({ order }) {
                                             {status === 'pending' && (
                                                 <Button
                                                     onClick={() => updateOrderStatus(order.id, 'confirmed')}
-                                                    className="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-xs h-8"
+                                                    className="pos-action w-full bg-yellow-600 hover:bg-yellow-700 text-white text-xs h-8"
                                                 >
                                                     Confirm
                                                 </Button>
@@ -433,7 +433,7 @@ function SourceBadge({ order }) {
                                             {status === 'confirmed' && (
                                                 <Button
                                                     onClick={() => updateOrderStatus(order.id, 'preparing')}
-                                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+                                                    className="pos-action w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
                                                 >
                                                     Start Preparing
                                                 </Button>
@@ -441,7 +441,7 @@ function SourceBadge({ order }) {
                                             {status === 'preparing' && (
                                                 <Button
                                                     onClick={() => updateOrderStatus(order.id, order.order_type === 'delivery' ? 'out_for_delivery' : 'ready_for_collection')}
-                                                    className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8"
+                                                    className="pos-action w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8"
                                                 >
                                                     {order.order_type === 'delivery' ? 'Send Out' : 'Mark Ready'}
                                                 </Button>
@@ -452,7 +452,7 @@ function SourceBadge({ order }) {
                                             {(status === 'ready' || status === 'out_for_delivery') && (
                                                 <Button
                                                     onClick={() => updateOrderStatus(order.id, order.order_type === 'delivery' ? 'delivered' : 'collected')}
-                                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
+                                                    className="pos-action w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
                                                 >
                                                     {order.order_type === 'delivery' ? 'Mark Delivered' : 'Mark Collected'}
                                                 </Button>

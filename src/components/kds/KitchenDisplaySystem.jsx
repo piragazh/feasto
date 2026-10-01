@@ -247,21 +247,21 @@ export default function KitchenDisplaySystem({ restaurant }) {
 
                     {/* Controls */}
                     <div className="flex items-center gap-1 ml-2">
-                        <Button variant="ghost" size="icon" onClick={() => setSoundEnabled(s => !s)}
-                            className="text-gray-400 hover:text-white" title={soundEnabled ? 'Mute' : 'Unmute'}>
+                        <Button variant="ghost" size="icon" onClick={() => setSoundEnabled(s => !s)} aria-label={soundEnabled ? 'Mute new-order sound' : 'Unmute new-order sound'}
+                            className="pos-icon-btn text-gray-400 hover:text-white" title={soundEnabled ? 'Mute' : 'Unmute'}>
                             {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={fetchOrders}
-                            className="text-gray-400 hover:text-white" title="Refresh">
+                        <Button variant="ghost" size="icon" onClick={fetchOrders} aria-label="Refresh orders"
+                            className="pos-icon-btn text-gray-400 hover:text-white" title="Refresh">
                             <RefreshCw className="h-5 w-5" />
                         </Button>
                         <Button variant="ghost" size="icon"
-                            onClick={() => document.documentElement.requestFullscreen?.()}
-                            className="text-gray-400 hover:text-white" title="Fullscreen">
+                            onClick={() => document.documentElement.requestFullscreen?.()} aria-label="Full screen"
+                            className="pos-icon-btn text-gray-400 hover:text-white" title="Fullscreen">
                             <Maximize className="h-5 w-5" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => base44.auth.logout()}
-                            className="text-gray-400 hover:text-red-400" title="Sign out">
+                        <Button variant="ghost" size="icon" onClick={() => base44.auth.logout()} aria-label="Sign out"
+                            className="pos-icon-btn text-gray-400 hover:text-red-400" title="Sign out">
                             <LogOut className="h-5 w-5" />
                         </Button>
                     </div>

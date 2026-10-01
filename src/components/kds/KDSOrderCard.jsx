@@ -116,8 +116,8 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
                     </div>
 
                     <button
-                        onClick={() => setExpanded(e => !e)}
-                        className="text-gray-500 hover:text-gray-300 ml-1"
+                        onClick={() => setExpanded(e => !e)} aria-label={expanded ? 'Hide items' : 'Show items'} aria-expanded={expanded}
+                        className="pos-icon-btn text-gray-500 hover:text-gray-300 ml-1"
                     >
                         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
@@ -206,7 +206,7 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
                         onClick={handleAction}
                         disabled={acting || unpaidKiosk}
                         title={unpaidKiosk ? 'Cannot prep — payment awaiting confirmation at counter' : ''}
-                        className={`w-full font-bold text-base h-11 rounded-lg ${ACTION_COLORS[actionColor]} ${
+                        className={`pos-action w-full font-bold text-base h-11 rounded-lg ${ACTION_COLORS[actionColor]} ${
                             unpaidKiosk ? 'opacity-40 cursor-not-allowed' : ''
                         }`}
                     >
