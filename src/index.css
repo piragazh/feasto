@@ -372,3 +372,4 @@
 [data-pos-v2] .pos-key-display .text-3xl { font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; }
 [data-pos-v2] .pos-quick-cash { height: 56px; font-size: 18px; font-weight: 800; border-radius: 12px; }
 [data-pos-v2] .pos-tender { height: 56px; font-size: 16px; border-radius: 12px; }
+[data-pos-v2] .pos-key.text-sm { font-size: 17px; }   /* word keys ("Clear") stay readable, not digit-sized */

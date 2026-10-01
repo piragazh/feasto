@@ -207,3 +207,32 @@ describe('stage 3: the option sheet', () => {
         expect(rules.every(r => r.split('{')[0].split(',').every(sel => sel.includes('[data-pos-v2'))) ).toBe(true);
     });
 });
+
+describe('stage 4: taking payment', () => {
+    const keypad = read('components/pos/NumericKeypad.jsx');
+    const pay = read('components/pos/POSPayment.jsx');
+    const css = read('index.css');
+    it('REGRESSION GUARD: every fixed-height keypad key is a 64px key', () => {
+        const buttons = [...keypad.matchAll(/<Button[\s\S]*?className=(\{`[^`]*`\}|"[^"]*")/g)].map(m => m[1]);
+        const fixed = buttons.filter(c => /\bh-12\b/.test(c));
+        expect(fixed.length).toBeGreaterThanOrEqual(7);
+        expect(fixed.filter(c => !c.includes('pos-key'))).toEqual([]);
+        expect(keypad).toMatch(/className="pos-keypad grid/);
+        expect(keypad).toMatch(/pos-key-display/);
+    });
+    it('quick cash (both rows) and the tender selector are tagged', () => {
+        expect((pay.match(/pos-quick-cash/g) || []).length).toBe(2);
+        expect(pay).toMatch(/className=\{`pos-tender /);
+    });
+    it('sizes: 64px keys 8px apart, 56px quick cash and tender', () => {
+        expect(css).toMatch(/\[data-pos-v2\] \.pos-key \{ height: 64px;/);
+        expect(css).toMatch(/\[data-pos-v2\] \.pos-keypad \{ gap: 8px; \}/);
+        expect(css).toMatch(/\[data-pos-v2\] \.pos-quick-cash \{ height: 56px;/);
+        expect(css).toMatch(/\[data-pos-v2\] \.pos-tender \{ height: 56px;/);
+    });
+    it('classic payment screen unchanged: every rule for these tags is inside the new design', () => {
+        const rules = css.replace(/\/\*[\s\S]*?\*\//g, '').split('}').map(r => r.trim()).filter(r => /\.pos-(key|quick-cash|tender)/.test(r));
+        expect(rules.length).toBeGreaterThanOrEqual(6);
+        expect(rules.every(r => r.split('{')[0].split(',').every(sel => sel.includes('[data-pos-v2')))).toBe(true);
+    });
+});
