@@ -242,10 +242,10 @@ describe('stage 5: service screens', () => {
     const kds = read('components/kds/KitchenDisplaySystem.jsx');
     const card = read('components/kds/KDSOrderCard.jsx');
     const css = read('index.css');
-    it('REGRESSION GUARD: every 32px queue button is a 48px action', () => {
-        const small = [...queue.matchAll(/<Button[\s\S]*?className="([^"]*\bh-8\b[^"]*)"/g)].map(m => m[1]);
-        expect(small.length).toBe(4);
-        expect(small.filter(c => !c.includes('pos-action'))).toEqual([]);
+    it('REGRESSION GUARD: the four queue status buttons are actions, 44px classic / 48px new', () => {
+        const actions = [...queue.matchAll(/<Button[\s\S]*?className="(pos-action [^"]*)"/g)].map(m => m[1]);
+        expect(actions.length).toBe(4);
+        expect(actions.every(c => /\bh-11\b/.test(c))).toBe(true);
     });
     it('kitchen: bump is an action; header icons and the chevron are 48px targets with names', () => {
         expect(card).toMatch(/className=\{`pos-action w-full font-bold text-base h-11/);
