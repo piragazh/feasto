@@ -52,9 +52,9 @@ export default function CustomerDisplay() {
             <div className="bg-gray-900/80 backdrop-blur border-b border-white/[0.06] px-8 py-3 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                     {logoUrl ? (
-                        <img src={logoUrl} alt={restaurantName} className="w-8 h-8 rounded-lg object-cover" />
+                        <img src={logoUrl} alt={restaurantName} className="w-8 h-8 rounded-xl object-cover" />
                     ) : (
-                        <div className="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-accent-500 rounded-xl flex items-center justify-center">
                             <ShoppingBag className="h-4 w-4 text-white" />
                         </div>
                     )}
@@ -167,9 +167,9 @@ function IdleScreen({ restaurantName, logoUrl }) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex flex-col items-center justify-center gap-8">
             {logoUrl ? (
-                <img src={logoUrl} alt={restaurantName} className="w-24 h-24 rounded-3xl object-cover shadow-2xl" />
+                <img src={logoUrl} alt={restaurantName} className="w-24 h-24 rounded-2xl object-cover shadow-2xl" />
             ) : (
-                <div className="w-24 h-24 bg-accent-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-accent-500/30">
+                <div className="w-24 h-24 bg-accent-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-accent-500/30">
                     <ShoppingBag className="h-12 w-12 text-white" />
                 </div>
             )}

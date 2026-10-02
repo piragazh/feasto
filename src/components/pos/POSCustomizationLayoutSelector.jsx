@@ -65,7 +65,7 @@ export default function POSCustomizationLayoutSelector({ restaurantId }) {
                                 : 'border-gray-200 hover:border-accent-300 bg-white'
                         }`}
                     >
-                        <div className={`mt-0.5 p-2 rounded-lg flex-shrink-0 ${isSelected ? 'bg-accent-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                        <div className={`mt-0.5 p-2 rounded-xl flex-shrink-0 ${isSelected ? 'bg-accent-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                             <Icon className="h-5 w-5" />
                         </div>
                         <div className="flex-1">

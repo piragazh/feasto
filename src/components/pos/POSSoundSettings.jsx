@@ -38,7 +38,7 @@ export default function POSSoundSettings() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex gap-2 text-xs text-blue-800">
                     <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                     <span>
                         This setting applies to <strong>this device only</strong>, so a till next to a noisy
@@ -96,13 +96,13 @@ export default function POSSoundSettings() {
                         Test sounds
                     </Label>
                     <div className="flex flex-wrap gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={() => playPreview()}>
+                        <Button type="button" className="h-11" size="sm" variant="outline" onClick={() => playPreview()}>
                             <Play className="h-3.5 w-3.5 mr-1.5" />Item added
                         </Button>
-                        <Button type="button" size="sm" variant="outline" onClick={() => playSuccess()}>
+                        <Button type="button" className="h-11" size="sm" variant="outline" onClick={() => playSuccess()}>
                             <Play className="h-3.5 w-3.5 mr-1.5" />Payment done
                         </Button>
-                        <Button type="button" size="sm" variant="outline" onClick={() => playError()}>
+                        <Button type="button" className="h-11" size="sm" variant="outline" onClick={() => playError()}>
                             <Play className="h-3.5 w-3.5 mr-1.5" />Error
                         </Button>
                     </div>

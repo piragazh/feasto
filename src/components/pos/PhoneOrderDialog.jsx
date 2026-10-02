@@ -269,7 +269,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                 <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full animate-pulse ml-2">📞 Incoming</span>
                             )}
                         </div>
-                        <button onClick={onClose} className={`w-8 h-8 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`} aria-label="Close">
+                        <button onClick={onClose} className={`w-11 h-11 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`} aria-label="Close">
                             <X className="h-4 w-4" />
                         </button>
                     </div>
@@ -432,7 +432,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                     <div className="flex gap-1.5 flex-wrap mb-2">
                                         {foundCustomer.savedAddresses.map((addr, i) => (
                                             <button key={i} onClick={() => setDeliveryAddress(addr.address)}
-                                                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-colors ${deliveryAddress === addr.address ? 'bg-accent-500 text-white border-accent-500' : isDark ? 'border-white/[0.08] text-gray-400 hover:border-accent-500/30 hover:text-accent-400' : 'border-gray-200 text-gray-500 hover:border-accent-300 hover:text-accent-500'}`}>
+                                                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-xl border transition-colors ${deliveryAddress === addr.address ? 'bg-accent-500 text-white border-accent-500' : isDark ? 'border-white/[0.08] text-gray-400 hover:border-accent-500/30 hover:text-accent-400' : 'border-gray-200 text-gray-500 hover:border-accent-300 hover:text-accent-500'}`}>
                                                 {addr.is_default && <Star className="h-2.5 w-2.5" />}
                                                 {addr.label || `Address ${i + 1}`}
                                             </button>

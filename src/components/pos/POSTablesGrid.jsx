@@ -30,7 +30,7 @@ export default function POSTablesGrid({
                 <h2 className={`${t.text} font-bold text-xl`}>Tables</h2>
                 <button
                     onClick={onBack}
-                    className={`${t.textMuted} text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${isDark ? 'hover:text-white hover:bg-white/5' : 'hover:text-gray-900 hover:bg-gray-100'}`}
+                    className={`${t.textMuted} text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors ${isDark ? 'hover:text-white hover:bg-white/5' : 'hover:text-gray-900 hover:bg-gray-100'}`}
                 >
                     ← Back to Order
                 </button>
@@ -52,7 +52,7 @@ export default function POSTablesGrid({
                                 <div className={`absolute top-2.5 right-2.5 w-2 h-2 rounded-full ${s.dot}`} />
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setSelectedTableForActions(table); setTableActionsOpen(true); }}
-                                    className="absolute top-2 left-2 w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
+                                    className="absolute top-2 left-2 w-6 h-6 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
                                 >
                                     <Settings className="h-3 w-3" />
                                 </button>

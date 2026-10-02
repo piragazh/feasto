@@ -103,7 +103,7 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
 
             <div 
                 id="floor-plan-container"
-                className="flex-1 bg-gray-800 rounded-lg border border-gray-700 relative overflow-hidden"
+                className="flex-1 bg-gray-800 rounded-xl border border-gray-700 relative overflow-hidden"
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
@@ -143,7 +143,7 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
                                     setSelectedTable(table);
                                     setTableActionsOpen(true);
                                 }}
-                                className="absolute top-2 left-2 h-6 w-6 p-0 text-gray-400 hover:text-white"
+                                className="h-11 absolute top-2 left-2 h-6 w-6 p-0 text-gray-400 hover:text-white"
                             >
                                 <Settings className="h-3 w-3" />
                             </Button>

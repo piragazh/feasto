@@ -70,7 +70,7 @@ function SourceBadge({ order }) {
         <span
             title={label}
             aria-label={label}
-            className={`inline-flex items-center justify-center h-6 w-6 rounded-lg border flex-shrink-0 ${cls}`}
+            className={`inline-flex items-center justify-center h-6 w-6 rounded-xl border flex-shrink-0 ${cls}`}
         >
             <Icon className="h-3.5 w-3.5" />
         </span>
@@ -272,10 +272,10 @@ function SourceBadge({ order }) {
             <div className="grid gap-4 grid-cols-4">
                 {[0, 1, 2, 3].map(i => (
                     <div key={i} className={`${t.bg} rounded-xl border ${t.border} p-4`}>
-                        <div className={`h-8 rounded-lg mb-4 animate-pulse ${t.colHeader}`} />
+                        <div className={`h-8 rounded-xl mb-4 animate-pulse ${t.colHeader}`} />
                         <div className="space-y-2">
                             {[0, 1].map(j => (
-                                <div key={j} className={`h-24 rounded-lg animate-pulse ${t.colHeader} opacity-60`} />
+                                <div key={j} className={`h-24 rounded-xl animate-pulse ${t.colHeader} opacity-60`} />
                             ))}
                         </div>
                     </div>
@@ -325,7 +325,7 @@ function SourceBadge({ order }) {
             }>
                 {Object.entries(displayOrders).map(([status, statusOrders]) => (
                 <div key={status} className={`${t.bg} rounded-xl border ${t.border} p-4`}>
-                    <h3 className={`${t.text} font-bold mb-4 capitalize text-center p-2 ${t.colHeader} rounded-lg text-sm`}>
+                    <h3 className={`${t.text} font-bold mb-4 capitalize text-center p-2 ${t.colHeader} rounded-xl text-sm`}>
                         {status.replace('_', ' ')} ({statusOrders.length})
                     </h3>
                     <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
@@ -425,7 +425,7 @@ function SourceBadge({ order }) {
                                             {status === 'pending' && (
                                                 <Button
                                                     onClick={() => updateOrderStatus(order.id, 'confirmed')}
-                                                    className="pos-action w-full bg-yellow-600 hover:bg-yellow-700 text-white text-xs h-8"
+                                                    className="pos-action w-full bg-yellow-600 hover:bg-yellow-700 text-white text-xs h-11"
                                                 >
                                                     Confirm
                                                 </Button>
@@ -433,7 +433,7 @@ function SourceBadge({ order }) {
                                             {status === 'confirmed' && (
                                                 <Button
                                                     onClick={() => updateOrderStatus(order.id, 'preparing')}
-                                                    className="pos-action w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+                                                    className="pos-action w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-11"
                                                 >
                                                     Start Preparing
                                                 </Button>
@@ -441,7 +441,7 @@ function SourceBadge({ order }) {
                                             {status === 'preparing' && (
                                                 <Button
                                                     onClick={() => updateOrderStatus(order.id, order.order_type === 'delivery' ? 'out_for_delivery' : 'ready_for_collection')}
-                                                    className="pos-action w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8"
+                                                    className="pos-action w-full bg-green-600 hover:bg-green-700 text-white text-xs h-11"
                                                 >
                                                     {order.order_type === 'delivery' ? 'Send Out' : 'Mark Ready'}
                                                 </Button>
@@ -452,7 +452,7 @@ function SourceBadge({ order }) {
                                             {(status === 'ready' || status === 'out_for_delivery') && (
                                                 <Button
                                                     onClick={() => updateOrderStatus(order.id, order.order_type === 'delivery' ? 'delivered' : 'collected')}
-                                                    className="pos-action w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
+                                                    className="pos-action w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-11"
                                                 >
                                                     {order.order_type === 'delivery' ? 'Mark Delivered' : 'Mark Collected'}
                                                 </Button>

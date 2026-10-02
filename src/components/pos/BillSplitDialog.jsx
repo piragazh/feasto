@@ -87,7 +87,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
 
                 <div className="space-y-4">
                     {/* Total */}
-                    <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-3 rounded`}>
+                    <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-3 rounded-xl`}>
                         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Order Total</p>
                         <p className="text-accent-400 text-2xl font-bold">£{order?.total.toFixed(2)}</p>
                     </div>
@@ -143,7 +143,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
                             
                             {/* Validation Message */}
                             {customSplits.length > 0 && (
-                                <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded text-sm`}>
+                                <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded-xl text-sm`}>
                                     <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
                                         Total: <span className={customSplits.reduce((sum, s) => sum + s.amount, 0) === order?.total ? 'text-green-400' : 'text-red-400'}>
                                             £{customSplits.reduce((sum, s) => sum + s.amount, 0).toFixed(2)}
