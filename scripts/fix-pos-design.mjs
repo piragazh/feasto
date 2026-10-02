@@ -21,53 +21,35 @@ const FILES = ['src/pages/POSDashboard.jsx'];
 for (const d of DIRS) for (const f of fs.readdirSync(path.join(ROOT, d))) if (/\.jsx$/.test(f)) FILES.push(`${d}/${f}`);
 const DRY = process.argv.includes('--dry');
 
-const mask = (src) => src.replace(/\/\*[\s\S]*?\*\//g, (s) => s.replace(/[^\n]/g, ' '))
-    .replace(/(^|[^:])\/\/.*$/gm, (s, p) => p + ' '.repeat(s.length - p.length));
-const TEXT = (px) => px < 11 ? 'text-[11px]' : px === 11 ? 'text-[11px]' : px <= 12 ? 'text-xs' : px <= 14 ? 'text-sm' : px <= 16 ? 'text-base' : px <= 18 ? 'text-lg' : 'text-xl';
+import { maskComments, stringMask, tappableTags, RADIUS_RE, TEXT_RE } from './lib/pos-design-scan.mjs';
 
-function tappableTags(code) {
-    const out = []; const re = /<(button|Button|SelectTrigger|TabsTrigger)\b/g; let m;
-    while ((m = re.exec(code))) {
-        let i = m.index, depth = 0, q = null;
-        for (; i < code.length; i++) {
-            const c = code[i];
-            if (q) { if (c === q && code[i - 1] !== '\\') q = null; continue; }
-            if (c === '"' || c === "'" || c === '`') { q = c; continue; }
-            if (c === '{') depth++; else if (c === '}') depth--;
-            else if (c === '>' && depth === 0 && code[i - 1] !== '=') break;
-        }
-        out.push([m.index, i + 1]);
-    }
-    return out;
-}
+const TEXT = (px) => px <= 11 ? 'text-[11px]' : px <= 12 ? 'text-xs' : px <= 14 ? 'text-sm' : px <= 16 ? 'text-base' : px <= 18 ? 'text-lg' : 'text-xl';
 
-/** Returns [newSource, counts]. Edits are applied right-to-left so offsets stay valid. */
+/** Returns [newSource, counts]. Only characters inside string literals are edited. */
 export function fix(src) {
-    const code = mask(src);
+    const code = maskComments(src); const inStr = stringMask(code);
     const edits = []; const counts = { touch: 0, radius: 0, text: 0 };
-    for (const m of code.matchAll(/\btext-\[(\d+(?:\.\d+)?)px\]/g)) {
+    for (const m of code.matchAll(TEXT_RE)) {
+        if (!inStr[m.index]) continue;
         const to = TEXT(Number(m[1]));
-        if (m[0] !== to && m[0] !== 'text-[11px]') { edits.push([m.index, m[0].length, to]); counts.text++; }
+        if (m[0] !== to) { edits.push([m.index, m[0].length, to]); counts.text++; }
     }
-    for (const m of code.matchAll(/(?<![\w-])rounded(-(?:sm|md|lg|3xl))?(?![\w-])/g)) {
+    for (const m of code.matchAll(RADIUS_RE)) {
+        if (!inStr[m.index]) continue;
         edits.push([m.index, m[0].length, m[1] === '-3xl' ? 'rounded-2xl' : 'rounded-xl']); counts.radius++;
     }
     for (const [a, b] of tappableTags(code)) {
-        const tag = code.slice(a, b);
-        let hit = false;
+        const tag = code.slice(a, b); let hit = false;
+        const growsH = [...tag.matchAll(/(?<![\w-])h-(7|8|9|10)(?![\w-])/g)].some(m => inStr[a + m.index]);
         for (const m of tag.matchAll(/(?<![\w-])(h|w)-(7|8|9|10)(?![\w-])/g)) {
-            if (m[1] === 'w' && !/(?<![\w-])h-(7|8|9|10)(?![\w-])/.test(tag)) continue;   // only square-up when the height grows
-            edits.push([a + m.index, m[0].length, `${m[1]}-11`]); hit = true;
+            if (!inStr[a + m.index]) continue;
+            if (m[1] === 'w' && !growsH) continue;          // square icon buttons stay square
+            edits.push([a + m.index, m[0].length, m[1] + '-11']); hit = true;
         }
         if (!hit && /\bsize="sm"/.test(tag) && !/(?<![\w-])h-(1[1-9]|[2-9]\d)(?![\w-])/.test(tag)) {
-            const cls = tag.match(/className=(["`])/) || tag.match(/className=\{`/);
-            if (cls) {
-                const at = a + tag.indexOf(cls[0]) + cls[0].length;
-                edits.push([at, 0, 'h-11 ']);
-            } else {
-                const sz = tag.indexOf('size="sm"');
-                edits.push([a + sz, 0, 'className="h-11" ']);
-            }
+            const cls = tag.match(/className=("|\{`)/);
+            if (cls) edits.push([a + tag.indexOf(cls[0]) + cls[0].length, 0, 'h-11 ']);
+            else edits.push([a + tag.indexOf('size="sm"'), 0, 'className="h-11" ']);
             hit = true;
         }
         if (hit) counts.touch++;
