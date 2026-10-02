@@ -21,46 +21,27 @@ const DIRS = ['src/components/pos', 'src/components/kds'];
 const FILES = ['src/pages/POSDashboard.jsx'];
 for (const d of DIRS) for (const f of fs.readdirSync(path.join(ROOT, d))) if (/\.jsx$/.test(f)) FILES.push(`${d}/${f}`);
 
-const ALLOWED_ARBITRARY_TEXT = new Set(['text-[11px]']);   // POS_TEXT.micro
+import { maskComments, stringMask, tappableTags, RADIUS_RE, TEXT_RE, SMALL_H_RE } from './lib/pos-design-scan.mjs';
 
-/** The opening tag of every tappable element: <button>, <Button>, <SelectTrigger>, role="button". */
-function tappableTags(src) {
-    const out = [];
-    const re = /<(button|Button|SelectTrigger|TabsTrigger)\b/g;
-    let m;
-    while ((m = re.exec(src))) {
-        // walk to the end of the opening tag, respecting {...} and quotes
-        let i = m.index, depth = 0, q = null;
-        for (; i < src.length; i++) {
-            const c = src[i];
-            if (q) { if (c === q && src[i - 1] !== '\\') q = null; continue; }
-            if (c === '"' || c === "'" || c === '`') { q = c; continue; }
-            if (c === '{') depth++;
-            else if (c === '}') depth--;
-            else if (c === '>' && depth === 0 && src[i - 1] !== '=') break;
-        }
-        out.push({ at: m.index, tag: src.slice(m.index, i + 1) });
-    }
-    return out;
-}
+const ALLOWED_ARBITRARY_TEXT = new Set(['text-[11px]']);   // POS_TEXT.micro
 const lineOf = (src, at) => src.slice(0, at).split('\n').length;
 
+/** Breaches in one file. Class names live in strings, so only string characters count. */
 export function audit(src) {
-    const breaches = [];
-    const code = src.replace(/\/\*[\s\S]*?\*\//g, (s) => s.replace(/[^\n]/g, ' '))
-                    .replace(/(^|[^:])\/\/.*$/gm, (s, p) => p + ' '.repeat(s.length - p.length));
-    for (const m of code.matchAll(/\btext-\[(\d+(?:\.\d+)?)px\]/g)) {
-        if (!ALLOWED_ARBITRARY_TEXT.has(m[0])) breaches.push({ rule: Number(m[1]) < 11 ? 'text<11px' : 'text-off-scale', line: lineOf(code, m.index), what: m[0] });
+    const code = maskComments(src); const inStr = stringMask(code); const breaches = [];
+    for (const m of code.matchAll(TEXT_RE)) {
+        if (!inStr[m.index] || ALLOWED_ARBITRARY_TEXT.has(m[0])) continue;
+        breaches.push({ rule: Number(m[1]) < 11 ? 'text<11px' : 'text-off-scale', line: lineOf(code, m.index), what: m[0] });
     }
-    for (const m of code.matchAll(/(?<![\w-])rounded(-(?:sm|md|lg|3xl))?(?![\w-])/g)) {
-        if (m[1] === undefined && /rounded(?=[-\w])/.test(code.slice(m.index, m.index + 9))) continue;
-        breaches.push({ rule: 'radius-off-scale', line: lineOf(code, m.index), what: m[0] });
+    for (const m of code.matchAll(RADIUS_RE)) {
+        if (inStr[m.index]) breaches.push({ rule: 'radius-off-scale', line: lineOf(code, m.index), what: m[0] });
     }
-    for (const { at, tag } of tappableTags(code)) {
-        const small = tag.match(/(?<![\w-])h-(7|8|9|10)(?![\w-])/);
+    for (const [a, b] of tappableTags(code)) {
+        const tag = code.slice(a, b);
+        const small = tag.match(SMALL_H_RE);
         const smallSize = /\bsize="sm"/.test(tag) && !/(?<![\w-])h-(1[1-9]|[2-9]\d)(?![\w-])/.test(tag);
-        if (small) breaches.push({ rule: 'touch<44px', line: lineOf(code, at), what: small[0] });
-        else if (smallSize) breaches.push({ rule: 'touch<44px', line: lineOf(code, at), what: 'size="sm"' });
+        if (small && inStr[a + small.index]) breaches.push({ rule: 'touch<44px', line: lineOf(code, a), what: small[0] });
+        else if (smallSize) breaches.push({ rule: 'touch<44px', line: lineOf(code, a), what: 'size="sm"' });
     }
     return breaches;
 }
