@@ -182,7 +182,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className={`h-8 w-8 ${isDark ? 'text-white hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                        className={`h-11 w-11 ${isDark ? 'text-white hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
                      aria-label="Close">
                         <X className="h-5 w-5" />
                     </Button>
@@ -226,7 +226,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                    {option.options?.map(opt => (
                                        <div 
                                            key={opt.label} 
-                                           className={`pos-choice flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
+                                           className={`pos-choice flex items-center space-x-2 p-2 md:p-3 rounded-xl ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                            onClick={() => {
                                                const newIsMeal = opt.label.toLowerCase().includes('meal');
                                                setIsMeal(newIsMeal);
@@ -266,7 +266,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                     {option.options?.map(opt => (
                                         <div 
                                             key={opt.label} 
-                                            className={`pos-choice flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
+                                            className={`pos-choice flex items-center space-x-2 p-2 md:p-3 rounded-xl ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                             onClick={() => handleSingleSelect(option.name, opt.label)}
                                         >
                                             <RadioGroupItem 
@@ -296,7 +296,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             {option.options?.map(opt => (
                                             <div 
                                             key={opt.label}
-                                            className={`pos-choice flex items-center space-x-2 p-2 md:p-3 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
+                                            className={`pos-choice flex items-center space-x-2 p-2 md:p-3 rounded-xl ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                             onClick={() => handleMultipleSelect(option.name, opt.label)}
                                         >
                                             <Checkbox
@@ -350,7 +350,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                     {mealOpt.options?.map(opt => (
                                         <div 
                                             key={opt.label} 
-                                            className={`pos-choice flex items-center space-x-2 p-2 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
+                                            className={`pos-choice flex items-center space-x-2 p-2 rounded-xl ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                             onClick={() => setMealCustomizations(prev => ({
                                                 ...prev,
                                                 [mealOpt.name]: opt.label
@@ -383,7 +383,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     {mealOpt.options?.map(opt => (
                                                     <div 
                                                     key={opt.label}
-                                                className={`pos-choice flex items-center space-x-2 p-2 rounded-lg ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
+                                                className={`pos-choice flex items-center space-x-2 p-2 rounded-xl ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} cursor-pointer transition-all border-2 border-transparent hover:border-accent-500`}
                                             onClick={() => {
                                                 setMealCustomizations(prev => ({
                                                     ...prev,
@@ -440,13 +440,13 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                     <Button 
                         variant="outline" 
                         onClick={onClose}
-                        className={`pos-sheet-cta flex-1 ${isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200'} font-bold rounded-lg h-12 text-sm`}
+                        className={`pos-sheet-cta flex-1 ${isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200'} font-bold rounded-xl h-12 text-sm`}
                     >
                         Cancel
                     </Button>
                     <Button 
                         onClick={handleConfirm}
-                        className="pos-sheet-cta flex-1 bg-accent-500 hover:bg-accent-600 text-white font-bold rounded-lg h-12 text-sm"
+                        className="pos-sheet-cta flex-1 bg-accent-500 hover:bg-accent-600 text-white font-bold rounded-xl h-12 text-sm"
                     >
                         {isEditing ? 'Update Item' : 'Add to Cart'}
                     </Button>

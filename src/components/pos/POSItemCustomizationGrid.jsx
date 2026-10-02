@@ -138,7 +138,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                         <p className={`font-bold text-lg ${text}`}>{item.name}</p>
                         <p className="text-accent-400 font-bold text-xl mt-0.5">£{currentPrice.toFixed(2)}</p>
                     </div>
-                    <button onClick={onClose} className={`h-10 w-10 rounded-full flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} aria-label="Close">
+                    <button onClick={onClose} className={`h-11 w-11 rounded-full flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} aria-label="Close">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
@@ -147,7 +147,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
                 <div className={`flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-5 ${showKeyboard ? 'pb-80' : ''}`}>
                     {allGroups.map((option) => (
                         <div key={option.name + (option._isMealSub ? '_meal' : '')}>
-                            <div className={`flex items-center justify-between px-3 py-1.5 rounded-lg mb-2 ${sectionHead}`}>
+                            <div className={`flex items-center justify-between px-3 py-1.5 rounded-xl mb-2 ${sectionHead}`}>
                                 <span className={`text-sm font-bold uppercase tracking-wide`}>{option.name}</span>
                                 {option.required && <span className="text-xs text-red-400 font-semibold">Required</span>}
                             </div>
@@ -217,7 +217,7 @@ export default function POSItemCustomizationGrid({ item, open, onClose, onConfir
 
                     {/* Special instructions */}
                     <div>
-                        <div className={`flex items-center px-3 py-1.5 rounded-lg mb-2 ${sectionHead}`}>
+                        <div className={`flex items-center px-3 py-1.5 rounded-xl mb-2 ${sectionHead}`}>
                             <span className="text-sm font-bold uppercase tracking-wide">Special Instructions</span>
                         </div>
                         <Textarea

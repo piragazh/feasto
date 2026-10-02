@@ -64,8 +64,8 @@ export default function VoidOrderDialog({ order, open, onClose, onUpdate, isDark
     };
 
     const selectCls = isDark
-        ? 'w-full h-10 px-3 rounded-md border bg-[#1a1d27] border-white/[0.08] text-white text-sm'
-        : 'w-full h-10 px-3 rounded-md border bg-white border-gray-200 text-gray-900 text-sm';
+        ? 'w-full h-10 px-3 rounded-xl border bg-[#1a1d27] border-white/[0.08] text-white text-sm'
+        : 'w-full h-10 px-3 rounded-xl border bg-white border-gray-200 text-gray-900 text-sm';
     const labelCls = isDark ? 'text-white' : 'text-gray-900';
 
     return (

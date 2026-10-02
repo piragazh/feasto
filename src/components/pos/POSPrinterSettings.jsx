@@ -23,7 +23,7 @@ import CentralizedPrinterSettings from '@/components/restaurant/CentralizedPrint
 export default function POSPrinterSettings({ restaurantId }) {
     return (
         <div className="space-y-4">
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex gap-2 text-xs text-blue-800">
                 <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 <span>
                     This is the same printer configuration used across the whole restaurant (including online and kiosk orders) —

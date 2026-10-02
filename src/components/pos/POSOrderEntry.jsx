@@ -763,23 +763,23 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 : 'flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 md:grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden'}>
                 {layoutCols.quickActions && (
                     <div className="md:col-span-1 overflow-hidden flex flex-col gap-2">
-                        <button onClick={() => setViewMode('tables')} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold ${t.itemCard} border text-center transition-colors`}>
+                        <button onClick={() => setViewMode('tables')} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-xl text-xs font-semibold ${t.itemCard} border text-center transition-colors`}>
                             <Users className="h-4 w-4 mb-1" />
                             Tables
                         </button>
-                        <button onClick={() => setCustomItemOpen(true)} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold ${t.itemCard} border text-center transition-colors`}>
+                        <button onClick={() => setCustomItemOpen(true)} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-xl text-xs font-semibold ${t.itemCard} border text-center transition-colors`}>
                             <PlusCircle className="h-4 w-4 mb-1" />
                             Custom
                         </button>
-                        <button onClick={holdOrder} disabled={optimisticCart.length === 0} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold border text-center transition-colors ${isDark ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400 disabled:opacity-40' : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-600 disabled:opacity-40'}`}>
+                        <button onClick={holdOrder} disabled={optimisticCart.length === 0} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-xl text-xs font-semibold border text-center transition-colors ${isDark ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400 disabled:opacity-40' : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-600 disabled:opacity-40'}`}>
                             <PauseCircle className="h-4 w-4 mb-1" />
                             Hold
                         </button>
-                        <button onClick={() => setHeldDrawerOpen(true)} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg text-xs font-semibold ${t.itemCard} border text-center transition-colors relative`}>
+                        <button onClick={() => setHeldDrawerOpen(true)} className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-xl text-xs font-semibold ${t.itemCard} border text-center transition-colors relative`}>
                             <PauseCircle className="h-4 w-4 mb-1" />
                             Held
                             {heldOrders.length > 0 && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">{heldOrders.length}</span>
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent-500 text-white text-[11px] rounded-full flex items-center justify-center font-bold">{heldOrders.length}</span>
                             )}
                         </button>
                     </div>
@@ -800,7 +800,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 <div className="h-full flex flex-col">
                                     <button
                                         onClick={() => setSelectedCategory('')}
-                                        className="flex items-center gap-2 px-4 py-3 mb-2 font-semibold text-sm rounded-lg transition-colors bg-accent-500 hover:bg-accent-600 text-white"
+                                        className="flex items-center gap-2 px-4 py-3 mb-2 font-semibold text-sm rounded-xl transition-colors bg-accent-500 hover:bg-accent-600 text-white"
                                     >
                                         ← Back to Categories
                                     </button>
@@ -898,26 +898,26 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                     primary ordering surface. */}
                 <div className={`${barSpanClass} ${t.bottomBar} rounded-2xl border p-1.5 flex items-center gap-1.5 flex-shrink-0`}>
                 {orderType === 'dine_in' && (
-                    <button onClick={() => setViewMode('tables')} className={`h-10 px-3 ${t.floorBack} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
+                    <button onClick={() => setViewMode('tables')} className={`h-11 px-3 ${t.floorBack} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                         <Users className="h-4 w-4" /> Tables
                     </button>
                 )}
-                <button onClick={() => setQuickLookupOpen(true)} className={`h-10 px-3 ${isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
+                <button onClick={() => setQuickLookupOpen(true)} className={`h-11 px-3 ${isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                     <Zap className="h-4 w-4" /> Item #
                 </button>
-                <button onClick={() => setCustomItemOpen(true)} className={`h-10 px-3 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
+                <button onClick={() => setCustomItemOpen(true)} className={`h-11 px-3 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}>
                     <PlusCircle className="h-4 w-4" /> Custom Item
                 </button>
                 <button
                     onClick={holdOrder}
                     disabled={optimisticCart.length === 0}
-                    className={`h-10 px-3 ${isDark ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400 disabled:opacity-40' : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-600 disabled:opacity-40'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
+                    className={`h-11 px-3 ${isDark ? 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30 text-yellow-400 disabled:opacity-40' : 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-600 disabled:opacity-40'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
                 >
                     <PauseCircle className="h-4 w-4" /> Hold
                 </button>
                 <button
                     onClick={() => setHeldDrawerOpen(true)}
-                    className={`h-10 px-3 relative ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
+                    className={`h-11 px-3 relative ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'} border font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors`}
                 >
                     <PauseCircle className="h-4 w-4" /> Held Orders
                     {heldOrders.length > 0 && (
@@ -941,7 +941,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                     key={qs.menu_item_id}
                                     onClick={() => handleQuickSale(qs)}
                                     title={`Quick sale: ${menuItem.name} — adds the item and opens payment`}
-                                    className="h-10 px-3 bg-emerald-600/90 hover:bg-emerald-600 active:bg-emerald-700 text-white border border-emerald-500/40 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
+                                    className="h-11 px-3 bg-emerald-600/90 hover:bg-emerald-600 active:bg-emerald-700 text-white border border-emerald-500/40 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
                                 >
                                     <Zap className="h-3.5 w-3.5" />
                                     <span className="max-w-[90px] truncate">{qs.label || menuItem.name}</span>

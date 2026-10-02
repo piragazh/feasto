@@ -56,9 +56,9 @@ export function quickCashOptions(owed) {
     // an exact total like £10.00 or £47.00 otherwise yields only one or two
     // buttons and leaves dead space in the grid.
     for (const step of [10, 20, 50, 100]) {
-        const rounded = Math.ceil(owed / step) * step;
-        if (rounded > owed) opts.push(rounded);
-        opts.push(rounded + step);
+        const rounded-xl = Math.ceil(owed / step) * step;
+        if (rounded-xl > owed) opts.push(rounded-xl);
+        opts.push(rounded-xl + step);
     }
 
     return [...new Set(opts)].filter(v => v > owed).sort((a, b) => a - b).slice(0, 4);
@@ -598,7 +598,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 <div className="flex justify-between items-center mb-3">
                     <h2 className={`${t.text} font-bold text-lg`}>Order Summary</h2>
                     {onBackToCart && (
-                        <Button onClick={onBackToCart} size="sm" className={`${t.backBtn} ${POS_TOUCH.control} px-4 text-sm ${POS_RADIUS.control} ${POS_FOCUS}`}>
+                        <Button onClick={onBackToCart} size="sm" className={`h-11 ${t.backBtn} ${POS_TOUCH.control} px-4 text-sm ${POS_RADIUS.control} ${POS_FOCUS}`}>
                             ← Back
                         </Button>
                     )}
@@ -642,7 +642,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     toast.error('Print failed: ' + e.message);
                                 }
                             }}
-                            className={`w-full ${POS_TOUCH.control} text-xs font-semibold ${POS_RADIUS.control} ${POS_FOCUS} ${t.inactBtn}`}
+                            className={`h-11 w-full ${POS_TOUCH.control} text-xs font-semibold ${POS_RADIUS.control} ${POS_FOCUS} ${t.inactBtn}`}
                         >
                             <FileText className="h-3.5 w-3.5 mr-1.5" /> Print Receipt
                         </Button>
@@ -717,7 +717,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <>
                             <div className="space-y-1">
                                 {payments.map((p, i) => (
-                                    <div key={i} className={`flex items-center justify-between ${t.row} rounded px-3 py-1.5`}>
+                                    <div key={i} className={`flex items-center justify-between ${t.row} rounded-xl px-3 py-1.5`}>
                                         <span className={`${t.subtext} text-sm capitalize`}>{p.method}</span>
                                         <span className={`${t.text} text-sm font-semibold`}>£{p.amount.toFixed(2)}</span>
                                         <button onClick={() => removePayment(i)} className="text-red-400 hover:text-red-300 ml-2">

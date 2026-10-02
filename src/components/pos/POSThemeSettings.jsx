@@ -194,9 +194,9 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
                                     )}
                                     {/* Live preview of the ramp this palette produces */}
                                     <div className="flex gap-1" style={paletteStyle(key)}>
-                                        <span className="h-7 w-7 rounded-lg bg-accent-500" />
-                                        <span className="h-7 w-4 rounded-lg bg-accent-400" />
-                                        <span className="h-7 w-2.5 rounded-lg bg-accent-200" />
+                                        <span className="h-7 w-7 rounded-xl bg-accent-500" />
+                                        <span className="h-7 w-4 rounded-xl bg-accent-400" />
+                                        <span className="h-7 w-2.5 rounded-xl bg-accent-200" />
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold text-gray-800">{palette.label}</p>
@@ -208,7 +208,7 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
                     </div>
                 </div>
 
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex gap-2 text-xs text-blue-800">
                     <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                     <span>
                         The accent colour is saved to the restaurant, so <strong>every till at this site</strong> picks it up.

@@ -66,7 +66,7 @@ export default function POSCart({
                     )}
                 </div>
                 {orderType === 'dine_in' && selectedTable && (
-                    <span className="text-xs bg-accent-500/20 text-accent-500 border border-accent-500/30 px-2 py-0.5 rounded-lg font-medium">
+                    <span className="text-xs bg-accent-500/20 text-accent-500 border border-accent-500/30 px-2 py-0.5 rounded-xl font-medium">
                         {selectedTable.table_number}
                     </span>
                 )}
@@ -116,7 +116,7 @@ export default function POSCart({
                                 <button
                                     onClick={() => handleRemove(item.id, item.name)}
                                     aria-label={`Remove ${item.name}`}
-                                    className="w-11 h-11 rounded-lg bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 text-red-400 flex items-center justify-center transition-colors flex-shrink-0"
+                                    className="w-11 h-11 rounded-xl bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 text-red-400 flex items-center justify-center transition-colors flex-shrink-0"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -181,7 +181,7 @@ export default function POSCart({
                                 </button>
                                 <button
                                     onClick={() => onSelectTable(null)}
-                                    className={`w-full ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'} font-semibold h-9 rounded-xl text-xs transition-colors`}
+                                    className={`w-full ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'} font-semibold h-11 rounded-xl text-xs transition-colors`}
                                 >
                                     Change Table
                                 </button>

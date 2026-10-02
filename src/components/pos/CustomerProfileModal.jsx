@@ -96,7 +96,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
     const textSub = isDark ? 'text-gray-400' : 'text-gray-500';
     const inputCls = `w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors ${isDark ? 'bg-[#0f1117] border-white/[0.08] text-white placeholder-gray-500 focus:border-accent-500/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-accent-400'}`;
     const labelCls = `text-xs font-semibold mb-1 block ${textSub}`;
-    const tabCls = (tab) => `flex-1 py-2 text-xs font-semibold transition-colors rounded-lg ${activeTab === tab ? (isDark ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-800') : textSub}`;
+    const tabCls = (tab) => `flex-1 py-2 text-xs font-semibold transition-colors rounded-xl ${activeTab === tab ? (isDark ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-800') : textSub}`;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -185,11 +185,11 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                         </div>
                                         <div className="flex items-center gap-1">
                                             {!addr.is_default && (
-                                                <button onClick={() => setDefaultAddress(i)} className={`text-xs px-2 py-1 rounded-lg border transition-colors ${isDark ? 'border-white/[0.08] text-gray-400 hover:text-accent-400' : 'border-gray-200 text-gray-500 hover:text-accent-500'}`}>
+                                                <button onClick={() => setDefaultAddress(i)} className={`text-xs px-2 py-1 rounded-xl border transition-colors ${isDark ? 'border-white/[0.08] text-gray-400 hover:text-accent-400' : 'border-gray-200 text-gray-500 hover:text-accent-500'}`}>
                                                     <Star className="h-3 w-3" />
                                                 </button>
                                             )}
-                                            <button onClick={() => removeAddress(i)} className={`text-xs px-2 py-1 rounded-lg border transition-colors ${isDark ? 'border-white/[0.08] text-gray-400 hover:text-red-400' : 'border-gray-200 text-gray-500 hover:text-red-500'}`}>
+                                            <button onClick={() => removeAddress(i)} className={`text-xs px-2 py-1 rounded-xl border transition-colors ${isDark ? 'border-white/[0.08] text-gray-400 hover:text-red-400' : 'border-gray-200 text-gray-500 hover:text-red-500'}`}>
                                                 <Trash2 className="h-3 w-3" />
                                             </button>
                                         </div>

@@ -106,7 +106,7 @@ function StaffFormDialog({ open, onClose, staff, restaurantId, onSaved, isDark }
                         <select
                             value={form.role}
                             onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
-                            className={`${t.select} border rounded-lg px-3 py-2 text-sm w-full outline-none`}
+                            className={`${t.select} border rounded-xl px-3 py-2 text-sm w-full outline-none`}
                         >
                             {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                         </select>
@@ -275,7 +275,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                     <h2 className={`${t.text} font-bold text-base`}>Staff Members</h2>
                     {isAdmin && (
                         <Button onClick={() => { setEditingStaff(null); setFormOpen(true); }}
-                            className="bg-accent-500 hover:bg-accent-600 text-white h-8 px-3 text-xs gap-1">
+                            className="bg-accent-500 hover:bg-accent-600 text-white h-11 px-3 text-xs gap-1">
                             <UserPlus className="h-3.5 w-3.5" /> Add
                         </Button>
                     )}
@@ -286,12 +286,12 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                     <div className="relative">
                         <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${t.textSub}`} />
                         <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search staff..."
-                            className={`${t.input} h-8 pl-8 text-xs border rounded-lg`} />
+                            className={`${t.input} h-8 pl-8 text-xs border rounded-xl`} />
                     </div>
                     <div className="flex gap-1 flex-wrap">
                         {['all', ...ROLES.map(r => r.value)].map(r => (
                             <button key={r} onClick={() => setRoleFilter(r)}
-                                className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${roleFilter === r ? t.pillActive : t.pill}`}>
+                                className={`px-2 py-1 rounded-xl text-[11px] font-semibold border transition-all ${roleFilter === r ? t.pillActive : t.pill}`}>
                                 {r === 'all' ? 'All' : ROLES.find(x => x.value === r)?.label || r}
                             </button>
                         ))}
@@ -346,7 +346,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                     <span className={`${t.textMuted} text-xs font-semibold`}>Period:</span>
                     {DATE_PRESETS.map(p => (
                         <button key={p.label} onClick={() => setDatePreset(p.label)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${datePreset === p.label ? t.pillActive : t.pill}`}>
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${datePreset === p.label ? t.pillActive : t.pill}`}>
                             {p.label}
                         </button>
                     ))}
@@ -376,10 +376,10 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                 {isAdmin && (
                                     <div className="flex items-center gap-2">
                                         <Button onClick={() => { setEditingStaff(selectedStaff); setFormOpen(true); }}
-                                            size="sm" className={isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/[0.08]' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'}>
+                                            className="h-11" size="sm" className={isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/[0.08]' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'}>
                                             <Edit2 className="h-3.5 w-3.5" />
                                         </Button>
-                                        <Button onClick={() => toggleActive(selectedStaff)} size="sm"
+                                        <Button onClick={() => toggleActive(selectedStaff)} className="h-11" size="sm"
                                             className={selectedStaff.is_active
                                                 ? 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
                                                 : 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30'}>
@@ -387,7 +387,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                             {selectedStaff.is_active ? 'Deactivate' : 'Activate'}
                                         </Button>
                                         <Button onClick={() => deleteStaff(selectedStaff)} size="sm"
-                                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30">
+                                            className="h-11 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30">
                                             <Trash2 className="h-3.5 w-3.5" />
                                         </Button>
                                     </div>

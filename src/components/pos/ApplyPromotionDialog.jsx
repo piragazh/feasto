@@ -118,7 +118,7 @@ export default function ApplyPromotionDialog({
 
                 {/* Coupon limit warning */}
                 {couponLimitReached && !hasManualDiscount && (
-                    <div className={`flex items-start gap-2 rounded-lg px-3 py-2 ${isDark ? 'bg-gray-500/10 border-gray-500/30' : 'bg-gray-100 border-gray-300'} border`}>
+                    <div className={`flex items-start gap-2 rounded-xl px-3 py-2 ${isDark ? 'bg-gray-500/10 border-gray-500/30' : 'bg-gray-100 border-gray-300'} border`}>
                         <AlertCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
                         <p className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                             Maximum {MAX_COUPONS} coupons already applied. Remove one before adding another.
@@ -128,7 +128,7 @@ export default function ApplyPromotionDialog({
 
                 {/* Mutual exclusion warning */}
                 {hasManualDiscount && (
-                    <div className="flex items-start gap-2 bg-accent-500/10 border border-accent-500/30 rounded-lg px-3 py-2">
+                    <div className="flex items-start gap-2 bg-accent-500/10 border border-accent-500/30 rounded-xl px-3 py-2">
                         <AlertCircle className="h-4 w-4 text-accent-400 shrink-0 mt-0.5" />
                         <p className="text-accent-300 text-xs">
                             A manual discount is already applied. Coupons and manual discounts cannot be combined — remove the manual discount first.
@@ -184,7 +184,7 @@ export default function ApplyPromotionDialog({
                                 return (
                                     <div
                                         key={coupon.id}
-                                        className={`p-3 rounded-lg border ${isDark ? (meetsMinimum ? 'bg-gray-700 border-gray-600' : 'bg-gray-700 border-gray-700 opacity-50') : (meetsMinimum ? 'bg-gray-50 border-gray-200' : 'bg-gray-50 border-gray-200 opacity-50')}`}
+                                        className={`p-3 rounded-xl border ${isDark ? (meetsMinimum ? 'bg-gray-700 border-gray-600' : 'bg-gray-700 border-gray-700 opacity-50') : (meetsMinimum ? 'bg-gray-50 border-gray-200' : 'bg-gray-50 border-gray-200 opacity-50')}`}
                                     >
                                         <div className="flex justify-between items-start gap-3">
                                             <div className="flex-1 min-w-0">
@@ -217,7 +217,7 @@ export default function ApplyPromotionDialog({
                                                 size="sm"
                                                 onClick={() => validateAndApply(coupon.code)}
                                                 disabled={!meetsMinimum || isValidating || couponLimitReached || hasManualDiscount}
-                                                className="bg-green-600 hover:bg-green-700 disabled:opacity-40 shrink-0"
+                                                className="h-11 bg-green-600 hover:bg-green-700 disabled:opacity-40 shrink-0"
                                             >
                                                 {isValidating
                                                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

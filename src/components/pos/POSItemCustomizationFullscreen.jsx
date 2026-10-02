@@ -196,7 +196,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                 return (
                                     <button key={opt.label}
                                         onClick={() => toggleMealUpgrade(isMealOpt)}
-                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
+                                        className={`w-full rounded-2xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">
@@ -219,7 +219,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                 return (
                                     <button key={opt.label}
                                         onClick={() => toggleSingle(currentStep.name, opt.label, currentStep._isMealSub)}
-                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
+                                        className={`w-full rounded-2xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">
@@ -241,7 +241,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                 return (
                                     <button key={opt.label}
                                         onClick={() => toggleMultiple(currentStep.name, opt.label, currentStep._isMealSub)}
-                                        className={`w-full rounded-3xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
+                                        className={`w-full rounded-2xl border-2 p-8 flex items-center justify-between transition-all active:scale-[0.98] ${isSelected ? 'bg-accent-500 border-accent-500' : isDark ? 'bg-white/[0.04] border-white/[0.08] hover:border-accent-500/40' : 'bg-gray-50 border-gray-200 hover:border-accent-400'}`}
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">

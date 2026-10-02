@@ -98,7 +98,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
 
                 <div className="space-y-4">
                     {/* Total Amount */}
-                    <div className="bg-gray-100 p-4 rounded-lg">
+                    <div className="bg-gray-100 p-4 rounded-xl">
                         <p className="text-sm text-gray-600">Total Bill Amount</p>
                         <p className="text-3xl font-bold text-gray-900">£{totalAmount.toFixed(2)}</p>
                     </div>
@@ -143,7 +143,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
                                     className="mt-1"
                                 />
                             </div>
-                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
                                 <p className="text-sm text-blue-700 mb-1">Amount per person:</p>
                                 <p className="text-2xl font-bold text-blue-900">
                                     £{(totalAmount / numberOfPeople).toFixed(2)}
@@ -158,9 +158,9 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
                             {/* Items List */}
                             <div>
                                 <Label className="text-sm font-semibold mb-2 block">Select Items</Label>
-                                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                                <div className="border rounded-xl p-3 max-h-48 overflow-y-auto space-y-2">
                                     {allItems.map((item) => (
-                                        <div key={item.uniqueKey} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                                        <div key={item.uniqueKey} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl">
                                             <Checkbox
                                                 checked={selectedItems.has(item.uniqueKey)}
                                                 onCheckedChange={() => toggleItemSelection(item.uniqueKey)}
@@ -180,7 +180,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
                                 <div className="flex items-center justify-between mb-2">
                                     <Label className="text-sm font-semibold">Split Between</Label>
                                     <Button
-                                        size="sm"
+                                        className="h-11" size="sm"
                                         variant="outline"
                                         onClick={() => setCustomSplits([...customSplits, { 
                                             person: customSplits.length + 1, 
@@ -194,7 +194,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
 
                                 <div className="space-y-2">
                                     {customSplits.map((split, idx) => (
-                                        <div key={idx} className="border rounded-lg p-3 bg-gray-50">
+                                        <div key={idx} className="border rounded-xl p-3 bg-gray-50">
                                             <div className="flex items-center justify-between mb-2">
                                                 <p className="font-semibold">Person {split.person}</p>
                                                 <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
                                                         size="sm"
                                                         onClick={() => assignItemsToPerson(idx)}
                                                         disabled={selectedItems.size === 0}
-                                                        className="h-7"
+                                                        className="h-11"
                                                     >
                                                         Assign Selected
                                                     </Button>
