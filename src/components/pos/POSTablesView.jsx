@@ -178,7 +178,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
         }[status] || (isDark ? 'border-gray-500 bg-gray-700' : 'border-gray-400 bg-gray-100');
     };
 
-    const shapeClass = (shape) => shape === 'round' ? 'rounded-full' : shape === 'rect' ? 'rounded-xl' : 'rounded-xl';
+    const shapeClass = (shape) => shape === 'round' ? 'rounded-full' : shape === 'rect' ? 'rounded-lg' : 'rounded-xl';
 
     const handlePaymentComplete = async () => {
         const ordersForTable = tableOrders.filter(o => o.table_id === viewingTable.id);
@@ -284,7 +284,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                             value={courseOf(it)}
                                             onChange={(e) => assignLine(order, i, { course: e.target.value })}
                                             aria-label={`Course for ${it.name}`}
-                                            className={`h-9 rounded-xl px-1 text-[11px] ${isDark ? 'bg-black/30 border border-white/10 text-white' : 'bg-white border border-gray-300'}`}
+                                            className={`h-9 rounded-lg px-1 text-[11px] ${isDark ? 'bg-black/30 border border-white/10 text-white' : 'bg-white border border-gray-300'}`}
                                         >
                                             {COURSES.map(c => <option key={c} value={c}>{COURSE_LABELS[c]}</option>)}
                                         </select>
@@ -292,7 +292,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                             value={seatOf(it) || ''}
                                             onChange={(e) => assignLine(order, i, { seat: e.target.value === '' ? 0 : Number(e.target.value) })}
                                             aria-label={`Seat for ${it.name}`}
-                                            className={`h-9 rounded-xl px-1 text-[11px] ${isDark ? 'bg-black/30 border border-white/10 text-white' : 'bg-white border border-gray-300'}`}
+                                            className={`h-9 rounded-lg px-1 text-[11px] ${isDark ? 'bg-black/30 border border-white/10 text-white' : 'bg-white border border-gray-300'}`}
                                         >
                                             <option value="">Table</option>
                                             {Array.from({ length: Math.max(Number(viewingTable.capacity) || 0, 8) }, (_, n) => n + 1)
@@ -454,14 +454,14 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                     <Button
                         size="sm"
                         onClick={() => setViewMode('floorplan')}
-                        className={`h-11 px-3 ${viewMode === 'floorplan' ? 'bg-accent-500 hover:bg-accent-600 text-white' : t.toggle}`}
+                        className={`h-9 px-3 ${viewMode === 'floorplan' ? 'bg-accent-500 hover:bg-accent-600 text-white' : t.toggle}`}
                     >
                         <LayoutGrid className="h-4 w-4 mr-1.5" /> Floor Plan
                     </Button>
                     <Button
                         size="sm"
                         onClick={() => setViewMode('grid')}
-                        className={`h-11 px-3 ${viewMode === 'grid' ? 'bg-accent-500 hover:bg-accent-600 text-white' : t.toggle}`}
+                        className={`h-9 px-3 ${viewMode === 'grid' ? 'bg-accent-500 hover:bg-accent-600 text-white' : t.toggle}`}
                     >
                         <Grid3x3 className="h-4 w-4 mr-1.5" /> Grid
                     </Button>

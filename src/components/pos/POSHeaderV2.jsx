@@ -48,7 +48,7 @@ export default function POSHeaderV2({
                     </div>
                 )}
                 <div className="min-w-0 hidden md:block">
-                    <div className="text-base font-extrabold leading-tight truncate max-w-[220px]">{posName}</div>
+                    <div className="text-[15px] font-extrabold leading-tight truncate max-w-[220px]">{posName}</div>
                     <div className={`flex items-center gap-1.5 text-xs font-semibold ${statusColour}`} role="status">
                         {status.tone === 'sync'
                             ? <RefreshCw className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -125,7 +125,7 @@ export default function POSHeaderV2({
                     <DropdownMenuContent align="end" className="w-64">
                         <DropdownMenuLabel>Screens</DropdownMenuLabel>
                         {MORE_NAV.map(n => (
-                            <DropdownMenuItem key={n.id} onSelect={() => onTab(n.id)} className="h-11 text-base font-semibold">
+                            <DropdownMenuItem key={n.id} onSelect={() => onTab(n.id)} className="h-11 text-[15px] font-semibold">
                                 {n.label}{activeTab === n.id && <span className="ml-auto text-xs text-accent-600 font-bold">Open</span>}
                             </DropdownMenuItem>
                         ))}

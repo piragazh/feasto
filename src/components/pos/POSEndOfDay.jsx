@@ -131,14 +131,14 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                             className={`pl-9 pr-3 py-2 rounded-xl border text-sm font-medium ${t.input} focus:outline-none focus:ring-2 focus:ring-accent-500/50`}
                         />
                     </div>
-                    <Button className="h-11" size="sm" variant="ghost" onClick={() => refetch()} className={t.textMuted}>
+                    <Button size="sm" variant="ghost" onClick={() => refetch()} className={t.textMuted}>
                         <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
                     </Button>
                     <Button
                         size="sm"
                         onClick={printEOD}
                         disabled={isPrinting || (!restaurant?.printer_config?.bluetooth_printer?.id && !restaurant?.printer_config?.qz_printer_name)}
-                        className="h-11 bg-accent-500 hover:bg-accent-600 text-white gap-2"
+                        className="bg-accent-500 hover:bg-accent-600 text-white gap-2"
                     >
                         <Printer className="h-4 w-4" />
                         {isPrinting ? 'Printing...' : 'Print Z-Report'}

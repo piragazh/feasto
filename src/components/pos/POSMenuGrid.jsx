@@ -52,9 +52,9 @@ const DENSITY = {
  * arm's length. The price steps with it, since name and price are read together.
  */
 const TEXT_SIZE = {
-    s: { name: 'text-xs leading-tight', price: 'text-lg' },
-    m: { name: 'text-sm leading-snug',  price: 'text-xl' },
-    l: { name: 'text-lg leading-snug',  price: 'text-2xl' },
+    s: { name: 'text-[12px] leading-tight', price: 'text-lg' },
+    m: { name: 'text-[14px] leading-snug',  price: 'text-xl' },
+    l: { name: 'text-[17px] leading-snug',  price: 'text-2xl' },
 };
 
 export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange, onSearchFocus, onItemClick, t, density = 'standard', textSize = 'm', categoryImages = {} }) {
@@ -159,7 +159,7 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                 {/* Flags an item that opens the options dialog, so staff
                                     know a tap won't add straight to the cart. */}
                                 {hasOptions && (
-                                    <span className="absolute top-1.5 right-1.5 bg-black/60 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-xl backdrop-blur-sm">
+                                    <span className="absolute top-1.5 right-1.5 bg-black/60 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm">
                                         OPTIONS
                                     </span>
                                 )}
@@ -170,12 +170,12 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                     promising the last portion. Sold-out items never reach
                                     here - they are already off sale. */}
                                 {stockState(item) === 'low' && (
-                                    <span className="absolute bottom-1.5 left-1.5 bg-amber-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded-xl">
+                                    <span className="absolute bottom-1.5 left-1.5 bg-amber-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded-md">
                                         {Math.floor(Number(item.stock_quantity))} left
                                     </span>
                                 )}
                                 {onOffer && (
-                                    <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-xl uppercase tracking-wide">
+                                    <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide">
                                         {item._price_label}
                                     </span>
                                 )}

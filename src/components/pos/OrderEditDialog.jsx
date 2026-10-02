@@ -140,9 +140,9 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                         {/* Items Section */}
                         <div className="col-span-2">
                             <Label className="text-white mb-2">Order Items</Label>
-                            <div className="space-y-2 mb-4 bg-gray-700 p-3 rounded-xl">
+                            <div className="space-y-2 mb-4 bg-gray-700 p-3 rounded">
                                 {items.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 bg-gray-600 p-2 rounded-xl">
+                                    <div key={idx} className="flex items-center gap-2 bg-gray-600 p-2 rounded">
                                         <div className="flex-1">
                                             <p className="text-white text-sm font-medium">{item.name}</p>
                                             <p className="text-gray-400 text-xs">£{item.price.toFixed(2)}</p>
@@ -188,7 +188,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                                         key={item.id}
                                         onClick={() => addItem(item)}
                                         variant="outline"
-                                        className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 text-xs h-11"
+                                        className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 text-xs h-8"
                                     >
                                         {item.name}
                                     </Button>

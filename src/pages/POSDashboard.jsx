@@ -520,7 +520,7 @@ export default function POSDashboard() {
                         <button 
                             onClick={toggleTheme}
                             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
                             {isDark ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
                         </button>
 
@@ -528,7 +528,7 @@ export default function POSDashboard() {
                             <button 
                                 onClick={() => setPosNumber(null)}
                                 aria-label="Switch POS terminal"
-                                className={`flex items-center gap-1 ${t.textMuted} text-xs px-3 py-2 rounded-xl hover:${isDark ? 'bg-white/5' : 'bg-gray-100'} transition-colors`}>
+                                className={`flex items-center gap-1 ${t.textMuted} text-xs px-3 py-2 rounded-lg hover:${isDark ? 'bg-white/5' : 'bg-gray-100'} transition-colors`}>
                                 <ChevronDown className="h-4 w-4" aria-hidden="true" />
                                 Switch
                             </button>
@@ -541,7 +541,7 @@ export default function POSDashboard() {
                                 window.open(createPageUrl('CustomerDisplay'), '_blank', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
                             }}
                             aria-label="Open customer display in new window"
-                            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
                             <ExternalLink className="h-4 w-4" aria-hidden="true" />
                         </button>
 
@@ -549,7 +549,7 @@ export default function POSDashboard() {
                         <button
                             onClick={() => window.open(createPageUrl('KioskDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
                             aria-label="Open self-order kiosk in new window"
-                            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
                             <TabletSmartphone className="h-4 w-4" aria-hidden="true" />
                         </button>
 
@@ -570,7 +570,7 @@ export default function POSDashboard() {
                         <button 
                             onClick={() => base44.auth.logout()}
                             aria-label="Sign out"
-                            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${t.iconBtn}`}>
                             <LogOut className="h-4 w-4" aria-hidden="true" />
                         </button>
                     </div>

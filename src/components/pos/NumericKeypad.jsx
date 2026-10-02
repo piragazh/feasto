@@ -35,7 +35,7 @@ export default function NumericKeypad({ rawValue = '', onRawChange, onComplete, 
     return (
         <div className="space-y-2">
             {/* Display */}
-            <div className={`pos-key-display ${displayCls} rounded-xl px-4 py-3 text-right`}>
+            <div className={`pos-key-display ${displayCls} rounded-lg px-4 py-3 text-right`}>
                 <div className={`${labelCls} text-xs mb-0.5`}>Amount</div>
                 <div className={`text-3xl font-bold ${valueCls}`}>£{numericValue.toFixed(2)}</div>
             </div>

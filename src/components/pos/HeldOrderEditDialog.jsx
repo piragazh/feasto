@@ -65,7 +65,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                         </label>
                         <div className="space-y-2 max-h-80 overflow-y-auto">
                             {items.map((item, idx) => (
-                                <div key={idx} className={`flex items-center justify-between p-2 rounded-xl ${isDark ? 'bg-[#0f1117] border-white/[0.06] border' : 'bg-gray-50 border border-gray-200'}`}>
+                                <div key={idx} className={`flex items-center justify-between p-2 rounded-lg ${isDark ? 'bg-[#0f1117] border-white/[0.06] border' : 'bg-gray-50 border border-gray-200'}`}>
                                     <div className="flex-1 min-w-0">
                                         <p className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>{item.name}</p>
                                         <p className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
@@ -75,7 +75,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                                     <div className="flex items-center gap-1 ml-2">
                                         <button
                                             onClick={() => handleQuantityChange(idx, item.quantity - 1)}
-                                            className={`h-6 w-6 rounded-xl flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200 hover:bg-gray-300'}`}
+                                            className={`h-6 w-6 rounded flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200 hover:bg-gray-300'}`}
                                         >
                                             <Minus className="h-3 w-3" />
                                         </button>
@@ -84,13 +84,13 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                                         </span>
                                         <button
                                             onClick={() => handleQuantityChange(idx, item.quantity + 1)}
-                                            className={`h-6 w-6 rounded-xl flex items-center justify-center ${isDark ? 'bg-accent-500/20 hover:bg-accent-500/30' : 'bg-accent-100 hover:bg-accent-200'}`}
+                                            className={`h-6 w-6 rounded flex items-center justify-center ${isDark ? 'bg-accent-500/20 hover:bg-accent-500/30' : 'bg-accent-100 hover:bg-accent-200'}`}
                                         >
                                             <Plus className="h-3 w-3" />
                                         </button>
                                         <button
                                             onClick={() => handleQuantityChange(idx, 0)}
-                                            className={`h-6 w-6 rounded-xl ml-1 flex items-center justify-center ${isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-50 hover:bg-red-100'} text-red-400`}
+                                            className={`h-6 w-6 rounded ml-1 flex items-center justify-center ${isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-50 hover:bg-red-100'} text-red-400`}
                                         >
                                             <X className="h-3 w-3" />
                                         </button>
@@ -101,7 +101,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                     </div>
 
                     {/* Total */}
-                    <div className={`p-3 rounded-xl ${isDark ? 'bg-blue-500/10 border-blue-500/30 border' : 'bg-blue-50 border-blue-200 border'}`}>
+                    <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-500/10 border-blue-500/30 border' : 'bg-blue-50 border-blue-200 border'}`}>
                         <p className={`text-xs ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>Total</p>
                         <p className={`text-2xl font-bold ${isDark ? 'text-blue-200' : 'text-blue-900'}`}>£{total.toFixed(2)}</p>
                     </div>

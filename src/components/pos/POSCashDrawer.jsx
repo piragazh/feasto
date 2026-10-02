@@ -35,7 +35,7 @@ function DenominationCounter({ counts, onChange, t }) {
                             value={counts[String(d)] ?? ''}
                             onChange={e => onChange({ ...counts, [String(d)]: e.target.value })}
                             aria-label={`Number of ${label}`}
-                            className={`h-11 w-full rounded-xl px-2 text-base font-bold tabular-nums ${t.input}`}
+                            className={`h-11 w-full rounded-lg px-2 text-base font-bold tabular-nums ${t.input}`}
                         />
                     </label>
                 );
@@ -216,7 +216,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
             {(session.movements || []).length > 0 && (
                 <ul className="space-y-1.5">
                     {session.movements.map((m, i) => (
-                        <li key={i} className={`flex justify-between text-sm p-2 rounded-xl border ${t.box}`}>
+                        <li key={i} className={`flex justify-between text-sm p-2 rounded-lg border ${t.box}`}>
                             <span className={t.text}>
                                 {m.type === 'paid_in' ? '↓ In' : '↑ Out'} · {m.reason}
                                 <span className={`${t.sub} text-xs`}> · {m.staff_name}</span>

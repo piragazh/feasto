@@ -153,7 +153,7 @@ export default function POSDiscountPanel({
         return (
             <button
                 onClick={() => setOpen(true)}
-                className={`w-full flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-semibold border transition-colors ${
+                className={`w-full flex items-center justify-center gap-2 h-9 rounded-xl text-xs font-semibold border transition-colors ${
                     isDark
                         ? 'bg-white/5 hover:bg-white/10 border-white/[0.08] text-gray-400 hover:text-accent-400'
                         : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-accent-500'
@@ -178,13 +178,13 @@ export default function POSDiscountPanel({
             <div className="grid grid-cols-2 gap-1.5">
                 <button
                     onClick={() => setType('percentage')}
-                    className={`h-11 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${type === 'percentage' ? typeBtnActive : typeBtnInactive}`}
+                    className={`h-8 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${type === 'percentage' ? typeBtnActive : typeBtnInactive}`}
                 >
                     <Percent className="h-3 w-3" /> Percentage
                 </button>
                 <button
                     onClick={() => setType('fixed')}
-                    className={`h-11 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${type === 'fixed' ? typeBtnActive : typeBtnInactive}`}
+                    className={`h-8 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${type === 'fixed' ? typeBtnActive : typeBtnInactive}`}
                 >
                     <DollarSign className="h-3 w-3" /> Fixed £
                 </button>
@@ -197,7 +197,7 @@ export default function POSDiscountPanel({
                         <button
                             key={p}
                             onClick={() => setValue(String(p))}
-                            className={`h-11 rounded-xl text-xs font-bold transition-colors ${value === String(p) ? typeBtnActive : typeBtnInactive}`}
+                            className={`h-7 rounded-lg text-xs font-bold transition-colors ${value === String(p) ? typeBtnActive : typeBtnInactive}`}
                         >
                             {p}%
                         </button>
@@ -209,7 +209,7 @@ export default function POSDiscountPanel({
                         <button
                             key={a}
                             onClick={() => setValue(String(a))}
-                            className={`h-11 rounded-xl text-xs font-bold transition-colors ${value === String(a) ? typeBtnActive : typeBtnInactive}`}
+                            className={`h-7 rounded-lg text-xs font-bold transition-colors ${value === String(a) ? typeBtnActive : typeBtnInactive}`}
                         >
                             £{a}
                         </button>
@@ -254,7 +254,7 @@ export default function POSDiscountPanel({
             <button
                 onClick={handleApply}
                 disabled={!value || parseFloat(value) <= 0 || !reasonCode || loading}
-                className="w-full h-11 bg-accent-500 hover:bg-accent-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors"
+                className="w-full h-9 bg-accent-500 hover:bg-accent-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors"
             >
                 {loading ? 'Checking…' : 'Apply Discount'}
             </button>

@@ -48,7 +48,7 @@ export default function POSCategoryPanel({ categories, selectedCategory, onSelec
                             <span className="capitalize truncate">{label}</span>
                             {count > 0 && (
                                 <span
-                                    className={`${POS_TEXT.micro} px-1.5 py-1 rounded-xl flex-shrink-0 tabular-nums ${
+                                    className={`${POS_TEXT.micro} px-1.5 py-1 rounded-md flex-shrink-0 tabular-nums ${
                                         active ? 'bg-white/20 text-white' : t.catCount
                                     }`}
                                 >

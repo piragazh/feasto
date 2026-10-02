@@ -205,7 +205,7 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
                     <Calendar className={`h-4 w-4 ${t.textMuted} mr-1`} />
                     {DATE_PRESETS.map(p => (
                         <button key={p.label} onClick={() => setDatePreset(p.label)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${datePreset === p.label ? t.pillActive : t.pill}`}>
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${datePreset === p.label ? t.pillActive : t.pill}`}>
                             {p.label}
                         </button>
                     ))}

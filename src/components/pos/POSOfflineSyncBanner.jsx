@@ -301,7 +301,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
             </span>
             <button
                 onClick={openStuckReview}
-                className="bg-red-500/25 hover:bg-red-500/40 border border-red-500/40 px-3 py-1 rounded-xl text-xs font-bold transition-colors"
+                className="bg-red-500/25 hover:bg-red-500/40 border border-red-500/40 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
             >
                 Review
             </button>
@@ -352,7 +352,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
                                             triggerSync(restaurantId, { manual: true });
                                             toast.success('Retrying order…');
                                         }}
-                                        className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-200 px-3 py-1 rounded-xl text-xs font-bold"
+                                        className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-200 px-3 py-1 rounded-lg text-xs font-bold"
                                     >
                                         Retry
                                     </button>
@@ -364,7 +364,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
                                             // to do nothing.
                                             setPendingDiscard(o);
                                         }}
-                                        className="bg-gray-700 hover:bg-red-600/40 border border-gray-600 text-gray-300 px-3 py-1 rounded-xl text-xs font-bold"
+                                        className="bg-gray-700 hover:bg-red-600/40 border border-gray-600 text-gray-300 px-3 py-1 rounded-lg text-xs font-bold"
                                     >
                                         Discard
                                     </button>
@@ -451,7 +451,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
             {isOnline && !isSyncing && pendingCount > 0 && (
                 <button
                     onClick={() => triggerSync(restaurantId, { manual: true })}
-                    className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 px-3 py-1 rounded-xl text-xs font-bold transition-colors"
+                    className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
                 >
                     <RefreshCw className="h-3 w-3" />
                     Sync Now

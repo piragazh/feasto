@@ -104,7 +104,7 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                             </div>
 
                             {notFound && (
-                                <div className={`flex items-start gap-2 p-3 rounded-xl ${isDark ? 'bg-red-500/10 border-red-500/30 border' : 'bg-red-50 border-red-200 border'}`}>
+                                <div className={`flex items-start gap-2 p-3 rounded-lg ${isDark ? 'bg-red-500/10 border-red-500/30 border' : 'bg-red-50 border-red-200 border'}`}>
                                     <AlertCircle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
                                     <div>
                                         <p className={`text-sm font-semibold ${isDark ? 'text-red-300' : 'text-red-700'}`}>
@@ -142,7 +142,7 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                         </>
                     ) : (
                         <>
-                            <div className={`p-4 rounded-xl border ${isDark ? 'bg-green-500/10 border-green-500/30' : 'bg-green-50 border-green-200'}`}>
+                            <div className={`p-4 rounded-lg border ${isDark ? 'bg-green-500/10 border-green-500/30' : 'bg-green-50 border-green-200'}`}>
                                 <p className={`text-xs font-semibold ${isDark ? 'text-green-400' : 'text-green-600'} mb-2`}>
                                     Item Found
                                 </p>

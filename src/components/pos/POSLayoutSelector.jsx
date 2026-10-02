@@ -11,9 +11,9 @@ const LAYOUTS = [
         description: 'Categories left · Menu centre · Cart right',
         preview: (
             <div className="grid grid-cols-12 gap-1 h-16 w-full">
-                <div className="col-span-2 bg-accent-400/60 rounded-xl" />
-                <div className="col-span-7 bg-blue-400/60 rounded-xl" />
-                <div className="col-span-3 bg-green-400/60 rounded-xl" />
+                <div className="col-span-2 bg-accent-400/60 rounded" />
+                <div className="col-span-7 bg-blue-400/60 rounded" />
+                <div className="col-span-3 bg-green-400/60 rounded" />
             </div>
         ),
     },
@@ -23,9 +23,9 @@ const LAYOUTS = [
         description: 'Narrow categories · Wide menu · Slim cart',
         preview: (
             <div className="grid grid-cols-12 gap-1 h-16 w-full">
-                <div className="col-span-1 bg-accent-400/60 rounded-xl" />
-                <div className="col-span-8 bg-blue-400/60 rounded-xl" />
-                <div className="col-span-3 bg-green-400/60 rounded-xl" />
+                <div className="col-span-1 bg-accent-400/60 rounded" />
+                <div className="col-span-8 bg-blue-400/60 rounded" />
+                <div className="col-span-3 bg-green-400/60 rounded" />
             </div>
         ),
     },
@@ -35,8 +35,8 @@ const LAYOUTS = [
         description: 'No category panel · Full-width menu · Cart right',
         preview: (
             <div className="grid grid-cols-12 gap-1 h-16 w-full">
-                <div className="col-span-9 bg-blue-400/60 rounded-xl" />
-                <div className="col-span-3 bg-green-400/60 rounded-xl" />
+                <div className="col-span-9 bg-blue-400/60 rounded" />
+                <div className="col-span-3 bg-green-400/60 rounded" />
             </div>
         ),
     },
@@ -46,9 +46,9 @@ const LAYOUTS = [
         description: 'Categories left · Menu centre · Wide cart',
         preview: (
             <div className="grid grid-cols-12 gap-1 h-16 w-full">
-                <div className="col-span-2 bg-accent-400/60 rounded-xl" />
-                <div className="col-span-5 bg-blue-400/60 rounded-xl" />
-                <div className="col-span-5 bg-green-400/60 rounded-xl" />
+                <div className="col-span-2 bg-accent-400/60 rounded" />
+                <div className="col-span-5 bg-blue-400/60 rounded" />
+                <div className="col-span-5 bg-green-400/60 rounded" />
             </div>
         ),
     },
@@ -58,9 +58,9 @@ const LAYOUTS = [
         description: 'Quick actions left · Full-width menu · Cart right',
         preview: (
             <div className="grid grid-cols-12 gap-1 h-16 w-full">
-                <div className="col-span-1 bg-purple-400/60 rounded-xl" />
-                <div className="col-span-9 bg-blue-400/60 rounded-xl" />
-                <div className="col-span-2 bg-green-400/60 rounded-xl" />
+                <div className="col-span-1 bg-purple-400/60 rounded" />
+                <div className="col-span-9 bg-blue-400/60 rounded" />
+                <div className="col-span-2 bg-green-400/60 rounded" />
             </div>
         ),
     },
@@ -70,8 +70,8 @@ const LAYOUTS = [
         description: 'Square category grid · Click to view items · Cart right',
         preview: (
             <div className="grid grid-cols-12 gap-1 h-16 w-full">
-                <div className="col-span-9 bg-accent-400/60 rounded-xl" />
-                <div className="col-span-3 bg-green-400/60 rounded-xl" />
+                <div className="col-span-9 bg-accent-400/60 rounded" />
+                <div className="col-span-3 bg-green-400/60 rounded" />
             </div>
         ),
     },
@@ -125,9 +125,9 @@ export default function POSLayoutSelector({ restaurantId }) {
                 })}
             </div>
             <div className="flex gap-2 text-xs text-gray-400 pt-1">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-xl bg-accent-400/60 inline-block" /> Categories</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-xl bg-blue-400/60 inline-block" /> Menu</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-xl bg-green-400/60 inline-block" /> Cart</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-accent-400/60 inline-block" /> Categories</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-400/60 inline-block" /> Menu</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-400/60 inline-block" /> Cart</span>
             </div>
         </div>
     );

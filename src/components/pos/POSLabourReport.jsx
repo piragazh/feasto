@@ -230,12 +230,12 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
                                                                         <span className={`${t.sub} text-[11px]`}>Hourly rate £</span>
                                                                         <input type="number" step="0.01" min="0" value={rateInput}
                                                                             onChange={e => setRateInput(e.target.value)}
-                                                                            className={`h-11 w-28 rounded-xl px-2 ${t.input}`} />
+                                                                            className={`h-11 w-28 rounded-lg px-2 ${t.input}`} />
                                                                     </label>
                                                                     <label className="flex flex-col gap-1">
                                                                         <span className={`${t.sub} text-[11px]`}>From</span>
                                                                         <input type="date" value={rateFrom} onChange={e => setRateFrom(e.target.value)}
-                                                                            className={`h-11 rounded-xl px-2 ${t.input}`} />
+                                                                            className={`h-11 rounded-lg px-2 ${t.input}`} />
                                                                     </label>
                                                                     <button onClick={() => saveRate(member.id)}
                                                                         className="h-11 px-4 rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-bold">Save</button>
@@ -264,7 +264,7 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
                             <h3 className={`${t.text} font-semibold text-sm mb-2`}>Needs attention</h3>
                             <ul className="space-y-1.5">
                                 {flagged.map(e => (
-                                    <li key={e.id} className="text-xs p-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200">
+                                    <li key={e.id} className="text-xs p-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-200">
                                         <strong>{e.staff_name}</strong> · {new Date(e.clock_in).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                         {' — '}
                                         {isForgottenClockOut(e) ? 'still clocked in after 16h — probably forgot to clock out' : 'over 6 hours without a 20-minute break'}

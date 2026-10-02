@@ -43,7 +43,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                         <h2 className={`${t.text} font-bold text-base`}>Held Orders</h2>
                         <p className={`${t.textMuted} text-xs mt-0.5`}>{filteredOrders.length} of {heldOrders.length} order{heldOrders.length !== 1 ? 's' : ''}</p>
                     </div>
-                    <button onClick={onClose} className={`w-11 h-11 rounded-xl flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'} transition-colors`} aria-label="Close">
+                    <button onClick={onClose} className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'} transition-colors`} aria-label="Close">
                         <X className="h-4 w-4" />
                     </button>
                 </div>
@@ -111,20 +111,20 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => { onRecall(held); onClose(); }}
-                                        className="flex-1 h-11 bg-accent-500 hover:bg-accent-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                                        className="flex-1 h-8 bg-accent-500 hover:bg-accent-600 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                                     >
                                         <RotateCcw className="h-3 w-3" />
                                         Recall
                                     </button>
                                     <button
                                         onClick={() => handleEdit(held)}
-                                        className={`w-11 h-11 rounded-xl flex items-center justify-center ${isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 text-blue-600'} transition-colors`}
+                                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 text-blue-600'} transition-colors`}
                                     >
                                         <Edit2 className="h-3 w-3" />
                                     </button>
                                     <button
                                         onClick={() => setDeleteConfirmId(held.id)}
-                                        className={`w-11 h-11 rounded-xl flex items-center justify-center ${isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-50 hover:bg-red-100'} text-red-400 transition-colors`}
+                                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-50 hover:bg-red-100'} text-red-400 transition-colors`}
                                     >
                                         <Trash2 className="h-3 w-3" />
                                     </button>

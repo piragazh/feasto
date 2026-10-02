@@ -131,7 +131,7 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
 
             {/* Items */}
             {expanded && (
-                <div className={`mx-3 mb-3 rounded-xl overflow-hidden ${urgency === URGENCY.urgent ? 'bg-red-900/40' : 'bg-gray-900/60'}`}>
+                <div className={`mx-3 mb-3 rounded-lg overflow-hidden ${urgency === URGENCY.urgent ? 'bg-red-900/40' : 'bg-gray-900/60'}`}>
                     {/* Courses. A HELD course is shown, clearly marked, rather than
                         hidden: the kitchen needs to know it exists and is coming,
                         and a waiter who thinks it was sent must be able to see
@@ -194,7 +194,7 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
 
             {/* Notes */}
             {order.notes && expanded && (
-                <div className="mx-3 mb-3 px-3 py-2 bg-yellow-900/30 border border-yellow-700/30 rounded-xl">
+                <div className="mx-3 mb-3 px-3 py-2 bg-yellow-900/30 border border-yellow-700/30 rounded-lg">
                     <p className="text-yellow-300 text-sm">📝 {order.notes}</p>
                 </div>
             )}
@@ -206,7 +206,7 @@ export default function KDSOrderCard({ order, onAction, actionLabel, actionColor
                         onClick={handleAction}
                         disabled={acting || unpaidKiosk}
                         title={unpaidKiosk ? 'Cannot prep — payment awaiting confirmation at counter' : ''}
-                        className={`pos-action w-full font-bold text-base h-11 rounded-xl ${ACTION_COLORS[actionColor]} ${
+                        className={`pos-action w-full font-bold text-base h-11 rounded-lg ${ACTION_COLORS[actionColor]} ${
                             unpaidKiosk ? 'opacity-40 cursor-not-allowed' : ''
                         }`}
                     >

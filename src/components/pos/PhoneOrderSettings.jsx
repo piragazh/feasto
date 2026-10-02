@@ -104,20 +104,20 @@ export default function PhoneOrderSettings({ restaurantId }) {
                                     <select
                                         value={settings.cid_baud}
                                         onChange={e => setSettings(s => ({ ...s, cid_baud: Number(e.target.value) }))}
-                                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white"
+                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white"
                                     >
                                         {BAUD_RATES.map(b => <option key={b} value={b}>{b}</option>)}
                                     </select>
                                     <p className="text-xs text-gray-400 mt-1">Most USB CID devices use 9600 baud</p>
                                 </div>
-                                <div className={`flex items-start gap-2 text-xs p-2 rounded-xl ${serialSupported ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'}`}>
+                                <div className={`flex items-start gap-2 text-xs p-2 rounded-lg ${serialSupported ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'}`}>
                                     <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                                     {serialSupported
                                         ? 'Web Serial is supported. Click below to pair your CID modem.'
                                         : 'Web Serial API not available. Please use Google Chrome or Microsoft Edge.'}
                                 </div>
                                 {serialSupported && (
-                                    <Button size="sm" variant="outline" onClick={requestSerialPort} className="h-11 w-full">
+                                    <Button size="sm" variant="outline" onClick={requestSerialPort} className="w-full">
                                         <Usb className="h-4 w-4 mr-2" /> Pair USB CID Device
                                     </Button>
                                 )}
@@ -130,16 +130,16 @@ export default function PhoneOrderSettings({ restaurantId }) {
                                 <div>
                                     <label className="text-xs font-semibold text-gray-600 block mb-1">VoIP Webhook Poll URL</label>
                                     <input
-                                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                                         placeholder="https://your-voip-system.com/api/incoming-call"
                                         value={settings.voip_webhook_url}
                                         onChange={e => setSettings(s => ({ ...s, voip_webhook_url: e.target.value }))}
                                     />
                                     <p className="text-xs text-gray-400 mt-1">
-                                        The POS will poll this URL every 3 seconds. It should return: <code className="bg-gray-100 px-1 rounded-xl">{'{"incoming_call": true, "phone": "07xxx..."}'}</code>
+                                        The POS will poll this URL every 3 seconds. It should return: <code className="bg-gray-100 px-1 rounded">{'{"incoming_call": true, "phone": "07xxx..."}'}</code>
                                     </p>
                                 </div>
-                                <div className="flex items-start gap-2 text-xs bg-blue-50 text-blue-700 p-2 rounded-xl">
+                                <div className="flex items-start gap-2 text-xs bg-blue-50 text-blue-700 p-2 rounded-lg">
                                     <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                                     Configure your VoIP system (3CX, FreePBX, etc.) to expose an API endpoint with the caller's number. The POS will auto-detect incoming calls and look up the customer.
                                 </div>

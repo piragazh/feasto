@@ -74,7 +74,7 @@ export default function POSStaffMaintenance({ restaurantId }) {
             <CardContent className="space-y-6">
                 {/* ── PIN migration ─────────────────────────────────────────── */}
                 <div className="space-y-3">
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex gap-2 text-xs text-amber-900">
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-2 text-xs text-amber-900">
                         <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                         <div>
                             <p className="font-bold mb-0.5">Secure staff PINs</p>
@@ -101,7 +101,7 @@ export default function POSStaffMaintenance({ restaurantId }) {
                     </div>
 
                     {pinResult && (
-                        <div className="p-3 rounded-xl border border-gray-200 bg-gray-50 text-xs space-y-1">
+                        <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-xs space-y-1">
                             <p className="font-semibold text-gray-800">
                                 {pinResult.dryRun ? 'Preview — nothing changed yet' : 'Done'}
                             </p>
@@ -125,7 +125,7 @@ export default function POSStaffMaintenance({ restaurantId }) {
 
                 {/* ── Staff numbers ─────────────────────────────────────────── */}
                 <div className="space-y-3 pt-4 border-t border-gray-100">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex gap-2 text-xs text-blue-800">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2 text-xs text-blue-800">
                         <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                         <div>
                             <p className="font-bold mb-0.5">Assign staff numbers</p>
@@ -144,7 +144,7 @@ export default function POSStaffMaintenance({ restaurantId }) {
                     </Button>
 
                     {numResult && (
-                        <div className="p-3 rounded-xl border border-gray-200 bg-gray-50 text-xs">
+                        <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-xs">
                             {numResult.count === 0 ? (
                                 <p className="text-green-700 flex items-center gap-1.5">
                                     <CheckCircle2 className="h-4 w-4" />

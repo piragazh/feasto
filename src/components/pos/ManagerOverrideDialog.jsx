@@ -124,7 +124,7 @@ export default function ManagerOverrideDialog({
                         <ShieldCheck className="h-5 w-5 text-amber-400" />
                         <h3 className={`${text} font-bold text-base`}>Authorisation required</h3>
                     </div>
-                    <button onClick={onClose} aria-label="Cancel" className={`${sub} hover:${text} h-11 w-11 flex items-center justify-center`}>
+                    <button onClick={onClose} aria-label="Cancel" className={`${sub} hover:${text} h-8 w-8 flex items-center justify-center`}>
                         <X className="h-5 w-5" />
                     </button>
                 </div>

@@ -85,7 +85,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                                     <button
                                         key={cat}
                                         onClick={() => setActiveTab(cat)}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                                             currentTab === cat ? 'bg-accent-500 text-white' : inactTabCls
                                         }`}
                                     >

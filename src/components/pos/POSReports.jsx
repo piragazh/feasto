@@ -259,14 +259,14 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
         <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pb-6">
 
             {/* ── Filter Bar ── */}
-            <div className={`${t.panel} rounded-xl border p-4`}>
+            <div className={`${t.panel} rounded-lg border p-4`}>
                 <div className="flex flex-wrap gap-2 mb-3">
                     {PRESETS.map(p => (
                         <Button
                             key={p.key}
                             size="sm"
                             onClick={() => setPreset(p.key)}
-                            className={`h-11 px-4 font-bold text-sm ${
+                            className={`h-9 px-4 font-bold text-sm ${
                                 preset === p.key
                                     ? 'bg-accent-500 hover:bg-accent-600 text-white'
                                     : t.inactivBtn
@@ -296,14 +296,14 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                     <span className={`${t.label} text-xs flex-1`}>
                         {filteredOrders.length} orders · {effectiveStart.format('DD MMM YYYY')} → {effectiveEnd.format('DD MMM YYYY')}
                     </span>
-                    <Button onClick={exportCSV} size="sm" className="bg-green-700 hover:bg-green-600 text-white h-11 px-3">
+                    <Button onClick={exportCSV} size="sm" className="bg-green-700 hover:bg-green-600 text-white h-9 px-3">
                         <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
                     </Button>
-                    <Button onClick={exportPDF} size="sm" className="bg-accent-600 hover:bg-accent-500 text-white h-11 px-3">
+                    <Button onClick={exportPDF} size="sm" className="bg-accent-600 hover:bg-accent-500 text-white h-9 px-3">
                         <FileText className="h-3.5 w-3.5 mr-1.5" /> PDF
                     </Button>
                     <Button onClick={printReport} disabled={isPrinting} size="sm"
-                        className="bg-blue-700 hover:bg-blue-600 text-white h-11 px-3">
+                        className="bg-blue-700 hover:bg-blue-600 text-white h-9 px-3">
                         <Printer className="h-3.5 w-3.5 mr-1.5" />
                         {isPrinting ? 'Printing...' : 'Print Report'}
                     </Button>
@@ -335,7 +335,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                 and blank charts, which reads as broken rather than "no trade in
                 this period" - especially on a newly-opened site. */}
             {filteredOrders.length === 0 && (
-                <div className={`${t.panel} rounded-xl border p-12 text-center`}>
+                <div className={`${t.panel} rounded-lg border p-12 text-center`}>
                     <TrendingUp className={`h-12 w-12 mx-auto mb-3 opacity-20 ${t.text}`} />
                     <p className={`${t.text} font-semibold`}>No orders in this period</p>
                     <p className={`${t.label} text-sm mt-1`}>
@@ -346,7 +346,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
 
             {/* ── Chart Tabs ── */}
             {filteredOrders.length > 0 && (
-            <div className={`${t.panel} rounded-xl border`}>
+            <div className={`${t.panel} rounded-lg border`}>
                 <div className={`flex border-b ${t.tabBorder}`}>
                     {[
                         { key: 'sales', label: 'Sales Trend' },

@@ -117,7 +117,7 @@ export default function QZTrayStatusBadge({ restaurant, isDark }) {
                     onClick={handleOpenDrawer}
                     disabled={opening}
                     aria-label="Open cash drawer"
-                    className={`flex items-center justify-center w-11 h-11 rounded-xl border transition-all ${t.pill} ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-200'}`}
+                    className={`flex items-center justify-center w-9 h-9 rounded-xl border transition-all ${t.pill} ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-200'}`}
                     title="Open Cash Drawer"
                 >
                     <Printer className={`h-4 w-4 ${opening ? 'animate-pulse text-amber-400' : isDark ? 'text-gray-400' : 'text-gray-600'}`} />

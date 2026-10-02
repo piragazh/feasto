@@ -106,7 +106,7 @@ export default function POSWaitlist({ posTheme = 'dark', restaurantId = null }) 
                     </div>
                     <Button
                         onClick={addToWaitlist}
-                        className="w-full bg-accent-500 hover:bg-accent-600 text-white font-bold h-11"
+                        className="w-full bg-accent-500 hover:bg-accent-600 text-white font-bold h-10"
                     >
                         Add to Waitlist
                     </Button>
@@ -162,7 +162,7 @@ export default function POSWaitlist({ posTheme = 'dark', restaurantId = null }) 
                                         <Button
                                             onClick={() => seatGuest(guest.id)}
                                             size="sm"
-                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs h-11"
+                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs h-8"
                                         >
                                             Seat
                                         </Button>
@@ -170,7 +170,7 @@ export default function POSWaitlist({ posTheme = 'dark', restaurantId = null }) 
                                             onClick={() => removeFromWaitlist(guest.id)}
                                             variant="ghost"
                                             size="sm"
-                                            className="h-11 w-11 text-red-400 hover:text-red-300"
+                                            className="h-8 w-8 text-red-400 hover:text-red-300"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -205,7 +205,7 @@ export default function POSWaitlist({ posTheme = 'dark', restaurantId = null }) 
                                         onClick={() => removeFromWaitlist(guest.id)}
                                         variant="ghost"
                                         size="sm"
-                                        className={`w-full text-xs h-11 ${t.textMuted} hover:${isDark ? 'text-white' : 'text-gray-900'}`}
+                                        className={`w-full text-xs h-8 ${t.textMuted} hover:${isDark ? 'text-white' : 'text-gray-900'}`}
                                     >
                                         Remove
                                     </Button>
