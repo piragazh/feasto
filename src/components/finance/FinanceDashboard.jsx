@@ -1,6 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FileText, ReceiptText, Calculator, Wallet, Plus, Search, Download, ShieldCheck, Info } from 'lucide-react';
 import { calculateVat, formatGBP } from './financeMath';
+import { base44 } from '@/api/base44Client';
+
+const TEST_COMPANY_ID = '6ac0a36e45827ca2bfaef6e9';
 
 const demoInvoices = [
   { id: 'MD-DEMO-001', customer: 'Example Catering Ltd', date: '2026-09-22', due: '2026-10-06', net: 480, vat: 96, total: 576, status: 'Awaiting payment' },
@@ -31,7 +34,10 @@ function Stat({ label, value, note, icon: Icon }) {
  */
 export default function FinanceDashboard() {
   const [tab, setTab] = useState('overview');
-  const [invoices, setInvoices] = useState(demoInvoices);
+  const [invoices, setInvoices] = useState([]);
+  const [company, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [draft, setDraft] = useState({ customer: '', net: '', rate: '20', due: '' });
@@ -41,18 +47,48 @@ export default function FinanceDashboard() {
     outstanding: invoices.filter(i => i.status !== 'Paid').reduce((sum, inv) => sum + inv.total, 0),
     paid: invoices.filter(i => i.status === 'Paid').reduce((sum, inv) => sum + inv.total, 0),
   }), [invoices]);
-  const visibleInvoices = invoices.filter(i => (i.id + ' ' + i.customer).toLowerCase().includes(search.toLowerCase()));
+  const visibleInvoices = invoices.filter(i => (i.invoice_number + ' ' + i.customer_name).toLowerCase().includes(search.toLowerCase()));
 
-  const createDraft = (event) => {
+  const loadFinanceData = async () => {
+    setLoading(true);
+    try {
+      const [companyRecord, invoiceRecords] = await Promise.all([
+        base44.entities.FinanceCompany.get(TEST_COMPANY_ID),
+        base44.entities.FinanceInvoice.filter({ company_id: TEST_COMPANY_ID }, '-created_date', 100, 0),
+      ]);
+      setCompany(companyRecord);
+      setInvoices(invoiceRecords || []);
+      setNotice('');
+    } catch (error) {
+      console.error('Unable to load PK Store Finance data:', error);
+      setNotice('Could not load PK Store data. Check your access and try refreshing.');
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { loadFinanceData(); }, []);
+
+  const createDraft = async (event) => {
     event.preventDefault();
     const net = Number(draft.net);
-    if (!draft.customer.trim() || !Number.isFinite(net) || net <= 0 || !draft.due) return;
-    const calc = calculateVat(net, Number(draft.rate));
-    const id = 'MD-DRAFT-' + String(invoices.length + 1).padStart(3, '0');
-    setInvoices(current => [{ id, customer: draft.customer.trim(), date: new Date().toISOString().slice(0, 10), due: draft.due, ...calc, total: calc.gross, status: 'Draft (local only)' }, ...current]);
-    setDraft({ customer: '', net: '', rate: '20', due: '' });
-    setShowCreate(false);
-    setNotice('Local demo draft created. It has not been saved or issued.');
+    if (!draft.customer.trim() || !Number.isFinite(net) || net <= 0 || !draft.due || saving) return;
+    setSaving(true);
+    try {
+      const issueDate = new Date().toISOString().slice(0, 10);
+      const response = await base44.functions.invoke('finance-operations', {
+        action: 'create_invoice', company_id: TEST_COMPANY_ID,
+        invoice_number: `PK-TEST-${Date.now()}`, document_type: 'sales_invoice',
+        customer_name: draft.customer.trim(), issue_date: issueDate, due_date: draft.due,
+        notes: 'TEST RECORD — created in PK Store Finance testing company.',
+        lines: [{ description: 'Test invoice item', quantity: 1, unit_price: net, vat_rate: Number(draft.rate) }],
+      });
+      if (!response?.data?.success) throw new Error(response?.data?.error || 'Invoice creation failed');
+      setDraft({ customer: '', net: '', rate: '20', due: '' });
+      setShowCreate(false);
+      setNotice('Test draft saved to PK Store. It has not been issued or sent to a customer.');
+      await loadFinanceData();
+    } catch (error) {
+      console.error('Unable to create PK Store test invoice:', error);
+      setNotice(error?.response?.data?.error || error.message || 'Could not save the draft invoice.');
+    } finally { setSaving(false); }
   };
 
   return <main className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
