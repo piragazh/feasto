@@ -14,6 +14,7 @@ import VoidOrderDialog from './VoidOrderDialog';
 import usePermissionGate from '@/lib/usePermissionGate';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
 import POSKioskPaymentLane, { isAwaitingKioskPayment } from './POSKioskPaymentLane';
+import UberPushWarning from './UberPushWarning';
 import { statusUpdateFor } from '@/lib/kds-board';
 import { PERMISSIONS } from '@/lib/posPermissions';
 
@@ -360,6 +361,9 @@ function SourceBadge({ order }) {
                                         </div>
 
                                         <p className="text-accent-500 font-bold mb-3">£{order.total.toFixed(2)}</p>
+
+                                        {/* Uber was not told about a status change - say so on the ticket. */}
+                                        <UberPushWarning order={order} isDark={isDark} onRetried={refetch} />
 
                                         {/* Order actions.
                                             - 28px buttons were well under the touch floor, which is
