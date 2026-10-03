@@ -379,8 +379,17 @@ Deno.serve(async (req) => {
         const order = rows?.[0];
         if (!order) return Response.json({ skipped: 'order not found' });
 
-        // force: a manual "retry now" from staff ignores back-off and gave-up.
-        const result = await pushOrder(base44, order, creds, { force: body.force === true });
+        // force: a manual "Retry now" from staff ignores back-off and gave-up.
+        // The workflow never sends it, so it must come from a signed-in person -
+        // otherwise anyone who could reach this URL could hammer Uber's API.
+        let force = false;
+        if (body.force === true) {
+            const user = await base44.auth.me().catch(() => null);
+            if (!user) return Response.json({ error: 'Sign in to retry' }, { status: 401 });
+            force = true;
+            console.log(`[UBER PUSH] manual retry of order=${order.id} by ${user.email}`);
+        }
+        const result = await pushOrder(base44, order, creds, { force });
         return Response.json(result, { status: result.pushed === false ? 502 : 200 });
     } catch (error) {
         console.error('[UBER PUSH] error:', error?.message || error);
