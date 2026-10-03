@@ -45,7 +45,10 @@ const UBER_API = {
     tokenUrl: SANDBOX
         ? 'https://sandbox-login.uber.com/oauth/v2/token'
         : 'https://auth.uber.com/oauth/v2/token',
-    scope: 'eats.order',
+    // Space-delimited. Only list scopes Uber has approved for the app - asking
+    // for one that is not approved makes the token request fail. Must match
+    // uberEatsWebhook, which shares the stored token.
+    scope: (Deno.env.get('UBER_EATS_SCOPES') || 'eats.order').trim().replace(/\s+/g, ' '),
     base: SANDBOX ? 'https://test-api.uber.com/v1/eats' : 'https://api.uber.com/v1/eats',
     endpoints: {
         // VERIFIED
@@ -75,10 +78,48 @@ const STATUS_ACTION = {
     refunded: 'cancel',
 };
 
-let cachedToken = null;   // { token, expiresAt }
+// ── Application token ───────────────────────────────────────────────────────
+// Tokens last 30 days and Uber allows only 100 per hour (the 101st invalidates
+// the oldest). An in-memory cache alone is lost on every cold start, so the
+// token is also kept in the server-only UberCredential entity and shared with
+// uberEatsWebhook. If that entity is unavailable this degrades to memory only.
+let cachedToken = null;   // { token, scope, expiresAt }
+const TOKEN_KEY = `client_credentials:${SANDBOX ? 'sandbox' : 'production'}`;
+const FRESH_FOR_MS = 5 * 60_000;
 
-async function getAccessToken(clientId, clientSecret) {
-    if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.token;
+function tokenStore(base44) {
+    try {
+        const s = base44.asServiceRole.entities.UberCredential;
+        return s && typeof s.filter === 'function' ? s : null;
+    } catch { return null; }
+}
+
+/** A 401 from Uber means the cached token is dead: forget it everywhere. */
+async function invalidateAccessToken(base44) {
+    cachedToken = null;
+    const store = tokenStore(base44);
+    if (!store) return;
+    try {
+        const row = (await store.filter({ key: TOKEN_KEY }))?.[0];
+        if (row?.id) await store.update(row.id, { expires_at: new Date(0).toISOString() });
+    } catch { /* best effort */ }
+}
+
+async function getAccessToken(base44, clientId, clientSecret) {
+    const now = Date.now();
+    if (cachedToken && cachedToken.scope === UBER_API.scope && cachedToken.expiresAt > now + FRESH_FOR_MS) return cachedToken.token;
+
+    const store = tokenStore(base44);
+    let row = null;
+    if (store) {
+        try { row = (await store.filter({ key: TOKEN_KEY }))?.[0] || null; } catch { row = null; }
+        const exp = row?.expires_at ? new Date(row.expires_at).getTime() : 0;
+        if (row?.access_token && row.scope === UBER_API.scope && exp > now + FRESH_FOR_MS) {
+            cachedToken = { token: row.access_token, scope: row.scope, expiresAt: exp };
+            return cachedToken.token;
+        }
+    }
+
     const res = await fetch(UBER_API.tokenUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -94,8 +135,18 @@ async function getAccessToken(clientId, clientSecret) {
     if (!json.access_token) throw new Error('token response had no access_token');
     cachedToken = {
         token: json.access_token,
-        expiresAt: Date.now() + (Number(json.expires_in || 3000) * 1000),
+        scope: UBER_API.scope,
+        expiresAt: now + (Number(json.expires_in || 3000) * 1000),
     };
+    if (store) {
+        const data = { access_token: json.access_token, scope: UBER_API.scope, expires_at: new Date(cachedToken.expiresAt).toISOString() };
+        try {
+            if (row?.id) await store.update(row.id, data);
+            else await store.create({ key: TOKEN_KEY, ...data });
+        } catch (e) {
+            console.error('[UBER PUSH] could not persist token (still cached in memory):', e?.message);
+        }
+    }
     return cachedToken.token;
 }
 
@@ -145,13 +196,15 @@ Deno.serve(async (req) => {
 
         let ok = false, detail = '';
         try {
-            const token = await getAccessToken(clientId, clientSecret);
+            const token = await getAccessToken(base44, clientId, clientSecret);
             const res = await fetch(`${UBER_API.base}${path}`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
             ok = res.ok;
+            // Stale token: drop it so the retry mints a fresh one.
+            if (res.status === 401) await invalidateAccessToken(base44);
             detail = ok ? '' : `${res.status} ${await res.text().catch(() => '')}`.slice(0, 300);
         } catch (err) {
             detail = err?.message || String(err);
