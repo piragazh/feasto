@@ -389,7 +389,7 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                                             <p className="text-sm font-semibold text-gray-800 truncate">{store.name}</p>
                                             {store.address && <p className="text-xs text-gray-500 truncate">{store.address}</p>}
                                             {store.already_integrated && (
-                                                <p className="text-xs text-amber-700">Already linked to another system</p>
+                                                <p className="text-xs text-amber-700">Already has a till integration on Uber</p>
                                             )}
                                         </div>
                                         <Button
