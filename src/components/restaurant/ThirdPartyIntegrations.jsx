@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AlertCircle, Check, X, Settings, RefreshCw, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import { takeUberConnectIntent } from '@/lib/uberConnectIntent';
 
 const PLATFORMS = [
     {
@@ -58,9 +59,16 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
     const startUberConnect = async () => {
         setUberBusy(true);
         try {
-            const result = await base44.functions.invoke('uberEatsConnect', { action: 'start', restaurantId });
-            if (!result?.data?.url) throw new Error('no url');
-            window.location.assign(result.data.url);
+            const result = await base44.functions.invoke('uberEatsConnect', {
+                action: 'start', restaurantId, origin: window.location.origin,
+            });
+            // On a restaurant's own domain the Uber step has to run on the main
+            // MealDrop address (the only one Uber will return to). The server
+            // answers with that address instead of an Uber URL.
+            const next = result?.data?.url || result?.data?.handoff;
+            if (!next) throw new Error('no url');
+            if (result.data.handoff) toast.message('Opening MealDrop to connect Uber Eats — you may be asked to sign in once.');
+            window.location.assign(next);
         } catch (e) {
             toast.error(errorText(e, 'Could not start the Uber Eats sign-in'));
             setUberBusy(false);
@@ -99,6 +107,23 @@ export default function ThirdPartyIntegrations({ restaurantId }) {
                 setUberBusy(false);
             }
         })();
+    }, [restaurantId]);
+
+    // Arrived from a restaurant's custom domain with "connect Uber Eats" parked
+    // (see uberConnectIntent): carry straight on to Uber, once.
+    const intentHandled = useRef(false);
+    useEffect(() => {
+        if (!restaurantId || intentHandled.current) return;
+        const params = new URLSearchParams(window.location.search);
+        if ((params.get('state') || '').startsWith('ue.')) return;   // this is the return from Uber, not the start
+        if (!takeUberConnectIntent(restaurantId)) return;
+        intentHandled.current = true;
+        if (params.has('uber_connect')) {
+            params.delete('uber_connect');
+            const qs = params.toString();
+            window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+        }
+        startUberConnect();
     }, [restaurantId]);
 
     const provisionUberStore = async (store) => {

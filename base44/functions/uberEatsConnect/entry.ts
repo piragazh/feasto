@@ -30,6 +30,11 @@
  *                            the RestaurantDashboard page of this app, e.g.
  *                            https://<your-domain>/RestaurantDashboard
  *   UBER_EATS_SANDBOX        "true" to use Uber's test environment
+ *
+ * CUSTOM DOMAINS
+ *   Only the redirect URI's own domain can finish the flow. "start" called from
+ *   any other origin answers { handoff } - the same dashboard on the main
+ *   domain - instead of an Uber URL. See src/lib/uberConnectIntent.js.
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
@@ -148,6 +153,21 @@ Deno.serve(async (req) => {
             const restaurantId = String(body.restaurantId || '');
             if (!restaurantId) return fail(400, 'restaurantId is required');
             if (!(await canManage(base44, user, restaurantId))) return fail(403, 'Access denied');
+
+            // Uber returns the manager to ONE fixed address (the redirect URI),
+            // and finishing requires the session that started. A manager on a
+            // restaurant's custom domain has no session on that address, so the
+            // flow is restarted THERE instead: the browser goes to the same
+            // dashboard on the main domain, signs in if needed, and carries on.
+            // The reported origin is only compared - the handoff address is
+            // built from our own configuration, never from the request.
+            const home = new URL(redirectUri);
+            const here = String(body.origin || '');
+            if (here && here !== home.origin) {
+                return Response.json({
+                    handoff: `${home.origin}${home.pathname}?${new URLSearchParams({ restaurantId, uber_connect: '1' })}`,
+                });
+            }
 
             const state = await signState(clientSecret, {
                 r: restaurantId, e: user.email, x: Date.now() + STATE_TTL_MS, n: crypto.randomUUID(),

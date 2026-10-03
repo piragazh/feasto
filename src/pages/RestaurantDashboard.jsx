@@ -55,6 +55,7 @@ import SmsNotificationSettings from '@/components/restaurant/SmsNotificationSett
 import RestaurantPayoutHistory from '@/components/restaurant/RestaurantPayoutHistory';
 import SidebarNav from '@/components/restaurant/RestaurantDashboardSidebar';
 import RequireAuth from '@/components/auth/RequireAuth';
+import { captureUberConnectIntent, peekUberConnectIntent } from '@/lib/uberConnectIntent';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 
@@ -216,7 +217,8 @@ function RestaurantDashboardInner() {
         const init = async () => {
             // Returning from Uber's sign-in page (?code&state=ue....): open the
             // integrations screen, which finishes the connection.
-            if (uberCallbackRestaurantId(new URLSearchParams(window.location.search).get('state'))) {
+            // ...or arriving from a restaurant's custom domain to START it here.
+            if (uberCallbackRestaurantId(new URLSearchParams(window.location.search).get('state')) || peekUberConnectIntent()) {
                 setActiveSection('settings');
                 setActiveTab('integrations');
             }
@@ -243,7 +245,9 @@ function RestaurantDashboardInner() {
             const urlParams = new URLSearchParams(window.location.search);
             // After Uber's sign-in the only thing in the URL is the signed state,
             // which names the restaurant the manager started from.
-            const restaurantIdParam = urlParams.get('restaurantId') || uberCallbackRestaurantId(urlParams.get('state'));
+            const restaurantIdParam = urlParams.get('restaurantId')
+                || uberCallbackRestaurantId(urlParams.get('state'))
+                || peekUberConnectIntent()?.r;
 
             if (userData.role === 'admin') {
                 const allRestaurants = await base44.entities.Restaurant.list();
@@ -594,6 +598,9 @@ function RestaurantDashboardInner() {
 }
 
 export default function RestaurantDashboard() {
+    // Runs on the first render, before RequireAuth can redirect to the login
+    // page - which keeps the path but drops the query string.
+    useState(() => { captureUberConnectIntent(); return null; });
     return (
         <RequireAuth>
             <RestaurantDashboardInner />
