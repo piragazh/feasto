@@ -130,6 +130,9 @@ Deno.serve(async (req) => {
         });
 
         for (const order of (unpaidOrders || [])) {
+            // Marketplace orders (Uber Eats etc.) are paid to the marketplace, so
+            // they are card orders with no Stripe payment by design - not unpaid.
+            if (order.order_source === 'third_party' || order.third_party_platform) continue;
             const existingIssue = await base44.asServiceRole.entities.ReconciliationIssue.filter({
                 order_id: order.id,
                 issue_type: 'unpaid_order',
