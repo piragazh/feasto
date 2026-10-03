@@ -17,7 +17,7 @@ const src = fs.readFileSync(new URL('../base44/functions/uberEatsPushStatus/entr
   .replace('const IN_CALL_WAITS_MS = [800, 2000];', 'const IN_CALL_WAITS_MS = [1, 1];');
 
 /** apiStatus: a number for every call, or a function (url, nthApiCall) => number. */
-function world({ order, orders, creds = true, apiStatus = 200, tokenOk = true } = {}) {
+function world({ order, orders, creds = true, apiStatus = 200, tokenOk = true, user = null } = {}) {
   const db = { Order: orders || [order] };
   const calls = []; const bodies = [];
   let updates = 0, apiCalls = 0;
@@ -38,7 +38,7 @@ function world({ order, orders, creds = true, apiStatus = 200, tokenOk = true } 
   let handler;
   new Function('Deno','createClientFromRequest',src)(
     { serve: f => { handler = f; }, env: { get: k => creds ? 'x' : undefined } },
-    () => ({ asServiceRole: { entities: ents } }));
+    () => ({ auth: { me: async () => { if (!user) throw new Error('not signed in'); return user; } }, asServiceRole: { entities: ents } }));
   const call = async (body = { orderId: 'o1' }) => { const q=[console.log,console.error]; console.log=console.error=()=>{};
     try { const r = await handler(new Request('http://x',{method:'POST',body:JSON.stringify(body)})); return {status:r.status, ...(await r.json())}; }
     finally { [console.log,console.error]=q; } };
@@ -126,6 +126,15 @@ const tail = (w) => w.api().map(c => c.split('/').pop()).join(' > ') || '-';
   const fine = uber({ id:'c', third_party_order_id:'UB3' });
   const w=world({orders:[due,notDue,fine]}); const r=await w.call({ sweep:true });
   ck('sweep retries only what is due', r.retried===1 && tail(w)==='accept_pos_order' && !!w.db.Order[0].uber_status_pushed?.accept && !w.db.Order[1].uber_status_pushed?.accept, `retried ${r.retried} of ${r.pending} pending`); }
+
+// ── manual "Retry now" from the order card ──────────────────────────────────
+{ const stuck = () => uber({ uber_push_error:'accept: 503 — gave up after 6 attempts', uber_push_pending:false, uber_push_retry:{ action:'accept', attempts:6, next_retry_at:null, gave_up:true } });
+  const w=world({order:stuck(), user:{ email:'staff@x' }}); const r=await w.call({ orderId:'o1', force:true }); const o=w.db.Order[0];
+  ck('Retry now re-sends an order that had given up', r.pushed && !!o.uber_status_pushed?.accept && o.uber_push_error==='', tail(w));
+  const w2=world({order:stuck()}); const r2=await w2.call({ orderId:'o1', force:true });
+  ck('...but only for a signed-in person', r2.status===401 && w2.api().length===0, `status ${r2.status}`);
+  const w3=world({order:stuck()}); const r3=await w3.call();
+  ck('...and the workflow alone still leaves it given up', !!r3.skipped && w3.api().length===0, r3.skipped); }
 
 const good=checks.filter(Boolean).length;
 console.log(`\n  ${good}/${checks.length} correct`);

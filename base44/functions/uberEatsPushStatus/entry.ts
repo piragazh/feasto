@@ -384,7 +384,7 @@ Deno.serve(async (req) => {
         // otherwise anyone who could reach this URL could hammer Uber's API.
         let force = false;
         if (body.force === true) {
-            const user = await base44.auth.me().catch(() => null);
+            const user = await Promise.resolve().then(() => base44.auth.me()).catch(() => null);
             if (!user) return Response.json({ error: 'Sign in to retry' }, { status: 401 });
             force = true;
             console.log(`[UBER PUSH] manual retry of order=${order.id} by ${user.email}`);
