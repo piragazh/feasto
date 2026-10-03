@@ -1,0 +1,113 @@
+{
+  "name": "FinanceLedgerEntry",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "FinanceCompany record ID"
+    },
+    "entry_number": {
+      "type": "string"
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "invoice",
+        "expense",
+        "payment",
+        "payout",
+        "journal",
+        "credit_note",
+        "opening_balance"
+      ]
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "posted",
+        "reversed"
+      ],
+      "default": "draft"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "GBP"
+      ],
+      "default": "GBP"
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "account_code": {
+            "type": "string"
+          },
+          "account_name": {
+            "type": "string"
+          },
+          "debit": {
+            "type": "number"
+          },
+          "credit": {
+            "type": "number"
+          },
+          "tax_code": {
+            "type": "string"
+          },
+          "memo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "total_debit": {
+      "type": "number",
+      "default": 0
+    },
+    "total_credit": {
+      "type": "number",
+      "default": 0
+    },
+    "posted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reversed_entry_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "entry_date",
+    "source_type",
+    "description",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

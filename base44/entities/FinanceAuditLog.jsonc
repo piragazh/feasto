@@ -1,0 +1,76 @@
+{
+  "name": "FinanceAuditLog",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "FinanceCompany record ID"
+    },
+    "entity_name": {
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update",
+        "issue",
+        "void",
+        "post",
+        "reverse",
+        "payment",
+        "export",
+        "period_lock",
+        "period_unlock"
+      ]
+    },
+    "changed_by_user_id": {
+      "type": "string"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "before_snapshot": {
+      "type": "object"
+    },
+    "after_snapshot": {
+      "type": "object"
+    },
+    "source": {
+      "type": "string",
+      "description": "UI, backend function, import or integration"
+    }
+  },
+  "required": [
+    "company_id",
+    "entity_name",
+    "record_id",
+    "action",
+    "changed_at"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

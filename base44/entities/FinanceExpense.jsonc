@@ -1,0 +1,94 @@
+{
+  "name": "FinanceExpense",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "FinanceCompany record ID"
+    },
+    "supplier_name": {
+      "type": "string"
+    },
+    "supplier_invoice_number": {
+      "type": "string"
+    },
+    "expense_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "category": {
+      "type": "string",
+      "description": "Bookkeeping category"
+    },
+    "description": {
+      "type": "string"
+    },
+    "net_amount": {
+      "type": "number"
+    },
+    "vat_rate": {
+      "type": "number"
+    },
+    "vat_amount": {
+      "type": "number"
+    },
+    "gross_amount": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "GBP"
+      ],
+      "default": "GBP"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "unpaid",
+        "part_paid",
+        "paid",
+        "void"
+      ],
+      "default": "unpaid"
+    },
+    "amount_paid": {
+      "type": "number",
+      "default": 0
+    },
+    "receipt_url": {
+      "type": "string"
+    },
+    "linked_invoice_id": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "expense_date",
+    "description",
+    "gross_amount",
+    "payment_status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

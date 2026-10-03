@@ -1,0 +1,158 @@
+{
+  "name": "FinanceInvoice",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "FinanceCompany record ID"
+    },
+    "invoice_number": {
+      "type": "string"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "sales_invoice",
+        "purchase_invoice",
+        "credit_note"
+      ],
+      "default": "sales_invoice"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_address": {
+      "type": "object",
+      "properties": {
+        "line_1": {
+          "type": "string"
+        },
+        "line_2": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "postcode": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        }
+      }
+    },
+    "issue_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "GBP"
+      ],
+      "default": "GBP"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "issued",
+        "part_paid",
+        "paid",
+        "overdue",
+        "void"
+      ],
+      "default": "draft"
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "net_amount": {
+            "type": "number"
+          },
+          "vat_rate": {
+            "type": "number"
+          },
+          "vat_amount": {
+            "type": "number"
+          },
+          "gross_amount": {
+            "type": "number"
+          },
+          "account_code": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "net_total": {
+      "type": "number",
+      "default": 0
+    },
+    "vat_total": {
+      "type": "number",
+      "default": 0
+    },
+    "gross_total": {
+      "type": "number",
+      "default": 0
+    },
+    "amount_paid": {
+      "type": "number",
+      "default": 0
+    },
+    "balance_due": {
+      "type": "number",
+      "default": 0
+    },
+    "source_order_id": {
+      "type": "string",
+      "description": "Optional external/POS order reference; no POS integration implied"
+    },
+    "attachment_url": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "invoice_number",
+    "document_type",
+    "issue_date",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
