@@ -16,7 +16,8 @@
  * gave up retrying. No genuine Uber order could ever be created.
  *
  * WHAT IT DOES NOW
- *   1. verifies X-Uber-Signature (HMAC-SHA256 of the raw body, client secret key)
+ *   1. verifies X-Uber-Signature (HMAC-SHA256 of the raw body, keyed by the webhook
+ *      signing key set in Uber's dashboard, or the client secret on older apps)
  *   2. routes on event_type - a cancellation or a store event is never mistaken
  *      for a new order
  *   3. for a new order: matches the store (meta.user_id) to a restaurant, fetches
@@ -34,6 +35,8 @@
  *
  * ENV
  *   UBER_EATS_CLIENT_ID, UBER_EATS_CLIENT_SECRET   required
+ *   UBER_EATS_WEBHOOK_SIGNING_KEY             the Signing Key typed into Uber's
+ *                       webhook form (Basic HMAC). Optional _SECONDARY for rotation.
  *   UBER_EATS_SCOPES    optional, default "eats.order" - space delimited. Only
  *                       list scopes Uber has approved for the app: asking for one
  *                       that is not approved makes the token request fail.
@@ -400,37 +403,49 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
 
-    // Signature: lowercased hex HMAC-SHA256 of the RAW body, keyed by the client
-    // secret. The body is read as text and only parsed afterwards - re-serialising
-    // JSON changes the bytes and breaks the signature.
-    const clientSecret = Deno.env.get('UBER_EATS_CLIENT_SECRET');
-    if (!clientSecret) {
-        console.error('[SECURITY] UBER_EATS_CLIENT_SECRET not set — rejecting all webhook requests');
+    // Signature: lowercased hex HMAC-SHA256 of the RAW body. The body is read as
+    // text and only parsed afterwards - re-serialising JSON changes the bytes and
+    // breaks the signature.
+    //
+    // WHICH KEY: Uber's dashboard ("Add New Webhook" > Basic HMAC) now asks for a
+    // Signing Key of your choosing, plus an optional Secondary Signing Key used
+    // while rotating. Older apps are signed with the client secret instead. A
+    // signature made with ANY configured key is accepted, so switching from one
+    // to the other, or rotating keys, never drops an order.
+    const signingKeys = [
+        Deno.env.get('UBER_EATS_WEBHOOK_SIGNING_KEY'),
+        Deno.env.get('UBER_EATS_WEBHOOK_SIGNING_KEY_SECONDARY'),
+        Deno.env.get('UBER_EATS_CLIENT_SECRET'),
+    ].map(k => String(k || '').trim()).filter(Boolean);
+    if (!signingKeys.length) {
+        console.error('[SECURITY] no Uber webhook signing key or client secret set — rejecting all webhook requests');
         return Response.json({ error: 'Webhook not configured' }, { status: 503 });
     }
 
     const rawBody = await req.text();
     const providedSig = (req.headers.get('x-uber-signature') || '').trim().toLowerCase();
 
-    let expectedSig = '';
+    let verified = false;
     try {
-        const key = await crypto.subtle.importKey(
-            'raw', new TextEncoder().encode(clientSecret),
-            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
-        );
-        const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
-        expectedSig = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
+        for (const secret of new Set(signingKeys)) {
+            const key = await crypto.subtle.importKey(
+                'raw', new TextEncoder().encode(secret),
+                { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+            );
+            const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
+            const expectedSig = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
+            // Constant-time comparison; every key is always checked.
+            let diff = providedSig.length ^ expectedSig.length;
+            for (let i = 0; i < Math.max(providedSig.length, expectedSig.length); i++) {
+                diff |= (providedSig.charCodeAt(i) || 0) ^ (expectedSig.charCodeAt(i) || 0);
+            }
+            if (diff === 0) verified = true;
+        }
     } catch (e) {
         console.error('[UBER] could not compute signature:', e?.message);
         return Response.json({ error: 'Signature check failed' }, { status: 500 });
     }
-
-    // Constant-time comparison.
-    let diff = providedSig.length ^ expectedSig.length;
-    for (let i = 0; i < Math.max(providedSig.length, expectedSig.length); i++) {
-        diff |= (providedSig.charCodeAt(i) || 0) ^ (expectedSig.charCodeAt(i) || 0);
-    }
-    if (diff !== 0) {
+    if (!verified) {
         console.error('[UBER] webhook rejected: signature mismatch');
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }

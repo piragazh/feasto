@@ -37,7 +37,7 @@ const uberOrder = (extra = {}) => ({
   ...extra,
 });
 
-function world({ restaurants, orders = [], order = uberOrder(), orderStatus = 200, tokenOk = true } = {}) {
+function world({ restaurants, orders = [], order = uberOrder(), orderStatus = 200, tokenOk = true, env = {} } = {}) {
   const db = {
     Restaurant: restaurants ?? [{ id: 'r1', third_party_integrations: { uber_eats: { store_id: STORE, enabled: true } } }],
     Order: orders, UberCredential: [],
@@ -63,11 +63,11 @@ function world({ restaurants, orders = [], order = uberOrder(), orderStatus = 20
   };
   let handler;
   new Function('Deno', 'createClientFromRequest', src)(
-    { serve: f => { handler = f; }, env: { get: k => ({ UBER_EATS_CLIENT_SECRET: SECRET, UBER_EATS_CLIENT_ID: 'cid' })[k] } },
+    { serve: f => { handler = f; }, env: { get: k => ({ UBER_EATS_CLIENT_SECRET: SECRET, UBER_EATS_CLIENT_ID: 'cid', ...env })[k] } },
     () => ({ asServiceRole: { entities: ents } }));
-  const send = async (payload, { sign = true } = {}) => {
+  const send = async (payload, { sign = true, key = SECRET } = {}) => {
     const raw = JSON.stringify(payload);
-    const sig = sign ? crypto.createHmac('sha256', SECRET).update(raw).digest('hex') : 'bad';
+    const sig = sign ? crypto.createHmac('sha256', key).update(raw).digest('hex') : 'bad';
     const q = [console.log, console.error]; console.log = console.error = () => {};
     try {
       const r = await handler(new Request('http://x', { method: 'POST', body: raw, headers: { 'x-uber-signature': sig } }));
@@ -135,6 +135,14 @@ const checks = []; const ck = (l, ok, d = '') => { checks.push(ok); console.log(
 
 { const w = world({ order: uberOrder({ current_state: 'CANCELED' }) }); const r = await w.send(notif());
   ck('order already cancelled on Uber is not created', r.status === 200 && w.db().Order.length === 0, ''); }
+
+{ const env = { UBER_EATS_WEBHOOK_SIGNING_KEY: 'dash-key', UBER_EATS_WEBHOOK_SIGNING_KEY_SECONDARY: 'old-key' };
+  const a = world({ env }); const ra = await a.send(notif(), { key: 'dash-key' });
+  ck('signed with the dashboard Signing Key is accepted', ra.status === 200 && a.db().Order.length === 1, `status ${ra.status}`);
+  const b = world({ env }); const rb = await b.send(notif(), { key: 'old-key' });
+  ck('...and with the secondary key (rotation)', rb.status === 200 && b.db().Order.length === 1, `status ${rb.status}`);
+  const c = world({ env }); const rc = await c.send(notif(), { key: 'someone-elses-key' });
+  ck('...but not with an unknown key', rc.status === 401 && c.db().Order.length === 0, `status ${rc.status}`); }
 
 const bad = checks.filter(x => !x).length;
 console.log(bad ? `\n${bad} check(s) WRONG` : `\nall ${checks.length} checks pass`);
