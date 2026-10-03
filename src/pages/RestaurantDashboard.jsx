@@ -135,6 +135,21 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
     },
 ];
 
+/**
+ * Uber redirects back to this page with ?code=...&state=ue.<payload>.<sig>.
+ * The payload (signed server-side by uberEatsConnect, only READ here) names the
+ * restaurant the manager started the connection from.
+ */
+function uberCallbackRestaurantId(state) {
+    try {
+        if (!state || !state.startsWith('ue.')) return null;
+        const payload = state.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(payload)).r || null;
+    } catch {
+        return null;
+    }
+}
+
 // ── Main component ──────────────────────────────────────────────────────────
 function RestaurantDashboardInner() {
     const [user, setUser] = useState(null);
