@@ -18,6 +18,7 @@ import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
 import DriverLocationMap from '@/components/driver/DriverLocationMap';
 import { staffErrorMessage } from '@/lib/function-errors';
+import UberPushWarning from '@/components/pos/UberPushWarning';
 
 // ── Canonical visibility helper ──────────────────────────────────────────
 // Maps kiosk (order_status) and legacy (status) to unified operational state
@@ -900,6 +901,8 @@ Provide only the time range (e.g., "25-30 min").`;
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
+                                        {/* Uber was not told about a status change - say so on the order. */}
+                                        <UberPushWarning order={order} onRetried={() => queryClient.invalidateQueries(['live-orders'])} />
                                         <div className="space-y-2">
                                             {order.items.map((item, idx) => {
                                                 // Format customizations for display
