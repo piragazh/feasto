@@ -21,6 +21,10 @@ function publicView(entry) {
     return {
         enabled: Boolean(entry.enabled),
         store_id: entry.store_id || null,
+        store_name: entry.store_name || null,
+        // True once the merchant has authorised MealDrop on the platform's own
+        // site. A store id typed in by hand is connected but NOT provisioned.
+        provisioned: Boolean(entry.provisioned),
         connected_at: entry.connected_at || null,
         updated_at: entry.updated_at || entry.last_sync || null,
         // Tells the UI a legacy record still holds credentials, WITHOUT returning
