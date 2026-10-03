@@ -71,11 +71,21 @@ Deno.serve(async (req) => {
         if (!restaurants?.length) return Response.json({ error: 'Restaurant not found' }, { status: 404 });
 
         const current = restaurants[0].third_party_integrations || {};
+        const previous = current[platform] || {};
+        const nextStoreId = store_id ? String(store_id).trim().slice(0, 120) : (previous.store_id || null);
+        // "provisioned" (the merchant authorised us on the platform's own site)
+        // belongs to a specific store: keep it only while the store id is unchanged.
+        const sameStore = nextStoreId && nextStoreId === previous.store_id;
         current[platform] = {
             // Non-secret connection state only.
-            store_id: store_id ? String(store_id).trim().slice(0, 120) : (current[platform]?.store_id || null),
+            store_id: nextStoreId,
+            ...(sameStore && previous.provisioned ? {
+                provisioned: true,
+                provisioned_at: previous.provisioned_at || null,
+                store_name: previous.store_name || null,
+            } : {}),
             enabled: enabled !== undefined ? Boolean(enabled) : true,
-            connected_at: current[platform]?.connected_at || new Date().toISOString(),
+            connected_at: previous.connected_at || new Date().toISOString(),
             updated_at: new Date().toISOString(),
         };
 
