@@ -199,6 +199,12 @@ function RestaurantDashboardInner() {
 
     useEffect(() => { 
         const init = async () => {
+            // Returning from Uber's sign-in page (?code&state=ue....): open the
+            // integrations screen, which finishes the connection.
+            if (uberCallbackRestaurantId(new URLSearchParams(window.location.search).get('state'))) {
+                setActiveSection('settings');
+                setActiveTab('integrations');
+            }
             await loadUserAndRestaurant();
             requestNotificationPermission();
         };
@@ -220,7 +226,9 @@ function RestaurantDashboardInner() {
             const userData = await base44.auth.me();
             setUser(userData);
             const urlParams = new URLSearchParams(window.location.search);
-            const restaurantIdParam = urlParams.get('restaurantId');
+            // After Uber's sign-in the only thing in the URL is the signed state,
+            // which names the restaurant the manager started from.
+            const restaurantIdParam = urlParams.get('restaurantId') || uberCallbackRestaurantId(urlParams.get('state'));
 
             if (userData.role === 'admin') {
                 const allRestaurants = await base44.entities.Restaurant.list();
