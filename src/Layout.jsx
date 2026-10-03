@@ -15,7 +15,7 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart } from 'lucide-react';
+import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart, Wallet } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
 import { Toaster } from 'sonner';
@@ -368,8 +368,8 @@ export default function Layout({ children, currentPageName }) {
 
     const hideHeader = ['Checkout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'RestaurantDashboard'].includes(currentPageName);
     const isFullScreenPage = ['MediaScreen', 'POSDashboard', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'KitchenDisplay', 'WaiterApp'].includes(currentPageName);
-    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'Sitemap', 'CustomerDisplay', 'KioskDashboard'].includes(currentPageName);
-    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'Sitemap', 'CustomerDisplay', 'KioskDashboard', 'Finance'].includes(currentPageName);
+    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'Finance'].includes(currentPageName);
     
     // Custom domain home link
     const isRootRestaurantContext = location.pathname === '/' && !!customDomainRestaurantId;
@@ -587,12 +587,20 @@ export default function Layout({ children, currentPageName }) {
                                            </Link>
                                        </DropdownMenuItem>
                                        {isRestaurantManager && (
+                                           <>
+                                           <DropdownMenuItem asChild>
+                                               <Link to={createPageUrl('Finance')} className="flex items-center gap-2">
+                                                   <Wallet className="h-4 w-4" />
+                                                   Finance
+                                               </Link>
+                                           </DropdownMenuItem>
                                            <DropdownMenuItem asChild>
                                                <Link to={createPageUrl('RestaurantDashboard')} className="flex items-center gap-2">
                                                    <Home className="h-4 w-4" />
                                                    Restaurant Dashboard
                                                </Link>
                                            </DropdownMenuItem>
+                                           </>
                                        )}
                                        {user?.role === 'admin' && (
                                        <>
