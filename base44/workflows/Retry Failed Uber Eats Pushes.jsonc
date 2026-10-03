@@ -1,6 +1,6 @@
 {
   "name": "Retry Failed Uber Eats Pushes",
-  "description": "Every 2 minutes, retries Uber Eats accept / deny / ready / cancel calls that failed and whose back-off has elapsed (Order.uber_push_pending). Uber auto-cancels an order that is not accepted or denied within 11.5 minutes, so a failed accept cannot wait for the next order change. Normally finds nothing to do.",
+  "description": "Every 5 minutes (the platform minimum), retries Uber Eats accept / deny / ready / cancel calls that failed and whose back-off has elapsed (Order.uber_push_pending). Uber auto-cancels an order that is not accepted or denied within 11.5 minutes, so a failed accept cannot wait for the next order change. Normally finds nothing to do.",
   "trigger": {
     "condition": null,
     "config": {
@@ -10,7 +10,7 @@
       "cron_expression": null,
       "one_time_date": null,
       "timezone": "UTC",
-      "interval_value": 2,
+      "interval_value": 5,
       "interval_unit": "minutes",
       "interval_anchor": "2026-10-03T09:00:00.000000",
       "ends_type": "never",
