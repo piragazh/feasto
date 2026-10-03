@@ -33,6 +33,15 @@
       "type": "string",
       "description": "Last failure when telling Uber Eats about a status change. An order Uber never hears about is auto-cancelled on their side, so this needs to be visible rather than silent."
     },
+    "uber_push_pending": {
+      "type": "boolean",
+      "default": false,
+      "description": "A failed Uber Eats push is waiting to be retried. Set only while a retry is genuinely outstanding, so the scheduled retry sweep has a cheap thing to query. Cleared on success or when retries are exhausted."
+    },
+    "uber_push_retry": {
+      "type": "object",
+      "description": "Retry bookkeeping for the Uber Eats push: { action, attempts, next_retry_at, gave_up }. The status workflow fires on every order update, including the ones the push itself makes; next_retry_at is what stops a failed push re-triggering itself in a loop."
+    },
     "loyalty_backfilled": {
       "type": "boolean",
       "description": "This order's points have been redistributed from the pooled service-account balance to the customer's phone. Stops a second backfill run crediting the same order twice."
@@ -49,7 +58,7 @@
     },
     "cash_amount": {
       "type": "number",
-      "description": "Cash that went INTO the drawer for this order, net of change and including any cash tip. Structured on purpose: split payments used to be recorded as payment_method 'cash' for the WHOLE total with the real breakdown only in free-text notes, so a £10 cash + £20 card bill counted as £30 of cash - making the drawer look £20 short and the Reports cash/card split wrong. Derived server-side as (total + tip) - card_amount so the two always reconcile."
+      "description": "Cash that went INTO the drawer for this order, net of change and including any cash tip. Structured on purpose: split payments used to be recorded as payment_method 'cash' for the WHOLE total with the real breakdown only in free-text notes, so a \u00a310 cash + \u00a320 card bill counted as \u00a330 of cash - making the drawer look \u00a320 short and the Reports cash/card split wrong. Derived server-side as (total + tip) - card_amount so the two always reconcile."
     },
     "card_amount": {
       "type": "number",
@@ -66,7 +75,10 @@
     },
     "tip_method": {
       "type": "string",
-      "enum": ["cash", "card"],
+      "enum": [
+        "cash",
+        "card"
+      ],
       "description": "How the tip was paid. Recorded because cash and card tips are handled differently for distribution and payroll."
     },
     "staff_id": {
@@ -160,7 +172,12 @@
           },
           "course": {
             "type": "string",
-            "enum": ["drinks", "starters", "mains", "desserts"],
+            "enum": [
+              "drinks",
+              "starters",
+              "mains",
+              "desserts"
+            ],
             "description": "Which course this line belongs to. Absent means mains, the commonest case, so existing orders are unaffected."
           },
           "seat": {
