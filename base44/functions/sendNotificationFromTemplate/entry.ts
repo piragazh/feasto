@@ -141,7 +141,22 @@ Deno.serve(async (req) => {
     }
 
     // ── WhatsApp ──────────────────────────────────────────────────────────────
+    // An order placed from a chat on the restaurant's OWN WhatsApp number already gets
+    // its updates there (whatsappOrderNotify). Sending the Twilio copy as well would
+    // message the customer twice, from two different numbers.
+    let waViaOwnNumber = false;
     if (waEnabled) {
+      try {
+        const linked = await base44.asServiceRole.entities.WaConversation.filter({ order_id: orderId });
+        if (linked.length) {
+          const ch = await base44.asServiceRole.entities.WhatsAppChannel.filter({ id: linked[0].channel_id });
+          waViaOwnNumber = ch[0]?.status === 'connected';
+        }
+      } catch (e) {
+        console.warn('[STATUS-NOTIFY] WhatsApp channel lookup failed:', e?.message);
+      }
+    }
+    if (waEnabled && !waViaOwnNumber) {
       try {
         const waTemplate = templates.find((t) => t.channel === 'whatsapp');
         const message = resolveText('whatsapp', waTemplate) || fallbackMsg;
@@ -163,7 +178,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sms: smsEnabled, whatsapp: waEnabled }),
+      JSON.stringify({ success: true, sms: smsEnabled, whatsapp: waEnabled && !waViaOwnNumber, whatsapp_own_number: waViaOwnNumber }),
       { status: 200 }
     );
   } catch (error) {
