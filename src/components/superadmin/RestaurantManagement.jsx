@@ -16,7 +16,8 @@ import {
     LayoutDashboard,
     UtensilsCrossed,
     Monitor,
-    ShoppingCart
+    ShoppingCart,
+    MessageCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils/index.ts';
@@ -239,6 +240,15 @@ export default function RestaurantManagement() {
                                    >
                                        <LayoutDashboard className="h-4 w-4 mr-1" />
                                        Dashboard
+                                   </Button>
+                                   <Button
+                                       size="sm"
+                                       variant="outline"
+                                       onClick={() => navigate(createPageUrl('WhatsAppOrdering') + `?restaurantId=${restaurant.id}`)}
+                                       className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                                   >
+                                       <MessageCircle className="h-4 w-4 mr-1" />
+                                       WhatsApp
                                    </Button>
                                    {restaurant.media_screen_enabled && (
                                        <Button
