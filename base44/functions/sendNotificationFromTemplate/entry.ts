@@ -6,7 +6,8 @@
  * - Reads the restaurant's per-status SMS + WhatsApp toggles.
  * - 'cancelled' always sends when the master channel toggle is on (no per-status toggle needed).
  * - Resolves the customer phone from the order (covers guests AND registered users who entered a phone).
- * - Uses per-restaurant NotificationTemplate text for SMS when available; falls back to a sensible default.
+ * - Text lookup: per-restaurant NotificationTemplate (restaurant dashboard editor) -> Super Admin
+ *   MessageTemplate restaurant override -> MessageTemplate platform default -> built-in default.
  * - WhatsApp uses approved Twilio Content Templates (via sendWhatsAppCustomer) — the template_text is
  *   passed only as a free-form fallback body.
  * - All dispatches are fire-and-forget; a notification failure never blocks the status update.
@@ -84,6 +85,22 @@ Deno.serve(async (req) => {
       delivery_address: orderData.delivery_address || '',
       customer_name: orderData.guest_name || 'Customer',
       items_count: String((orderData.items || []).length),
+      total: `£${(Number(orderData.total) || 0).toFixed(2)}`,
+      reason: rejectionReason || orderData.rejection_reason || orderData.cancellation_reason || 'please contact the restaurant',
+    };
+
+    // Super Admin message wording (MessageTemplate) - best-effort
+    const platformTexts = await base44.asServiceRole.entities.MessageTemplate.filter({ key: `order_${newStatus}` }).catch(() => []);
+    const platformText = (channel) => {
+      const live = platformTexts.filter((r) => r.is_active !== false);
+      const tries = [
+        (r) => r.restaurant_id === restaurantId && r.channel === channel,
+        (r) => r.restaurant_id === restaurantId && r.channel === 'any',
+        (r) => !r.restaurant_id && r.channel === channel,
+        (r) => !r.restaurant_id && r.channel === 'any',
+      ];
+      for (const t of tries) { const hit = live.find(t); if (hit) return hit.body; }
+      return null;
     };
 
     const substitute = (text) => {
@@ -92,6 +109,11 @@ Deno.serve(async (req) => {
         out = out.replace(new RegExp(`{${k}}`, 'g'), String(v));
       }
       return out;
+    };
+    const resolveText = (channel, legacy) => {
+      if (legacy?.template_text) return substitute(legacy.template_text);
+      const platform = platformText(channel);
+      return platform ? substitute(platform) : null;
     };
 
     const orderLabel = orderData.order_number || `#${String(orderId).slice(-6)}`;
@@ -102,7 +124,7 @@ Deno.serve(async (req) => {
     if (smsEnabled) {
       try {
         const smsTemplate = templates.find((t) => t.channel === 'sms');
-        const message = smsTemplate?.template_text ? substitute(smsTemplate.template_text) : fallbackMsg;
+        const message = resolveText('sms', smsTemplate) || fallbackMsg;
         base44.functions
           .invoke('sendSMS', {
             to: customerPhone,
@@ -122,7 +144,7 @@ Deno.serve(async (req) => {
     if (waEnabled) {
       try {
         const waTemplate = templates.find((t) => t.channel === 'whatsapp');
-        const message = waTemplate?.template_text ? substitute(waTemplate.template_text) : fallbackMsg;
+        const message = resolveText('whatsapp', waTemplate) || fallbackMsg;
         base44.functions
           .invoke('sendWhatsAppCustomer', {
             to: customerPhone,
