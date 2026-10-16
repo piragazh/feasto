@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2, MessageCircle, AlertCircle } from 'lucide-react';
+import { unwrap } from '@/components/whatsapp/whatsappApi';
 
 /**
  * Landing page for the "Pay & place order" link sent in WhatsApp.
@@ -26,7 +27,7 @@ export default function WhatsAppCheckout() {
         (async () => {
             try {
                 const res = await base44.functions.invoke('whatsappCheckoutCart', { token });
-                const data = res?.data ?? res;
+                const data = unwrap(res);
                 if (!data?.cart?.length) throw new Error(data?.error || 'Your basket is empty.');
 
                 try {
