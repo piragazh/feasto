@@ -46,6 +46,49 @@ const clip = (s, n) => {
     return t.length > n ? t.slice(0, n - 1) + '…' : t;
 };
 const nowIso = () => new Date().toISOString();
+const fill = (text, vars) => String(text).replace(/\{([a-z_]+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m));
+
+// ── Editable wording (Super Admin > Message Templates) ────────────────────────────
+// Built-in text, same as the catalog defaults in messageTemplateAdmin.
+const BOT_DEFAULTS = {
+    wa_welcome: 'Hi {customer_first_name}! 👋 Welcome to *{restaurant_name}*.\nTell me what you\'d like (e.g. "2 chicken burgers and a large chips"), or browse the menu.',
+    wa_closed: "{closed_reason} Please message us again when we're open. — {restaurant_name}",
+    wa_checkout: "{basket}\n\nTap below to confirm your details and pay. The link works for 2 hours. We'll message you here as soon as your order is accepted.",
+    wa_handoff: 'Thanks — someone from {restaurant_name} will reply here shortly.',
+};
+
+/** Restaurant override -> platform default -> built-in, cached per request. */
+async function botText(ctx, key, vars) {
+    ctx.textCache = ctx.textCache || {};
+    if (!(key in ctx.textCache)) {
+        const rows = (await ctx.db.MessageTemplate.filter({ key }).catch(() => [])).filter((r) => r.is_active !== false);
+        const rid = ctx.restaurant.id;
+        const tries = [
+            (r) => r.restaurant_id === rid && r.channel === 'whatsapp',
+            (r) => r.restaurant_id === rid && r.channel === 'any',
+            (r) => !r.restaurant_id && r.channel === 'whatsapp',
+            (r) => !r.restaurant_id && r.channel === 'any',
+        ];
+        let body = null;
+        for (const t of tries) { const hit = rows.find(t); if (hit) { body = hit.body; break; } }
+        ctx.textCache[key] = body ?? BOT_DEFAULTS[key];
+    }
+    return fill(ctx.textCache[key], { restaurant_name: ctx.restaurant.name, ...vars });
+}
+
+/** Meta's message_template_status_update webhook: keep WaTemplate submissions current. */
+async function handleTemplateStatus(db, wabaId, v) {
+    if (!v?.message_template_name || !v?.event) return;
+    const rows = await db.WaTemplate.filter({ name: v.message_template_name });
+    for (const t of rows) {
+        if (v.message_template_language && t.language && t.language !== v.message_template_language) continue;
+        const subs = [...(t.submissions || [])];
+        const i = subs.findIndex((s) => (v.message_template_id && String(s.meta_id) === String(v.message_template_id)) || s.waba_id === wabaId);
+        if (i < 0) continue;
+        subs[i] = { ...subs[i], status: v.event, reason: v.reason && v.reason !== 'NONE' ? v.reason : '', updated_at: nowIso() };
+        await db.WaTemplate.update(t.id, { submissions: subs });
+    }
+}
 
 function timingSafeEqual(a, b) {
     if (a.length !== b.length) return false;
@@ -394,14 +437,14 @@ async function startCheckout(ctx) {
     convo.checkout_token_expires_at = new Date(Date.now() + CHECKOUT_TTL_MS).toISOString();
     convo.state = 'awaiting_payment';
     const url = `${APP_URL}/WhatsAppCheckout?t=${convo.checkout_token}`;
-    const body = `${cartText(convo)}\n\nTap below to confirm your details and pay. The link works for 2 hours. We'll message you here as soon as your order is accepted.`;
+    const body = await botText(ctx, 'wa_checkout', { basket: cartText(convo) });
     return send(ctx, msg.cta(body, 'Pay & place order', url), `[checkout link] ${url}`);
 }
 
 async function startHandoff(ctx, reason) {
     ctx.convo.state = 'handoff';
     ctx.convo.unread_count = (ctx.convo.unread_count || 0) + 1;
-    const text = reason || `Thanks — someone from ${ctx.restaurant.name} will reply here shortly.`;
+    const text = reason || await botText(ctx, 'wa_handoff', {});
     return send(ctx, msg.text(text), text, 'system');
 }
 
@@ -618,7 +661,8 @@ async function handleMessage(ctx, m) {
 
     const closed = restaurantClosedReason(restaurant);
     if (closed) {
-        return send(ctx, msg.text(`${closed} Please message us again when we're open. — ${restaurant.name}`), closed, 'system');
+        const t = await botText(ctx, 'wa_closed', { closed_reason: closed });
+        return send(ctx, msg.text(t), t, 'system');
     }
 
     const id = input.id || '';
@@ -687,7 +731,7 @@ async function handleMessage(ctx, m) {
 
     if (isNew && GREETING.test(text.trim())) {
         const welcome = channel.welcome_message
-            || `Hi${convo.customer_name ? ' ' + convo.customer_name.split(' ')[0] : ''}! 👋 Welcome to *${restaurant.name}*.\nTell me what you'd like (e.g. "2 chicken burgers and a large chips"), or browse the menu.`;
+            || await botText(ctx, 'wa_welcome', { customer_first_name: convo.customer_name ? convo.customer_name.split(' ')[0] : 'there' });
         return showCategories(ctx, welcome);
     }
 
@@ -725,6 +769,10 @@ Deno.serve(async (req) => {
 
     for (const entry of body.entry || []) {
         for (const change of entry.changes || []) {
+            if (change.field === 'message_template_status_update') {
+                await handleTemplateStatus(db, entry.id, change.value).catch((e) => console.error('[whatsappWebhook] template status failed:', e.message));
+                continue;
+            }
             if (change.field !== 'messages') continue;
             const value = change.value || {};
             const phoneNumberId = value.metadata?.phone_number_id;
