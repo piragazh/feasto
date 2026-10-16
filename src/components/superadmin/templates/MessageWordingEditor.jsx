@@ -181,6 +181,11 @@ export default function MessageWordingEditor() {
                             {restaurantId ? <Store className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
                             Customers currently get the <span className="font-medium text-gray-700">{effective.source}</span>.
                         </div>
+                        {entry.group === 'Order updates' && entry.channels.includes('sms') && (
+                            <p className="text-xs text-gray-400 -mt-2">
+                                If a restaurant has written its own text in its dashboard (Notification templates), that still takes priority for SMS and Twilio WhatsApp updates.
+                            </p>
+                        )}
 
                         <div>
                             <div className="flex items-center justify-between mb-1.5">
