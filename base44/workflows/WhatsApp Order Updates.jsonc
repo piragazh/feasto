@@ -1,0 +1,37 @@
+{
+  "name": "WhatsApp Order Updates",
+  "description": "Links an order placed from a WhatsApp checkout link back to its chat, then sends each status change (received, accepted, on its way, ready, cancelled) to the customer on the restaurant's own WhatsApp number. Does nothing for orders that did not come from WhatsApp.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update"
+      ],
+      "entity_name": "Order"
+    }
+  },
+  "definition": {
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "then": "end",
+          "with": {
+            "args": {
+              "orderId": "${ .trigger.entity_id }"
+            },
+            "function_name": "whatsappOrderNotify"
+          }
+        }
+      }
+    ],
+    "document": {
+      "dsl": "1.0.0",
+      "name": "whatsapp_order_updates",
+      "namespace": "base44",
+      "version": "1.0"
+    }
+  }
+}
