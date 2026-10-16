@@ -325,7 +325,8 @@ Deno.serve(async (req) => {
                     if (!cur) return fail('Not found', 404);
                     // Meta does not allow renaming; an approved template's content can only be edited in Meta's own tools
                     if ((cur.submissions || []).length) {
-                        const contentKey = (x) => JSON.stringify([x.name, x.language, x.category, x.header_text || '', (x.body || '').trim(), x.footer || '', x.buttons || []]);
+                        const contentKey = (x) => JSON.stringify([x.name, x.language, x.category, x.header_text || '', (x.body || '').trim(), x.footer || '',
+                            (x.buttons || []).map((b) => [b.type, (b.text || '').trim(), (b.url || '').trim(), (b.phone_number || '').replace(/\s/g, '')])]);
                         if (contentKey(cur) !== contentKey(data)) {
                             return fail('This template has been submitted to Meta, so its content is locked. Duplicate it to make a new version.');
                         }
