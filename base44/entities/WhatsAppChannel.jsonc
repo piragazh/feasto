@@ -11,6 +11,11 @@
       "description": "When off, messages are stored for staff to answer in the inbox and the AI stays silent.",
       "type": "boolean"
     },
+    "coexistence": {
+      "default": false,
+      "description": "Number is also used in the WhatsApp Business app on the restaurant's phone",
+      "type": "boolean"
+    },
     "connected_at": {
       "format": "date-time",
       "type": "string"
@@ -34,6 +39,10 @@
     },
     "phone_number_id": {
       "description": "Meta phone number ID. Every webhook carries this, so it is how an incoming message is routed to the right restaurant. Unique.",
+      "type": "string"
+    },
+    "registration_pin": {
+      "description": "Six-digit two-step PIN set when the number was registered for Cloud API. Needed to re-register it. Server-only.",
       "type": "string"
     },
     "restaurant_id": {
@@ -67,6 +76,7 @@
     "restaurant_id",
     "phone_number_id"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -88,6 +98,5 @@
         "role": "admin"
       }
     }
-  },
-  "type": "object"
+  }
 }
