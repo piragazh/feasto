@@ -1,3 +1,4 @@
+import React from 'react';
 import { base44 } from '@/api/base44Client';
 import { unwrap } from '@/components/whatsapp/whatsappApi';
 
@@ -64,4 +65,3 @@ export function waFormat(text) {
     });
 }
 
-import React from 'react';
