@@ -216,9 +216,13 @@ async function markReadWithTyping(channel, wamid) {
 }
 
 // ── Menu ────────────────────────────────────────────────────────────────────
-function isOrderable(item) {
-    if (item.is_available === false) return false;
-    if (item.availability_channel === 'pos_only') return false;
+/**
+ * Same rule as the website checkout (shared availability block below): switched on,
+ * sold online, inside its time windows - plus in stock. Anything else is never
+ * offered, so checkout can't refuse it later.
+ */
+function isOrderable(item, date = new Date()) {
+    if (whyNotSellable(item, 'online', date) !== null) return false;
     if (item.track_stock && typeof item.stock_quantity === 'number' && item.stock_quantity <= 0) return false;
     return true;
 }
@@ -236,10 +240,55 @@ function buildMenu(items) {
     return { available, byCat, categories, byId: new Map(available.map((i) => [i.id, i])) };
 }
 
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/**
+ * Opening hours in UK time. type = 'delivery' | 'collection' uses that service's own
+ * hours when set, otherwise the restaurant's opening hours. No hours set = always open.
+ * Overnight hours (e.g. 17:00-02:00) carry past midnight; open === close = all day.
+ */
+function hoursClosedReason(r, type) {
+    const hours = (type === 'delivery' && r.delivery_hours) || (type === 'collection' && r.collection_hours) || r.opening_hours;
+    if (!hours || typeof hours !== 'object' || !Object.keys(hours).length) return null;
+    const { day, minutes } = ukClock(new Date());
+    const slot = (d) => {
+        const h = hours[DAY_KEYS[d]];
+        if (!h || h.closed) return null;
+        const open = hhmmToMinutes(h.open), close = hhmmToMinutes(h.close);
+        return open === null || close === null ? null : { open, close, openText: h.open };
+    };
+    const today = slot(day);
+    const yesterday = slot((day + 6) % 7);
+    if (today) {
+        if (today.open === today.close) return null;
+        if (today.close > today.open ? minutes >= today.open && minutes < today.close : minutes >= today.open) return null;
+    }
+    if (yesterday && yesterday.close < yesterday.open && minutes < yesterday.close) return null;
+    const what = type === 'delivery' ? 'Delivery' : type === 'collection' ? 'Collection' : null;
+    if (today && minutes < today.open) {
+        return what ? `${what} starts at ${today.openText} today.` : `We're closed right now — we open at ${today.openText} today.`;
+    }
+    return what ? `${what} isn't available right now.` : "We're closed at the moment.";
+}
+
 function restaurantClosedReason(r) {
     if (r.temporary_closure?.enabled) return r.temporary_closure.custom_message || 'We are not taking orders right now.';
     if (r.is_open === false) return 'We are closed at the moment.';
-    return null;
+    return hoursClosedReason(r, null);
+}
+
+// WhatsApp caps interactive message bodies at 1024 characters
+const BODY_LIMIT = 1000;
+function splitText(t, n = 4000) {
+    const out = [];
+    let rest = t;
+    while (rest.length > n) {
+        const cut = rest.lastIndexOf('\n', n) > n / 2 ? rest.lastIndexOf('\n', n) : n;
+        out.push(rest.slice(0, cut));
+        rest = rest.slice(cut).replace(/^\n/, '');
+    }
+    if (rest) out.push(rest);
+    return out;
 }
 
 // ── Cart ────────────────────────────────────────────────────────────────────
@@ -369,7 +418,7 @@ async function showCategory(ctx, catIndex, page = 0) {
     return send(ctx, msg.list(`*${cat}* — tap an item to add it.`, 'Choose item', [{ title: cat, rows }]), `[category ${cat} p${page}]`);
 }
 
-async function askNextOption(ctx, item) {
+async function askNextOption(ctx, item, prefix = '') {
     const step = ctx.convo.pending_item.queue[0];
     const group = findGroup(item, step);
     if (!group) { // menu changed underneath us - drop this step
@@ -382,7 +431,7 @@ async function askNextOption(ctx, item) {
         description: o.price ? `+${money(o.price)}` : undefined,
     }));
     const more = (group.options || []).length > 10 ? '\n(Not listed? Type the option name.)' : '';
-    return send(ctx, msg.list(`*${item.name}* — choose ${group.name || 'an option'}:${more}`, 'Choose', [{ title: group.name || 'Options', rows }]),
+    return send(ctx, msg.list(`${prefix ? prefix + '\n\n' : ''}*${item.name}* — choose ${group.name || 'an option'}:${more}`, 'Choose', [{ title: group.name || 'Options', rows }]),
         `[options ${item.name} / ${group.name}]`);
 }
 
@@ -394,9 +443,14 @@ async function continuePending(ctx, item) {
 }
 
 async function showCartWithActions(ctx, prefix) {
-    const text = `${prefix ? prefix + '\n\n' : ''}${cartText(ctx.convo)}`;
+    let text = `${prefix ? prefix + '\n\n' : ''}${cartText(ctx.convo)}`;
     if (!(ctx.convo.cart || []).length) {
         return send(ctx, msg.buttons(text, [{ id: 'menu', title: 'View menu' }]), text);
+    }
+    // A big basket doesn't fit a button message: send it as text, then the buttons
+    if (text.length > BODY_LIMIT) {
+        for (const chunk of splitText(text)) await send(ctx, msg.text(chunk), chunk);
+        text = `${(ctx.convo.cart || []).reduce((n, l) => n + l.quantity, 0)} items · Subtotal ${money(cartTotal(ctx.convo.cart))}. What next?`;
     }
     return send(ctx, msg.buttons(text, [
         { id: 'checkout', title: 'Checkout' },
@@ -420,9 +474,25 @@ async function startCheckout(ctx) {
     const { convo, restaurant } = ctx;
     const closed = restaurantClosedReason(restaurant);
     if (closed) return send(ctx, msg.text(closed), closed, 'system');
+    // An item still waiting for its options would silently miss the order
+    if (convo.pending_item) {
+        const item = ctx.menu.byId.get(convo.pending_item.menu_item_id);
+        if (item && convo.pending_item.queue?.length) return askNextOption(ctx, item, `Let's finish your ${item.name} first — then tap Checkout.`);
+        convo.pending_item = null;
+    }
     if (!(convo.cart || []).length) return showCategories(ctx, 'Your basket is empty — what would you like?');
     if (!convo.order_type) return askOrderType(ctx);
     if (convo.order_type === 'collection' && !restaurant.collection_enabled) convo.order_type = 'delivery';
+
+    const serviceClosed = hoursClosedReason(restaurant, convo.order_type);
+    if (serviceClosed) {
+        const other = convo.order_type === 'delivery' ? 'collection' : 'delivery';
+        const otherOk = (other === 'delivery' || restaurant.collection_enabled) && !hoursClosedReason(restaurant, other);
+        const t = `${serviceClosed}${otherOk ? ` You can still choose ${other}.` : ''}`;
+        return otherOk
+            ? send(ctx, msg.buttons(t, [{ id: `type:${other}`, title: other === 'delivery' ? 'Delivery' : 'Collection' }]), t, 'system')
+            : send(ctx, msg.text(t), t, 'system');
+    }
 
     const min = Number(restaurant.minimum_order) || 0;
     if (convo.order_type === 'delivery' && min > 0 && cartTotal(convo.cart) < min) {
@@ -437,7 +507,11 @@ async function startCheckout(ctx) {
     convo.checkout_token_expires_at = new Date(Date.now() + CHECKOUT_TTL_MS).toISOString();
     convo.state = 'awaiting_payment';
     const url = `${APP_URL}/WhatsAppCheckout?t=${convo.checkout_token}`;
-    const body = await botText(ctx, 'wa_checkout', { basket: cartText(convo) });
+    let body = await botText(ctx, 'wa_checkout', { basket: cartText(convo) });
+    if (body.length > BODY_LIMIT) {
+        for (const chunk of splitText(body)) await send(ctx, msg.text(chunk), chunk);
+        body = 'Tap below to confirm your details and pay.';
+    }
     return send(ctx, msg.cta(body, 'Pay & place order', url), `[checkout link] ${url}`);
 }
 
@@ -537,11 +611,11 @@ RULES
             case 'add_item': {
                 const item = menu.byId.get(a.menu_item_id);
                 if (!item) { notes.push('I couldn\'t find one of those items on the menu.'); break; }
-                if (convo.pending_item) { notes.push(`I'll add ${item.name} once we've finished the current item.`); break; }
+                if (convo.pending_item) { notes.push(`Let's finish choosing options for your current item first — then ask me for ${item.name} again.`); break; }
                 const { pending, ignored } = startPending(item, a.quantity || 1, a.options);
                 if (ignored.length) notes.push(`(${item.name}: ignored unknown option ${ignored.join(', ')})`);
                 convo.pending_item = pending;
-                if (pending.queue.length) next = { kind: 'options', item };
+                if (pending.queue.length) { if (next?.kind !== 'handoff') next = { kind: 'options', item }; }
                 else { finishPending(convo, item); showCart = true; }
                 break;
             }
@@ -577,6 +651,7 @@ RULES
             case 'set_address':
                 if (a.address) convo.delivery_address = clip(a.address, 300);
                 break;
+            // Priority of the follow-up screen: handoff > options for an item > checkout > menu
             case 'show_menu': next = next || { kind: 'menu' }; break;
             case 'show_category': {
                 const i = menu.categories.findIndex((c) => c.toLowerCase() === String(a.category || '').toLowerCase());
@@ -584,7 +659,7 @@ RULES
                 break;
             }
             case 'show_cart': showCart = true; break;
-            case 'checkout': next = { kind: 'checkout' }; break;
+            case 'checkout': if (!next || !['handoff', 'options'].includes(next.kind)) next = { kind: 'checkout' }; break;
             case 'handoff': next = { kind: 'handoff' }; break;
         }
     }
@@ -667,11 +742,6 @@ async function handleMessage(ctx, m) {
 
     const id = input.id || '';
     const lower = input.text.trim().toLowerCase();
-
-    // A new order after a completed one starts from a clean basket
-    if (convo.state === 'closed') {
-        Object.assign(convo, { state: 'browsing', cart: [], pending_item: null, order_id: null, checkout_token: null, last_notified_status: null, history: [] });
-    }
 
     // ── Pending option choice (tap, or the option typed as text) ──
     if (convo.pending_item) {
@@ -917,8 +987,8 @@ Deno.serve(async (req) => {
                         status: 'received',
                     });
 
-                    const snapshot = JSON.stringify(convo);
-                    const ctx = { base44, db, channel, restaurant, menu, convo: { ...convo }, isNew, sentTexts: [] };
+                    // Deep copy: handlers mutate nested objects (cart lines, pending_item)
+                    const ctx = { base44, db, channel, restaurant, menu, convo: JSON.parse(JSON.stringify(convo)), isNew, sentTexts: [] };
                     ctx.convo.customer_name = ctx.convo.customer_name || profileName;
                     ctx.convo.last_inbound_at = nowIso();
                     ctx.convo.last_message_preview = clip(inbound.text, 120);
@@ -926,17 +996,19 @@ Deno.serve(async (req) => {
                     await markReadWithTyping(channel, m.id);
                     await handleMessage(ctx, m);
 
+                    // Write back ONLY what this message changed. The LLM call takes seconds, and in
+                    // that time whatsappOrderNotify may link a placed order (order_id, empty cart,
+                    // revoked token) or staff may take over - rewriting every field from the copy
+                    // taken before would silently undo those changes.
                     const c = ctx.convo;
-                    const patch = {
-                        state: c.state, cart: c.cart || [], pending_item: c.pending_item || null,
-                        order_type: c.order_type, delivery_address: c.delivery_address,
-                        checkout_token: c.checkout_token, checkout_token_expires_at: c.checkout_token_expires_at,
-                        order_id: c.order_id, last_notified_status: c.last_notified_status,
-                        history: c.history || [], last_inbound_at: c.last_inbound_at,
-                        last_message_preview: c.last_message_preview, unread_count: c.unread_count || 0,
-                        customer_name: c.customer_name,
-                    };
-                    if (JSON.stringify({ ...convo, ...patch }) !== snapshot) await db.WaConversation.update(convo.id, patch);
+                    const OWNED = ['state', 'cart', 'pending_item', 'order_type', 'delivery_address', 'checkout_token',
+                        'checkout_token_expires_at', 'history', 'last_inbound_at', 'last_message_preview', 'unread_count', 'customer_name'];
+                    const patch = {};
+                    for (const f of OWNED) {
+                        const after = c[f] ?? null;
+                        if (JSON.stringify(after) !== JSON.stringify(convo[f] ?? null)) patch[f] = after;
+                    }
+                    if (Object.keys(patch).length) await db.WaConversation.update(convo.id, patch);
                 } catch (e) {
                     console.error(`[whatsappWebhook] message ${m.id} failed:`, e.message);
                 }
