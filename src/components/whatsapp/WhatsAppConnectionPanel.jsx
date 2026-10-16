@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ export default function WhatsAppConnectionPanel({ restaurant, config, channel, o
     const [saving, setSaving] = useState(false);
     const [manual, setManual] = useState({ waba_id: '', phone_number_id: '', access_token: '' });
     const [showManual, setShowManual] = useState(false);
+
+    useEffect(() => { setWelcome(channel?.welcome_message || ''); }, [channel?.id, channel?.welcome_message]);
 
     const connected = channel?.status === 'connected';
     const link = waLink(channel?.display_phone_number);
