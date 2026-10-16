@@ -366,10 +366,10 @@ export default function Layout({ children, currentPageName }) {
 
 
 
-    const hideHeader = ['Checkout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'RestaurantDashboard'].includes(currentPageName);
+    const hideHeader = ['Checkout', 'WhatsAppCheckout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'RestaurantDashboard'].includes(currentPageName);
     const isFullScreenPage = ['MediaScreen', 'POSDashboard', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'KitchenDisplay', 'WaiterApp'].includes(currentPageName);
-    const showBottomNav = !['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'Sitemap', 'CustomerDisplay', 'KioskDashboard', 'Finance'].includes(currentPageName);
-    const hideFooter = ['Checkout', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'Finance'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'WhatsAppCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'Sitemap', 'CustomerDisplay', 'KioskDashboard', 'Finance'].includes(currentPageName);
+    const hideFooter = ['Checkout', 'WhatsAppCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'Finance'].includes(currentPageName);
     
     // Custom domain home link
     const isRootRestaurantContext = location.pathname === '/' && !!customDomainRestaurantId;
