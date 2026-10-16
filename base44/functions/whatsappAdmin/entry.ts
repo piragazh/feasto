@@ -58,7 +58,7 @@ async function saveChannel(db, { restaurant, waba_id, phone_number_id, token, vi
     const info = await graph(`/${phone_number_id}?fields=display_phone_number,verified_name`, { token });
     const existing = await db.WhatsAppChannel.filter({ phone_number_id });
     const other = existing.find((c) => c.restaurant_id !== restaurant.id && c.status === 'connected');
-    if (other) throw new Error(`This number is already connected to ${other.restaurant_name || 'another restaurant'}.`);
+    if (other) throw Object.assign(new Error(`This number is already connected to ${other.restaurant_name || 'another restaurant'}.`), { status: 409 });
 
     const data = {
         restaurant_id: restaurant.id,
