@@ -324,8 +324,11 @@ Deno.serve(async (req) => {
                     const cur = (await db.WaTemplate.filter({ id: t.id }))[0];
                     if (!cur) return fail('Not found', 404);
                     // Meta does not allow renaming; an approved template's content can only be edited in Meta's own tools
-                    if ((cur.submissions || []).length && (cur.name !== data.name || cur.language !== data.language)) {
-                        return fail('This template has been submitted - its name and language can no longer change. Duplicate it instead.');
+                    if ((cur.submissions || []).length) {
+                        const contentKey = (x) => JSON.stringify([x.name, x.language, x.category, x.header_text || '', (x.body || '').trim(), x.footer || '', x.buttons || []]);
+                        if (contentKey(cur) !== contentKey(data)) {
+                            return fail('This template has been submitted to Meta, so its content is locked. Duplicate it to make a new version.');
+                        }
                     }
                     await db.WaTemplate.update(t.id, data);
                     return Response.json({ template: { ...cur, ...data } });
