@@ -13,10 +13,14 @@
  *   Once linked, WaConversation.order_id is set and the basket is cleared.
  *
  * UPDATES
- *   Each status is sent once (WaConversation.last_notified_status). Free-form
- *   messages are only allowed within 24h of the customer's last message; outside
- *   that, an approved template is used if WHATSAPP_STATUS_TEMPLATE is set
- *   (body params: {{1}} order number, {{2}} status text), otherwise it is skipped.
+ *   Each status is sent once (WaConversation.last_notified_status). The wording
+ *   comes from Super Admin > Message Templates (MessageTemplate key order_<status>,
+ *   restaurant override first), falling back to the built-in text below.
+ *   Free-form messages are only allowed within 24h of the customer's last message;
+ *   outside that, an APPROVED Meta template with purpose "order_status_update" on
+ *   this restaurant's WhatsApp Business Account is used (WaTemplate), else the
+ *   legacy WHATSAPP_STATUS_TEMPLATE env ({{1}} order number, {{2}} status text),
+ *   otherwise it is skipped.
  *
  * ENV  WHATSAPP_GRAPH_VERSION (default v23.0), WHATSAPP_STATUS_TEMPLATE, WHATSAPP_TEMPLATE_LANG (default en_GB)
  */
@@ -32,20 +36,64 @@ const basketKey = (lines) => (lines || [])
     .sort()
     .join('|');
 
-function statusText(order, restaurant) {
-    const num = order.order_number || `#${order.id.slice(-6).toUpperCase()}`;
-    const eta = restaurant?.delivery_time ? ` Estimated ${restaurant.delivery_time}.` : '';
-    switch (order.status) {
-        case 'pending': return `📥 We've received order ${num} (${'£' + (order.total || 0).toFixed(2)}). We'll confirm it shortly.`;
-        case 'confirmed': return `✅ Order ${num} accepted — we're on it!${order.order_type === 'delivery' ? eta : ''}`;
-        case 'out_for_delivery': return `🛵 Order ${num} is on its way.`;
-        case 'ready_for_collection': return `🛍️ Order ${num} is ready to collect.`;
-        case 'delivered': return `🎉 Order ${num} delivered. Enjoy! Message us any time to order again.`;
-        case 'collected': return `🎉 Thanks for collecting order ${num}. Enjoy!`;
-        case 'cancelled': return `❌ Sorry, order ${num} was cancelled${order.rejection_reason || order.cancellation_reason ? `: ${order.rejection_reason || order.cancellation_reason}` : ''}. Any card payment will be refunded. Reply here if you need help.`;
-        case 'refunded': return `💷 Order ${num} has been refunded.`;
-        default: return null; // preparing etc. - not worth a message
-    }
+// Built-in wording - same defaults as the catalog in messageTemplateAdmin.
+// null = not sent unless a template has been written for it.
+const DEFAULT_TEXT = {
+    order_received: "📥 We've received order {order_number} ({total}). We'll confirm it shortly.",
+    order_confirmed: "✅ Order {order_number} accepted — we're on it! Estimated time: {eta}.",
+    order_preparing: null,
+    order_out_for_delivery: '🛵 Order {order_number} is on its way.',
+    order_ready_for_collection: '🛍️ Order {order_number} is ready to collect.',
+    order_delivered: '🎉 Order {order_number} delivered. Enjoy! Message us any time to order again.',
+    order_collected: '🎉 Thanks for collecting order {order_number}. Enjoy!',
+    order_cancelled: '❌ Sorry, order {order_number} was cancelled: {reason}. Any card payment will be refunded. Reply here if you need help.',
+    order_refunded: '💷 Order {order_number} has been refunded.',
+};
+
+// Short phrase for {status_text} in Meta templates
+const STATUS_PHRASE = {
+    pending: 'received', confirmed: 'accepted and being prepared', preparing: 'being prepared',
+    out_for_delivery: 'out for delivery', ready_for_collection: 'ready to collect', delivered: 'delivered',
+    collected: 'collected', cancelled: 'cancelled', refunded: 'refunded',
+};
+
+const keyFor = (status) => (status === 'pending' ? 'order_received' : `order_${status}`);
+
+function orderVars(order, restaurant, convo) {
+    return {
+        order_number: order.order_number || `#${order.id.slice(-6).toUpperCase()}`,
+        restaurant_name: restaurant?.name || order.restaurant_name || '',
+        customer_name: order.guest_name || convo?.customer_name || 'there',
+        total: `£${(Number(order.total) || 0).toFixed(2)}`,
+        eta: order.estimated_delivery || restaurant?.delivery_time || 'soon',
+        delivery_address: order.delivery_address || '',
+        items_count: String((order.items || []).length),
+        reason: order.rejection_reason || order.cancellation_reason || 'please contact us for details',
+        status_text: STATUS_PHRASE[order.status] || order.status,
+    };
+}
+
+const fill = (text, vars) => String(text).replace(/\{([a-z_]+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m));
+
+async function statusText(db, order, restaurant, convo) {
+    const key = keyFor(order.status);
+    const rows = (await db.MessageTemplate.filter({ key }).catch(() => [])).filter((r) => r.is_active !== false);
+    const tries = [
+        (r) => r.restaurant_id === order.restaurant_id && r.channel === 'whatsapp',
+        (r) => r.restaurant_id === order.restaurant_id && r.channel === 'any',
+        (r) => !r.restaurant_id && r.channel === 'whatsapp',
+        (r) => !r.restaurant_id && r.channel === 'any',
+    ];
+    let body = null;
+    for (const t of tries) { const hit = rows.find(t); if (hit) { body = hit.body; break; } }
+    body = body ?? DEFAULT_TEXT[key] ?? null;
+    return body ? fill(body, orderVars(order, restaurant, convo)) : null;
+}
+
+/** An approved order-update Meta template on this WhatsApp Business Account, if any. */
+async function approvedStatusTemplate(db, wabaId) {
+    const rows = await db.WaTemplate.filter({ purpose: 'order_status_update' }).catch(() => []);
+    return rows.find((t) => (t.submissions || []).some((s) => s.waba_id === wabaId && s.status === 'APPROVED')) || null;
 }
 
 async function sendWa(channel, to, payload) {
@@ -101,14 +149,28 @@ Deno.serve(async (req) => {
         if (!channel || channel.status !== 'connected') return Response.json({ skipped: 'channel not connected' });
 
         const restaurant = (await db.Restaurant.filter({ id: order.restaurant_id }))[0];
-        const text = statusText(order, restaurant);
+        const text = await statusText(db, order, restaurant, convo);
         if (!text) return Response.json({ skipped: `no message for ${order.status}` });
 
         const inWindow = convo.last_inbound_at && Date.now() - new Date(convo.last_inbound_at).getTime() < SERVICE_WINDOW_MS;
         const template = Deno.env.get('WHATSAPP_STATUS_TEMPLATE');
+        const built = inWindow ? null : await approvedStatusTemplate(db, channel.waba_id);
         let payload;
         if (inWindow) {
             payload = { type: 'text', text: { body: text } };
+        } else if (built) {
+            const vars = orderVars(order, restaurant, convo);
+            const params = built.param_order || [];
+            payload = {
+                type: 'template',
+                template: {
+                    name: built.name,
+                    language: { code: built.language || 'en_GB' },
+                    components: params.length
+                        ? [{ type: 'body', parameters: params.map((p) => ({ type: 'text', text: String(vars[p] ?? '') || '-' })) }]
+                        : [],
+                },
+            };
         } else if (template) {
             payload = {
                 type: 'template',
