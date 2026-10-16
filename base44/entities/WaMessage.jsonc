@@ -1,11 +1,15 @@
 {
-  "description": "Every WhatsApp message in or out. wamid is unique, which is what stops Meta's webhook retries from being processed twice.",
+  "description": "Every WhatsApp message in or out. wamid is unique, which is what stops Meta's webhook retries from being processed twice. dedupe_key makes automatic order updates send once even when two workflow runs overlap.",
   "name": "WaMessage",
   "properties": {
     "body": {
       "type": "string"
     },
     "conversation_id": {
+      "type": "string"
+    },
+    "dedupe_key": {
+      "description": "<order id>:<status> for automatic order updates - the first row written wins, later duplicates stand down",
       "type": "string"
     },
     "direction": {
@@ -39,6 +43,7 @@
     "status": {
       "enum": [
         "received",
+        "sending",
         "sent",
         "delivered",
         "read",
@@ -54,6 +59,7 @@
     "conversation_id",
     "direction"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -75,6 +81,5 @@
         "role": "admin"
       }
     }
-  },
-  "type": "object"
+  }
 }
