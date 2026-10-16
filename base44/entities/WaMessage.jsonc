@@ -1,0 +1,80 @@
+{
+  "description": "Every WhatsApp message in or out. wamid is unique, which is what stops Meta's webhook retries from being processed twice.",
+  "name": "WaMessage",
+  "properties": {
+    "body": {
+      "type": "string"
+    },
+    "conversation_id": {
+      "type": "string"
+    },
+    "direction": {
+      "enum": [
+        "inbound",
+        "outbound"
+      ],
+      "type": "string"
+    },
+    "error": {
+      "type": "string"
+    },
+    "msg_type": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "sender": {
+      "enum": [
+        "customer",
+        "ai",
+        "staff",
+        "system"
+      ],
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "received",
+        "sent",
+        "delivered",
+        "read",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "wamid": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "direction"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}

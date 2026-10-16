@@ -1,0 +1,149 @@
+{
+  "description": "A WhatsApp ordering chat between one customer and one restaurant number. Holds the server-side cart; prices in it are always copied from MenuItem, never from the AI.",
+  "name": "WaConversation",
+  "properties": {
+    "cart": {
+      "description": "Same line shape as the website cart in localStorage, so checkout can reuse it unchanged.",
+      "items": {
+        "properties": {
+          "customizations": {
+            "type": "object"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "itemQuantities": {
+            "type": "object"
+          },
+          "menu_item_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "options_summary": {
+            "type": "string"
+          },
+          "price": {
+            "description": "Unit price including chosen options",
+            "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "channel_id": {
+      "type": "string"
+    },
+    "checkout_token": {
+      "description": "Random token in the checkout link. Lets the public checkout page load this cart without exposing any other data.",
+      "type": "string"
+    },
+    "checkout_token_expires_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_wa_id": {
+      "description": "Customer's WhatsApp ID (E.164 digits, no +)",
+      "type": "string"
+    },
+    "delivery_address": {
+      "type": "string"
+    },
+    "history": {
+      "description": "Recent turns for the AI (last 12)",
+      "items": {
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "last_inbound_at": {
+      "description": "Free-form replies are only allowed within 24h of this",
+      "format": "date-time",
+      "type": "string"
+    },
+    "last_message_preview": {
+      "type": "string"
+    },
+    "last_notified_status": {
+      "description": "Last order status sent to the customer, so each update is sent once",
+      "type": "string"
+    },
+    "order_id": {
+      "description": "Order placed from this chat, once checkout completes",
+      "type": "string"
+    },
+    "order_type": {
+      "enum": [
+        "delivery",
+        "collection"
+      ],
+      "type": "string"
+    },
+    "pending_item": {
+      "description": "An item waiting on required option choices: { menu_item_id, quantity, queue: [{ group_name, parent }], customizations, extra_price, summary }",
+      "type": "object"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "state": {
+      "default": "browsing",
+      "enum": [
+        "browsing",
+        "cart",
+        "awaiting_payment",
+        "handoff",
+        "closed"
+      ],
+      "type": "string"
+    },
+    "unread_count": {
+      "default": 0,
+      "type": "number"
+    }
+  },
+  "required": [
+    "channel_id",
+    "restaurant_id",
+    "customer_wa_id"
+  ],
+  "type": "object",
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

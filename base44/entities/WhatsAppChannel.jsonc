@@ -1,0 +1,93 @@
+{
+  "description": "One restaurant's own WhatsApp Business number connected through Meta's Cloud API. Holds the access token, so only admins can read it directly; managers go through the whatsappAdmin function, which never returns the token.",
+  "name": "WhatsAppChannel",
+  "properties": {
+    "access_token": {
+      "description": "Business token from Embedded Signup. Server-only.",
+      "type": "string"
+    },
+    "ai_enabled": {
+      "default": true,
+      "description": "When off, messages are stored for staff to answer in the inbox and the AI stays silent.",
+      "type": "boolean"
+    },
+    "connected_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "connected_via": {
+      "enum": [
+        "embedded_signup",
+        "manual"
+      ],
+      "type": "string"
+    },
+    "display_phone_number": {
+      "type": "string"
+    },
+    "last_error": {
+      "type": "string"
+    },
+    "last_inbound_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "phone_number_id": {
+      "description": "Meta phone number ID. Every webhook carries this, so it is how an incoming message is routed to the right restaurant. Unique.",
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
+    "status": {
+      "default": "pending",
+      "enum": [
+        "pending",
+        "connected",
+        "disconnected",
+        "error"
+      ],
+      "type": "string"
+    },
+    "verified_name": {
+      "type": "string"
+    },
+    "waba_id": {
+      "description": "WhatsApp Business Account ID",
+      "type": "string"
+    },
+    "welcome_message": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "phone_number_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}
