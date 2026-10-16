@@ -67,6 +67,7 @@ const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refund
             { id: 'orders', label: 'Live Orders', icon: ShoppingBag, badge: pendingOrders.length },
             { id: 'messages', label: 'Messages', icon: MessageSquare, badge: unreadMessagesCount },
             { id: 'history', label: 'Order History', icon: History },
+            { id: 'whatsapp', label: 'WhatsApp Orders', icon: MessageCircle },
         ]
     },
     {
@@ -420,6 +421,17 @@ function RestaurantDashboardInner() {
                     <TabsContent value="orders"><LiveOrders restaurantId={restaurant.id} onOrderUpdate={() => {}} /></TabsContent>
                     <TabsContent value="messages"><RestaurantMessages restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="history"><PastOrders restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="whatsapp">
+                        <Card>
+                            <CardHeader><CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-green-600" />WhatsApp Ordering</CardTitle></CardHeader>
+                            <CardContent>
+                                <p className="text-gray-600 mb-4">Let customers order by messaging your restaurant's own WhatsApp number. Connect your number, and answer chats the AI hands over to staff.</p>
+                                <Button className="bg-green-600 hover:bg-green-700" onClick={() => window.location.href = createPageUrl('WhatsAppOrdering') + `?restaurantId=${restaurant.id}`}>
+                                    <MessageCircle className="h-4 w-4 mr-2" />Open WhatsApp Ordering
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
                 </Tabs>
             );
         }
