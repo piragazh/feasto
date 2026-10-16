@@ -395,6 +395,11 @@ export default function WaTemplateBuilder() {
                         {(form.submissions || []).length > 0 && (
                             <div className="bg-white border rounded-xl p-4">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Meta review</p>
+                                {form.submissions.some((s) => s.status === 'REJECTED') && (
+                                    <p className="text-xs bg-red-50 border border-red-200 text-red-800 rounded-md p-2 mb-2">
+                                        Meta won't re-review a rejected template under the same name. Use <b>Duplicate</b>, fix the wording, and submit the new version.
+                                    </p>
+                                )}
                                 <ul className="space-y-2">
                                     {form.submissions.map((s) => (
                                         <li key={s.waba_id} className="text-sm">
