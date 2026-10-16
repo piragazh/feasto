@@ -1,0 +1,145 @@
+{
+  "description": "A WhatsApp message template built in Super Admin and submitted to Meta for approval on each restaurant's WhatsApp Business Account. Approved templates are the only way to message a customer more than 24 hours after their last message.",
+  "name": "WaTemplate",
+  "properties": {
+    "body": {
+      "description": "Body written with named {variables}; converted to {{1}}, {{2}}... on submission",
+      "type": "string"
+    },
+    "buttons": {
+      "items": {
+        "properties": {
+          "phone_number": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "QUICK_REPLY",
+              "URL",
+              "PHONE_NUMBER"
+            ],
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "category": {
+      "default": "UTILITY",
+      "enum": [
+        "UTILITY",
+        "MARKETING",
+        "AUTHENTICATION"
+      ],
+      "type": "string"
+    },
+    "footer": {
+      "type": "string"
+    },
+    "header_text": {
+      "type": "string"
+    },
+    "language": {
+      "default": "en_GB",
+      "type": "string"
+    },
+    "name": {
+      "description": "Meta template name: lowercase letters, digits and underscores",
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "param_order": {
+      "description": "Variable name for each positional {{n}} in the submitted body, in order",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "purpose": {
+      "default": "other",
+      "description": "order_status_update = used automatically for order updates outside the 24h window",
+      "enum": [
+        "order_status_update",
+        "marketing",
+        "other"
+      ],
+      "type": "string"
+    },
+    "submissions": {
+      "description": "One per WhatsApp Business Account",
+      "items": {
+        "properties": {
+          "meta_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "restaurant_names": {
+            "type": "string"
+          },
+          "status": {
+            "description": "PENDING, APPROVED, REJECTED, PAUSED, DISABLED, ERROR",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "waba_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "target_channel_ids": {
+      "description": "WhatsAppChannel ids to submit to; empty = every connected number",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "name",
+    "body"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}

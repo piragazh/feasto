@@ -1,0 +1,66 @@
+{
+  "description": "Wording for customer messages (SMS and WhatsApp free-form text), managed in Super Admin. A row with no restaurant_id is the platform default for that key and channel; a row with restaurant_id overrides it for that restaurant. Lookup order in senders: legacy NotificationTemplate (restaurant) -> restaurant override -> platform default -> built-in text.",
+  "name": "MessageTemplate",
+  "properties": {
+    "body": {
+      "description": "Text with {variables}",
+      "type": "string"
+    },
+    "channel": {
+      "default": "any",
+      "description": "any = used for both SMS and WhatsApp unless a channel-specific row exists",
+      "enum": [
+        "sms",
+        "whatsapp",
+        "any"
+      ],
+      "type": "string"
+    },
+    "is_active": {
+      "default": true,
+      "type": "boolean"
+    },
+    "key": {
+      "description": "Message key from the catalog in messageTemplateAdmin, e.g. order_confirmed, wa_welcome",
+      "type": "string"
+    },
+    "restaurant_id": {
+      "description": "Empty for the platform default",
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
+    "updated_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "key",
+    "channel",
+    "body"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}
