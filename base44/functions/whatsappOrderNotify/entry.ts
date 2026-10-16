@@ -11,6 +11,13 @@
  *     - an identical basket (same items and quantities) - covers a customer who
  *       typed a different number at checkout.
  *   Once linked, WaConversation.order_id is set and the basket is cleared.
+ *   Only website (online) orders are ever linked - a till, kiosk or marketplace
+ *   order with the same basket must never send updates to someone's WhatsApp.
+ *
+ * SEND ONCE
+ *   The workflow fires on create AND update, and Order changes in quick bursts,
+ *   so two runs can race. Each update is claimed first with a WaMessage row keyed
+ *   <order id>:<status>; when two claims exist, only the earliest sends.
  *
  * UPDATES
  *   Each status is sent once (WaConversation.last_notified_status). The wording
@@ -121,6 +128,7 @@ Deno.serve(async (req) => {
         // ── Find or establish the link ──
         let convo = (await db.WaConversation.filter({ order_id: order.id }))[0];
         if (!convo) {
+            if ((order.order_source || 'online') !== 'online') return Response.json({ skipped: 'not an online order' });
             const ageMs = Date.now() - new Date(order.created_date).getTime();
             if (ageMs > LINK_WINDOW_MS) return Response.json({ skipped: 'not a whatsapp order' });
 
@@ -190,14 +198,28 @@ Deno.serve(async (req) => {
             return Response.json({ skipped: 'outside 24h window and no template configured' });
         }
 
+        // ── Claim this update; the earliest claim wins ──
+        const dedupeKey = `${order.id}:${order.status}`;
+        if ((await db.WaMessage.filter({ dedupe_key: dedupeKey })).some((m) => m.status !== 'failed')) {
+            return Response.json({ skipped: 'already sent' });
+        }
+        const claim = await db.WaMessage.create({
+            conversation_id: convo.id, restaurant_id: convo.restaurant_id, direction: 'outbound', sender: 'system',
+            msg_type: payload.type, body: text, status: 'sending', dedupe_key: dedupeKey,
+        });
+        const byAge = (a, b) => String(a.created_date || '').localeCompare(String(b.created_date || ''))
+            || String(a.id).length - String(b.id).length || (String(a.id) < String(b.id) ? -1 : 1);
+        const claims = (await db.WaMessage.filter({ dedupe_key: dedupeKey })).filter((m) => m.status !== 'failed').sort(byAge);
+        if (claims[0]?.id !== claim.id) {
+            await db.WaMessage.delete(claim.id).catch(() => {});
+            return Response.json({ skipped: 'another run is sending this update' });
+        }
+
         let wamid = null;
         let error = null;
         try { wamid = await sendWa(channel, convo.customer_wa_id, payload); } catch (e) { error = e.message; }
 
-        await db.WaMessage.create({
-            conversation_id: convo.id, restaurant_id: convo.restaurant_id, wamid, direction: 'outbound',
-            sender: 'system', msg_type: payload.type, body: text, status: error ? 'failed' : 'sent', error: error || undefined,
-        });
+        await db.WaMessage.update(claim.id, { wamid, status: error ? 'failed' : 'sent', error: error || undefined });
         if (!error) await db.WaConversation.update(convo.id, { last_notified_status: order.status });
 
         return Response.json({ sent: !error, error });
