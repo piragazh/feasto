@@ -1,10 +1,15 @@
 import { base44 } from '@/api/base44Client';
 
+/** functions.invoke returns the body in some SDK versions and an axios-style response in others. */
+export function unwrap(res) {
+    return res && typeof res === 'object' && 'data' in res && 'status' in res && 'headers' in res ? res.data : res;
+}
+
 /** Calls the whatsappAdmin backend function and unwraps the response or error. */
 export async function waAdmin(action, params = {}) {
     try {
         const res = await base44.functions.invoke('whatsappAdmin', { action, ...params });
-        const data = res && typeof res === 'object' && 'data' in res && !('channels' in res) ? res.data : res;
+        const data = unwrap(res);
         if (data?.error) throw new Error(data.error);
         return data;
     } catch (e) {
