@@ -108,7 +108,11 @@ export default function Checkout() {
         door_number: '', // Door/flat number
         delivery_address: '', // Street address
         phone: '', // Contact phone number
-        notes: '' // Special delivery instructions
+        notes: '', // Special delivery instructions
+        // Marketing consent — always unticked by default (UK GDPR / PECR). One per channel.
+        marketing_sms: false,
+        marketing_email: false,
+        marketing_whatsapp: false,
     });
     const [deliveryCoordinates, setDeliveryCoordinates] = useState(null); // GPS coordinates for delivery
     
@@ -1510,6 +1514,33 @@ export default function Checkout() {
                                             </label>
                                         </div>
                                     )}
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">
+                                        Offers from {restaurant?.name || 'this restaurant'}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <p className="text-sm text-gray-600">
+                                        Tick if you'd like {restaurant?.name || 'this restaurant'} to send you offers and news. You can stop any time by replying STOP or using the unsubscribe link.
+                                    </p>
+                                    {[
+                                        { key: 'marketing_sms', label: 'By text message (SMS)' },
+                                        { key: 'marketing_email', label: 'By email' },
+                                        { key: 'marketing_whatsapp', label: 'On WhatsApp' },
+                                    ].map(opt => (
+                                        <div key={opt.key} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={opt.key}
+                                                checked={!!formData[opt.key]}
+                                                onCheckedChange={(v) => setFormData(f => ({ ...f, [opt.key]: v === true }))}
+                                            />
+                                            <label htmlFor={opt.key} className="text-sm text-gray-700 cursor-pointer">{opt.label}</label>
+                                        </div>
+                                    ))}
                                 </CardContent>
                             </Card>
 
