@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Loader2, Plus, Smartphone, Mail, Pause, Play, XCircle, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,7 +23,8 @@ function Report({ restaurantId, campaignId, onClose }) {
         queryKey: ['crm-campaign', restaurantId, campaignId],
         queryFn: () => crm(restaurantId, 'campaign_get', { campaign_id: campaignId }),
         enabled: !!campaignId,
-        refetchInterval: (d) => (['sending', 'scheduled'].includes(d?.campaign?.status) ? 15000 : false),
+        // react-query v4 passes the data, v5 the query: handle both.
+        refetchInterval: (q) => { const d = q?.state ? q.state.data : q; return ['sending', 'scheduled'].includes(d?.campaign?.status) ? 15000 : false; },
     });
     const act = async (action, msg) => {
         try { await crm(restaurantId, action, { campaign_id: campaignId }); toast.success(msg); refetch(); qc.invalidateQueries({ queryKey: ['crm-campaigns', restaurantId] }); }
@@ -148,7 +148,7 @@ export default function CRMCampaigns({ restaurantId, restaurantName, draft, onDr
                                             </button>
                                             <div className="flex items-center gap-3 shrink-0">
                                                 {c.status !== 'draft' && <div className="text-right text-xs text-gray-600 hidden sm:block">{c.stats?.sent ?? 0} sent · {c.stats?.converted ?? 0} ordered · {money(c.stats?.revenue)}</div>}
-                                                <Badge className={`${STATUS[c.status]} hover:${STATUS[c.status]}`}>{c.status}</Badge>
+                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS[c.status]}`}>{c.status}</span>
                                                 {c.status === 'draft' && <>
                                                     <Button variant="ghost" size="icon" onClick={() => openDraft(c.id)}><Pencil className="h-4 w-4" /></Button>
                                                     <Button variant="ghost" size="icon" onClick={() => removeDraft(c.id)}><Trash2 className="h-4 w-4 text-gray-400" /></Button>
