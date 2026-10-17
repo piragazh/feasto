@@ -1,0 +1,134 @@
+{
+  "description": "A one-off marketing send to a segment on one channel. Sending snapshots the audience into MessageJob rows; the crmSendWorker sends them.",
+  "name": "Campaign",
+  "properties": {
+    "body": {
+      "description": "Message text with {first_name} {restaurant} {coupon_code} {favourite_item} {order_link} tokens",
+      "type": "string"
+    },
+    "button_text": {
+      "type": "string"
+    },
+    "channel": {
+      "enum": [
+        "sms",
+        "email",
+        "whatsapp"
+      ],
+      "type": "string"
+    },
+    "completed_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "coupon_code": {
+      "description": "Shared code (coupon_mode=shared)",
+      "type": "string"
+    },
+    "coupon_config": {
+      "description": "For unique codes: { discount_type, discount_value, validity_days, minimum_order }",
+      "type": "object"
+    },
+    "coupon_mode": {
+      "default": "none",
+      "enum": [
+        "none",
+        "shared",
+        "unique"
+      ],
+      "type": "string"
+    },
+    "created_by_email": {
+      "type": "string"
+    },
+    "heading": {
+      "description": "Email headline",
+      "type": "string"
+    },
+    "holdout_pct": {
+      "default": 0,
+      "type": "number"
+    },
+    "name": {
+      "type": "string"
+    },
+    "on_behalf_of_admin": {
+      "default": false,
+      "type": "boolean"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "schedule_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "segment_key": {
+      "description": "System segment key (e.g. sys:at_risk) or a Segment id",
+      "type": "string"
+    },
+    "segment_name": {
+      "type": "string"
+    },
+    "sent_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "sms_provider": {
+      "enum": [
+        "auto",
+        "httpsms",
+        "twilio"
+      ],
+      "type": "string"
+    },
+    "stats": {
+      "description": "Cached report numbers",
+      "type": "object"
+    },
+    "status": {
+      "default": "draft",
+      "enum": [
+        "draft",
+        "scheduled",
+        "sending",
+        "sent",
+        "paused",
+        "cancelled"
+      ],
+      "type": "string"
+    },
+    "subject": {
+      "description": "Email subject",
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "channel"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}

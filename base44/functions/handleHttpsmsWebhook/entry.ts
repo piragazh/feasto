@@ -214,6 +214,20 @@ async function handleInboundStop(base44, data) {
     return { stop: true, recorded: true };
 }
 
+// ── CRM: mirror delivery status onto the marketing MessageJob ──────────────
+// Marketing SMS are logged with request_id = MessageJob.idempotency_key. Best effort only.
+async function syncMessageJob(base44, smsLog, patch) {
+    if (!smsLog?.request_id || smsLog.type !== 'promotional') return;
+    try {
+        const jobs = await base44.asServiceRole.entities.MessageJob.filter({ idempotency_key: smsLog.request_id });
+        const job = jobs?.[0];
+        if (!job || job.status === 'converted') return;
+        await base44.asServiceRole.entities.MessageJob.update(job.id, patch);
+    } catch (e) {
+        console.warn('[HTTPSMS-WEBHOOK] MessageJob sync failed:', e?.message);
+    }
+}
+
 // ── Main handler ───────────────────────────────────────────────────────
 Deno.serve(async (req) => {
     try {
@@ -282,6 +296,7 @@ Deno.serve(async (req) => {
                 });
                 console.log(`[HTTPSMS-WEBHOOK] SmsLog ${smsLog.id} → sent`);
             }
+            await syncMessageJob(base44, smsLog, { status: 'sent' });
             return Response.json({ received: true, status: 'sent' });
         }
 
@@ -293,6 +308,7 @@ Deno.serve(async (req) => {
                 });
                 console.log(`[HTTPSMS-WEBHOOK] SmsLog ${smsLog.id} → delivered`);
             }
+            await syncMessageJob(base44, smsLog, { status: 'delivered', delivered_at: eventTimestamp || new Date().toISOString() });
             return Response.json({ received: true, status: 'delivered' });
         }
 
@@ -331,6 +347,10 @@ Deno.serve(async (req) => {
 
             // ── Create separate SmsLog for the Twilio attempt ──
             await logTwilioFallbackAttempt(base44, smsLog, twilioResult, failureReason);
+
+            await syncMessageJob(base44, smsLog, twilioResult.success
+                ? { status: 'sent', provider: 'twilio', provider_message_id: twilioResult.provider_message_id, error: `httpSMS ${failureStatus}; sent by Twilio` }
+                : { status: 'failed', error: `${failureReason}; Twilio: ${twilioResult.error || 'not sent'}` });
 
             if (twilioResult.success) {
                 console.log(`[HTTPSMS-WEBHOOK] Twilio fallback sent for SmsLog ${smsLog.id}, SID: ${twilioResult.provider_message_id}`);

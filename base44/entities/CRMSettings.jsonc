@@ -1,0 +1,91 @@
+{
+  "description": "Per-restaurant CRM marketing settings. Read and written only through the crmApi function.",
+  "name": "CRMSettings",
+  "properties": {
+    "attribution_days": {
+      "default": 7,
+      "type": "number"
+    },
+    "default_sms_provider": {
+      "default": "auto",
+      "description": "auto = httpSMS first, Twilio if it fails",
+      "enum": [
+        "auto",
+        "httpsms",
+        "twilio"
+      ],
+      "type": "string"
+    },
+    "email_from_name": {
+      "type": "string"
+    },
+    "max_marketing_per_week": {
+      "default": 2,
+      "description": "Per customer, per restaurant, rolling 7 days",
+      "type": "number"
+    },
+    "monthly_budget_pence": {
+      "default": 5000,
+      "description": "Spend cap for SMS per calendar month; 0 = no cap",
+      "type": "number"
+    },
+    "quiet_hours_end": {
+      "default": "09:00",
+      "description": "UK time; marketing resumes at this time",
+      "type": "string"
+    },
+    "quiet_hours_start": {
+      "default": "21:00",
+      "description": "UK time; no marketing sent from this time",
+      "type": "string"
+    },
+    "reply_to": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "sender_name": {
+      "description": "Name shown in messages, e.g. Tilbury Chicken",
+      "type": "string"
+    },
+    "sms_cost_pence": {
+      "description": "Estimated cost per SMS segment by provider",
+      "properties": {
+        "httpsms": {
+          "type": "number"
+        },
+        "twilio": {
+          "type": "number"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "restaurant_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}

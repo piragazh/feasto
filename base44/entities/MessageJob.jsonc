@@ -1,0 +1,125 @@
+{
+  "description": "One marketing message to one customer: queued by a campaign or automation, sent by crmSendWorker, updated by provider webhooks and by order attribution. Every message ever sent is here.",
+  "name": "MessageJob",
+  "properties": {
+    "attempts": {
+      "default": 0,
+      "type": "number"
+    },
+    "automation_id": {
+      "type": "string"
+    },
+    "campaign_id": {
+      "type": "string"
+    },
+    "channel": {
+      "enum": [
+        "sms",
+        "email",
+        "whatsapp"
+      ],
+      "type": "string"
+    },
+    "converted_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "converted_order_id": {
+      "type": "string"
+    },
+    "converted_total": {
+      "type": "number"
+    },
+    "cost_pence": {
+      "default": 0,
+      "type": "number"
+    },
+    "coupon_code": {
+      "type": "string"
+    },
+    "delivered_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "error": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "is_test": {
+      "default": false,
+      "type": "boolean"
+    },
+    "profile_id": {
+      "type": "string"
+    },
+    "provider": {
+      "description": "httpsms, twilio, base44_email",
+      "type": "string"
+    },
+    "provider_message_id": {
+      "type": "string"
+    },
+    "rendered_body": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "sent_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "skip_reason": {
+      "description": "no_consent, no_contact, suppressed, marketplace, frequency_cap, budget, cancelled, duplicate",
+      "type": "string"
+    },
+    "status": {
+      "default": "queued",
+      "enum": [
+        "queued",
+        "skipped",
+        "holdout",
+        "sending",
+        "sent",
+        "delivered",
+        "failed",
+        "uncertain",
+        "converted"
+      ],
+      "type": "string"
+    },
+    "to": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "channel",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}

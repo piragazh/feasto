@@ -1,0 +1,57 @@
+{
+  "description": "A saved customer audience: a rule tree evaluated server-side against CustomerProfile. System segments are defined in code; these are the restaurant's own.",
+  "name": "Segment",
+  "properties": {
+    "created_by": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "last_count": {
+      "type": "number"
+    },
+    "last_evaluated_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "rules": {
+      "description": "{ match: 'all'|'any', conditions: [{ field, op, value }] }",
+      "type": "object"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "rules"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}
