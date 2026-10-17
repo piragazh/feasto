@@ -1,0 +1,43 @@
+{
+  "name": "CRM Send Worker",
+  "description": "Every 5 minutes (the platform minimum): starts scheduled campaigns that are due and sends queued marketing messages, re-checking consent, opt-outs, the weekly cap, quiet hours and the monthly SMS budget for every message at the moment it is sent. Normally finds nothing to do.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "interval",
+      "cron_expression": null,
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": 5,
+      "interval_unit": "minutes",
+      "interval_anchor": "2026-10-17T15:00:00",
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "crm_send_worker",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "crmSendWorker",
+            "args": {
+              "mode": "drain"
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}
