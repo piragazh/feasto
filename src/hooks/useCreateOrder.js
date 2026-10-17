@@ -154,7 +154,7 @@ export function useCreateOrder({
                     email: formData.marketing_email === true,
                     whatsapp: formData.marketing_whatsapp === true,
                     method: 'checkout_tickbox',
-                    wording_version: 'checkout_v1',
+                    wording_version: 'checkout_v2',
                 }
             };
 
