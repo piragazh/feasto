@@ -554,8 +554,23 @@ Deno.serve(async (req) => {
             ? orderData.status
             : 'confirmed';
 
+        // Marketing consent asked verbally by the cashier. Only explicit true counts; who captured
+        // it comes from the verified staff session, never the client.
+        const mo = orderData.marketing_opt_in && typeof orderData.marketing_opt_in === 'object' ? orderData.marketing_opt_in : null;
+        const marketingOptIn = mo && (mo.sms === true || mo.whatsapp === true)
+            ? {
+                sms: mo.sms === true,
+                whatsapp: mo.whatsapp === true,
+                email: false,
+                method: 'pos_verbal',
+                wording_version: 'pos_v1',
+                captured_by: staffSession?.staff_name || user?.email || null,
+            }
+            : undefined;
+
         const order = await base44.asServiceRole.entities.Order.create({
             ...safeOrderData,
+            marketing_opt_in: marketingOptIn,
             // Stamp the channel server-side. The Order entity defaults
             // order_source to 'online', and neither the POS client nor this
             // function was setting it - so every till sale was recorded as an
