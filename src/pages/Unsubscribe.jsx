@@ -33,10 +33,7 @@ export default function Unsubscribe() {
           setMessage(`You have successfully unsubscribed from ${channel === 'email' ? 'promotional emails' : 'promotional messages'}.`);
         } else if (response.status === 400) {
           setStatus('error');
-          setMessage('This unsubscribe link is invalid or has expired.');
-        } else if (response.status === 404) {
-          setStatus('error');
-          setMessage('User account not found.');
+          setMessage('This unsubscribe link is not valid. Reply STOP to any of our texts, or contact the restaurant, and we will remove you.');
         } else {
           setStatus('error');
           setMessage('An error occurred while processing your request. Please try again later.');
