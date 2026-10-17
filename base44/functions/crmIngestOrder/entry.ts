@@ -95,6 +95,22 @@ async function write(fn) {
     return withRetry(fn);
 }
 
+// Wraps every entity call (filter/create/update/...) in withRetry.
+function retrying(db) {
+    return new Proxy(db, {
+        get(target, name) {
+            const entity = target[name];
+            if (!entity || typeof entity !== 'object') return entity;
+            return new Proxy(entity, {
+                get(e, method) {
+                    const fn = e[method];
+                    return typeof fn === 'function' ? (...args) => withRetry(() => fn.apply(e, args)) : fn;
+                },
+            });
+        },
+    });
+}
+
 async function listAll(entity, query = {}, sort = 'created_date') {
     const out = [];
     for (let skip = 0; ; skip += 500) {
@@ -532,8 +548,15 @@ Deno.serve(async (req) => {
             // 200, not 400: a workflow counting failures would eventually be switched off.
             return Response.json({ skipped: 'no_order_id' });
         }
-        const result = await ingestOne(db, orderId);
-        return Response.json({ success: true, ...result });
+        // The CRM must never be the reason an order workflow is switched off: a failure here is
+        // logged and answered 200, and the nightly refresh repairs anything that was missed.
+        try {
+            const result = await ingestOne(retrying(db), orderId);
+            return Response.json({ success: true, ...result });
+        } catch (e) {
+            console.error(`[crmIngestOrder] deferred order ${orderId}:`, e?.message);
+            return Response.json({ deferred: true, reason: e?.message || 'error' });
+        }
     } catch (error) {
         console.error('[crmIngestOrder] Error:', error?.message);
         return Response.json({ error: error?.message || 'Internal error' }, { status: 500 });
