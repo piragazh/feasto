@@ -32,7 +32,7 @@ import OrderAnalyticsDashboard from '@/components/restaurant/OrderAnalyticsDashb
 import DriverTracking from '@/components/restaurant/DriverTracking';
 import DriverManagement from '@/components/restaurant/DriverManagement';
 import DriverPerformance from '@/components/restaurant/DriverPerformance';
-import CustomerCRM from '@/components/restaurant/CustomerCRM';
+import RestaurantCRM from '@/components/crm/RestaurantCRM';
 import RefundManagement from '@/components/restaurant/RefundManagement';
 import PromotionManagement from '@/components/restaurant/PromotionManagement';
 import OrderBatching from '@/components/restaurant/OrderBatching';
@@ -487,7 +487,7 @@ function RestaurantDashboardInner() {
                     <TabsContent value="kds"><KitchenDisplaySystem restaurant={restaurant} /></TabsContent>
                     <TabsContent value="drivers"><DriverTracking restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="driver-management"><DriverManagement restaurantId={restaurant.id} /></TabsContent>
-                    <TabsContent value="crm"><CustomerCRM restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
+                    <TabsContent value="crm"><RestaurantCRM restaurantId={restaurant.id} restaurantName={restaurant.name} /></TabsContent>
                     <TabsContent value="refunds"><RefundManagement restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="offline-orders"><OfflineOrdersReview restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="batching"><OrderBatching restaurantId={restaurant.id} /></TabsContent>
