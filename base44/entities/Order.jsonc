@@ -531,6 +531,36 @@
     },
     "offline_review_notes": {
       "type": "string"
+    },
+    "crm_profile_id": {
+      "type": "string",
+      "description": "CustomerProfile this order belongs to. Set by crmIngestOrder."
+    },
+    "crm_contact_id": {
+      "type": "string",
+      "description": "Platform Contact this order belongs to. Set by crmIngestOrder."
+    },
+    "marketing_opt_in": {
+      "type": "object",
+      "description": "Marketing consent given when this order was placed (unticked by default). Copied into ConsentRecord by crmIngestOrder.",
+      "properties": {
+        "sms": {
+          "type": "boolean"
+        },
+        "email": {
+          "type": "boolean"
+        },
+        "whatsapp": {
+          "type": "boolean"
+        },
+        "method": {
+          "type": "string",
+          "description": "checkout_tickbox or pos_verbal"
+        },
+        "wording_version": {
+          "type": "string"
+        }
+      }
     }
   },
   "required": [
