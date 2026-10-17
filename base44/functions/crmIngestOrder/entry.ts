@@ -66,21 +66,47 @@ function contactOf(order) {
     };
 }
 
+// The entity API is rate limited. Every call retries with back-off on a rate-limit error, and
+// backfill writes are paced so a full rebuild does not trip the limit in the first place.
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+async function withRetry(fn) {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await fn();
+        } catch (e) {
+            if (attempt < 6 && /rate limit|429|too many/i.test(String(e?.message || e))) {
+                await sleep(1000 * 2 ** attempt);
+                continue;
+            }
+            throw e;
+        }
+    }
+}
+const WRITE_GAP_MS = 250;
+let lastWrite = 0;
+async function write(fn) {
+    const wait = lastWrite + WRITE_GAP_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastWrite = Date.now();
+    return withRetry(fn);
+}
+
 async function listAll(entity, query = {}, sort = 'created_date') {
     const out = [];
     for (let skip = 0; ; skip += 500) {
-        const page = await entity.filter(query, sort, 500, skip);
+        const page = await withRetry(() => entity.filter(query, sort, 500, skip));
         out.push(...page);
         if (page.length < 500) break;
     }
     return out;
 }
 
-async function inBatches(items, size, fn) {
-    for (let i = 0; i < items.length; i += size) {
-        await Promise.all(items.slice(i, i + size).map(fn));
-    }
-}
+// Fingerprint of what a profile update would change, so an unchanged profile is not rewritten.
+const fingerprint = (o) => JSON.stringify([
+    o.order_count, o.total_spend, o.last_order_at, o.first_order_at, o.lifecycle_stage, o.is_vip,
+    o.rfm, o.consent, o.contact_id, o.phone_e164, o.emails, o.display_name, o.marketing_eligible,
+    o.favourite_items, o.addresses, o.avg_days_between_orders,
+]);
 
 // ── Stats and lifecycle ───────────────────────────────────────────────────
 function computeStats(orders, now) {
@@ -284,6 +310,11 @@ async function ingestOne(db, orderId) {
 // ── Backfill / nightly refresh ────────────────────────────────────────────
 async function backfill(db) {
     const now = Date.now();
+    // Stays inside the function time limit. Every step skips work already done, so a partial run
+    // is simply continued by the next one (run it again, or let the nightly schedule finish it).
+    const BUDGET_MS = 110000;
+    const outOfTime = () => Date.now() - now > BUDGET_MS;
+    const partial = (step) => ({ partial: true, stopped_at: step, message: 'Time budget reached; run again to continue.' });
     const [orders, profiles, contacts, consentRecords, legacyCustomers] = await Promise.all([
         listAll(db.Order),
         listAll(db.CustomerProfile),
@@ -316,10 +347,11 @@ async function backfill(db) {
         if (!p && phone) p = byPhone.get(`${order.restaurant_id}|${phone}`) || null;
         if (!p && email) p = byEmail.get(`${order.restaurant_id}|${email}`) || null;
         if (!p) {
-            p = await db.CustomerProfile.create({
+            if (outOfTime()) return partial('profiles');
+            p = await write(() => db.CustomerProfile.create({
                 restaurant_id: order.restaurant_id, phone_e164: phone || null, emails: email ? [email] : [],
                 display_name: name, consent: { sms: false, email: false, whatsapp: false }, lifecycle_stage: 'prospect',
-            });
+            }));
             createdProfiles++;
             byId.set(p.id, p);
         }
@@ -347,11 +379,12 @@ async function backfill(db) {
         let p = (phone && byPhone.get(`${c.restaurant_id}|${phone}`)) || (email && byEmail.get(`${c.restaurant_id}|${email}`)) || null;
         if (p?.legacy_customer_id === c.id) continue;
         if (!p) {
-            p = await db.CustomerProfile.create({
+            if (outOfTime()) return partial('legacy_customers');
+            p = await write(() => db.CustomerProfile.create({
                 restaurant_id: c.restaurant_id, phone_e164: phone || null, emails: email ? [email] : [],
                 display_name: c.full_name || null, consent: { sms: false, email: false, whatsapp: false },
                 lifecycle_stage: 'prospect',
-            });
+            }));
             createdProfiles++;
             byId.set(p.id, p); index(p);
             assigned.set(p.id, assigned.get(p.id) || []);
@@ -373,11 +406,12 @@ async function backfill(db) {
         const email = (p.emails || [])[0] || null;
         let c = (p.phone_e164 && cByPhone.get(p.phone_e164)) || (email && cByEmail.get(email)) || null;
         if (!c) {
-            c = await db.Contact.create({
+            if (outOfTime()) return partial('contacts');
+            c = await write(() => db.Contact.create({
                 phone_e164: p.phone_e164 || null, email_lower: email, name: p.display_name || null,
                 profile_ids: [p.id], restaurant_ids: [p.restaurant_id],
                 platform_consent: { sms: false, email: false, whatsapp: false },
-            });
+            }));
             createdContacts++;
         } else {
             const cp = contactPatches.get(c.id) || {};
@@ -394,7 +428,10 @@ async function backfill(db) {
         if (p.contact_id !== c.id) { patchOf(p).contact_id = c.id; }
         p.contact_id = c.id;
     }
-    await inBatches([...contactPatches.entries()], 5, ([id, patch]) => db.Contact.update(id, patch));
+    for (const [id, patch] of contactPatches) {
+        if (outOfTime()) return partial('contact_links');
+        await write(() => db.Contact.update(id, patch));
+    }
 
     // 4. Link orders (only where the link changed)
     const orderUpdates = [];
@@ -406,7 +443,10 @@ async function backfill(db) {
             }
         }
     }
-    await inBatches(orderUpdates, 5, ([id, patch]) => db.Order.update(id, patch));
+    for (const [id, patch] of orderUpdates) {
+        if (outOfTime()) return partial('order_links');
+        await write(() => db.Order.update(id, patch));
+    }
 
     // 5. Consent captured on orders not yet in the ledger
     const ledgerKeys = new Set(consentRecords.map(r => `${r.source_ref}|${r.channel}|${r.action}`));
@@ -419,12 +459,14 @@ async function backfill(db) {
             }
         }
     }
-    await inBatches(newGrants, 5, (g) => db.ConsentRecord.create(g));
+    for (const g of newGrants) {
+        if (outOfTime()) return partial('consent');
+        await write(() => db.ConsentRecord.create(g));
+    }
     const allConsent = [...consentRecords, ...newGrants];
 
     // 6. Recalculate every profile
-    let reconcileOrders = 0, reconcileSpend = 0;
-    const profileUpdates = [];
+    let reconcileOrders = 0, reconcileSpend = 0, profilesWritten = 0;
     for (const p of byId.values()) {
         if (p.merged_into) continue;
         const list = assigned.get(p.id) || [];
@@ -432,12 +474,15 @@ async function backfill(db) {
         reconcileOrders += stats.order_count;
         reconcileSpend += stats.total_spend;
         const consent = currentConsent(allConsent.filter(r => r.profile_id === p.id && r.scope === p.restaurant_id));
-        profileUpdates.push([p.id, {
+        const update = {
             ...(patches.get(p.id) || {}), ...stats, consent,
             display_name: stats.display_name || p.display_name || null,
-        }]);
+        };
+        if (fingerprint({ ...p, ...update }) === fingerprint(p) && p.stats_updated_at) continue;
+        if (outOfTime()) return partial('profile_stats');
+        await write(() => db.CustomerProfile.update(p.id, update));
+        profilesWritten++;
     }
-    await inBatches(profileUpdates, 5, ([id, patch]) => db.CustomerProfile.update(id, patch));
 
     // Reconciliation figures for the Phase 1 gate
     const completedWithContact = orders.filter(o => COMPLETED.has(o.status) && o.restaurant_id
@@ -453,6 +498,7 @@ async function backfill(db) {
         contacts_created: createdContacts,
         legacy_customers_migrated: migratedCustomers,
         consent_grants_recorded: newGrants.length,
+        profiles_written: profilesWritten,
         reconcile: {
             completed_orders_with_contact: completedWithContact.length,
             completed_orders_on_profiles: reconcileOrders,
