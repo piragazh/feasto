@@ -46,27 +46,13 @@ Deno.serve(async (req) => {
     let messageCount = 0;
 
     for (const customer of customers) {
-        // Generate collision-safe coupon code
+        // WhatsApp needs a phone number; skip anyone without one instead of minting a coupon for them.
+        if (!customer.phone) continue;
+
+        // Generate collision-safe coupon code. The Coupon record is created only after the
+        // message is accepted, so opted-out or unreachable customers never get one.
         const rand = crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase();
         const couponCode = `WB-${rand}`;
-
-        // Create 1-use coupon
-        await base44.asServiceRole.entities.Coupon.create({
-            code: couponCode,
-            description: `Win-back offer for ${customer.name || 'customer'}`,
-            discount_type: coupon.discount_type,
-            discount_value: coupon.discount_value || 0,
-            restaurant_id: restaurantId,
-            is_active: true,
-            valid_from: new Date().toISOString().split('T')[0],
-            valid_until: validUntil,
-            usage_limit: 1,
-            usage_count: 0,
-            per_customer_limit: 1,
-            minimum_order: 0,
-            stackable: false
-        });
-        couponCount++;
 
         const daysSinceLast = Math.ceil(
             (Date.now() - new Date(customer.lastOrderDate).getTime()) / (1000 * 60 * 60 * 24)
@@ -90,7 +76,29 @@ Deno.serve(async (req) => {
             restaurant_id: restaurantId
         }).catch(e => ({ data: { sent: 0 } }));
 
-        if ((resp?.data?.sent || 0) > 0) messageCount++;
+        if ((resp?.data?.sent || 0) > 0) {
+            messageCount++;
+            try {
+                await base44.asServiceRole.entities.Coupon.create({
+                    code: couponCode,
+                    description: `Win-back offer for ${customer.name || 'customer'}`,
+                    discount_type: coupon.discount_type,
+                    discount_value: coupon.discount_value || 0,
+                    restaurant_id: restaurantId,
+                    is_active: true,
+                    valid_from: new Date().toISOString().split('T')[0],
+                    valid_until: validUntil,
+                    usage_limit: 1,
+                    usage_count: 0,
+                    per_customer_limit: 1,
+                    minimum_order: 0,
+                    stackable: false
+                });
+                couponCount++;
+            } catch (e) {
+                console.error(`[scheduleWinBack] Sent but could not create coupon ${couponCode}:`, e.message);
+            }
+        }
     }
 
     return Response.json({
