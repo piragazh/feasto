@@ -1,0 +1,37 @@
+{
+  "name": "CRM Ingest Order",
+  "description": "On every order create and update, puts the order on the right customer profile (matched by phone, then email), records any marketing consent ticked at checkout or given to the cashier, and recalculates that customer's stats and lifecycle stage. Never writes to the Order, so it cannot re-trigger the other order workflows.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update"
+      ],
+      "entity_name": "Order"
+    }
+  },
+  "definition": {
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "then": "end",
+          "with": {
+            "args": {
+              "orderId": "${ .trigger.entity_id }"
+            },
+            "function_name": "crmIngestOrder"
+          }
+        }
+      }
+    ],
+    "document": {
+      "dsl": "1.0.0",
+      "name": "crm_ingest_order",
+      "namespace": "base44",
+      "version": "1.0"
+    }
+  }
+}
