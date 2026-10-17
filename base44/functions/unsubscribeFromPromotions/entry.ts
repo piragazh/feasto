@@ -129,6 +129,27 @@ Deno.serve(async (req) => {
         key: email || phone, type: email ? 'email' : 'phone', channels, reason: 'unsubscribe_link', sourceRef: 'token',
       });
 
+      // Record the withdrawal in the CRM consent ledger for every restaurant profile with this address.
+      try {
+        const profiles = email
+          ? await base44.asServiceRole.entities.CustomerProfile.filter({ emails: email })
+          : await base44.asServiceRole.entities.CustomerProfile.filter({ phone_e164: phone });
+        const at = new Date().toISOString();
+        for (const p of profiles) {
+          for (const ch of channels) {
+            await base44.asServiceRole.entities.ConsentRecord.create({
+              contact_id: p.contact_id || null, profile_id: p.id, restaurant_id: p.restaurant_id, scope: p.restaurant_id,
+              channel: ch, action: 'withdraw', method: 'unsubscribe_link', source_ref: 'token', at,
+            });
+          }
+          const consent = { ...(p.consent || {}) };
+          channels.forEach(ch => { consent[ch] = false; });
+          await base44.asServiceRole.entities.CustomerProfile.update(p.id, { consent, consent_updated_at: at });
+        }
+      } catch (e) {
+        console.warn('[UNSUBSCRIBE] consent ledger update failed (suppression still recorded):', e?.message);
+      }
+
       // Keep the legacy User flag in sync for account holders.
       if (email) {
         const users = await base44.asServiceRole.entities.User.filter({ email });
