@@ -573,6 +573,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
                             customer={selectedCustomer}
                             onClose={() => setSelectedCustomer(null)}
                             restaurantName={restaurantName}
+                            restaurantId={restaurantId}
                         />
                     )}
                 </DialogContent>
