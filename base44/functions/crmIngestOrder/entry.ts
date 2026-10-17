@@ -248,6 +248,31 @@ function consentGrantsFromOrder(order, profile, contactId) {
     return out;
 }
 
+// ── Campaign attribution ──────────────────────────────────────────────────────────────
+// A completed order is credited to the message that most plausibly caused it, within the window:
+// a message whose coupon code was used wins; otherwise the latest message without a code.
+async function attributeOrder(db, order, profile) {
+    if (!COMPLETED.has(order.status)) return null;
+    const already = await db.MessageJob.filter({ converted_order_id: order.id });
+    if (already.length) return already[0].id;
+    const settings = (await db.CRMSettings.filter({ restaurant_id: order.restaurant_id }))[0] || {};
+    const windowMs = (Number(settings.attribution_days) || 7) * DAY;
+    const placed = ts(order.created_date);
+    const jobs = (await db.MessageJob.filter({ profile_id: profile.id }, '-created_date', 50))
+        .filter(j => !j.is_test && ['sent', 'delivered', 'uncertain'].includes(j.status) && j.sent_at
+            && ts(j.sent_at) <= placed && placed - ts(j.sent_at) <= windowMs);
+    if (!jobs.length) return null;
+    const codes = [...(order.coupon_codes || []), order.coupon_code].filter(Boolean).map(c => String(c).toUpperCase());
+    const byCode = jobs.find(j => j.coupon_code && codes.includes(String(j.coupon_code).toUpperCase()));
+    const job = byCode || jobs.filter(j => !j.coupon_code).sort((a, b) => ts(b.sent_at) - ts(a.sent_at))[0];
+    if (!job) return null;
+    await db.MessageJob.update(job.id, {
+        status: 'converted', converted_order_id: order.id, converted_total: Number(order.total) || 0,
+        converted_at: order.created_date,
+    });
+    return job.id;
+}
+
 // ── Contacts ──────────────────────────────────────────────────────────────
 async function ensureContact(db, { phone, email, name, profileId, restaurantId }) {
     let contact = null;
@@ -342,7 +367,10 @@ async function ingestOne(db, orderId) {
         ...patch, ...stats, consent,
         display_name: stats.display_name || profile.display_name || name || null,
     });
-    return { profile_id: profile.id, contact_id: contact.id, created, stage: stats.lifecycle_stage };
+    let attributed = null;
+    try { attributed = await attributeOrder(db, order, profile); }
+    catch (e) { console.warn('[crmIngestOrder] attribution failed:', e?.message); }
+    return { profile_id: profile.id, contact_id: contact.id, created, stage: stats.lifecycle_stage, attributed_job: attributed };
 }
 
 // ── Backfill / nightly refresh ────────────────────────────────────────────
