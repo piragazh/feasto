@@ -176,6 +176,44 @@ async function logTwilioFallbackAttempt(base44, original, twilioResult, failureR
     }
 }
 
+// ── Inbound opt-out (STOP replies) ─────────────────────────────────────
+const STOP_WORDS = new Set(['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT', 'OPTOUT', 'OPT OUT']);
+
+function normalisePhone(raw) {
+    let p = String(raw || '').replace(/[^\d+]/g, '');
+    if (p.startsWith('00')) p = '+' + p.slice(2);
+    if (!p.startsWith('+')) {
+        if (p.startsWith('07') && p.length === 11) p = '+44' + p.slice(1);
+        else if (p.startsWith('7') && p.length === 10) p = '+44' + p;
+        else if (p.startsWith('44') && p.length === 12) p = '+' + p;
+        else return null;
+    }
+    return /^\+\d{8,15}$/.test(p) ? p : null;
+}
+
+async function sha256Hex(s) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function handleInboundStop(base44, data) {
+    const word = String(data?.content || '').trim().toUpperCase().replace(/[^A-Z ]/g, '');
+    if (!STOP_WORDS.has(word)) return { stop: false };
+    const phone = normalisePhone(data?.contact);
+    if (!phone) return { stop: true, recorded: false };
+    const key_hash = await sha256Hex(phone);
+    for (const channel of ['sms', 'whatsapp']) {
+        const existing = await base44.asServiceRole.entities.Suppression.filter({ key_hash, channel });
+        if (existing.length) continue;
+        await base44.asServiceRole.entities.Suppression.create({
+            key_hash, key_type: 'phone', key_hint: `${phone.slice(0, 5)}*****${phone.slice(-4)}`,
+            channel, scope: 'global', reason: 'stop_reply', source_ref: data?.id || 'httpsms',
+        });
+    }
+    console.log(`[HTTPSMS-WEBHOOK] STOP received — suppressed ${phone.slice(0, 5)}*****${phone.slice(-4)}`);
+    return { stop: true, recorded: true };
+}
+
 // ── Main handler ───────────────────────────────────────────────────────
 Deno.serve(async (req) => {
     try {
@@ -219,6 +257,12 @@ Deno.serve(async (req) => {
         console.log(`[HTTPSMS-WEBHOOK] Event: ${eventTypeFinal} | request_id: ${requestId} | msg_id: ${providerMessageId}`);
 
         const base44 = createClientFromRequest(req);
+
+        // ── Inbound messages: honour STOP replies, ignore everything else ──
+        if (eventTypeFinal === 'message.phone.received') {
+            const result = await handleInboundStop(base44, data);
+            return Response.json({ received: true, ...result });
+        }
 
         // ── Step 4: Find related SmsLog ──
         const smsLog = await findSmsLog(base44, requestId, providerMessageId);
