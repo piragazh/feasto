@@ -345,10 +345,19 @@ export default function CustomerCRM() {
     });
 
     const handleSave = (form) => {
+        // Only save the Customer fields — merged rows also carry order stats and order lists.
+        const data = {
+            full_name: form.full_name,
+            phone_number: form.phone_number,
+            email: form.email,
+            restaurant_id: form.restaurant_id,
+            delivery_address: form.delivery_address,
+            notes: form.notes,
+        };
         if (editing) {
-            updateMutation.mutate({ id: editing.id, data: form });
+            updateMutation.mutate({ id: editing.id, data });
         } else {
-            createMutation.mutate(form);
+            createMutation.mutate(data);
         }
     };
 
