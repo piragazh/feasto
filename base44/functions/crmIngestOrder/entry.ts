@@ -324,6 +324,8 @@ async function backfill(db) {
     ]);
 
     const byId = new Map(profiles.map(p => [p.id, p]));
+    // Snapshot as stored, before the in-memory enrichment below, to decide what really changed.
+    const original = new Map(profiles.map(p => [p.id, JSON.parse(JSON.stringify(p))]));
     const byPhone = new Map(), byEmail = new Map();
     const index = (p) => {
         if (p.merged_into) return;
@@ -478,7 +480,8 @@ async function backfill(db) {
             ...(patches.get(p.id) || {}), ...stats, consent,
             display_name: stats.display_name || p.display_name || null,
         };
-        if (fingerprint({ ...p, ...update }) === fingerprint(p) && p.stats_updated_at) continue;
+        const before = original.get(p.id);
+        if (before && before.stats_updated_at && fingerprint({ ...before, ...update }) === fingerprint(before)) continue;
         if (outOfTime()) return partial('profile_stats');
         await write(() => db.CustomerProfile.update(p.id, update));
         profilesWritten++;
