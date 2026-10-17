@@ -21,8 +21,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
  * SAFE NO MATTER WHO CALLS IT (single-order mode)
  *   Takes only an order id and reads everything from the database; the most any caller can do is
  *   trigger a recalculation that would have happened anyway. Same pattern as applyOrderStock.
- *   Writing crm_profile_id back onto the order re-fires the update workflow once; the second run
- *   finds the link already set and only recalculates.
+ *
+ * NEVER WRITES TO ORDER
+ *   Every Order update fires five other workflows (stock, loyalty, Uber, notifications, WhatsApp).
+ *   Linking is stored on the profile (CustomerProfile.order_ids) instead, so the CRM can rebuild
+ *   itself at any time without disturbing order processing. (Order.crm_profile_id exists on a
+ *   handful of orders from the first backfill attempt and is only read, never written.)
  */
 
 const COMPLETED = new Set([
@@ -105,7 +109,7 @@ async function listAll(entity, query = {}, sort = 'created_date') {
 const fingerprint = (o) => JSON.stringify([
     o.order_count, o.total_spend, o.last_order_at, o.first_order_at, o.lifecycle_stage, o.is_vip,
     o.rfm, o.consent, o.contact_id, o.phone_e164, o.emails, o.display_name, o.marketing_eligible,
-    o.favourite_items, o.addresses, o.avg_days_between_orders,
+    o.favourite_items, o.addresses, o.avg_days_between_orders, [...(o.order_ids || [])].sort(),
 ]);
 
 // ── Stats and lifecycle ───────────────────────────────────────────────────
@@ -243,11 +247,11 @@ async function ingestOne(db, orderId) {
     const restaurantId = order.restaurant_id;
     const { phone, email, name } = contactOf(order);
 
-    let profile = null;
-    if (order.crm_profile_id) {
+    let profile = (await withRetry(() => db.CustomerProfile.filter({ order_ids: order.id })))[0] || null;
+    if (!profile && order.crm_profile_id) {
         profile = (await db.CustomerProfile.filter({ id: order.crm_profile_id }))[0] || null;
-        if (profile?.merged_into) profile = (await db.CustomerProfile.filter({ id: profile.merged_into }))[0] || profile;
     }
+    if (profile?.merged_into) profile = (await db.CustomerProfile.filter({ id: profile.merged_into }))[0] || profile;
     if (!profile && !phone && !email) return { skipped: 'no_contact_details' };
     if (!profile && phone) profile = (await db.CustomerProfile.filter({ restaurant_id: restaurantId, phone_e164: phone }))[0] || null;
     if (!profile && email) profile = (await db.CustomerProfile.filter({ restaurant_id: restaurantId, emails: email }))[0] || null;
@@ -283,9 +287,8 @@ async function ingestOne(db, orderId) {
     });
     if (profile.contact_id !== contact.id) patch.contact_id = contact.id;
 
-    if (order.crm_profile_id !== profile.id || order.crm_contact_id !== contact.id) {
-        await db.Order.update(order.id, { crm_profile_id: profile.id, crm_contact_id: contact.id });
-    }
+    const orderIds = profile.order_ids || [];
+    if (!orderIds.includes(order.id)) patch.order_ids = [...orderIds, order.id];
 
     // Consent captured with this order (once per order + channel)
     for (const grant of consentGrantsFromOrder(order, profile, contact.id)) {
@@ -294,8 +297,12 @@ async function ingestOne(db, orderId) {
     }
 
     // Recalculate from every order linked to this profile
-    const orders = await listAll(db.Order, { crm_profile_id: profile.id });
-    if (!orders.some(o => o.id === order.id)) orders.push({ ...order, crm_profile_id: profile.id });
+    const ids = patch.order_ids || orderIds;
+    const orders = [];
+    for (let i = 0; i < ids.length; i += 200) {
+        orders.push(...await withRetry(() => db.Order.filter({ id: ids.slice(i, i + 200) })));
+    }
+    if (!orders.some(o => o.id === order.id)) orders.push(order);
     const stats = computeStats(orders, Date.now());
     const consentRecords = await db.ConsentRecord.filter({ profile_id: profile.id, scope: restaurantId });
     const consent = currentConsent(consentRecords);
@@ -336,6 +343,8 @@ async function backfill(db) {
 
     const patches = new Map();               // profile id -> identity patch
     const assigned = new Map();              // profile id -> orders
+    const linkedTo = new Map();              // order id -> profile id, as currently stored
+    profiles.forEach(p => (p.order_ids || []).forEach(id => linkedTo.set(id, p.id)));
     const patchOf = (p) => { if (!patches.has(p.id)) patches.set(p.id, {}); return patches.get(p.id); };
     let createdProfiles = 0;
 
@@ -343,7 +352,8 @@ async function backfill(db) {
     for (const order of orders) {
         if (!order.restaurant_id) continue;
         const { phone, email, name } = contactOf(order);
-        let p = order.crm_profile_id ? byId.get(order.crm_profile_id) : null;
+        const knownId = linkedTo.get(order.id) || order.crm_profile_id;
+        let p = knownId ? byId.get(knownId) : null;
         if (p?.merged_into) p = byId.get(p.merged_into) || p;
         if (!p && !phone && !email) continue;
         if (!p && phone) p = byPhone.get(`${order.restaurant_id}|${phone}`) || null;
@@ -435,20 +445,7 @@ async function backfill(db) {
         await write(() => db.Contact.update(id, patch));
     }
 
-    // 4. Link orders (only where the link changed)
-    const orderUpdates = [];
-    for (const [pid, list] of assigned) {
-        const p = byId.get(pid);
-        for (const o of list) {
-            if (o.crm_profile_id !== pid || o.crm_contact_id !== p.contact_id) {
-                orderUpdates.push([o.id, { crm_profile_id: pid, crm_contact_id: p.contact_id }]);
-            }
-        }
-    }
-    for (const [id, patch] of orderUpdates) {
-        if (outOfTime()) return partial('order_links');
-        await write(() => db.Order.update(id, patch));
-    }
+    // 4. Orders are linked through CustomerProfile.order_ids, written with the stats in step 6.
 
     // 5. Consent captured on orders not yet in the ledger
     const ledgerKeys = new Set(consentRecords.map(r => `${r.source_ref}|${r.channel}|${r.action}`));
@@ -478,6 +475,7 @@ async function backfill(db) {
         const consent = currentConsent(allConsent.filter(r => r.profile_id === p.id && r.scope === p.restaurant_id));
         const update = {
             ...(patches.get(p.id) || {}), ...stats, consent,
+            order_ids: list.map(o => o.id),
             display_name: stats.display_name || p.display_name || null,
         };
         const before = original.get(p.id);
@@ -495,7 +493,6 @@ async function backfill(db) {
     return {
         orders_total: orders.length,
         orders_linked: [...assigned.values()].reduce((s, l) => s + l.length, 0),
-        order_links_written: orderUpdates.length,
         profiles_total: [...byId.values()].filter(p => !p.merged_into).length,
         profiles_created: createdProfiles,
         contacts_created: createdContacts,
