@@ -934,7 +934,18 @@ Deno.serve(async (req) => {
             guest_name,
             guest_email,
             coupon_codes,
+            marketing_opt_in,
         } = orderData;
+
+        // Marketing consent: only explicit `true` counts, method/wording fixed server-side.
+        const optIn = marketing_opt_in && typeof marketing_opt_in === 'object' ? marketing_opt_in : {};
+        const marketingOptIn = {
+            sms: optIn.sms === true,
+            email: optIn.email === true,
+            whatsapp: optIn.whatsapp === true,
+            method: 'checkout_tickbox',
+            wording_version: 'checkout_v1',
+        };
 
         // Compute loyalty points server-side (never trust client)
         const restaurant = await base44.asServiceRole.entities.Restaurant.filter({ id: restaurant_id });
@@ -979,6 +990,7 @@ Deno.serve(async (req) => {
             payment_method: orderData.payment_method || 'cash',
             customer_email: customerEmail,
             customer_phone: customerPhone,
+            marketing_opt_in: marketingOptIn,
         });
 
         // ── Update/create PaymentTransaction record ────────────────────────────
