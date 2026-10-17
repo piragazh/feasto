@@ -534,7 +534,7 @@
     },
     "crm_profile_id": {
       "type": "string",
-      "description": "CustomerProfile this order belongs to. Set by crmIngestOrder."
+      "description": "CustomerProfile this order belongs to. Set server-side by crmIngestOrder."
     },
     "crm_contact_id": {
       "type": "string",
