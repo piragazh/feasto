@@ -38,6 +38,9 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
     const [postcode, setPostcode] = useState('');
     const [collectionTime, setCollectionTime] = useState('ASAP');
     const [notes, setNotes] = useState('');
+    // Marketing consent asked by the cashier; never pre-ticked.
+    const [marketingSms, setMarketingSms] = useState(false);
+    const [marketingWhatsapp, setMarketingWhatsapp] = useState(false);
     const [searching, setSearching] = useState(false);
     const [foundCustomer, setFoundCustomer] = useState(null);
     const [searchMode, setSearchMode] = useState('phone');
@@ -66,9 +69,9 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
     // Sync phone order details to parent via callback (replaces window.__phoneOrderDetails global)
     useEffect(() => {
         if (onDetailsChange) {
-            onDetailsChange({ phone: customerPhone, name: customerName, address: deliveryAddress, collectionTime, notes });
+            onDetailsChange({ phone: customerPhone, name: customerName, address: deliveryAddress, collectionTime, notes, marketing: { sms: marketingSms, whatsapp: marketingWhatsapp } });
         }
-    }, [customerPhone, customerName, deliveryAddress, collectionTime, notes, onDetailsChange]);
+    }, [customerPhone, customerName, deliveryAddress, collectionTime, notes, marketingSms, marketingWhatsapp, onDetailsChange]);
 
     if (!open) return null;
 
@@ -230,6 +233,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
         setNotes(''); setFoundCustomer(null); setCollectionTime('ASAP');
         setPostcode(''); setPostcodeResults([]); setShowNewCustomerForm(false);
         setNewAddressLine(''); setNewPostcode(''); setPostcodeInfo(null); setIncomingCall(null);
+        setMarketingSms(false); setMarketingWhatsapp(false);
         if (onDetailsChange) onDetailsChange({});
     };
 
@@ -490,6 +494,23 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
                                     onChange={e => setNotes(e.target.value)} />
                             </div>
                         </div>
+
+                        {/* Marketing consent — cashier asks, customer must say yes */}
+                        {customerPhone && (
+                            <div className={`rounded-xl border p-3 space-y-2 ${borderCls}`}>
+                                <p className={`text-xs font-semibold ${textMuted}`}>Ask: "Would you like us to text you our offers?"</p>
+                                {[
+                                    { label: 'Yes — offers by SMS', value: marketingSms, set: setMarketingSms },
+                                    { label: 'Yes — offers on WhatsApp', value: marketingWhatsapp, set: setMarketingWhatsapp },
+                                ].map(opt => (
+                                    <label key={opt.label} className={`flex items-center gap-2 text-sm cursor-pointer ${text}`}>
+                                        <input type="checkbox" className="h-4 w-4" checked={opt.value} onChange={e => opt.set(e.target.checked)} />
+                                        {opt.label}
+                                    </label>
+                                ))}
+                                <p className={`text-[11px] ${textMuted}`}>Only tick if the customer says yes. They can reply STOP at any time.</p>
+                            </div>
+                        )}
 
                         {/* Add new customer CTA — if phone searched but no customer found and form was dismissed */}
                         {!foundCustomer && !showNewCustomerForm && customerPhone && (
