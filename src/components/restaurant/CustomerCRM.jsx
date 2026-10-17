@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import CRMCustomerProfile from './CRMCustomerProfile';
 import CRMCampaignDialog from './CRMCampaignDialog';
 import WinBackCampaignWorkflow from './WinBackCampaignWorkflow';
+import { orderContact, isMarketplaceOrder } from '@/lib/crmContact';
 
 export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restaurant' }) {
     const [selectedSegment, setSelectedSegment] = useState('all');
@@ -65,8 +66,11 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
         // Orders come sorted by -created_date so first encountered = most recent
         // Group primarily by phone number, fall back to email, then unique order ID
         orders.forEach(order => {
-            const phone = order.phone;
-            const email = order.created_by || order.guest_email;
+            // Marketplace customers belong to Uber Eats / Deliveroo / Just Eat, not to us.
+            if (isMarketplaceOrder(order)) return;
+            if (['cancelled', 'refunded'].includes(order.status)) return;
+            // Phone (E.164) then customer_email / guest_email — never created_by.
+            const { phone, email } = orderContact(order);
             const key = phone || email || `unknown_${order.id}`;
 
             if (!customerData[key]) {
@@ -86,7 +90,7 @@ export default function CustomerCRM({ restaurantId, restaurantName = 'Our Restau
             }
 
             // Keep most recent contact details (first encounter is most recent due to sort order)
-            if (order.phone && !customerData[key].phone) customerData[key].phone = order.phone;
+            if (phone && !customerData[key].phone) customerData[key].phone = phone;
             if (order.delivery_address && !customerData[key].lastAddress) customerData[key].lastAddress = order.delivery_address;
             if (order.guest_name && !customerData[key].guestName) customerData[key].guestName = order.guest_name;
             if (email && !customerData[key].email) customerData[key].email = email;
