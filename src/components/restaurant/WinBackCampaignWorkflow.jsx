@@ -14,6 +14,7 @@ import { AlertCircle, Calendar, Zap, Users, Clock, CheckCircle2, Loader2, Messag
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import WinBackAutomationSettings from './WinBackAutomationSettings';
+import { orderContact, isMarketplaceOrder } from '@/lib/crmContact';
 
 export default function WinBackCampaignWorkflow({ restaurantId, restaurantName }) {
     const queryClient = useQueryClient();
@@ -36,11 +37,14 @@ export default function WinBackCampaignWorkflow({ restaurantId, restaurantName }
         const thresholdDays = inactivityDays;
 
         orders.forEach(order => {
-            const key = order.phone || order.created_by || `unknown_${order.id}`;
+            if (isMarketplaceOrder(order)) return;
+            if (['cancelled', 'refunded'].includes(order.status)) return;
+            const { phone, email, key } = orderContact(order);
+            if (!key) return;
             if (!customerMap[key]) {
                 customerMap[key] = {
-                    phone: order.phone,
-                    email: order.created_by || order.guest_email,
+                    phone,
+                    email,
                     name: order.guest_name,
                     lastOrderDate: order.created_date,
                     totalSpent: 0,
