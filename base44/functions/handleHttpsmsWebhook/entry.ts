@@ -210,6 +210,24 @@ async function handleInboundStop(base44, data) {
             channel, scope: 'global', reason: 'stop_reply', source_ref: data?.id || 'httpsms',
         });
     }
+    // Record the withdrawal in the CRM consent ledger for every restaurant profile with this phone.
+    try {
+        const profiles = await base44.asServiceRole.entities.CustomerProfile.filter({ phone_e164: phone });
+        const at = new Date().toISOString();
+        for (const p of profiles) {
+            for (const channel of ['sms', 'whatsapp']) {
+                await base44.asServiceRole.entities.ConsentRecord.create({
+                    contact_id: p.contact_id || null, profile_id: p.id, restaurant_id: p.restaurant_id, scope: p.restaurant_id,
+                    channel, action: 'withdraw', method: 'stop_reply', source_ref: data?.id || 'httpsms', at,
+                });
+            }
+            await base44.asServiceRole.entities.CustomerProfile.update(p.id, {
+                consent: { ...(p.consent || {}), sms: false, whatsapp: false }, consent_updated_at: at,
+            });
+        }
+    } catch (e) {
+        console.warn('[HTTPSMS-WEBHOOK] consent ledger update failed (suppression still recorded):', e?.message);
+    }
     console.log(`[HTTPSMS-WEBHOOK] STOP received — suppressed ${phone.slice(0, 5)}*****${phone.slice(-4)}`);
     return { stop: true, recorded: true };
 }
