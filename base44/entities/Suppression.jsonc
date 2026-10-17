@@ -1,0 +1,89 @@
+{
+  "description": "Do-not-market list. One row per opted-out email or phone per channel. Keyed by a SHA-256 hash of the normalised address (lowercase email or E.164 phone), so it works for guests with no account. Every marketing sender must check it immediately before sending. Rows are never deleted when a customer is erased, so they stay unsubscribed.",
+  "name": "Suppression",
+  "properties": {
+    "channel": {
+      "description": "Which marketing channel is blocked; all = every channel",
+      "enum": [
+        "email",
+        "sms",
+        "whatsapp",
+        "all"
+      ],
+      "type": "string"
+    },
+    "key_hash": {
+      "description": "SHA-256 hex of the normalised email (lowercase) or phone (E.164)",
+      "type": "string"
+    },
+    "key_hint": {
+      "description": "Masked address for admins, e.g. w***@gmail.com or +447*****4496",
+      "type": "string"
+    },
+    "key_type": {
+      "enum": [
+        "email",
+        "phone"
+      ],
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "reason": {
+      "enum": [
+        "unsubscribe_link",
+        "stop_reply",
+        "carrier_opt_out",
+        "hard_bounce",
+        "complaint",
+        "admin",
+        "migrated_user_flag",
+        "erased"
+      ],
+      "type": "string"
+    },
+    "restaurant_id": {
+      "description": "Restaurant whose message triggered the opt-out, if known",
+      "type": "string"
+    },
+    "scope": {
+      "default": "global",
+      "description": "global, or a restaurant id when the opt-out applies to one restaurant only",
+      "type": "string"
+    },
+    "source_ref": {
+      "description": "Provider message id, token or other reference",
+      "type": "string"
+    }
+  },
+  "required": [
+    "key_hash",
+    "key_type",
+    "channel",
+    "reason"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}
