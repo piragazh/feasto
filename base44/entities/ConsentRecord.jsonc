@@ -1,0 +1,93 @@
+{
+  "description": "Append-only marketing consent ledger. Every grant or withdrawal, for a restaurant or for MealDrop (scope = platform), with how and when it was captured. Never edited or deleted, so consent can be proven. The current state is cached on CustomerProfile.consent.",
+  "name": "ConsentRecord",
+  "properties": {
+    "action": {
+      "enum": [
+        "grant",
+        "withdraw"
+      ],
+      "type": "string"
+    },
+    "at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "captured_by": {
+      "description": "Staff email/name for POS and manual changes",
+      "type": "string"
+    },
+    "channel": {
+      "enum": [
+        "sms",
+        "email",
+        "whatsapp"
+      ],
+      "type": "string"
+    },
+    "contact_id": {
+      "type": "string"
+    },
+    "method": {
+      "enum": [
+        "checkout_tickbox",
+        "soft_opt_in",
+        "pos_verbal",
+        "whatsapp_optin",
+        "signup_form",
+        "import",
+        "unsubscribe_link",
+        "stop_reply",
+        "staff_manual",
+        "admin"
+      ],
+      "type": "string"
+    },
+    "profile_id": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "scope": {
+      "description": "Restaurant id, or 'platform' for MealDrop-branded marketing",
+      "type": "string"
+    },
+    "source_ref": {
+      "description": "Order id, message id or other reference",
+      "type": "string"
+    },
+    "wording_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "channel",
+    "action",
+    "method",
+    "scope"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}

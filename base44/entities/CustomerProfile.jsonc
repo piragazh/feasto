@@ -1,0 +1,236 @@
+{
+  "description": "A customer's relationship with ONE restaurant: identity, order stats, lifecycle stage and marketing consent. Built and kept up to date server-side by crmIngestOrder on every order change; restaurants read it through CRM functions. Replaces the old Customer entity.",
+  "name": "CustomerProfile",
+  "properties": {
+    "addresses": {
+      "items": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "avg_days_between_orders": {
+      "type": "number"
+    },
+    "avg_order_value": {
+      "default": 0,
+      "type": "number"
+    },
+    "birthday": {
+      "description": "MM-DD, only if the customer gave it",
+      "type": "string"
+    },
+    "consent": {
+      "description": "Current marketing consent for THIS restaurant, derived from ConsentRecord",
+      "properties": {
+        "email": {
+          "type": "boolean"
+        },
+        "sms": {
+          "type": "boolean"
+        },
+        "whatsapp": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "consent_updated_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "contact_id": {
+      "description": "Platform Contact this profile belongs to",
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "emails": {
+      "description": "Lowercase emails seen on this customer's orders; first is primary",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "favourite_items": {
+      "description": "Top 5 items by quantity",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "first_order_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "is_anonymised": {
+      "default": false,
+      "type": "boolean"
+    },
+    "is_vip": {
+      "default": false,
+      "type": "boolean"
+    },
+    "last_order_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "legacy_customer_id": {
+      "description": "Old Customer record this was migrated from",
+      "type": "string"
+    },
+    "lifecycle_stage": {
+      "description": "prospect = no completed order yet",
+      "enum": [
+        "prospect",
+        "new",
+        "active",
+        "at_risk",
+        "lapsed"
+      ],
+      "type": "string"
+    },
+    "marketing_eligible": {
+      "default": true,
+      "description": "False when every order came from a marketplace (Uber Eats, Deliveroo, Just Eat) \u2014 never message",
+      "type": "boolean"
+    },
+    "merged_into": {
+      "type": "string"
+    },
+    "notes": {
+      "description": "Internal staff notes (allergies, preferences)",
+      "type": "string"
+    },
+    "order_count": {
+      "default": 0,
+      "description": "Completed orders only (confirmed onwards; pending, cancelled and refunded excluded)",
+      "type": "number"
+    },
+    "order_sources": {
+      "description": "Completed orders per channel",
+      "properties": {
+        "kiosk": {
+          "type": "number"
+        },
+        "online": {
+          "type": "number"
+        },
+        "pos": {
+          "type": "number"
+        },
+        "table": {
+          "type": "number"
+        },
+        "third_party": {
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "order_types": {
+      "properties": {
+        "collection": {
+          "type": "number"
+        },
+        "delivery": {
+          "type": "number"
+        },
+        "dine_in": {
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "phone_e164": {
+      "description": "Primary phone, E.164. Main matching key within a restaurant.",
+      "type": "string"
+    },
+    "phone_raw": {
+      "description": "Phone as last typed on an order",
+      "type": "string"
+    },
+    "possible_shared_number": {
+      "default": false,
+      "description": "Same phone used with clearly different names/emails; needs a person to review",
+      "type": "boolean"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "rfm": {
+      "properties": {
+        "f": {
+          "type": "number"
+        },
+        "m": {
+          "type": "number"
+        },
+        "r": {
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "stats_updated_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "total_spend": {
+      "default": 0,
+      "type": "number"
+    }
+  },
+  "required": [
+    "restaurant_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}

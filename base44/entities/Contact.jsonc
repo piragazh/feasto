@@ -1,0 +1,73 @@
+{
+  "description": "One real person across the whole platform, matched by normalised phone (E.164) and email. Links that person's CustomerProfile at each restaurant. Super Admin only; written by crmIngestOrder.",
+  "name": "Contact",
+  "properties": {
+    "email_lower": {
+      "description": "Normalised (lowercase) email",
+      "type": "string"
+    },
+    "merged_into": {
+      "description": "Set when this contact was merged into another",
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "phone_e164": {
+      "description": "Normalised phone, e.g. +447700900123",
+      "type": "string"
+    },
+    "platform_consent": {
+      "description": "Consent to MealDrop-branded marketing (separate from any restaurant)",
+      "properties": {
+        "email": {
+          "type": "boolean"
+        },
+        "sms": {
+          "type": "boolean"
+        },
+        "whatsapp": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "profile_ids": {
+      "description": "CustomerProfile ids, one per restaurant",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "restaurant_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}
