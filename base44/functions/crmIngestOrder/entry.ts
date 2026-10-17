@@ -215,22 +215,37 @@ function currentConsent(records) {
     return consent;
 }
 
+// Consent changes carried by an order. With checkout_v2, SMS and email are pre-ticked: a ticked
+// box is a soft opt-in grant, an unticked box is a refusal (withdraw). WhatsApp is always an
+// explicit tick. Older wording (v1, POS) only ever recorded grants.
 function consentGrantsFromOrder(order, profile, contactId) {
     const mo = order.marketing_opt_in;
     if (!mo || typeof mo !== 'object') return [];
-    return CHANNELS.filter(ch => mo[ch] === true).map(ch => ({
+    const v2 = mo.wording_version === 'checkout_v2';
+    const base = {
         contact_id: contactId,
         profile_id: profile.id,
         restaurant_id: order.restaurant_id,
         scope: order.restaurant_id,
-        channel: ch,
-        action: 'grant',
-        method: ['checkout_tickbox', 'pos_verbal', 'soft_opt_in', 'whatsapp_optin'].includes(mo.method) ? mo.method : 'checkout_tickbox',
         wording_version: mo.wording_version || 'v1',
         source_ref: order.id,
         captured_by: mo.captured_by || null,
         at: order.created_date || new Date().toISOString(),
-    }));
+    };
+    const out = [];
+    for (const ch of CHANNELS) {
+        const preTicked = v2 && (ch === 'sms' || ch === 'email');
+        if (mo[ch] === true) {
+            out.push({
+                ...base, channel: ch, action: 'grant',
+                method: preTicked ? 'soft_opt_in'
+                    : (['checkout_tickbox', 'pos_verbal', 'whatsapp_optin'].includes(mo.method) ? mo.method : 'checkout_tickbox'),
+            });
+        } else if (preTicked && mo[ch] === false) {
+            out.push({ ...base, channel: ch, action: 'withdraw', method: 'checkout_tickbox' });
+        }
+    }
+    return out;
 }
 
 // ── Contacts ──────────────────────────────────────────────────────────────
@@ -308,7 +323,7 @@ async function ingestOne(db, orderId) {
 
     // Consent captured with this order (once per order + channel)
     for (const grant of consentGrantsFromOrder(order, profile, contact.id)) {
-        const exists = await db.ConsentRecord.filter({ source_ref: order.id, channel: grant.channel, action: 'grant' });
+        const exists = await db.ConsentRecord.filter({ source_ref: order.id, channel: grant.channel, action: grant.action });
         if (!exists.length) await db.ConsentRecord.create(grant);
     }
 
@@ -470,7 +485,8 @@ async function backfill(db) {
         const p = byId.get(pid);
         for (const o of list) {
             for (const g of consentGrantsFromOrder(o, p, p.contact_id)) {
-                if (!ledgerKeys.has(`${o.id}|${g.channel}|grant`)) { newGrants.push(g); ledgerKeys.add(`${o.id}|${g.channel}|grant`); }
+                const k = `${o.id}|${g.channel}|${g.action}`;
+                if (!ledgerKeys.has(k)) { newGrants.push(g); ledgerKeys.add(k); }
             }
         }
     }
