@@ -147,7 +147,15 @@ export function useCreateOrder({
                 scheduled_for: isScheduled ? scheduledFor : null,
                 is_group_order: !!groupOrderId,
                 group_order_id: groupOrderId,
-                payment_intent_id: paymentIntentId
+                payment_intent_id: paymentIntentId,
+                // Marketing consent from the unticked checkout tickboxes (CRM consent ledger)
+                marketing_opt_in: {
+                    sms: formData.marketing_sms === true,
+                    email: formData.marketing_email === true,
+                    whatsapp: formData.marketing_whatsapp === true,
+                    method: 'checkout_tickbox',
+                    wording_version: 'checkout_v1',
+                }
             };
 
             if (isGuest) {
