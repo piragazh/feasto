@@ -30,7 +30,7 @@ export default function CRMCustomers({ restaurantId }) {
     const { data, isLoading, isFetching, error } = useQuery({
         queryKey: ['crm-customers', restaurantId, filters],
         queryFn: () => crm(restaurantId, 'customers_list', filters),
-        keepPreviousData: true,
+        placeholderData: (prev) => prev,
     });
 
     const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
