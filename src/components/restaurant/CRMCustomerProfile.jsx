@@ -30,7 +30,21 @@ const statusColors = {
     preparing: 'bg-orange-100 text-orange-700',
 };
 
-export default function CRMCustomerProfile({ customer, onClose, restaurantName }) {
+function escapeHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function buildSimpleEmail({ restaurantName, subject, body }) {
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;">
+<div style="background:#f97316;padding:24px 32px;color:#fff;"><h1 style="margin:0;font-size:22px;">${escapeHtml(restaurantName)}</h1><p style="margin:6px 0 0;">${escapeHtml(subject)}</p></div>
+<div style="padding:28px 32px;color:#374151;font-size:15px;line-height:1.7;white-space:pre-line;">${escapeHtml(body)}</div>
+<div style="padding:16px 32px;background:#f9fafb;color:#9ca3af;font-size:11px;text-align:center;">You're receiving this because you've ordered from ${escapeHtml(restaurantName)}. <a href="UNSUBSCRIBE_URL_PLACEHOLDER" style="color:#f97316;">Unsubscribe</a></div>
+</div></body></html>`;
+}
+
+export default function CRMCustomerProfile({ customer, onClose, restaurantName, restaurantId }) {
     const [offerType, setOfferType] = useState('message');
     const [offerTitle, setOfferTitle] = useState('');
     const [discountValue, setDiscountValue] = useState('');
@@ -99,8 +113,25 @@ Order frequency: ${customer.orderFrequency}
                 body = `${offerTitle}\n\n${messageContent}\n\nEnjoy FREE DELIVERY on your next order!`;
             }
 
-            await base44.integrations.Core.SendEmail({ to: customer.email, subject, body });
-            toast.success('Offer sent successfully!');
+            // Goes through the backend sender so opt-outs are honoured and an unsubscribe link is added.
+            const result = await base44.functions.invoke('sendCRMCampaignWithOptOut', {
+                channel: 'email',
+                recipients: [{ email: customer.email, name: customer.guestName }],
+                subject,
+                htmlBody: buildSimpleEmail({ restaurantName, subject, body }),
+                textBody: body,
+                restaurant_id: restaurantId,
+            });
+            const r = result.data || {};
+            if (r.sent > 0) {
+                toast.success('Message sent');
+            } else if (r.skip_reasons?.suppressed > 0) {
+                toast.error('Not sent — this customer has opted out of marketing emails');
+                return;
+            } else {
+                toast.error('Not sent — no valid email address for this customer');
+                return;
+            }
             setMessageContent('');
             setOfferTitle('');
             setDiscountValue('');
@@ -310,8 +341,6 @@ Order frequency: ${customer.orderFrequency}
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="message">Message Only</SelectItem>
-                                    <SelectItem value="discount">% Discount</SelectItem>
-                                    <SelectItem value="freeDelivery">Free Delivery</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
