@@ -288,6 +288,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             ...(isPhoneOrder && phoneDetails.phone ? { phone: phoneDetails.phone } : {}),
             ...(isPhoneOrder && phoneDetails.name ? { guest_name: phoneDetails.name } : {}),
             ...(isPhoneOrder && phoneDetails.address ? { delivery_address: phoneDetails.address } : {}),
+            ...(isPhoneOrder && (phoneDetails.marketing?.sms || phoneDetails.marketing?.whatsapp)
+                ? { marketing_opt_in: { sms: !!phoneDetails.marketing.sms, whatsapp: !!phoneDetails.marketing.whatsapp, email: false, method: 'pos_verbal' } }
+                : {}),
         };
 
         if (!navigator.onLine) {
@@ -450,7 +453,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     const changeNote = hasCash && changeNow > 0.005 ? `Change: £${changeNow.toFixed(2)}` : null;
                     return [isPh && phoneDetails.notes ? phoneDetails.notes : null, isPh && phoneDetails.collectionTime && orderType === 'phone_collection' ? `Ready in: ${phoneDetails.collectionTime}` : null, splitNotes, changeNote].filter(Boolean).join(' | ') || undefined;
                 })(),
-                ...(() => { const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery'; return { ...(isPh && phoneDetails.phone ? { phone: phoneDetails.phone } : {}), ...(isPh && phoneDetails.name ? { guest_name: phoneDetails.name } : {}), ...(isPh && phoneDetails.address ? { delivery_address: phoneDetails.address } : {}) }; })(),
+                ...(() => { const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery'; return { ...(isPh && phoneDetails.phone ? { phone: phoneDetails.phone } : {}), ...(isPh && phoneDetails.name ? { guest_name: phoneDetails.name } : {}), ...(isPh && phoneDetails.address ? { delivery_address: phoneDetails.address } : {}), ...(isPh && (phoneDetails.marketing?.sms || phoneDetails.marketing?.whatsapp) ? { marketing_opt_in: { sms: !!phoneDetails.marketing.sms, whatsapp: !!phoneDetails.marketing.whatsapp, email: false, method: 'pos_verbal' } } : {}) }; })(),
             };
 
             await printReceiptAfterPayment(orderDataForPrint, finalPayments);
