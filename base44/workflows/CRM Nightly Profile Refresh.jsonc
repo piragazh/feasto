@@ -1,0 +1,43 @@
+{
+  "name": "CRM Nightly Profile Refresh",
+  "description": "Every night: links any order not yet on a customer profile and recalculates every CustomerProfile's stats, lifecycle stage (New / Active / At risk / Lapsed), VIP flag and RFM score. Stages move with time even when a customer places no new order, so this has to run daily. Idempotent.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "7 3 * * *",
+      "one_time_date": null,
+      "timezone": "Europe/London",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "crm_nightly_profile_refresh",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "crmIngestOrder",
+            "args": {
+              "mode": "backfill"
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}
