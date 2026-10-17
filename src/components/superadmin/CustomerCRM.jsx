@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { orderContact, normalisePhone, normaliseEmail, isMarketplaceOrder } from '@/lib/crmContact';
 
 const EMPTY_CUSTOMER = {
     full_name: '',
@@ -85,26 +86,30 @@ function CustomerForm({ initial, restaurants, onSave, onClose, loading }) {
 }
 
 // ── Order history mini-list ────────────────────────────────────────────────
-function CustomerOrders({ customerId, customerPhone, customerEmail }) {
-    const { data: orders = [], isLoading } = useQuery({
+function CustomerOrders({ customerId, customerPhone, customerEmail, knownOrders }) {
+    const { data: fetched = [], isLoading } = useQuery({
         queryKey: ['customer-orders', customerId, customerPhone, customerEmail],
         queryFn: async () => {
-            const results = [];
+            // Orders store the phone as typed, so match on every field that can hold it.
+            const lookups = [];
             if (customerPhone) {
-                const byPhone = await base44.entities.Order.filter({ customer_phone: customerPhone });
-                results.push(...byPhone);
+                lookups.push(base44.entities.Order.filter({ phone: customerPhone }, '-created_date', 50));
+                lookups.push(base44.entities.Order.filter({ customer_phone: customerPhone }, '-created_date', 50));
             }
             if (customerEmail) {
-                const byEmail = await base44.entities.Order.filter({ customer_email: customerEmail });
-                // deduplicate
-                for (const o of byEmail) {
-                    if (!results.find(r => r.id === o.id)) results.push(o);
-                }
+                lookups.push(base44.entities.Order.filter({ customer_email: customerEmail }, '-created_date', 50));
+                lookups.push(base44.entities.Order.filter({ guest_email: customerEmail }, '-created_date', 50));
             }
-            return results.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 20);
+            const map = {};
+            (await Promise.all(lookups)).flat().forEach(o => { map[o.id] = o; });
+            return Object.values(map);
         },
-        enabled: !!(customerPhone || customerEmail),
+        enabled: !knownOrders && !!(customerPhone || customerEmail),
     });
+    const orders = (knownOrders || fetched)
+        .slice()
+        .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+        .slice(0, 20);
 
     if (isLoading) return <p className="text-xs text-gray-400 py-2">Loading orders...</p>;
     if (!orders.length) return <p className="text-xs text-gray-400 py-2">No orders found.</p>;
@@ -228,6 +233,7 @@ function CustomerCard({ customer, restaurant, onEdit }) {
                             customerId={customer.id}
                             customerPhone={customer.phone_number}
                             customerEmail={customer.email}
+                            knownOrders={customer._orders}
                         />
                     </div>
                 )}
@@ -249,46 +255,63 @@ export default function CustomerCRM() {
         queryFn: () => base44.entities.Customer.list('-created_date', 500),
     });
 
-    // If no CRM customers exist, derive them from Order data
+    // Always derive customers from orders (one per restaurant + phone/email), then overlay any
+    // stored Customer records on top. Previously a single stored record hid every derived one.
     const { data: derivedCustomers = [], isLoading: ordersLoading } = useQuery({
         queryKey: ['admin-customers-from-orders'],
         queryFn: async () => {
             const orders = await base44.entities.Order.list('-created_date', 2000);
             const map = {};
             for (const o of orders) {
-                const phone = o.customer_phone || o.phone;
-                const email = o.customer_email || o.guest_email;
-                const name = o.guest_name || email?.split('@')[0] || phone || 'Unknown';
-                const key = phone || email;
-                if (!key) continue;
+                if (isMarketplaceOrder(o)) continue;
+                if (['cancelled', 'refunded'].includes(o.status)) continue;
+                const { phone, email, key: contactKey } = orderContact(o);
+                if (!contactKey) continue;
+                const key = `${o.restaurant_id}|${contactKey}`;
                 if (!map[key]) {
                     map[key] = {
                         id: `derived-${key}`,
-                        full_name: name,
+                        _key: key,
+                        full_name: o.guest_name || email?.split('@')[0] || phone || 'Unknown',
                         phone_number: phone || '',
                         email: email || '',
                         restaurant_id: o.restaurant_id,
                         total_orders: 0,
                         total_spent: 0,
                         last_order_date: null,
+                        _orders: [],
                         _derived: true,
                     };
                 }
-                map[key].total_orders += 1;
-                map[key].total_spent = (map[key].total_spent || 0) + (o.total || 0);
-                if (!map[key].last_order_date || new Date(o.created_date) > new Date(map[key].last_order_date)) {
-                    map[key].last_order_date = o.created_date;
-                    map[key].full_name = o.guest_name || map[key].full_name;
-                    map[key].restaurant_id = o.restaurant_id;
+                const c = map[key];
+                c.total_orders += 1;
+                c.total_spent += o.total || 0;
+                c._orders.push(o);
+                if (!c.email && email) c.email = email;
+                if (!c.last_order_date || new Date(o.created_date) > new Date(c.last_order_date)) {
+                    c.last_order_date = o.created_date;
+                    if (o.guest_name) c.full_name = o.guest_name;
                 }
             }
-            return Object.values(map).sort((a, b) => (b.total_orders || 0) - (a.total_orders || 0));
+            return Object.values(map);
         },
-        enabled: crmCustomers.length === 0 && !crmLoading,
     });
 
-    const customers = crmCustomers.length > 0 ? crmCustomers : derivedCustomers;
-    const isLoading = crmLoading || (crmCustomers.length === 0 && ordersLoading);
+    const customers = useMemo(() => {
+        const byKey = {};
+        for (const d of derivedCustomers) byKey[d._key] = d;
+        for (const s of crmCustomers) {
+            const contactKey = normalisePhone(s.phone_number) || normaliseEmail(s.email) || `stored-${s.id}`;
+            const key = `${s.restaurant_id}|${contactKey}`;
+            const d = byKey[key];
+            // Stored record wins for name, notes, address; order stats come from orders.
+            byKey[key] = d
+                ? { ...d, ...s, total_orders: d.total_orders, total_spent: d.total_spent, last_order_date: d.last_order_date, _orders: d._orders, _derived: false }
+                : { ...s, _derived: false };
+        }
+        return Object.values(byKey).sort((a, b) => (b.total_orders || 0) - (a.total_orders || 0));
+    }, [crmCustomers, derivedCustomers]);
+    const isLoading = crmLoading || ordersLoading;
 
     const { data: restaurants = [] } = useQuery({
         queryKey: ['admin-restaurants-list'],
@@ -390,12 +413,10 @@ export default function CustomerCRM() {
             </div>
 
             {/* Stats row */}
-            {crmCustomers.length === 0 && derivedCustomers.length > 0 && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 flex items-center gap-2">
-                    <span>ℹ️</span>
-                    <span>Showing customers derived from order history. Add customers manually or they will appear here automatically as orders come in.</span>
-                </div>
-            )}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 flex items-center gap-2">
+                <span>ℹ️</span>
+                <span>Customers are built from the last 2,000 orders across all restaurants (marketplace, cancelled and refunded orders excluded), merged with saved customer records.</span>
+            </div>
             <div className="grid grid-cols-3 gap-3">
                 {[
                     { label: 'Total Customers', value: customers.length, color: 'text-blue-600' },
