@@ -1,5 +1,5 @@
 {
-  "description": "A customer's relationship with ONE restaurant: identity, order stats, lifecycle stage and marketing consent. Built and kept up to date server-side by crmIngestOrder on every order change; restaurants read it through CRM functions. Replaces the old Customer entity.",
+  "description": "A customer's relationship with ONE restaurant: identity, order stats, lifecycle stage and marketing consent. Built and kept up to date server-side by crmIngestOrder on every order change; restaurants read it through CRM functions. Replaces the old Customer entity. Orders are linked through order_ids (not by writing to the Order) so CRM updates never re-trigger the order workflows.",
   "name": "CustomerProfile",
   "properties": {
     "addresses": {
@@ -127,6 +127,13 @@
       "description": "Completed orders only (confirmed onwards; pending, cancelled and refunded excluded)",
       "type": "number"
     },
+    "order_ids": {
+      "description": "Every order (any status) that belongs to this customer at this restaurant",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "order_sources": {
       "description": "Completed orders per channel",
       "properties": {
@@ -210,6 +217,7 @@
   "required": [
     "restaurant_id"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -231,6 +239,5 @@
         "role": "admin"
       }
     }
-  },
-  "type": "object"
+  }
 }
