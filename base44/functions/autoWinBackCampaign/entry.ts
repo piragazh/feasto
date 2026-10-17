@@ -53,6 +53,24 @@ Deno.serve(async (req) => {
     return Response.json({ processed: automations.length, summary });
 });
 
+function normaliseEmail(raw) {
+    const e = String(raw || '').trim().toLowerCase();
+    if (!e.includes('@') || e.endsWith('@no-reply.base44.com')) return null;
+    return e;
+}
+
+function normalisePhone(raw) {
+    let p = String(raw || '').replace(/[^\d+]/g, '');
+    if (p.startsWith('00')) p = '+' + p.slice(2);
+    if (!p.startsWith('+')) {
+        if (p.startsWith('07') && p.length === 11) p = '+44' + p.slice(1);
+        else if (p.startsWith('7') && p.length === 10) p = '+44' + p;
+        else if (p.startsWith('44') && p.length === 12) p = '+' + p;
+        else return null;
+    }
+    return /^\+\d{8,15}$/.test(p) ? p : null;
+}
+
 async function processAutomation(base44, automation) {
     const { restaurant_id, inactivity_days = 60, coupon_type, coupon_value, coupon_validity_days = 14,
             channel = 'whatsapp', message_template, email_subject, contacted_customer_keys = [] } = automation;
@@ -63,24 +81,31 @@ async function processAutomation(base44, automation) {
         2000
     );
 
-    // Build customer map — last order date per customer
+    // Build customer map — last order date per customer.
+    // Phone (E.164) is the key, then email. created_by is never used: for online orders it is the
+    // Base44 service account, not the customer. Marketplace orders are not ours to market to.
     const customerMap = {};
     for (const order of orders) {
         if (['cancelled', 'refunded'].includes(order.status)) continue;
-        const key = order.phone || order.customer_email || order.created_by || order.guest_email;
+        if (order.order_source === 'third_party' || order.third_party_platform) continue;
+        const phone = normalisePhone(order.phone || order.customer_phone);
+        const email = normaliseEmail(order.customer_email) || normaliseEmail(order.guest_email);
+        const key = phone || email;
         if (!key) continue;
 
         if (!customerMap[key]) {
             customerMap[key] = {
                 key,
-                phone: order.phone || null,
-                email: order.customer_email || order.created_by || order.guest_email || null,
+                phone,
+                email,
                 name: order.guest_name || null,
                 lastOrderDate: order.created_date,
                 orderCount: 0,
                 totalSpent: 0
             };
         }
+        if (!customerMap[key].email && email) customerMap[key].email = email;
+        if (!customerMap[key].name && order.guest_name) customerMap[key].name = order.guest_name;
         if (order.created_date > customerMap[key].lastOrderDate) {
             customerMap[key].lastOrderDate = order.created_date;
         }
@@ -88,10 +113,12 @@ async function processAutomation(base44, automation) {
         customerMap[key].totalSpent += order.total || 0;
     }
 
-    // Filter: inactive >= threshold AND not already contacted this cycle
+    // Filter: reachable on THIS channel, inactive >= threshold, not already contacted this cycle.
+    // Contacted keys written before normalisation are normalised here so they still match.
+    const contacted = new Set(contacted_customer_keys.map(k => normalisePhone(k) || normaliseEmail(k) || k));
     const eligibleCustomers = Object.values(customerMap).filter(c => {
-        if (!c.phone && !c.email) return false;
-        if (contacted_customer_keys.includes(c.key)) return false;
+        if (channel === 'email' ? !c.email : !c.phone) return false;
+        if (contacted.has(c.key)) return false;
         const daysSinceLast = (Date.now() - new Date(c.lastOrderDate).getTime()) / (1000 * 60 * 60 * 24);
         return daysSinceLast >= inactivity_days;
     });
@@ -119,31 +146,15 @@ async function processAutomation(base44, automation) {
     const validUntil = new Date(Date.now() + coupon_validity_days * 24 * 60 * 60 * 1000)
         .toISOString().split('T')[0];
 
-    // Generate unique coupons and build recipients list
+    // Build recipients with a reserved code. The Coupon record is only created after the
+    // provider accepts the message, so unreachable or opted-out customers never get one.
     const recipients = [];
-    const newContactedKeys = [...contacted_customer_keys];
+    const newContactedKeys = [...contacted];
 
     for (const customer of eligibleCustomers) {
         // Use crypto.randomUUID to guarantee uniqueness even inside tight loops
         const rand = crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase();
         const couponCode = `WB-${rand}`;
-
-        // Create 1-use coupon in DB
-        await base44.asServiceRole.entities.Coupon.create({
-            code: couponCode,
-            description: `Win-back offer for ${customer.name || customer.phone || customer.email}`,
-            discount_type: coupon_type || 'percentage',
-            discount_value: coupon_value || 0,
-            restaurant_id,
-            is_active: true,
-            valid_from: new Date().toISOString().split('T')[0],
-            valid_until: validUntil,
-            usage_limit: 1,
-            usage_count: 0,
-            per_customer_limit: 1,
-            minimum_order: 0,
-            stackable: false
-        });
 
         const daysSinceLast = Math.ceil(
             (Date.now() - new Date(customer.lastOrderDate).getTime()) / (1000 * 60 * 60 * 24)
@@ -165,6 +176,7 @@ async function processAutomation(base44, automation) {
             .replace(/\[RESTAURANT_LINK\]/g, restaurantName);
 
         recipients.push({
+            key: customer.key,
             phone: customer.phone,
             email: customer.email,
             name: customer.name,
@@ -203,17 +215,37 @@ async function processAutomation(base44, automation) {
 
         const r = resp?.data || {};
         const wasSent = (r.sent || 0) > 0;
+        const wasSuppressed = (r.skip_reasons?.suppressed || 0) > 0;
         totalSent += r.sent || 0;
         totalSkipped += r.skipped || 0;
         totalFailed += r.failed || 0;
 
-        // Only mark as contacted if the message was actually sent (not skipped/failed)
-        // Push the same key format used in the dedup filter (customer.key = phone || email || created_by)
         if (wasSent) {
-            const contactedKey = recipient.phone || recipient.email;
-            if (contactedKey && !newContactedKeys.includes(contactedKey)) {
-                newContactedKeys.push(contactedKey);
+            // Message accepted — now create the single-use coupon it refers to.
+            try {
+                await base44.asServiceRole.entities.Coupon.create({
+                    code: recipient.coupon_code,
+                    description: `Win-back offer for ${recipient.name || recipient.phone || recipient.email}`,
+                    discount_type: coupon_type || 'percentage',
+                    discount_value: coupon_value || 0,
+                    restaurant_id,
+                    is_active: true,
+                    valid_from: new Date().toISOString().split('T')[0],
+                    valid_until: validUntil,
+                    usage_limit: 1,
+                    usage_count: 0,
+                    per_customer_limit: 1,
+                    minimum_order: 0,
+                    stackable: false
+                });
+            } catch (e) {
+                console.error(`[autoWinBack] Sent but could not create coupon ${recipient.coupon_code}:`, e.message);
             }
+        }
+
+        // Mark as contacted when sent, or when opted out (no point re-checking them daily).
+        if ((wasSent || wasSuppressed) && !newContactedKeys.includes(recipient.key)) {
+            newContactedKeys.push(recipient.key);
         }
     }
 
