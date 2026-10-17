@@ -937,14 +937,16 @@ Deno.serve(async (req) => {
             marketing_opt_in,
         } = orderData;
 
-        // Marketing consent: only explicit `true` counts, method/wording fixed server-side.
+        // Marketing choices from checkout (wording checkout_v2): SMS and email are pre-ticked and
+        // recorded as soft opt-in; WhatsApp is an explicit tick. An unticked box is kept as `false`
+        // so the CRM can record the refusal. Method/wording fixed server-side.
         const optIn = marketing_opt_in && typeof marketing_opt_in === 'object' ? marketing_opt_in : {};
         const marketingOptIn = {
             sms: optIn.sms === true,
             email: optIn.email === true,
             whatsapp: optIn.whatsapp === true,
             method: 'checkout_tickbox',
-            wording_version: 'checkout_v1',
+            wording_version: 'checkout_v2',
         };
 
         // Compute loyalty points server-side (never trust client)
