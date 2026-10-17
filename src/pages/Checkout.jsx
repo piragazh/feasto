@@ -109,9 +109,11 @@ export default function Checkout() {
         delivery_address: '', // Street address
         phone: '', // Contact phone number
         notes: '', // Special delivery instructions
-        // Marketing consent — always unticked by default (UK GDPR / PECR). One per channel.
-        marketing_sms: false,
-        marketing_email: false,
+        // Marketing: SMS and email are pre-ticked as a PECR "soft opt-in" (the restaurant's own
+        // offers to its own customers, with the chance to refuse right here). WhatsApp needs an
+        // explicit opt-in, so it starts unticked.
+        marketing_sms: true,
+        marketing_email: true,
         marketing_whatsapp: false,
     });
     const [deliveryCoordinates, setDeliveryCoordinates] = useState(null); // GPS coordinates for delivery
@@ -1525,7 +1527,7 @@ export default function Checkout() {
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <p className="text-sm text-gray-600">
-                                        Tick if you'd like {restaurant?.name || 'this restaurant'} to send you offers and news. You can stop any time by replying STOP or using the unsubscribe link.
+                                        {restaurant?.name || 'This restaurant'} would like to send you offers and news. Untick anything you don't want. You can stop any time by replying STOP or using the unsubscribe link.
                                     </p>
                                     {[
                                         { key: 'marketing_sms', label: 'By text message (SMS)' },
