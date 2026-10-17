@@ -201,6 +201,10 @@ Deno.serve(async (req) => {
         const db = base44.asServiceRole.entities;
         const body = await req.json().catch(() => ({}));
 
+        // A job left 'sending' by a crashed run may or may not have gone out: never resend it.
+        const stale = await withRetry(() => db.MessageJob.filter({ status: 'sending', updated_date: { $lt: new Date(Date.now() - 10 * 60000).toISOString() } }, 'created_date', 200));
+        for (const j of stale) await withRetry(() => db.MessageJob.update(j.id, { status: 'uncertain', error: 'Worker stopped mid-send; not retried to avoid a duplicate' }));
+
         // Promote scheduled campaigns whose time has come
         const due = await withRetry(() => db.Campaign.filter({ status: 'scheduled', schedule_at: { $lte: new Date().toISOString() } }));
         for (const c of due) await withRetry(() => db.Campaign.update(c.id, { status: 'sending', sent_at: new Date().toISOString() }));
