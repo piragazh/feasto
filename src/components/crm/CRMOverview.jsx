@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Users, Crown, Repeat, PoundSterling, Smartphone, Mail, MessageCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { Loader2, Users, Repeat, PoundSterling, Smartphone, Mail, MessageCircle, Sparkles, ArrowRight } from 'lucide-react';
 import { crm, money, pence, STAGE } from './crmClient';
 
 function Stat({ icon: Icon, label, value, hint }) {
