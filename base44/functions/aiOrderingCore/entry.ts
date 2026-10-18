@@ -1033,7 +1033,7 @@ Deno.serve(async (req) => {
                 note = `order ${out.order_id}`;
                 const eta = s.order_type === 'collection' ? 'about 15 to 20 minutes' : etaSay(s.delivery_quote?.eta || restaurant.delivery_time || '30-45');
                 done({ order_id: out.order_id, order_number: out.order_number || null, total: q.total, eta,
-                    say: `Your order is placed${out.order_number ? `, number ${out.order_number}` : ''}. It's ${money(q.total)} in cash, ready in ${eta}. Thank you!` });
+                    say: `Your order is placed${out.order_number ? `, number ${out.order_number}` : ''}. It's ${money(q.total)} in cash, ${s.order_type === 'delivery' ? 'with you in' : 'ready in'} ${eta}. Thank you!` });
                 break;
             }
 
