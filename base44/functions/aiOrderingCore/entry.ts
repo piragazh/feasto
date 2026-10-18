@@ -146,6 +146,22 @@ async function loadMenu(db, restaurantId) {
 const SYNONYMS = { fries: 'chips', chip: 'chips', coke: 'cola', pop: 'drink', soda: 'drink', burgers: 'burger', wings: 'wing' };
 const tokensOf = (s) => norm(s).split(' ').filter(Boolean).map((t) => SYNONYMS[t] || (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t));
 
+/** Edit distance, capped - speech-to-text misspells ("margarita" for "margherita"). */
+function closeEnough(a, b) {
+    if (a.length < 5 || b.length < 5 || Math.abs(a.length - b.length) > 2) return false;
+    const prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+        let diag = prev[0];
+        prev[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+            const tmp = prev[j];
+            prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, diag + (a[i - 1] === b[j - 1] ? 0 : 1));
+            diag = tmp;
+        }
+    }
+    return prev[b.length] <= 2;
+}
+
 function scoreItem(item, qTokens, qPhrase) {
     const name = norm(item.name);
     const nameTokens = tokensOf(item.name);
@@ -157,6 +173,7 @@ function scoreItem(item, qTokens, qPhrase) {
     for (const t of qTokens) {
         if (nameTokens.includes(t)) s += 4;
         else if (nameTokens.some((n) => n.startsWith(t) || t.startsWith(n))) s += 2;
+        else if (nameTokens.some((n) => closeEnough(n, t))) s += 3;
         if (cat.includes(t)) s += 1;
         if (desc.includes(t)) s += 0.5;
     }
