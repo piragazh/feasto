@@ -57,6 +57,7 @@ const TabletDashboard = lazyWithRetry(() => import('./pages/TabletDashboard'));
 const TermsOfService = lazyWithRetry(() => import('./pages/TermsOfService'));
 const TrackOrder = lazyWithRetry(() => import('./pages/TrackOrder'));
 const WhatsAppCheckout = lazyWithRetry(() => import('./pages/WhatsAppCheckout'));
+const AiCheckout = lazyWithRetry(() => import('./pages/AiCheckout'));
 const WhatsAppOrdering = lazyWithRetry(() => import('./pages/WhatsAppOrdering'));
 
 import __Layout from './Layout.jsx';
@@ -99,6 +100,7 @@ export const Pages = {
   "TermsOfService": TermsOfService,
   "TrackOrder": TrackOrder,
   "WhatsAppCheckout": WhatsAppCheckout,
+  "AiCheckout": AiCheckout,
   "WhatsAppOrdering": WhatsAppOrdering,
 };
 
