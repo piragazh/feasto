@@ -11,11 +11,13 @@
  *
  * ACTIONS
  *   start_session      { channel, called_number? | restaurant_id?, external_id?, customer_phone?, customer_name? }
- *   get_context        { session_id }                       restaurant, open/closed, basket, returning customer
+ *   get_context        { session_id, skip_returning? }      restaurant, open/closed, basket, returning customer
+ *   browse_menu        { session_id, mode?, category?, page?, per_page? }   categories | one category's items | menu text for an LLM prompt
+ *   apply              { session_id, steps: [{ action, ...args }] }   several basket actions in one call (chat messages)
  *   search_menu        { session_id, query, limit? }
  *   get_item           { session_id, menu_item_id }         description, allergens, option groups
  *   add_item           { session_id, menu_item_id, quantity?, options? }   options: { "Group": "Label" | ["Label"] }
- *   choose_option      { session_id, option }               answers the question add_item asked
+ *   choose_option      { session_id, option | option_index } answers the question add_item asked
  *   cancel_pending     { session_id }
  *   remove_item        { session_id, line? | menu_item_id?, quantity? }
  *   set_quantity       { session_id, line, quantity }
@@ -24,7 +26,8 @@
  *   set_order_type     { session_id, order_type }           delivery | collection
  *   check_delivery     { session_id, postcode, address? }   zone, fee, minimum
  *   set_customer       { session_id, name?, phone?, address?, postcode? }
- *   send_payment_link  { session_id, send_sms? }            card: one-time checkout link (+ SMS)
+ *   send_payment_link  { session_id, send_sms?, details_at_checkout? }  card: one-time checkout link (+ SMS);
+ *                      details_at_checkout lets the website checkout take the address and run the zone check (chat)
  *   place_cash_order   { session_id, notes?, dry_run? }     cash: creates the order now
  *   handoff            { session_id, reason? }
  *   end_session        { session_id, outcome? }
@@ -809,7 +812,7 @@ Deno.serve(async (req) => {
             }
 
             case 'get_context':
-                done(await contextOf(db, s, restaurant));
+                done(await contextOf(db, s, restaurant, { skipReturning: body.skip_returning === true }));
                 break;
 
             case 'search_menu': {
@@ -1158,10 +1161,10 @@ function menuForAgent(menu, cats) {
 }
 
 /** What an agent needs at the start of (or back in) a conversation. */
-async function contextOf(db, session, restaurant) {
+async function contextOf(db, session, restaurant, opts = {}) {
     const closed = restaurantClosedReason(restaurant);
     let returning = null;
-    if (session.customer_phone) {
+    if (session.customer_phone && !opts.skipReturning) {
         const local = localPhone(session.customer_phone);
         for (const p of [local, `+${session.customer_phone}`, session.customer_phone]) {
             const rows = await db.Order.filter({ restaurant_id: restaurant.id, phone: p }, '-created_date', 1).catch(() => []);
