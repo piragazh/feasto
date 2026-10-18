@@ -1,0 +1,36 @@
+{
+  "name": "AI Order Link",
+  "description": "Links a card order paid through an AI ordering pay link (phone or chat agent) back to its AI session, and tags the order with the AI channel. Does nothing for other orders.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Order"
+    }
+  },
+  "definition": {
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "then": "end",
+          "with": {
+            "args": {
+              "orderId": "${ .trigger.entity_id }"
+            },
+            "function_name": "aiOrderLink"
+          }
+        }
+      }
+    ],
+    "document": {
+      "dsl": "1.0.0",
+      "name": "ai_order_link",
+      "namespace": "base44",
+      "version": "1.0"
+    }
+  }
+}
