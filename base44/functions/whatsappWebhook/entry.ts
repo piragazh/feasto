@@ -3,7 +3,13 @@
  *
  * One webhook serves every restaurant. Meta puts the receiving number's
  * phone_number_id in every event; that id is looked up in WhatsAppChannel to
- * find the restaurant, its token, and its menu.
+ * find the restaurant and its token.
+ *
+ * This function is the WhatsApp CHANNEL only: Meta's API, signatures, menu lists
+ * and buttons, templates, staff handoff and the chat prompt. Everything about the
+ * ORDER - menu availability, the basket, option questions, prices, opening hours,
+ * minimums and the pay link - is done by aiOrderingCore, the same core the phone
+ * agent uses. Each chat (WaConversation) is linked to an AiOrderSession there.
  *
  * FLOW
  *   GET  -> Meta's one-time verification (hub.verify_token / hub.challenge)
@@ -13,12 +19,14 @@
  *                - deterministic taps first (menu list, item rows, option picks,
  *                  Checkout / Cart / Menu buttons) - cheap and exact
  *                - free text goes to the AI agent, which may only ask for ACTIONS
- *                  (add/remove item, set order type, checkout, handoff). The server
+ *                  (add/remove item, set order type, checkout, handoff). The core
  *                  applies them against the real menu, so the AI can never invent
  *                  an item or a price.
- *           4. checkout sends a one-time link to /WhatsAppCheckout?t=<token>; that
- *              page loads this cart into the normal website checkout, so pricing
+ *           4. checkout asks the core for a one-time link (/AiCheckout?t=<token>); that
+ *              page loads the basket into the normal website checkout, so pricing
  *              validation, Stripe, POS and printing are exactly as for web orders.
+ *              aiOrderLink ties the paid order back to the session, and
+ *              whatsappOrderNotify then sends status updates in this chat.
  *
  * POLICY NOTE: Meta allows business-specific AI (ordering, support) on the
  * WhatsApp Business Platform, not general-purpose assistants. The prompt keeps the
@@ -28,15 +36,13 @@
  *   WHATSAPP_APP_SECRET      Meta app secret - signature check (required)
  *   WHATSAPP_VERIFY_TOKEN    any string, also typed into Meta's webhook form (required)
  *   WHATSAPP_GRAPH_VERSION   optional, default v23.0
- *   BASE44_APP_URL           public site origin for checkout links (default https://app.mealdrop.co.uk)
+ *   AI_CORE_API_KEY          key for aiOrderingCore (required)
  *
  * Webhook URL to give Meta: https://<app domain>/functions/whatsappWebhook
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const GRAPH = `https://graph.facebook.com/${Deno.env.get('WHATSAPP_GRAPH_VERSION') || 'v23.0'}`;
-const APP_URL = (Deno.env.get('BASE44_APP_URL') || 'https://app.mealdrop.co.uk').replace(/\/$/, '');
-const CHECKOUT_TTL_MS = 2 * 60 * 60 * 1000;
 const HISTORY_TURNS = 12;
 
 // ── Small helpers ───────────────────────────────────────────────────────────
@@ -106,11 +112,6 @@ async function validSignature(rawBytes, header) {
     const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, rawBytes));
     const hex = [...sig].map((b) => b.toString(16).padStart(2, '0')).join('');
     return timingSafeEqual(hex, header.slice(7).toLowerCase());
-}
-
-function randomToken() {
-    const bytes = crypto.getRandomValues(new Uint8Array(24));
-    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 // ── Graph API sending ───────────────────────────────────────────────────────
@@ -215,68 +216,6 @@ async function markReadWithTyping(channel, wamid) {
     }
 }
 
-// ── Menu ────────────────────────────────────────────────────────────────────
-/**
- * Same rule as the website checkout (shared availability block below): switched on,
- * sold online, inside its time windows - plus in stock. Anything else is never
- * offered, so checkout can't refuse it later.
- */
-function isOrderable(item, date = new Date()) {
-    if (whyNotSellable(item, 'online', date) !== null) return false;
-    if (item.track_stock && typeof item.stock_quantity === 'number' && item.stock_quantity <= 0) return false;
-    return true;
-}
-
-function buildMenu(items) {
-    const available = items.filter(isOrderable);
-    const byCat = new Map();
-    for (const it of available) {
-        const cat = it.category || 'Other';
-        if (!byCat.has(cat)) byCat.set(cat, []);
-        byCat.get(cat).push(it);
-    }
-    const categories = [...byCat.keys()].sort((a, b) => a.localeCompare(b));
-    for (const c of categories) byCat.get(c).sort((a, b) => (b.is_popular ? 1 : 0) - (a.is_popular ? 1 : 0) || a.name.localeCompare(b.name));
-    return { available, byCat, categories, byId: new Map(available.map((i) => [i.id, i])) };
-}
-
-const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-/**
- * Opening hours in UK time. type = 'delivery' | 'collection' uses that service's own
- * hours when set, otherwise the restaurant's opening hours. No hours set = always open.
- * Overnight hours (e.g. 17:00-02:00) carry past midnight; open === close = all day.
- */
-function hoursClosedReason(r, type) {
-    const hours = (type === 'delivery' && r.delivery_hours) || (type === 'collection' && r.collection_hours) || r.opening_hours;
-    if (!hours || typeof hours !== 'object' || !Object.keys(hours).length) return null;
-    const { day, minutes } = ukClock(new Date());
-    const slot = (d) => {
-        const h = hours[DAY_KEYS[d]];
-        if (!h || h.closed) return null;
-        const open = hhmmToMinutes(h.open), close = hhmmToMinutes(h.close);
-        return open === null || close === null ? null : { open, close, openText: h.open };
-    };
-    const today = slot(day);
-    const yesterday = slot((day + 6) % 7);
-    if (today) {
-        if (today.open === today.close) return null;
-        if (today.close > today.open ? minutes >= today.open && minutes < today.close : minutes >= today.open) return null;
-    }
-    if (yesterday && yesterday.close < yesterday.open && minutes < yesterday.close) return null;
-    const what = type === 'delivery' ? 'Delivery' : type === 'collection' ? 'Collection' : null;
-    if (today && minutes < today.open) {
-        return what ? `${what} starts at ${today.openText} today.` : `We're closed right now — we open at ${today.openText} today.`;
-    }
-    return what ? `${what} isn't available right now.` : "We're closed at the moment.";
-}
-
-function restaurantClosedReason(r) {
-    if (r.temporary_closure?.enabled) return r.temporary_closure.custom_message || 'We are not taking orders right now.';
-    if (r.is_open === false) return 'We are closed at the moment.';
-    return hoursClosedReason(r, null);
-}
-
 // WhatsApp caps interactive message bodies at 1024 characters
 const BODY_LIMIT = 1000;
 function splitText(t, n = 4000) {
@@ -291,166 +230,118 @@ function splitText(t, n = 4000) {
     return out;
 }
 
-// ── Cart ────────────────────────────────────────────────────────────────────
-function cartTotal(cart) {
-    return (cart || []).reduce((s, l) => s + (l.price || 0) * (l.quantity || 1), 0);
+// ── AI ordering core ────────────────────────────────────────────────────────
+/** One call to aiOrderingCore for this chat's session. Returns its JSON ({ ok, ... }). */
+async function core(ctx, action, args = {}) {
+    const payload = { action, key: Deno.env.get('AI_CORE_API_KEY'), ...args };
+    if (action !== 'start_session') payload.session_id = ctx.sessionId;
+    const res = await ctx.base44.asServiceRole.functions.invoke('aiOrderingCore', payload);
+    const data = res?.data ?? res;
+    if (!data || typeof data !== 'object' || !('ok' in data)) throw new Error(`aiOrderingCore ${action}: unexpected response`);
+    return data;
 }
 
-function cartText(convo) {
+/** The chat's current core session; a new one after an order (or if it went missing). */
+async function ensureSession(ctx) {
+    const { convo } = ctx;
+    if (convo.ai_session_id) {
+        ctx.sessionId = convo.ai_session_id;
+        const c = await core(ctx, 'get_context', { skip_returning: true });
+        if (c.ok && !['ordered', 'closed'].includes(c.session?.state)) {
+            ctx.context = c;
+            if (c.session?.order_type) convo.order_type = c.session.order_type;
+            return c;
+        }
+    }
+    const c = await core(ctx, 'start_session', {
+        channel: 'whatsapp', restaurant_id: convo.restaurant_id,
+        customer_phone: convo.customer_wa_id, customer_name: convo.customer_name || undefined,
+    });
+    if (!c.ok) throw new Error(`aiOrderingCore start_session: ${c.code}`);
+    ctx.sessionId = c.session_id;
+    ctx.context = c;
+    convo.ai_session_id = c.session_id;
+    convo.pending_item = null;
+    convo.cart = [];
+    convo.order_type = null;
+    if (convo.state === 'cart' || convo.state === 'awaiting_payment') convo.state = 'browsing';
+    return c;
+}
+
+/** Keep the inbox's display copy of the basket in step with the core. */
+function syncCart(convo, basket) {
+    if (!Array.isArray(basket)) return;
+    convo.cart = basket.map((l) => ({ menu_item_id: l.menu_item_id, name: l.name, quantity: l.quantity, price: l.unit_price, options_summary: l.options || '' }));
+    if (convo.cart.length && convo.state === 'browsing') convo.state = 'cart';
+    if (!convo.cart.length && convo.state === 'cart') convo.state = 'browsing';
+}
+
+function rememberQuestion(convo, q) {
+    convo.pending_item = q ? { menu_item_id: q.menu_item_id, item_name: q.item_name, group: q.group, options: (q.options || []).map((o) => o.label) } : null;
+}
+
+function cartText(convo, quote) {
     const cart = convo.cart || [];
     if (!cart.length) return 'Your basket is empty.';
     const lines = cart.map((l, i) =>
         `${i + 1}. ${l.quantity}× ${l.name}${l.options_summary ? ` (${l.options_summary})` : ''} — ${money(l.price * l.quantity)}`);
+    const subtotal = quote?.subtotal ?? cart.reduce((s, l) => s + l.price * l.quantity, 0);
     const type = convo.order_type ? `\n${convo.order_type === 'delivery' ? '🛵 Delivery' : '🏃 Collection'}` : '';
-    return `🛒 *Your basket*\n${lines.join('\n')}\n\n*Subtotal: ${money(cartTotal(cart))}*${type}\nDelivery fee and offers are applied at checkout.`;
-}
-
-function addLine(convo, line) {
-    const cart = [...(convo.cart || [])];
-    const key = JSON.stringify({ c: line.customizations || {}, q: line.itemQuantities || {} });
-    const existing = cart.find((l) => l.menu_item_id === line.menu_item_id
-        && JSON.stringify({ c: l.customizations || {}, q: l.itemQuantities || {} }) === key);
-    if (existing) existing.quantity += line.quantity;
-    else cart.push(line);
-    convo.cart = cart;
-}
-
-/** Groups the customer must choose from before an item can go in the basket. */
-function requiredGroups(item) {
-    return (item.customization_options || []).filter((g) => g.required && (g.options || []).length);
-}
-
-/**
- * Applies a {groupName: label} map from the AI to an item. Unknown groups or labels
- * are ignored (reported back), never invented. Returns the state for a pending item.
- */
-function startPending(item, quantity, chosen = {}) {
-    const pending = {
-        menu_item_id: item.id, quantity: Math.max(1, Math.min(50, Math.round(quantity || 1))),
-        queue: [], customizations: {}, extra_price: 0, summary: [],
-    };
-    const ignored = [];
-    for (const [groupName, rawLabel] of Object.entries(chosen || {})) {
-        const group = (item.customization_options || []).find((g) => g.name.toLowerCase() === String(groupName).toLowerCase());
-        const label = Array.isArray(rawLabel) ? rawLabel[0] : rawLabel;
-        const option = group && (group.options || []).find((o) => o.label.toLowerCase() === String(label).toLowerCase());
-        if (!group || !option) { ignored.push(`${groupName}: ${label}`); continue; }
-        recordChoice(pending, item, { group_name: group.name, parent: null }, option);
-    }
-    for (const g of requiredGroups(item)) {
-        if (!(g.name in pending.customizations)) pending.queue.push({ group_name: g.name, parent: null });
-    }
-    return { pending, ignored };
-}
-
-function findGroup(item, step) {
-    if (!step.parent) return (item.customization_options || []).find((g) => g.name === step.group_name);
-    const parent = (item.customization_options || []).find((g) => g.name === step.parent);
-    return (parent?.meal_customizations || []).find((g) => g.name === step.group_name);
-}
-
-function recordChoice(pending, item, step, option) {
-    const group = findGroup(item, step);
-    const value = group?.type === 'multiple' ? [option.label] : option.label;
-    if (step.parent) {
-        const key = `${step.parent}_meal_customizations`;
-        pending.customizations[key] = { ...(pending.customizations[key] || {}), [step.group_name]: value };
-        if (group?.type === 'multiple') {
-            pending.itemQuantities = { ...(pending.itemQuantities || {}), [`${step.group_name}_${option.label}`]: 1 };
-        }
-    } else {
-        pending.customizations[step.group_name] = value;
-        if (group?.type === 'multiple') {
-            pending.itemQuantities = { ...(pending.itemQuantities || {}), [`${step.group_name}_${option.label}`]: 1 };
-        }
-    }
-    pending.extra_price += typeof option.price === 'number' ? option.price : 0;
-    pending.summary.push(option.label);
-    // A paid meal upgrade brings its own required meal choices (side, drink...)
-    if (!step.parent && group?.type === 'meal_upgrade' && (option.price || 0) > 0) {
-        const nested = (group.meal_customizations || []).filter((g) => g.required && (g.options || []).length);
-        pending.queue.unshift(...nested.map((g) => ({ group_name: g.name, parent: group.name })));
-    }
-}
-
-function finishPending(convo, item) {
-    const p = convo.pending_item;
-    addLine(convo, {
-        menu_item_id: item.id,
-        name: item.name,
-        price: Math.round((item.price + (p.extra_price || 0)) * 100) / 100,
-        quantity: p.quantity,
-        image_url: item.image_url || undefined,
-        customizations: p.customizations || {},
-        itemQuantities: p.itemQuantities || {},
-        options_summary: (p.summary || []).join(', '),
-    });
-    convo.pending_item = null;
-    convo.state = 'cart';
+    return `🛒 *Your basket*\n${lines.join('\n')}\n\n*Subtotal: ${money(subtotal)}*${type}\nDelivery fee and offers are applied at checkout.`;
 }
 
 // ── Screens (deterministic messages) ─────────────────────────────────────────
 async function showCategories(ctx, intro, page = 0) {
-    const { menu } = ctx;
-    if (!menu.categories.length) return send(ctx, msg.text('Sorry, our menu is not available on WhatsApp right now.'), 'menu unavailable');
+    const r = await core(ctx, 'browse_menu', { mode: 'categories' });
+    const cats = r.ok ? r.categories : [];
+    if (!cats.length) return send(ctx, msg.text('Sorry, our menu is not available on WhatsApp right now.'), 'menu unavailable');
     const per = 9;
-    const slice = menu.categories.slice(page * per, page * per + per);
-    const rows = slice.map((c) => ({
-        id: `cat:${menu.categories.indexOf(c)}:0`, title: c, description: `${menu.byCat.get(c).length} items`,
+    const rows = cats.slice(page * per, page * per + per).map((c) => ({
+        id: `cat:${c.index}:0`, title: c.name, description: `${c.count} items`,
     }));
-    if (menu.categories.length > (page + 1) * per) rows.push({ id: `cats:${page + 1}`, title: 'More categories…' });
+    if (cats.length > (page + 1) * per) rows.push({ id: `cats:${page + 1}`, title: 'More categories…' });
     return send(ctx, msg.list(intro || 'What are you in the mood for?', 'View menu', [{ title: 'Menu', rows }]), `[menu categories p${page}]`);
 }
 
 async function showCategory(ctx, catIndex, page = 0) {
-    const { menu } = ctx;
-    const cat = menu.categories[catIndex];
-    if (!cat) return showCategories(ctx);
-    const items = menu.byCat.get(cat);
-    const per = 9;
-    const slice = items.slice(page * per, page * per + per);
-    const rows = slice.map((it) => ({
-        id: `item:${it.id}`,
+    const r = await core(ctx, 'browse_menu', { mode: 'category', category: catIndex, page, per_page: 9 });
+    if (!r.ok) return showCategories(ctx);
+    const rows = r.items.map((it) => ({
+        id: `item:${it.menu_item_id}`,
         title: it.name,
-        description: `${money(it.price)}${it.is_popular ? ' · ⭐ popular' : ''}${it.description ? ` · ${it.description}` : ''}`,
+        description: `${money(it.price)}${it.popular ? ' · ⭐ popular' : ''}${it.description ? ` · ${it.description}` : ''}`,
     }));
-    if (items.length > (page + 1) * per) rows.push({ id: `cat:${catIndex}:${page + 1}`, title: 'More…' });
-    return send(ctx, msg.list(`*${cat}* — tap an item to add it.`, 'Choose item', [{ title: cat, rows }]), `[category ${cat} p${page}]`);
+    if (r.has_more) rows.push({ id: `cat:${r.category_index}:${page + 1}`, title: 'More…' });
+    return send(ctx, msg.list(`*${r.category}* — tap an item to add it.`, 'Choose item', [{ title: r.category, rows }]), `[category ${r.category} p${page}]`);
 }
 
-async function askNextOption(ctx, item, prefix = '') {
-    const step = ctx.convo.pending_item.queue[0];
-    const group = findGroup(item, step);
-    if (!group) { // menu changed underneath us - drop this step
-        ctx.convo.pending_item.queue.shift();
-        return continuePending(ctx, item);
-    }
-    const rows = (group.options || []).slice(0, 10).map((o, i) => ({
-        id: `opt:${item.id}:${i}`,
+async function askOption(ctx, q, prefix = '') {
+    rememberQuestion(ctx.convo, q);
+    const rows = (q.options || []).slice(0, 10).map((o, i) => ({
+        id: `opt:${q.menu_item_id}:${i}`,
         title: o.label,
-        description: o.price ? `+${money(o.price)}` : undefined,
+        description: o.extra_price ? `+${money(o.extra_price)}` : undefined,
     }));
-    const more = (group.options || []).length > 10 ? '\n(Not listed? Type the option name.)' : '';
-    return send(ctx, msg.list(`${prefix ? prefix + '\n\n' : ''}*${item.name}* — choose ${group.name || 'an option'}:${more}`, 'Choose', [{ title: group.name || 'Options', rows }]),
-        `[options ${item.name} / ${group.name}]`);
+    const more = (q.options || []).length > 10 ? '\n(Not listed? Type the option name.)' : '';
+    return send(ctx, msg.list(`${prefix ? prefix + '\n\n' : ''}*${q.item_name}* — choose ${q.group || 'an option'}:${more}`, 'Choose', [{ title: q.group || 'Options', rows }]),
+        `[options ${q.item_name} / ${q.group}]`);
 }
 
-async function continuePending(ctx, item) {
-    const p = ctx.convo.pending_item;
-    if (p.queue.length) return askNextOption(ctx, item);
-    finishPending(ctx.convo, item);
-    return showCartWithActions(ctx, `✅ Added ${p.quantity}× ${item.name}.`);
-}
-
-async function showCartWithActions(ctx, prefix) {
-    let text = `${prefix ? prefix + '\n\n' : ''}${cartText(ctx.convo)}`;
+async function showCartWithActions(ctx, prefix, basket, quote) {
+    if (!basket) {
+        const r = await core(ctx, 'get_basket');
+        basket = r.basket; quote = r.quote;
+        if (r.removed_unavailable?.length) prefix = [prefix, `${r.removed_unavailable.join(', ')} is no longer available, so I took it off.`].filter(Boolean).join('\n');
+    }
+    syncCart(ctx.convo, basket);
+    let text = `${prefix ? prefix + '\n\n' : ''}${cartText(ctx.convo, quote)}`;
     if (!(ctx.convo.cart || []).length) {
         return send(ctx, msg.buttons(text, [{ id: 'menu', title: 'View menu' }]), text);
     }
     // A big basket doesn't fit a button message: send it as text, then the buttons
     if (text.length > BODY_LIMIT) {
         for (const chunk of splitText(text)) await send(ctx, msg.text(chunk), chunk);
-        text = `${(ctx.convo.cart || []).reduce((n, l) => n + l.quantity, 0)} items · Subtotal ${money(cartTotal(ctx.convo.cart))}. What next?`;
+        text = `${ctx.convo.cart.reduce((n, l) => n + l.quantity, 0)} items · Subtotal ${money(quote?.subtotal)}. What next?`;
     }
     return send(ctx, msg.buttons(text, [
         { id: 'checkout', title: 'Checkout' },
@@ -459,60 +350,69 @@ async function showCartWithActions(ctx, prefix) {
     ]), text);
 }
 
-async function askOrderType(ctx) {
-    const r = ctx.restaurant;
-    const buttons = [{ id: 'type:delivery', title: 'Delivery' }];
-    if (r.collection_enabled) buttons.push({ id: 'type:collection', title: 'Collection' });
-    if (buttons.length === 1) {
-        ctx.convo.order_type = 'delivery';
-        return startCheckout(ctx);
-    }
-    return send(ctx, msg.buttons('Is this for delivery or collection?', buttons), '[ask order type]');
+/** A core reply to add_item / choose_option: ask the next question, or show the basket. */
+async function afterAdd(ctx, r) {
+    if (r.needs_choice) return askOption(ctx, r.needs_choice);
+    rememberQuestion(ctx.convo, null);
+    const l = r.line;
+    return showCartWithActions(ctx, l ? `✅ Added ${l.quantity}× ${l.name}.` : '', r.basket, r.quote);
 }
 
-async function startCheckout(ctx) {
-    const { convo, restaurant } = ctx;
-    const closed = restaurantClosedReason(restaurant);
-    if (closed) return send(ctx, msg.text(closed), closed, 'system');
-    // An item still waiting for its options would silently miss the order
-    if (convo.pending_item) {
-        const item = ctx.menu.byId.get(convo.pending_item.menu_item_id);
-        if (item && convo.pending_item.queue?.length) return askNextOption(ctx, item, `Let's finish your ${item.name} first — then tap Checkout.`);
-        convo.pending_item = null;
+async function askOrderType(ctx) {
+    const r = ctx.context?.restaurant || {};
+    if (!r.collection_enabled) {
+        const t = await core(ctx, 'set_order_type', { order_type: 'delivery' });
+        if (t.ok) ctx.convo.order_type = 'delivery';
+        return startCheckout(ctx, true);
     }
-    if (!(convo.cart || []).length) return showCategories(ctx, 'Your basket is empty — what would you like?');
-    if (!convo.order_type) return askOrderType(ctx);
-    if (convo.order_type === 'collection' && !restaurant.collection_enabled) convo.order_type = 'delivery';
+    return send(ctx, msg.buttons('Is this for delivery or collection?', [
+        { id: 'type:delivery', title: 'Delivery' }, { id: 'type:collection', title: 'Collection' },
+    ]), '[ask order type]');
+}
 
-    const serviceClosed = hoursClosedReason(restaurant, convo.order_type);
-    if (serviceClosed) {
-        const other = convo.order_type === 'delivery' ? 'collection' : 'delivery';
-        const otherOk = (other === 'delivery' || restaurant.collection_enabled) && !hoursClosedReason(restaurant, other);
-        const t = `${serviceClosed}${otherOk ? ` You can still choose ${other}.` : ''}`;
-        return otherOk
-            ? send(ctx, msg.buttons(t, [{ id: `type:${other}`, title: other === 'delivery' ? 'Delivery' : 'Collection' }]), t, 'system')
-            : send(ctx, msg.text(t), t, 'system');
+async function startCheckout(ctx, typeJustSet = false) {
+    const { convo } = ctx;
+    const r = await core(ctx, 'send_payment_link', { send_sms: false, details_at_checkout: true });
+    if (r.ok) {
+        syncCart(convo, r.basket);
+        convo.state = 'awaiting_payment';
+        let body = await botText(ctx, 'wa_checkout', { basket: cartText(convo, r.quote) });
+        if (body.length > BODY_LIMIT) {
+            for (const chunk of splitText(body)) await send(ctx, msg.text(chunk), chunk);
+            body = 'Tap below to confirm your details and pay.';
+        }
+        return send(ctx, msg.cta(body, 'Pay & place order', r.checkout_url), `[checkout link] ${r.checkout_url}`);
     }
-
-    const min = Number(restaurant.minimum_order) || 0;
-    if (convo.order_type === 'delivery' && min > 0 && cartTotal(convo.cart) < min) {
-        const short = min - cartTotal(convo.cart);
-        return send(ctx, msg.buttons(
-            `The minimum for delivery is ${money(min)} — add ${money(short)} more, or switch to collection.`,
-            [{ id: 'menu', title: 'Add more' }, ...(restaurant.collection_enabled ? [{ id: 'type:collection', title: 'Collection' }] : [])],
-        ), '[below minimum order]');
+    const rest = ctx.context?.restaurant || {};
+    switch (r.code) {
+        case 'OPTIONS_PENDING':
+            return r.question ? askOption(ctx, r.question, `Let's finish your ${r.question.item_name} first — then tap Checkout.`) : showCartWithActions(ctx);
+        case 'EMPTY_BASKET':
+            return showCategories(ctx, 'Your basket is empty — what would you like?');
+        case 'ORDER_TYPE_NEEDED':
+            return typeJustSet ? send(ctx, msg.text(r.say), r.say, 'system') : askOrderType(ctx);
+        case 'NO_COLLECTION': {
+            const t = await core(ctx, 'set_order_type', { order_type: 'delivery' });
+            if (t.ok && !typeJustSet) { convo.order_type = 'delivery'; return startCheckout(ctx, true); }
+            return send(ctx, msg.text(r.say), r.say, 'system');
+        }
+        case 'SERVICE_CLOSED': {
+            const other = convo.order_type === 'delivery' ? 'collection' : 'delivery';
+            const otherOk = other === 'delivery' ? rest.delivery_open : rest.collection_open;
+            const t = `${r.say}${otherOk ? ` You can still choose ${other}.` : ''}`;
+            return otherOk
+                ? send(ctx, msg.buttons(t, [{ id: `type:${other}`, title: other === 'delivery' ? 'Delivery' : 'Collection' }]), t, 'system')
+                : send(ctx, msg.text(t), t, 'system');
+        }
+        case 'BELOW_MINIMUM':
+            return send(ctx, msg.buttons(r.say,
+                [{ id: 'menu', title: 'Add more' }, ...(rest.collection_enabled ? [{ id: 'type:collection', title: 'Collection' }] : [])],
+            ), '[below minimum order]');
+        case 'ITEM_UNAVAILABLE':
+            return showCartWithActions(ctx, r.say);
+        default:
+            return send(ctx, msg.text(r.say || 'Sorry, something went wrong. Please try again.'), r.say || r.code, 'system');
     }
-
-    convo.checkout_token = randomToken();
-    convo.checkout_token_expires_at = new Date(Date.now() + CHECKOUT_TTL_MS).toISOString();
-    convo.state = 'awaiting_payment';
-    const url = `${APP_URL}/WhatsAppCheckout?t=${convo.checkout_token}`;
-    let body = await botText(ctx, 'wa_checkout', { basket: cartText(convo) });
-    if (body.length > BODY_LIMIT) {
-        for (const chunk of splitText(body)) await send(ctx, msg.text(chunk), chunk);
-        body = 'Tap below to confirm your details and pay.';
-    }
-    return send(ctx, msg.cta(body, 'Pay & place order', url), `[checkout link] ${url}`);
 }
 
 async function startHandoff(ctx, reason) {
@@ -553,31 +453,29 @@ const AGENT_SCHEMA = {
     required: ['reply', 'actions'],
 };
 
-function menuForPrompt(menu) {
-    return menu.categories.map((cat) => `[${cat}]\n` + menu.byCat.get(cat).map((i) => {
-        const groups = (i.customization_options || []).map((g) =>
-            `${g.required ? '*' : ''}${g.name}: ${(g.options || []).map((o) => `${o.label}${o.price ? ` +${o.price.toFixed(2)}` : ''}`).join(' / ')}`);
-        return `  ${i.id} | ${i.name} | ${money(i.price)}${i.is_popular ? ' | popular' : ''}${i.is_vegetarian ? ' | veg' : ''}${i.is_spicy ? ' | spicy' : ''}`
-            + `${i.allergens?.length ? ` | allergens: ${i.allergens.join(', ')}` : ''}`
-            + `${groups.length ? `\n      options: ${groups.join('; ')}` : ''}`;
-    }).join('\n')).join('\n');
-}
-
 async function runAgent(ctx, userText) {
-    const { db, convo, restaurant, menu } = ctx;
+    const { convo, restaurant } = ctx;
+    const menuRes = await core(ctx, 'browse_menu', { mode: 'agent' });
+    const basketRes = await core(ctx, 'get_basket');
+    syncCart(convo, basketRes.basket);
+    const r = ctx.context?.restaurant || {};
+    const waiting = convo.pending_item
+        ? `\nWAITING FOR: the customer to choose ${convo.pending_item.group || 'an option'} for ${convo.pending_item.item_name} (${(convo.pending_item.options || []).join(' / ')}).`
+        : '';
+
     const system = `You are the WhatsApp ordering assistant for ${restaurant.name}, a UK takeaway. You ONLY help customers order from this menu and answer questions about this restaurant and their order. Politely decline anything unrelated.
 
 RESTAURANT
-- Delivery fee: ${money(restaurant.delivery_fee)} · Min order for delivery: ${money(restaurant.minimum_order)}
-- Collection: ${restaurant.collection_enabled ? 'yes' : 'no'} · Delivery time: ${restaurant.delivery_time || '30-45 mins'}
-- Address: ${restaurant.address || 'n/a'}
+- Delivery fee: ${money(r.delivery_fee)} · Min order for delivery: ${money(r.minimum_order)}
+- Collection: ${r.collection_enabled ? 'yes' : 'no'} · Delivery time: ${r.delivery_time || '30-45 mins'}
+- Address: ${r.address || 'n/a'}
 
 MENU (id | name | price; options marked * are required)
-${menuForPrompt(menu)}
+${menuRes.menu_text || '(menu unavailable)'}
 
 CURRENT BASKET
-${(convo.cart || []).map((l, i) => `${i + 1}. ${l.quantity}x ${l.name}${l.options_summary ? ` (${l.options_summary})` : ''} ${money(l.price * l.quantity)}`).join('\n') || 'empty'}
-Order type: ${convo.order_type || 'not chosen'}
+${(basketRes.basket || []).map((l) => `${l.line}. ${l.quantity}x ${l.name}${l.options ? ` (${l.options})` : ''} ${money(l.line_total)}`).join('\n') || 'empty'}
+Order type: ${basketRes.quote?.order_type || 'not chosen'}${waiting}
 
 RULES
 - Use ONLY menu ids above in actions. Never quote a price that is not on the menu.
@@ -603,70 +501,56 @@ RULES
 
     const actions = Array.isArray(out?.actions) ? out.actions : [];
     const notes = [];
+    const steps = [];
     let showCart = false;
     let next = null; // a follow-up screen; at most one per turn
 
     for (const a of actions) {
         switch (a.type) {
-            case 'add_item': {
-                const item = menu.byId.get(a.menu_item_id);
-                if (!item) { notes.push('I couldn\'t find one of those items on the menu.'); break; }
-                if (convo.pending_item) { notes.push(`Let's finish choosing options for your current item first — then ask me for ${item.name} again.`); break; }
-                const { pending, ignored } = startPending(item, a.quantity || 1, a.options);
-                if (ignored.length) notes.push(`(${item.name}: ignored unknown option ${ignored.join(', ')})`);
-                convo.pending_item = pending;
-                if (pending.queue.length) { if (next?.kind !== 'handoff') next = { kind: 'options', item }; }
-                else { finishPending(convo, item); showCart = true; }
+            case 'add_item':
+                steps.push({ action: 'add_item', menu_item_id: a.menu_item_id, quantity: a.quantity || 1, options: a.options || {} });
                 break;
-            }
-            case 'remove_item': {
-                const cart = [...(convo.cart || [])];
-                const idx = a.line ? a.line - 1 : cart.findIndex((l) => l.menu_item_id === a.menu_item_id);
-                if (idx >= 0 && cart[idx]) {
-                    if (a.quantity && cart[idx].quantity > a.quantity) cart[idx].quantity -= a.quantity;
-                    else cart.splice(idx, 1);
-                    convo.cart = cart;
-                    showCart = true;
-                }
+            case 'remove_item':
+                steps.push({ action: 'remove_item', line: a.line, menu_item_id: a.menu_item_id, quantity: a.quantity }); showCart = true;
                 break;
-            }
-            case 'set_quantity': {
-                const cart = [...(convo.cart || [])];
-                const idx = a.line ? a.line - 1 : cart.findIndex((l) => l.menu_item_id === a.menu_item_id);
-                if (idx >= 0 && cart[idx]) {
-                    const q = Math.round(a.quantity || 0);
-                    if (q <= 0) cart.splice(idx, 1); else cart[idx].quantity = Math.min(50, q);
-                    convo.cart = cart;
-                    showCart = true;
-                }
+            case 'set_quantity':
+                steps.push({ action: 'set_quantity', line: a.line, menu_item_id: a.menu_item_id, quantity: a.quantity }); showCart = true;
                 break;
-            }
             case 'clear_cart':
-                convo.cart = []; convo.pending_item = null; convo.state = 'browsing'; showCart = true;
+                steps.push({ action: 'clear_basket' }); showCart = true;
                 break;
             case 'set_order_type':
-                if (a.order_type === 'collection' && !restaurant.collection_enabled) notes.push('Sorry, we only do delivery.');
-                else if (a.order_type) convo.order_type = a.order_type;
+                if (a.order_type) steps.push({ action: 'set_order_type', order_type: a.order_type });
                 break;
             case 'set_address':
-                if (a.address) convo.delivery_address = clip(a.address, 300);
+                if (a.address) steps.push({ action: 'set_customer', address: clip(a.address, 300) });
                 break;
             // Priority of the follow-up screen: handoff > options for an item > checkout > menu
             case 'show_menu': next = next || { kind: 'menu' }; break;
-            case 'show_category': {
-                const i = menu.categories.findIndex((c) => c.toLowerCase() === String(a.category || '').toLowerCase());
-                next = next || (i >= 0 ? { kind: 'category', index: i } : { kind: 'menu' });
-                break;
-            }
+            case 'show_category': next = next || { kind: 'category', name: a.category }; break;
             case 'show_cart': showCart = true; break;
             case 'checkout': if (!next || !['handoff', 'options'].includes(next.kind)) next = { kind: 'checkout' }; break;
             case 'handoff': next = { kind: 'handoff' }; break;
         }
     }
 
-    const reply = clip([out?.reply, ...notes].filter(Boolean).join('\n'), 900);
+    let basket = null;
+    let quote = null;
+    if (steps.length) {
+        const res = await core(ctx, 'apply', { steps });
+        basket = res.basket; quote = res.quote;
+        syncCart(convo, basket);
+        for (const s of res.results || []) {
+            if (s.ok && s.action === 'add_item' && s.added) showCart = true;
+            if (s.ok && s.action === 'set_order_type') convo.order_type = s.order_type;
+            if (s.ignored_options?.length) notes.push(`(ignored unknown option ${s.ignored_options.join(', ')})`);
+            if (!s.ok && s.code !== 'OPTIONS_PENDING') notes.push(s.say || s.error);
+        }
+        if (res.pending && next?.kind !== 'handoff') next = { kind: 'options', question: res.pending };
+    }
+
+    const reply = clip([out?.reply, ...new Set(notes)].filter(Boolean).join('\n'), 900);
     convo.history = [...(convo.history || []), { role: 'user', content: clip(userText, 500) }, { role: 'assistant', content: reply }].slice(-HISTORY_TURNS);
-    if ((convo.cart || []).length && convo.state === 'browsing') convo.state = 'cart';
 
     if (next?.kind === 'handoff') return startHandoff(ctx, reply || undefined);
     if (next?.kind === 'checkout') {
@@ -675,14 +559,16 @@ RULES
     }
     if (next?.kind === 'options') {
         if (reply) await send(ctx, msg.text(reply), reply);
-        return askNextOption(ctx, next.item);
+        return askOption(ctx, next.question);
     }
     if (next?.kind === 'menu') return showCategories(ctx, reply || undefined);
     if (next?.kind === 'category') {
         if (reply) await send(ctx, msg.text(reply), reply);
-        return showCategory(ctx, next.index);
+        const cats = await core(ctx, 'browse_menu', { mode: 'categories' });
+        const hit = (cats.categories || []).find((c) => c.name.toLowerCase() === String(next.name || '').toLowerCase());
+        return hit ? showCategory(ctx, hit.index) : showCategories(ctx);
     }
-    if (showCart) return showCartWithActions(ctx, reply);
+    if (showCart) return showCartWithActions(ctx, reply, basket || undefined, quote || undefined);
 
     const quick = (Array.isArray(out?.quick_replies) ? out.quick_replies : []).filter(Boolean).slice(0, 3);
     if (quick.length) {
@@ -692,8 +578,8 @@ RULES
 }
 
 function base44Invoke(base44) {
-    const core = base44.asServiceRole?.integrations?.Core || base44.integrations?.Core;
-    return (args) => core.InvokeLLM(args);
+    const llm = base44.asServiceRole?.integrations?.Core || base44.integrations?.Core;
+    return (args) => llm.InvokeLLM(args);
 }
 
 // ── Inbound message handling ────────────────────────────────────────────────
@@ -716,7 +602,7 @@ function readInbound(m) {
 const GREETING = /^(hi|hii+|hello|hey|hiya|yo|good (morning|afternoon|evening)|salam|assalam.*|start|order)[!. ]*$/i;
 
 async function handleMessage(ctx, m) {
-    const { convo, menu, restaurant, channel, isNew } = ctx;
+    const { convo, channel, isNew } = ctx;
     const input = readInbound(m);
 
     if (input.unsupported) {
@@ -724,19 +610,21 @@ async function handleMessage(ctx, m) {
     }
 
     // Staff are handling this chat, or the restaurant switched the AI off: just log it.
-    if (convo.state === 'handoff' || !channel.ai_enabled) {
+    const aiOn = channel.ai_enabled !== false;
+    if (convo.state === 'handoff' || !aiOn) {
         convo.unread_count = (convo.unread_count || 0) + 1;
-        if (input.text.trim().toLowerCase() === 'menu' && convo.state === 'handoff' && channel.ai_enabled) {
+        if (input.text.trim().toLowerCase() === 'menu' && convo.state === 'handoff' && aiOn) {
             convo.state = (convo.cart || []).length ? 'cart' : 'browsing';
             convo.unread_count = 0;
+            await ensureSession(ctx);
             return showCategories(ctx);
         }
         return;
     }
 
-    const closed = restaurantClosedReason(restaurant);
-    if (closed) {
-        const t = await botText(ctx, 'wa_closed', { closed_reason: closed });
+    const context = await ensureSession(ctx);
+    if (context.restaurant?.closed_reason) {
+        const t = await botText(ctx, 'wa_closed', { closed_reason: context.restaurant.closed_reason });
         return send(ctx, msg.text(t), t, 'system');
     }
 
@@ -744,26 +632,22 @@ async function handleMessage(ctx, m) {
     const lower = input.text.trim().toLowerCase();
 
     // ── Pending option choice (tap, or the option typed as text) ──
-    if (convo.pending_item) {
-        const item = menu.byId.get(convo.pending_item.menu_item_id);
-        if (!item) { convo.pending_item = null; }
-        else {
-            const step = convo.pending_item.queue[0];
-            const group = step && findGroup(item, step);
-            let option = null;
-            if (id.startsWith(`opt:${item.id}:`)) option = group?.options?.[Number(id.split(':')[2])];
-            else if (group && !id) option = (group.options || []).find((o) => o.label.toLowerCase() === lower);
-            if (option) {
-                convo.pending_item.queue.shift();
-                recordChoice(convo.pending_item, item, step, option);
-                return continuePending(ctx, item);
-            }
-            if (['cancel', 'stop', 'back'].includes(lower)) {
-                convo.pending_item = null;
-                return showCartWithActions(ctx, `OK, I've dropped ${item.name}.`);
-            }
-            // anything else: fall through to the normal handling below (keeps the pending item)
+    const pq = convo.pending_item;
+    if (pq?.menu_item_id) {
+        let choice = null;
+        if (id.startsWith(`opt:${pq.menu_item_id}:`)) choice = { option_index: Number(id.split(':')[2]) };
+        else if (!id && (pq.options || []).some((o) => o.toLowerCase() === lower)) choice = { option: input.text.trim() };
+        if (choice) {
+            const r = await core(ctx, 'choose_option', choice);
+            if (r.ok) return afterAdd(ctx, r);
+            if (r.code === 'OPTION_NOT_FOUND' && r.question) return askOption(ctx, r.question, 'Please choose one of these:');
+            rememberQuestion(convo, null); // nothing pending any more - carry on below
+        } else if (['cancel', 'stop', 'back'].includes(lower)) {
+            await core(ctx, 'cancel_pending');
+            rememberQuestion(convo, null);
+            return showCartWithActions(ctx, `OK, I've dropped ${pq.item_name}.`);
         }
+        // anything else: fall through to the normal handling below (keeps the pending item)
     }
 
     // ── Deterministic taps and keywords ──
@@ -774,25 +658,28 @@ async function handleMessage(ctx, m) {
         return showCategory(ctx, Number(ci), Number(pg) || 0);
     }
     if (id.startsWith('item:')) {
-        const item = menu.byId.get(id.slice(5));
-        if (!item) return showCategories(ctx, 'Sorry, that item is no longer available.');
         if (convo.pending_item) {
-            const prev = menu.byId.get(convo.pending_item.menu_item_id);
-            return send(ctx, msg.text(`Let's finish your ${prev?.name || 'current item'} first — choose from the list above, or type "cancel".`), 'finish pending first', 'system');
+            return send(ctx, msg.text(`Let's finish your ${convo.pending_item.item_name || 'current item'} first — choose from the list above, or type "cancel".`), 'finish pending first', 'system');
         }
-        const { pending } = startPending(item, 1);
-        convo.pending_item = pending;
-        return continuePending(ctx, item);
+        const r = await core(ctx, 'add_item', { menu_item_id: id.slice(5), quantity: 1 });
+        if (r.ok) return afterAdd(ctx, r);
+        if (r.code === 'OPTIONS_PENDING' && r.question) return askOption(ctx, r.question, r.say);
+        return showCategories(ctx, 'Sorry, that item is no longer available.');
     }
     if (id === 'cart' || ['cart', 'basket'].includes(lower)) return showCartWithActions(ctx);
     if (id === 'clear') {
-        convo.cart = []; convo.pending_item = null; convo.state = 'browsing';
-        return showCartWithActions(ctx, '🗑️ Basket emptied.');
+        const r = await core(ctx, 'clear_basket');
+        rememberQuestion(convo, null);
+        convo.state = 'browsing';
+        return showCartWithActions(ctx, '🗑️ Basket emptied.', r.basket || [], r.quote);
     }
     if (id === 'checkout' || ['checkout', 'pay'].includes(lower)) return startCheckout(ctx);
     if (id.startsWith('type:')) {
-        convo.order_type = id.slice(5) === 'collection' ? 'collection' : 'delivery';
-        return startCheckout(ctx);
+        const type = id.slice(5) === 'collection' ? 'collection' : 'delivery';
+        const r = await core(ctx, 'set_order_type', { order_type: type });
+        if (!r.ok) return send(ctx, msg.text(r.say), r.say, 'system');
+        convo.order_type = type;
+        return startCheckout(ctx, true);
     }
     if (['staff', 'human', 'agent', 'speak to someone'].includes(lower)) return startHandoff(ctx);
 
@@ -809,91 +696,6 @@ async function handleMessage(ctx, m) {
 }
 
 // ── Entry point ─────────────────────────────────────────────────────────────
-// Copied verbatim from src/lib/item-availability.js - check-item-availability.mjs compares.
-// ── ITEM AVAILABILITY (shared - keep identical in every copy) ────────────────
-const AVAILABILITY_TZ = 'Europe/London';
-const SELLS_AT = {
-    till: ['both', 'pos_only'],
-    online: ['both', 'online_only'],
-    kiosk: ['both'],
-    qr: ['both'],
-};
-const WEEKDAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-
-/** An unknown or missing setting means "both" - never hide a menu by accident. */
-function channelOf(item) {
-    const c = item?.availability_channel;
-    return c === 'online_only' || c === 'pos_only' ? c : 'both';
-}
-
-function sellsAt(item, where) {
-    return (SELLS_AT[where] || []).includes(channelOf(item));
-}
-
-/** Weekday and minute-of-day in the UK, whatever the device's own zone. */
-function ukClock(date) {
-    const parts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: AVAILABILITY_TZ, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    }).formatToParts(date);
-    const get = (t) => parts.find(p => p.type === t)?.value;
-    return { day: WEEKDAYS[get('weekday')], minutes: Number(get('hour')) * 60 + Number(get('minute')) };
-}
-
-function hhmmToMinutes(hhmm) {
-    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
-    if (!m) return null;
-    const h = Number(m[1]), min = Number(m[2]);
-    return h > 23 || min > 59 ? null : h * 60 + min;
-}
-
-/** Same rule as the till: days, late menus past midnight, start === end is all day. */
-function inWindow(w, date) {
-    if (!w) return false;
-    const start = hhmmToMinutes(w.start), end = hhmmToMinutes(w.end);
-    if (start === null || end === null) return false;
-    const { day, minutes } = ukClock(date);
-    const days = Array.isArray(w.days) && w.days.length ? w.days : [0, 1, 2, 3, 4, 5, 6];
-    if (start === end) return days.includes(day);
-    if (start < end) return days.includes(day) && minutes >= start && minutes < end;
-    if (minutes >= start) return days.includes(day);           // evening part of a late menu
-    return minutes < end && days.includes((day + 6) % 7);       // after midnight: yesterday's window
-}
-
-/** No windows (or an empty list) means always - scheduling is opt-in. */
-function inHours(item, date) {
-    const ws = item?.availability_windows;
-    if (!Array.isArray(ws) || ws.length === 0) return true;
-    return ws.some(w => inWindow(w, date));
-}
-
-/**
- * Why this item cannot be sold here at `date`, or null if it can.
- * 'unavailable' - switched off; 'channel' - not sold here; 'hours' - outside its times.
- */
-function whyNotSellable(item, where, date) {
-    if (!item || item.is_available === false) return 'unavailable';
-    if (!sellsAt(item, where)) return 'channel';
-    if (!inHours(item, date)) return 'hours';
-    return null;
-}
-/**
- * When an order is FOR: a future scheduled slot, else now. A scheduled order is
- * checked against the time it will be made, not the time it was placed.
- */
-function forTime(isScheduled, scheduledFor, now = new Date()) {
-    const t = isScheduled !== false && scheduledFor ? new Date(scheduledFor) : null;
-    return t && Number.isFinite(t.getTime()) && t.getTime() > now.getTime() ? t : now;
-}
-
-/** Customer-facing wording for a refusal (servers use the same words). */
-function notSellableMessage(name, why) {
-    const n = `"${name || 'An item'}"`;
-    if (why === 'channel') return `${n} isn't sold here. Please remove it.`;
-    if (why === 'hours') return `${n} isn't available at this time. Please remove it.`;
-    return `${n} is currently unavailable. Please remove it.`;
-}
-// ── END ITEM AVAILABILITY ────────────────────────────────────────────────────
-
 Deno.serve(async (req) => {
     const url = new URL(req.url);
 
@@ -954,13 +756,8 @@ Deno.serve(async (req) => {
             const channel = channels.find((c) => c.status === 'connected');
             if (!channel) { console.warn(`[whatsappWebhook] no connected channel for ${phoneNumberId}`); continue; }
 
-            const [restaurants, menuItems] = await Promise.all([
-                db.Restaurant.filter({ id: channel.restaurant_id }),
-                db.MenuItem.filter({ restaurant_id: channel.restaurant_id }),
-            ]);
-            const restaurant = restaurants[0];
+            const restaurant = (await db.Restaurant.filter({ id: channel.restaurant_id }))[0];
             if (!restaurant) continue;
-            const menu = buildMenu(menuItems);
 
             for (const m of value.messages) {
                 try {
@@ -987,22 +784,29 @@ Deno.serve(async (req) => {
                         status: 'received',
                     });
 
-                    // Deep copy: handlers mutate nested objects (cart lines, pending_item)
-                    const ctx = { base44, db, channel, restaurant, menu, convo: JSON.parse(JSON.stringify(convo)), isNew, sentTexts: [] };
+                    // Deep copy: handlers mutate nested objects (cart copy, pending question)
+                    const ctx = { base44, db, channel, restaurant, convo: JSON.parse(JSON.stringify(convo)), isNew, sentTexts: [] };
                     ctx.convo.customer_name = ctx.convo.customer_name || profileName;
                     ctx.convo.last_inbound_at = nowIso();
                     ctx.convo.last_message_preview = clip(inbound.text, 120);
 
                     await markReadWithTyping(channel, m.id);
-                    await handleMessage(ctx, m);
+                    try {
+                        await handleMessage(ctx, m);
+                    } catch (e) {
+                        // The order engine could not be reached: tell the customer rather than go silent
+                        console.error(`[whatsappWebhook] handling ${m.id} failed:`, e.message);
+                        const t = 'Sorry, something went wrong on our side. Please try again in a moment, or type *staff* to reach the team.';
+                        await send(ctx, msg.text(t), `[error] ${clip(e.message, 200)}`, 'system');
+                    }
 
                     // Write back ONLY what this message changed. The LLM call takes seconds, and in
-                    // that time whatsappOrderNotify may link a placed order (order_id, empty cart,
-                    // revoked token) or staff may take over - rewriting every field from the copy
-                    // taken before would silently undo those changes.
+                    // that time whatsappOrderNotify may link a placed order (order_id, empty cart)
+                    // or staff may take over - rewriting every field from the copy taken before
+                    // would silently undo those changes.
                     const c = ctx.convo;
-                    const OWNED = ['state', 'cart', 'pending_item', 'order_type', 'delivery_address', 'checkout_token',
-                        'checkout_token_expires_at', 'history', 'last_inbound_at', 'last_message_preview', 'unread_count', 'customer_name'];
+                    const OWNED = ['state', 'cart', 'pending_item', 'order_type', 'delivery_address', 'ai_session_id',
+                        'history', 'last_inbound_at', 'last_message_preview', 'unread_count', 'customer_name'];
                     const patch = {};
                     for (const f of OWNED) {
                         const after = c[f] ?? null;
