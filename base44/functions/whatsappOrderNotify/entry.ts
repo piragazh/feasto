@@ -4,15 +4,12 @@
  * Runs from the "WhatsApp Order Updates" workflow on every Order create/update.
  *
  * LINKING
- *   The website checkout doesn't know about WhatsApp, so a new order is matched to
- *   a chat that is waiting for payment at the same restaurant, placed within the
- *   checkout link's lifetime, by EITHER
- *     - the customer's phone number (last 10 digits), or
- *     - an identical basket (same items and quantities) - covers a customer who
- *       typed a different number at checkout.
- *   Once linked, WaConversation.order_id is set and the basket is cleared.
- *   Only website (online) orders are ever linked - a till, kiosk or marketplace
- *   order with the same basket must never send updates to someone's WhatsApp.
+ *   WhatsApp orders go through aiOrderingCore. A card order paid via the chat's
+ *   link is tied to its AiOrderSession by aiOrderLink, and a cash order is tagged
+ *   when the core creates it; either way the Order ends up with ai_channel
+ *   'whatsapp' and ai_session_id. The chat is the WaConversation whose
+ *   ai_session_id matches. Once linked, WaConversation.order_id is set and the
+ *   basket copy is cleared. Orders from any other channel are never linked.
  *
  * SEND ONCE
  *   The workflow fires on create AND update, and Order changes in quick bursts,
@@ -37,11 +34,6 @@ const GRAPH = `https://graph.facebook.com/${Deno.env.get('WHATSAPP_GRAPH_VERSION
 const LINK_WINDOW_MS = 3 * 60 * 60 * 1000;
 const SERVICE_WINDOW_MS = 24 * 60 * 60 * 1000 - 5 * 60 * 1000;
 
-const last10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
-const basketKey = (lines) => (lines || [])
-    .map((l) => `${l.menu_item_id}x${l.quantity}`)
-    .sort()
-    .join('|');
 
 // Built-in wording - same defaults as the catalog in messageTemplateAdmin.
 // null = not sent unless a template has been written for it.
@@ -128,23 +120,14 @@ Deno.serve(async (req) => {
         // ── Find or establish the link ──
         let convo = (await db.WaConversation.filter({ order_id: order.id }))[0];
         if (!convo) {
-            if ((order.order_source || 'online') !== 'online') return Response.json({ skipped: 'not an online order' });
-            const ageMs = Date.now() - new Date(order.created_date).getTime();
-            if (ageMs > LINK_WINDOW_MS) return Response.json({ skipped: 'not a whatsapp order' });
+            // Until aiOrderLink (or the core) has tagged it, this is not known to be a WhatsApp order;
+            // the tag is an Order update, which runs this function again.
+            if (order.ai_channel !== 'whatsapp' || !order.ai_session_id) return Response.json({ skipped: 'not a whatsapp order' });
+            if (Date.now() - new Date(order.created_date).getTime() > LINK_WINDOW_MS) return Response.json({ skipped: 'too old to link' });
 
-            const waiting = (await db.WaConversation.filter({ restaurant_id: order.restaurant_id, state: 'awaiting_payment' }))
-                .filter((c) => c.checkout_token && new Date(c.updated_date).getTime() > Date.now() - LINK_WINDOW_MS);
-            if (!waiting.length) return Response.json({ skipped: 'no waiting chats' });
+            convo = (await db.WaConversation.filter({ ai_session_id: order.ai_session_id }))[0];
+            if (!convo) return Response.json({ skipped: 'no chat for this session' });
 
-            const phone = last10(order.phone || order.customer_phone);
-            const key = basketKey(order.items);
-            const byPhone = phone.length === 10 ? waiting.filter((c) => last10(c.customer_wa_id) === phone) : [];
-            const byBasket = waiting.filter((c) => basketKey(c.cart) === key);
-            const candidates = byPhone.length ? byPhone : byBasket;
-            // Ambiguous basket match (two chats, same basket) - don't guess
-            if (candidates.length !== 1) return Response.json({ skipped: `no unique match (${candidates.length})` });
-
-            convo = candidates[0];
             await db.WaConversation.update(convo.id, {
                 order_id: order.id, cart: [], pending_item: null, checkout_token: null,
                 checkout_token_expires_at: null, state: 'browsing', last_notified_status: null,

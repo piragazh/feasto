@@ -11,7 +11,7 @@
  */
 import fs from 'node:fs';
 
-export const TARGETS = ['kioskCreateOrder', 'tableCreateOrder', 'verifyAndCreateOrder', 'createPaymentIntent', 'whatsappWebhook', 'aiOrderingCore'];
+export const TARGETS = ['kioskCreateOrder', 'tableCreateOrder', 'verifyAndCreateOrder', 'createPaymentIntent', 'aiOrderingCore'];
 const S = '// ── ITEM AVAILABILITY (shared', E = '// ── END ITEM AVAILABILITY';
 const HEADER = '// Copied verbatim from src/lib/item-availability.js - check-item-availability.mjs compares.\n';
 

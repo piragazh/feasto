@@ -24,7 +24,7 @@ export default function AiCheckout() {
     useEffect(() => {
         const token = new URLSearchParams(window.location.search).get('t');
         if (!token) {
-            setError('This link is incomplete. Please use the link from your text message again.');
+            setError('This link is incomplete. Please tap the link in your message again.');
             return;
         }
         (async () => {
@@ -69,7 +69,7 @@ export default function AiCheckout() {
                         <p className="text-sm text-gray-600 mt-2">{error}</p>
                         <p className="text-sm text-gray-500 mt-4 flex items-center justify-center gap-1.5">
                             <Phone className="h-4 w-4 text-orange-500" />
-                            Call the restaurant again for a new link.
+                            Message or call the restaurant again for a new link.
                         </p>
                         <Button variant="outline" className="mt-5 w-full" onClick={() => navigate(createPageUrl('Home'))}>
                             Go to homepage

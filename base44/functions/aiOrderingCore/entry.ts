@@ -11,11 +11,13 @@
  *
  * ACTIONS
  *   start_session      { channel, called_number? | restaurant_id?, external_id?, customer_phone?, customer_name? }
- *   get_context        { session_id }                       restaurant, open/closed, basket, returning customer
+ *   get_context        { session_id, skip_returning? }      restaurant, open/closed, basket, returning customer
+ *   browse_menu        { session_id, mode?, category?, page?, per_page? }   categories | one category's items | menu text for an LLM prompt
+ *   apply              { session_id, steps: [{ action, ...args }] }   several basket actions in one call (chat messages)
  *   search_menu        { session_id, query, limit? }
  *   get_item           { session_id, menu_item_id }         description, allergens, option groups
  *   add_item           { session_id, menu_item_id, quantity?, options? }   options: { "Group": "Label" | ["Label"] }
- *   choose_option      { session_id, option }               answers the question add_item asked
+ *   choose_option      { session_id, option | option_index } answers the question add_item asked
  *   cancel_pending     { session_id }
  *   remove_item        { session_id, line? | menu_item_id?, quantity? }
  *   set_quantity       { session_id, line, quantity }
@@ -24,7 +26,8 @@
  *   set_order_type     { session_id, order_type }           delivery | collection
  *   check_delivery     { session_id, postcode, address? }   zone, fee, minimum
  *   set_customer       { session_id, name?, phone?, address?, postcode? }
- *   send_payment_link  { session_id, send_sms? }            card: one-time checkout link (+ SMS)
+ *   send_payment_link  { session_id, send_sms?, details_at_checkout? }  card: one-time checkout link (+ SMS);
+ *                      details_at_checkout lets the website checkout take the address and run the zone check (chat)
  *   place_cash_order   { session_id, notes?, dry_run? }     cash: creates the order now
  *   handoff            { session_id, reason? }
  *   end_session        { session_id, outcome? }
@@ -184,7 +187,7 @@ function scoreItem(item, qTokens, qPhrase) {
 function itemSummary(item) {
     return {
         menu_item_id: item.id,
-        name: item.name,
+        name: String(item.name || '').trim(),
         category: item.category || 'Other',
         price: round2(item.price),
         description: item.description ? clip(item.description, 160) : undefined,
@@ -323,7 +326,7 @@ function finishPending(session, item) {
     const { serverPrice } = calcItemServerPrice(item, { customizations: p.customizations || {}, itemQuantities: p.itemQuantities || {} });
     addLine(session, {
         menu_item_id: item.id,
-        name: item.name,
+        name: String(item.name || '').trim(),
         price: round2(serverPrice),
         quantity: p.quantity,
         image_url: item.image_url || undefined,
@@ -332,7 +335,7 @@ function finishPending(session, item) {
         options_summary: (p.summary || []).join(', '),
     });
     session.pending_item = null;
-    return { quantity: p.quantity, name: item.name, unit_price: round2(serverPrice), options: (p.summary || []).join(', ') };
+    return { quantity: p.quantity, name: String(item.name || '').trim(), unit_price: round2(serverPrice), options: (p.summary || []).join(', ') };
 }
 
 // ── Pricing: COPY of calcItemServerPrice in verifyAndCreateOrder (online prices) ──
@@ -412,7 +415,7 @@ function repriceCart(session, menu) {
         const item = menu.byId.get(l.menu_item_id);
         if (!item) { dropped.push(l.name); continue; }
         const { serverPrice } = calcItemServerPrice(item, l);
-        cart.push({ ...l, name: item.name, price: round2(serverPrice) });
+        cart.push({ ...l, name: String(item.name || '').trim(), price: round2(serverPrice) });
     }
     session.cart = cart;
     return dropped;
@@ -562,8 +565,13 @@ function basketSay(session, q) {
     return `You've got ${lines}. That's ${money(q.subtotal)}${fee}${q.small_order_surcharge ? ` and a ${money(q.small_order_surcharge)} service charge` : ''}, ${money(q.total)} in total.`;
 }
 
-/** Everything that must be true before an order can be paid for or placed. */
-function readiness(session, restaurant, menu) {
+/**
+ * Everything that must be true before an order can be paid for or placed.
+ * detailsAtCheckout: the pay link opens the website checkout, which asks for the
+ * address and runs the zone check itself (chat channels), so only the lowest
+ * possible delivery minimum is enforced here when no postcode was checked.
+ */
+function readiness(session, restaurant, menu, opts = {}) {
     const closed = restaurantClosedReason(restaurant);
     if (closed) return { code: 'CLOSED', error: closed };
     if (session.pending_item?.queue?.length) {
@@ -580,7 +588,14 @@ function readiness(session, restaurant, menu) {
     if (svc) return { code: 'SERVICE_CLOSED', error: svc };
     const q = quote(session, restaurant);
     if (session.order_type === 'delivery') {
-        if (!session.delivery_quote) return { code: 'POSTCODE_NEEDED', error: "What's the postcode for delivery?" };
+        if (!session.delivery_quote) {
+            if (!opts.detailsAtCheckout) return { code: 'POSTCODE_NEEDED', error: "What's the postcode for delivery?" };
+            const t = restaurant.tiered_delivery;
+            const std = Number(restaurant.minimum_order) || 0;
+            const low = t?.enabled && (t.lower_minimum ?? 0) > 0 ? Math.min(t.lower_minimum, std || t.lower_minimum) : std;
+            if (q.subtotal < low) return { code: 'BELOW_MINIMUM', minimum_order: round2(low), short_by: round2(low - q.subtotal), error: `The minimum for delivery is ${money(low)}. You need ${money(low - q.subtotal)} more, or you could collect instead.` };
+            return { q };
+        }
         if (session.delivery_quote.available === false) return { code: 'OUT_OF_AREA', error: 'Sorry, we don\'t deliver to that postcode.' };
         if (q.below_minimum) return { code: 'BELOW_MINIMUM', error: `The minimum for delivery is ${money(q.minimum_order)}. You need ${money(q.short_by)} more, or you could collect instead.` };
     }
@@ -759,18 +774,45 @@ Deno.serve(async (req) => {
         if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
 
         const s = JSON.parse(JSON.stringify(before)); // handlers mutate the copy; saveSession diffs it
-        const needsMenu = !['get_context', 'set_customer', 'handoff', 'end_session', 'check_delivery', 'set_order_type'].includes(action);
+        const needsMenu = action === 'apply' || !['get_context', 'set_customer', 'handoff', 'end_session', 'check_delivery', 'set_order_type'].includes(action);
         const menu = needsMenu ? await loadMenu(db, restaurant.id) : null;
 
-        let result;
         let resultOk = true;
         let note = '';
-        const done = (data) => { result = ok(data); };
-        const refuse = (code, error, extra = {}) => { resultOk = false; note = code; result = fail(code, error, extra); };
+
+        /** Runs ONE action against the session copy `s`; returns a plain result object. */
+        const run = async (action, body) => {
+        let result;
+        const done = (data) => { result = { ok: true, ...data }; };
+        const refuse = (code, error, extra = {}) => { resultOk = false; note = code; result = { ok: false, code, error, say: extra.say || error, ...extra }; };
+        if (s.order_id && CHANGES_ORDER.includes(action)) {
+            refuse('ALREADY_ORDERED', 'This order has already been placed.', { order_id: s.order_id, say: 'Your order is already placed. For any changes, let me put you through to the team.' });
+            return result;
+        }
 
         switch (action) {
+            case 'browse_menu': {
+                const cats = [...new Set(menu.available.map((i) => i.category || 'Other'))].sort((a, b) => a.localeCompare(b));
+                const mode = body.mode || (body.category != null ? 'category' : 'categories');
+                if (mode === 'categories') {
+                    done({ categories: cats.map((c, i) => ({ index: i, name: c, count: menu.available.filter((x) => (x.category || 'Other') === c).length })) });
+                } else if (mode === 'category') {
+                    const name = typeof body.category === 'number' ? cats[body.category] : cats.find((c) => norm(c) === norm(body.category));
+                    if (!name) { refuse('CATEGORY_NOT_FOUND', "I couldn't find that part of the menu.", { categories: cats }); break; }
+                    const items = menu.available.filter((i) => (i.category || 'Other') === name)
+                        .sort((a, b) => (b.is_popular ? 1 : 0) - (a.is_popular ? 1 : 0) || a.name.localeCompare(b.name));
+                    const per = Math.max(1, Math.min(30, Number(body.per_page) || 9));
+                    const page = Math.max(0, Math.floor(Number(body.page) || 0));
+                    done({ category: name, category_index: cats.indexOf(name), page, has_more: items.length > (page + 1) * per,
+                        items: items.slice(page * per, (page + 1) * per).map(itemSummary) });
+                } else if (mode === 'agent') {
+                    done({ menu_text: menuForAgent(menu, cats) });
+                } else refuse('BAD_MODE', 'mode must be categories, category or agent.');
+                break;
+            }
+
             case 'get_context':
-                done(await contextOf(db, s, restaurant));
+                done(await contextOf(db, s, restaurant, { skipReturning: body.skip_returning === true }));
                 break;
 
             case 'search_menu': {
@@ -833,7 +875,7 @@ Deno.serve(async (req) => {
                 const group = findGroup(item, step);
                 if (!group) { p.queue.shift(); }
                 else {
-                    const option = matchOption(group, body.option);
+                    const option = Number.isInteger(body.option_index) ? (group.options || [])[body.option_index] : matchOption(group, body.option);
                     if (!option) {
                         refuse('OPTION_NOT_FOUND', `"${clip(body.option, 40)}" isn't one of the choices.`, { question: nextQuestion(item, p) });
                         break;
@@ -944,9 +986,14 @@ Deno.serve(async (req) => {
             }
 
             case 'send_payment_link': {
-                const r = readiness(s, restaurant, menu);
-                if (!r.q) { refuse(r.code, r.error, r.question ? { question: r.question } : {}); break; }
-                if (s.order_type === 'delivery' && !s.delivery_address) { refuse('ADDRESS_NEEDED', "What's the delivery address?"); break; }
+                const atCheckout = body.details_at_checkout === true;
+                const r = readiness(s, restaurant, menu, { detailsAtCheckout: atCheckout });
+                if (!r.q) {
+                    const { code, error, ...rest } = r;
+                    refuse(code, error, rest);
+                    break;
+                }
+                if (!atCheckout && s.order_type === 'delivery' && !s.delivery_address) { refuse('ADDRESS_NEEDED', "What's the delivery address?"); break; }
                 s.checkout_token = randomToken();
                 s.checkout_token_expires_at = new Date(Date.now() + CHECKOUT_TTL_MS).toISOString();
                 s.state = 'awaiting_payment';
@@ -963,7 +1010,7 @@ Deno.serve(async (req) => {
                     } catch (e) { console.warn(`${LOG} pay link SMS failed: ${e?.message}`); }
                 }
                 note = smsSent ? 'sms sent' : 'link only';
-                done({ checkout_url: url, expires_at: s.checkout_token_expires_at, sms_sent: smsSent, quote: r.q,
+                done({ checkout_url: url, expires_at: s.checkout_token_expires_at, sms_sent: smsSent, quote: r.q, basket: basketView(s),
                     say: smsSent ? `I've texted you a link to pay ${money(r.q.total)}. Your order goes through as soon as you pay.` : `Your total is ${money(r.q.total)}. Here's your link to pay.` });
                 break;
             }
@@ -1054,22 +1101,70 @@ Deno.serve(async (req) => {
                 break;
 
             default:
-                return fail('UNKNOWN_ACTION', `Unknown action "${action}".`, {}, 400);
+                refuse('UNKNOWN_ACTION', `Unknown action "${action}".`);
+        }
+        return result;
+        };
+
+        let response;
+        if (action === 'apply') {
+            // Several actions in one call (a chat message often says "2 burgers and a coke, no wait 3").
+            // Stops at the first question the customer must answer before anything else can be added.
+            const steps = Array.isArray(body.steps) ? body.steps.slice(0, 12) : [];
+            const results = [];
+            for (const st of steps) {
+                const a = String(st?.action || '');
+                if (!a || ['apply', 'start_session', 'place_cash_order', 'send_payment_link', 'end_session'].includes(a)) {
+                    results.push({ action: a, ok: false, code: 'NOT_ALLOWED_IN_APPLY', error: `${a || 'missing action'} must be its own call.` });
+                    continue;
+                }
+                const r = await run(a, st);
+                results.push({ action: a, ...r });
+                if (r.needs_choice || (r.code === 'OPTIONS_PENDING')) break;
+            }
+            note = steps.map((x) => x?.action).join(',');
+            resultOk = results.every((r) => r.ok);
+            response = ok({ results, basket: basketView(s), quote: quote(s, restaurant), pending: pendingQuestion(s, menu) });
+        } else {
+            const r = await run(action, body);
+            response = Response.json(r, { status: r.code === 'UNKNOWN_ACTION' ? 400 : 200 });
         }
 
         await saveSession(db, before, s, action, resultOk, note).catch((e) => console.error(`${LOG} save failed: ${e?.message}`));
-        return result;
+        return response;
     } catch (e) {
         console.error(`${LOG} ${action} failed:`, e?.message, e?.stack);
         return fail('INTERNAL', 'Something went wrong.', { say: 'Sorry, something went wrong on our side.' }, 500);
     }
 });
 
+/** The question waiting for the customer, if an item still needs option choices. */
+function pendingQuestion(session, menu) {
+    const p = session.pending_item;
+    if (!p?.queue?.length || !menu) return null;
+    const item = menu.byId.get(p.menu_item_id);
+    return item ? nextQuestion(item, p) : null;
+}
+
+/** Compact menu for an LLM prompt: ids, names, prices, flags, allergens, option groups (* = required). */
+function menuForAgent(menu, cats) {
+    const opts = (g) => `${g.required ? '*' : ''}${g.name || 'Option'}: ${(g.options || []).map((o) => `${o.label}${o.price ? ` +${Number(o.price).toFixed(2)}` : ''}`).join(' / ')}`;
+    return cats.map((cat) => `[${cat}]\n` + menu.available.filter((i) => (i.category || 'Other') === cat).map((i) => {
+        const groups = (i.customization_options || []).filter((g) => (g.options || []).length).map((g) => {
+            const nested = (g.meal_customizations || []).filter((m) => (m.options || []).length);
+            return opts(g) + (nested.length ? ` (with a paid ${g.name || 'upgrade'}: ${nested.map(opts).join('; ')})` : '');
+        });
+        return `  ${i.id} | ${i.name} | ${money(i.price)}${i.is_popular ? ' | popular' : ''}${i.is_vegetarian ? ' | veg' : ''}${i.is_spicy ? ' | spicy' : ''}`
+            + `${i.allergens?.length ? ` | allergens: ${i.allergens.join(', ')}` : ''}`
+            + `${groups.length ? `\n      options: ${groups.join('; ')}` : ''}`;
+    }).join('\n')).join('\n');
+}
+
 /** What an agent needs at the start of (or back in) a conversation. */
-async function contextOf(db, session, restaurant) {
+async function contextOf(db, session, restaurant, opts = {}) {
     const closed = restaurantClosedReason(restaurant);
     let returning = null;
-    if (session.customer_phone) {
+    if (session.customer_phone && !opts.skipReturning) {
         const local = localPhone(session.customer_phone);
         for (const p of [local, `+${session.customer_phone}`, session.customer_phone]) {
             const rows = await db.Order.filter({ restaurant_id: restaurant.id, phone: p }, '-created_date', 1).catch(() => []);

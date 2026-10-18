@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
         const session = (await db.AiOrderSession.filter({ checkout_token: token }))[0];
         if (!session) return Response.json({ error: 'This payment link has already been used or is invalid.' }, { status: 404 });
         if (!session.checkout_token_expires_at || new Date(session.checkout_token_expires_at) < new Date()) {
-            return Response.json({ error: 'This payment link has expired. Please call or message us again for a new one.' }, { status: 410 });
+            return Response.json({ error: 'This payment link has expired. Please message or call us again for a new one (on WhatsApp, send "checkout").' }, { status: 410 });
         }
         const restaurant = (await db.Restaurant.filter({ id: session.restaurant_id }))[0];
         if (!restaurant) return Response.json({ error: 'Restaurant not found' }, { status: 404 });

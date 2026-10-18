@@ -1,4 +1,7 @@
 /**
+ * LEGACY: WhatsApp now sends /AiCheckout links from aiOrderingCore (aiCheckoutCart).
+ * Kept only so a link sent before the switch keeps working; safe to delete later.
+ *
  * whatsappCheckoutCart — public lookup behind the WhatsApp checkout link
  *
  * The link sent in WhatsApp carries a random one-time token. This returns ONLY
