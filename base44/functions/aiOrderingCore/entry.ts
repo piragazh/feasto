@@ -1,0 +1,1077 @@
+/**
+ * aiOrderingCore — the channel-neutral "brain" behind every MealDrop AI ordering agent
+ *
+ * One endpoint, many ACTIONS. A voice agent (phone), the WhatsApp agent, or a web chat
+ * calls these as tools. The AI only ever asks for actions; this server applies them
+ * against the real menu, so an agent can never invent an item, an option or a price.
+ *
+ *   POST /functions/aiOrderingCore   { action, session_id?, ...args }
+ *   Auth: header  x-ai-core-key: <AI_CORE_API_KEY>   (or Authorization: Bearer <key>)
+ *         or a signed-in admin user (for testing from the app)
+ *
+ * ACTIONS
+ *   start_session      { channel, called_number? | restaurant_id?, external_id?, customer_phone?, customer_name? }
+ *   get_context        { session_id }                       restaurant, open/closed, basket, returning customer
+ *   search_menu        { session_id, query, limit? }
+ *   get_item           { session_id, menu_item_id }         description, allergens, option groups
+ *   add_item           { session_id, menu_item_id, quantity?, options? }   options: { "Group": "Label" | ["Label"] }
+ *   choose_option      { session_id, option }               answers the question add_item asked
+ *   cancel_pending     { session_id }
+ *   remove_item        { session_id, line? | menu_item_id?, quantity? }
+ *   set_quantity       { session_id, line, quantity }
+ *   clear_basket       { session_id }
+ *   get_basket         { session_id }                       lines + full price quote
+ *   set_order_type     { session_id, order_type }           delivery | collection
+ *   check_delivery     { session_id, postcode, address? }   zone, fee, minimum
+ *   set_customer       { session_id, name?, phone?, address?, postcode? }
+ *   send_payment_link  { session_id, send_sms? }            card: one-time checkout link (+ SMS)
+ *   place_cash_order   { session_id, notes?, dry_run? }     cash: creates the order now
+ *   handoff            { session_id, reason? }
+ *   end_session        { session_id, outcome? }
+ *
+ * Every response: { ok: true, ...data, say? } or { ok: false, error, code, say? }.
+ * `say` is a short plain-English line an agent can read out or send as-is.
+ *
+ * PARITY: pricing is the SAME function verifyAndCreateOrder validates with
+ * (calcItemServerPrice, copied below), and the quote mirrors src/pages/Checkout.jsx
+ * (zones, tiered delivery, small order surcharge) - so a basket total here is the
+ * total the website checkout and the validator arrive at.
+ *
+ * ENV
+ *   AI_CORE_API_KEY   shared secret for voice/chat platforms (required for non-admin callers)
+ *   BASE44_APP_URL    public origin for pay links (default https://app.mealdrop.co.uk)
+ */
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+
+const LOG = '[aiOrderingCore]';
+const APP_URL = (Deno.env.get('BASE44_APP_URL') || 'https://app.mealdrop.co.uk').replace(/\/$/, '');
+const CHECKOUT_TTL_MS = 2 * 60 * 60 * 1000;
+const MAX_QTY = 50;
+const EVENT_LOG_MAX = 50;
+
+// ── Small helpers ───────────────────────────────────────────────────────────
+const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const nowIso = () => new Date().toISOString();
+const clip = (s, n) => {
+    const t = String(s ?? '').trim();
+    return t.length > n ? t.slice(0, n - 1) + '…' : t;
+};
+const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const ok = (data = {}) => Response.json({ ok: true, ...data });
+const fail = (code, error, extra = {}, status = 200) => Response.json({ ok: false, code, error, say: extra.say || error, ...extra }, { status });
+
+function timingSafeEqual(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    return diff === 0;
+}
+
+function randomToken() {
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** Any UK/intl phone -> E.164 digits, no + ("07700 900123" -> "447700900123"). */
+function phoneDigits(raw) {
+    let d = String(raw || '').replace(/[^\d+]/g, '');
+    if (d.startsWith('+')) d = d.slice(1);
+    else if (d.startsWith('00')) d = d.slice(2);
+    else if (d.startsWith('0')) d = '44' + d.slice(1);
+    return /^\d{8,15}$/.test(d) ? d : '';
+}
+/** E.164 digits -> UK local "07..." where possible (how the website stores phones). */
+const localPhone = (digits) => (digits.startsWith('44') ? `0${digits.slice(2)}` : `+${digits}`);
+
+const UK_POSTCODE = /^([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})$/i;
+function normPostcode(raw) {
+    const m = UK_POSTCODE.exec(String(raw || '').trim().toUpperCase().replace(/\s+/g, ' '));
+    return m ? `${m[1]} ${m[2]}` : null;
+}
+
+// ── Opening hours (same rules as whatsappWebhook) ────────────────────────────
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function hoursClosedReason(r, type) {
+    const hours = (type === 'delivery' && r.delivery_hours) || (type === 'collection' && r.collection_hours) || r.opening_hours;
+    if (!hours || typeof hours !== 'object' || !Object.keys(hours).length) return null;
+    const { day, minutes } = ukClock(new Date());
+    const slot = (d) => {
+        const h = hours[DAY_KEYS[d]];
+        if (!h || h.closed) return null;
+        const open = hhmmToMinutes(h.open), close = hhmmToMinutes(h.close);
+        return open === null || close === null ? null : { open, close, openText: h.open };
+    };
+    const today = slot(day);
+    const yesterday = slot((day + 6) % 7);
+    if (today) {
+        if (today.open === today.close) return null;
+        if (today.close > today.open ? minutes >= today.open && minutes < today.close : minutes >= today.open) return null;
+    }
+    if (yesterday && yesterday.close < yesterday.open && minutes < yesterday.close) return null;
+    const what = type === 'delivery' ? 'Delivery' : type === 'collection' ? 'Collection' : null;
+    if (today && minutes < today.open) {
+        return what ? `${what} starts at ${today.openText} today.` : `We're closed right now. We open at ${today.openText} today.`;
+    }
+    return what ? `${what} isn't available right now.` : "We're closed at the moment.";
+}
+
+function restaurantClosedReason(r) {
+    if (r.temporary_closure?.enabled) return r.temporary_closure.custom_message || 'We are not taking orders right now.';
+    if (r.is_open === false) return 'We are closed at the moment.';
+    return hoursClosedReason(r, null);
+}
+
+// ── Menu ────────────────────────────────────────────────────────────────────
+function isOrderable(item, date = new Date()) {
+    if (whyNotSellable(item, 'online', date) !== null) return false;
+    if (item.track_stock && typeof item.stock_quantity === 'number' && item.stock_quantity <= 0) return false;
+    return true;
+}
+
+async function loadMenu(db, restaurantId) {
+    const all = [];
+    const PAGE = 200;
+    for (let skip = 0; skip < 5000; skip += PAGE) {
+        const batch = await db.MenuItem.filter({ restaurant_id: restaurantId }, 'created_date', PAGE, skip);
+        if (!Array.isArray(batch) || !batch.length) break;
+        all.push(...batch);
+        if (batch.length < PAGE) break;
+    }
+    const available = all.filter((i) => isOrderable(i));
+    return { all, available, byId: new Map(available.map((i) => [i.id, i])) };
+}
+
+const SYNONYMS = { fries: 'chips', chip: 'chips', coke: 'cola', pop: 'drink', soda: 'drink', burgers: 'burger', wings: 'wing' };
+const tokensOf = (s) => norm(s).split(' ').filter(Boolean).map((t) => SYNONYMS[t] || (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t));
+
+function scoreItem(item, qTokens, qPhrase) {
+    const name = norm(item.name);
+    const nameTokens = tokensOf(item.name);
+    const cat = norm(item.category);
+    const desc = norm(item.description);
+    let s = 0;
+    if (qPhrase && name === qPhrase) s += 20;
+    else if (qPhrase && name.includes(qPhrase)) s += 8;
+    for (const t of qTokens) {
+        if (nameTokens.includes(t)) s += 4;
+        else if (nameTokens.some((n) => n.startsWith(t) || t.startsWith(n))) s += 2;
+        if (cat.includes(t)) s += 1;
+        if (desc.includes(t)) s += 0.5;
+    }
+    if (item.is_popular) s += 0.25;
+    return s;
+}
+
+function itemSummary(item) {
+    return {
+        menu_item_id: item.id,
+        name: item.name,
+        category: item.category || 'Other',
+        price: round2(item.price),
+        description: item.description ? clip(item.description, 160) : undefined,
+        has_required_options: requiredGroups(item).length > 0,
+        popular: !!item.is_popular,
+        vegetarian: !!item.is_vegetarian,
+        spicy: !!item.is_spicy,
+    };
+}
+
+function groupForAgent(g) {
+    return {
+        group: g.name,
+        required: !!g.required,
+        type: g.type || 'single',
+        options: (g.options || []).map((o) => ({ label: o.label, extra_price: round2(o.price || 0) })),
+        ...(Array.isArray(g.meal_customizations) && g.meal_customizations.length
+            ? { meal_groups: g.meal_customizations.map((m) => ({ group: m.name, required: !!m.required, options: (m.options || []).map((o) => ({ label: o.label, extra_price: round2(o.price || 0) })) })) }
+            : {}),
+    };
+}
+
+// ── Options (same state machine as whatsappWebhook) ─────────────────────────
+function requiredGroups(item) {
+    return (item.customization_options || []).filter((g) => g.required && (g.options || []).length);
+}
+
+function findGroup(item, step) {
+    if (!step.parent) return (item.customization_options || []).find((g) => g.name === step.group_name);
+    const parent = (item.customization_options || []).find((g) => g.name === step.parent);
+    return (parent?.meal_customizations || []).find((g) => g.name === step.group_name);
+}
+
+/** Match a spoken/typed label to one option: exact first, then a single unambiguous partial match. */
+function matchOption(group, raw) {
+    const want = norm(raw);
+    if (!want) return null;
+    const opts = group?.options || [];
+    const exact = opts.find((o) => norm(o.label) === want);
+    if (exact) return exact;
+    const partial = opts.filter((o) => norm(o.label).includes(want) || want.includes(norm(o.label)));
+    return partial.length === 1 ? partial[0] : null;
+}
+
+function recordChoice(pending, item, step, option) {
+    const group = findGroup(item, step);
+    const value = group?.type === 'multiple' ? [option.label] : option.label;
+    if (step.parent) {
+        const key = `${step.parent}_meal_customizations`;
+        const prev = pending.customizations[key]?.[step.group_name];
+        const merged = group?.type === 'multiple' && Array.isArray(prev) ? [...prev, option.label] : value;
+        pending.customizations[key] = { ...(pending.customizations[key] || {}), [step.group_name]: merged };
+    } else {
+        const prev = pending.customizations[step.group_name];
+        pending.customizations[step.group_name] = group?.type === 'multiple' && Array.isArray(prev) ? [...prev, option.label] : value;
+    }
+    pending.summary.push(option.label);
+    // A meal upgrade brings its own required meal choices (side, drink...)
+    if (!step.parent && group?.type === 'meal_upgrade' && (option.price || 0) > 0) {
+        const nested = (group.meal_customizations || []).filter((g) => g.required && (g.options || []).length);
+        pending.queue.unshift(...nested.map((g) => ({ group_name: g.name, parent: group.name })));
+    }
+}
+
+/** Apply any options the customer already gave that answer the step at the head of the queue. */
+function drainGiven(pending, item, given, ignored) {
+    let guard = 0;
+    while (pending.queue.length && guard++ < 20) {
+        const step = pending.queue[0];
+        const key = Object.keys(given).find((k) => norm(k) === norm(step.group_name));
+        if (!key) return;
+        const group = findGroup(item, step);
+        const raw = Array.isArray(given[key]) ? given[key][0] : given[key];
+        const option = matchOption(group, raw);
+        delete given[key];
+        if (!option) { ignored.push(`${step.group_name}: ${raw}`); return; }
+        pending.queue.shift();
+        recordChoice(pending, item, step, option);
+    }
+}
+
+function startPending(item, quantity, chosen = {}) {
+    const pending = {
+        menu_item_id: item.id,
+        quantity: Math.max(1, Math.min(MAX_QTY, Math.round(Number(quantity) || 1))),
+        queue: [], customizations: {}, summary: [],
+    };
+    const given = { ...(chosen && typeof chosen === 'object' ? chosen : {}) };
+    const ignored = [];
+    // Top-level groups first, in any order the customer said them
+    for (const g of item.customization_options || []) {
+        const key = Object.keys(given).find((k) => norm(k) === norm(g.name));
+        if (!key) continue;
+        const labels = Array.isArray(given[key]) ? given[key] : [given[key]];
+        delete given[key];
+        for (const raw of labels.slice(0, g.type === 'multiple' ? 10 : 1)) {
+            const option = matchOption(g, raw);
+            if (!option) { ignored.push(`${g.name}: ${raw}`); continue; }
+            recordChoice(pending, item, { group_name: g.name, parent: null }, option);
+        }
+    }
+    for (const g of requiredGroups(item)) {
+        if (!(g.name in pending.customizations)) pending.queue.push({ group_name: g.name, parent: null });
+    }
+    // Nested meal groups the upgrade queued, if the customer already named them
+    drainGiven(pending, item, given, ignored);
+    for (const k of Object.keys(given)) ignored.push(`${k}: ${given[k]}`);
+    return { pending, ignored };
+}
+
+function nextQuestion(item, pending) {
+    const step = pending.queue[0];
+    const group = findGroup(item, step);
+    if (!group) return null;
+    return {
+        menu_item_id: item.id,
+        item_name: item.name,
+        group: group.name,
+        options: (group.options || []).map((o) => ({ label: o.label, extra_price: round2(o.price || 0) })),
+        say: `Which ${group.name || 'option'} would you like for the ${item.name}? ${(group.options || []).slice(0, 6).map((o) => o.label + (o.price ? ` (plus ${money(o.price)})` : '')).join(', ')}.`,
+    };
+}
+
+function addLine(session, line) {
+    const cart = [...(session.cart || [])];
+    const key = JSON.stringify({ c: line.customizations || {}, q: line.itemQuantities || {} });
+    const existing = cart.find((l) => l.menu_item_id === line.menu_item_id
+        && JSON.stringify({ c: l.customizations || {}, q: l.itemQuantities || {} }) === key);
+    if (existing) existing.quantity = Math.min(MAX_QTY, existing.quantity + line.quantity);
+    else cart.push(line);
+    session.cart = cart;
+}
+
+function finishPending(session, item) {
+    const p = session.pending_item;
+    const { serverPrice } = calcItemServerPrice(item, { customizations: p.customizations || {}, itemQuantities: p.itemQuantities || {} });
+    addLine(session, {
+        menu_item_id: item.id,
+        name: item.name,
+        price: round2(serverPrice),
+        quantity: p.quantity,
+        image_url: item.image_url || undefined,
+        customizations: p.customizations || {},
+        itemQuantities: p.itemQuantities || {},
+        options_summary: (p.summary || []).join(', '),
+    });
+    session.pending_item = null;
+    return { quantity: p.quantity, name: item.name, unit_price: round2(serverPrice), options: (p.summary || []).join(', ') };
+}
+
+// ── Pricing: COPY of calcItemServerPrice in verifyAndCreateOrder (online prices) ──
+// Keep identical to the validator so an AI basket can never be refused at checkout.
+function calcItemServerPrice(dbItem, orderItem, isPOS = false) {
+    const basePrice = (isPOS && dbItem.pos_price != null) ? dbItem.pos_price : dbItem.price;
+    let serverPrice = basePrice;
+    const breakdown = [`base=£${basePrice.toFixed(2)}`];
+    const customizations = orderItem.customizations;
+    const itemQuantities = orderItem.itemQuantities || {};
+    if (!customizations || typeof customizations !== 'object') return { serverPrice, breakdown };
+    const dbOptions = dbItem.customization_options || [];
+    const customizationList = Array.isArray(customizations)
+        ? customizations
+        : Object.entries(customizations).map(([name, value]) => ({ name, value }));
+    for (const clientCustom of customizationList) {
+        const customName = clientCustom.name ?? clientCustom.key;
+        if (customName === undefined || customName === null) continue;
+        if (customName.endsWith('_meal_customizations')) continue;
+        const dbGroup = dbOptions.find(g => g.name === customName);
+        if (!dbGroup) continue;
+        if (dbGroup.type === 'meal_upgrade') {
+            const selectedUpgrade = clientCustom.selected_option || clientCustom.value;
+            if (!selectedUpgrade) continue;
+            const upgradeLabel = typeof selectedUpgrade === 'string' ? selectedUpgrade : selectedUpgrade.label;
+            const dbUpgradeOption = (dbGroup.options || []).find(o => o.label === upgradeLabel);
+            if (dbUpgradeOption && typeof dbUpgradeOption.price === 'number') {
+                serverPrice += dbUpgradeOption.price;
+                breakdown.push(`upgrade:${upgradeLabel}=£${dbUpgradeOption.price.toFixed(2)}`);
+            }
+            const mealCustomsObj = (Array.isArray(customizations)
+                ? null
+                : customizations[`${customName}_meal_customizations`]) || {};
+            const mealGroups = (Array.isArray(dbGroup.meal_customizations) && dbGroup.meal_customizations.length)
+                ? dbGroup.meal_customizations
+                : (Array.isArray(dbUpgradeOption?.meal_customizations) ? dbUpgradeOption.meal_customizations : []);
+            if (mealGroups.length) {
+                for (const mealGroup of mealGroups) {
+                    const mealSelections = mealCustomsObj[mealGroup.name];
+                    if (!mealSelections) continue;
+                    const selections = Array.isArray(mealSelections) ? mealSelections : [mealSelections];
+                    for (const selLabel of selections) {
+                        const dbOpt = (mealGroup.options || []).find(o => o.label === selLabel);
+                        if (!dbOpt) continue;
+                        const optPrice = isPOS && dbOpt.pos_price != null ? dbOpt.pos_price : (dbOpt.price || 0);
+                        const qtyKey = `${customName}_meal_${mealGroup.name}_${selLabel}`;
+                        const qty = itemQuantities[qtyKey] || 1;
+                        serverPrice += optPrice * qty;
+                        breakdown.push(`${mealGroup.name}:${selLabel}×${qty}=£${(optPrice * qty).toFixed(2)}`);
+                    }
+                }
+            }
+            continue;
+        }
+        const rawValue = clientCustom.selected_options ?? clientCustom.selected_option ?? clientCustom.value;
+        const selectedOptions = Array.isArray(rawValue) ? rawValue : (rawValue != null && rawValue !== '' ? [rawValue] : []);
+        for (const sel of selectedOptions) {
+            const selLabel = typeof sel === 'string' ? sel : sel?.label;
+            if (!selLabel) continue;
+            const dbOpt = (dbGroup.options || []).find(o => o.label === selLabel);
+            if (!dbOpt) continue;
+            const optPrice = isPOS && dbOpt.pos_price != null ? dbOpt.pos_price : (typeof dbOpt.price === 'number' ? dbOpt.price : 0);
+            const qtyKey = `${customName}_${selLabel}`;
+            const qty = (dbGroup.type === 'multiple' && itemQuantities[qtyKey]) ? itemQuantities[qtyKey] : 1;
+            serverPrice += optPrice * qty;
+            breakdown.push(`${customName}:${selLabel}×${qty}=£${(optPrice * qty).toFixed(2)}`);
+        }
+    }
+    return { serverPrice, breakdown };
+}
+
+/** Re-price every basket line from the CURRENT menu; drops lines no longer sellable. */
+function repriceCart(session, menu) {
+    const dropped = [];
+    const cart = [];
+    for (const l of session.cart || []) {
+        const item = menu.byId.get(l.menu_item_id);
+        if (!item) { dropped.push(l.name); continue; }
+        const { serverPrice } = calcItemServerPrice(item, l);
+        cart.push({ ...l, name: item.name, price: round2(serverPrice) });
+    }
+    session.cart = cart;
+    return dropped;
+}
+
+// ── Delivery zones: MIRROR of src/components/checkout/DeliveryZoneCalculator.jsx ──
+function haversineDistance(p1, p2) {
+    const R = 3958.8;
+    const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+    const dLng = (p2.lng - p1.lng) * Math.PI / 180;
+    const lat1 = p1.lat * Math.PI / 180, lat2 = p2.lat * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function extractPostcodeDistrict(address) {
+    if (!address) return null;
+    const fullMatch = address.match(/\b([A-Z]{1,2}\d{1,2}[A-Z]?)\s*\d[A-Z]{2}\b/i);
+    if (fullMatch) return fullMatch[1].toUpperCase();
+    const districtMatch = address.match(/\b([A-Z]{1,2}\d{1,2}[A-Z]?)\b/i);
+    return districtMatch ? districtMatch[1].toUpperCase() : null;
+}
+function isPostcodeInZone(customerAddress, zonePostcodes) {
+    if (!customerAddress || !zonePostcodes || zonePostcodes.length === 0) return false;
+    const district = extractPostcodeDistrict(customerAddress);
+    if (!district) return false;
+    return zonePostcodes.some(pc => pc.trim().toUpperCase().replace(/\s+/g, '') === district);
+}
+function isPointInPolygon(point, polygon) {
+    if (!point || !polygon || polygon.length < 3) return false;
+    const px = point.lng, py = point.lat;
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].lng, yi = polygon[i].lat;
+        const xj = polygon[j].lng, yj = polygon[j].lat;
+        const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+function matchZone(zones, customerLocation, customerAddress) {
+    const sorted = [...zones].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+    for (const zone of sorted) {
+        const type = zone.zone_type || (zone.postcodes?.length > 0 ? 'postcode' : zone.radius_miles ? 'radius' : 'polygon');
+        if (type === 'postcode') {
+            if (isPostcodeInZone(customerAddress, zone.postcodes)) return zone;
+        } else if (type === 'radius') {
+            const center = zone.radius_center;
+            if (center?.lat && center?.lng && customerLocation?.lat && customerLocation?.lng) {
+                if (haversineDistance(center, customerLocation) <= zone.radius_miles) return zone;
+            }
+        } else if (zone.coordinates?.length >= 3 && customerLocation) {
+            if (isPointInPolygon(customerLocation, zone.coordinates)) return zone;
+        }
+    }
+    return null;
+}
+
+async function geocodePostcode(postcode) {
+    try {
+        const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode.replace(/\s+/g, ''))}`);
+        if (!res.ok) return { valid: res.status === 404 ? false : null };
+        const j = await res.json();
+        const r = j?.result;
+        return r ? { valid: true, lat: r.latitude, lng: r.longitude, postcode: r.postcode } : { valid: false };
+    } catch (e) {
+        console.warn(`${LOG} postcode lookup failed: ${e?.message}`);
+        return { valid: null }; // unknown - postcode-district zones still work
+    }
+}
+
+// ── Quote: MIRROR of the price block in src/pages/Checkout.jsx ───────────────
+function quote(session, restaurant) {
+    const cart = session.cart || [];
+    const subtotal = cart.reduce((s, l) => s + (l.price * l.quantity), 0);
+    const type = session.order_type || null;
+    const dq = session.delivery_quote || null; // null = not checked yet
+    const tiered = restaurant?.tiered_delivery;
+    const standardFee = restaurant?.delivery_fee ?? 0;
+    const standardMin = restaurant?.minimum_order ?? 0;
+    const zonesConfigured = dq ? dq.zones_configured === true : null;
+    const zoneAvailable = dq?.available === true && zonesConfigured;
+    const zoneMinimum = zoneAvailable ? (dq.minimum_order || 0) : 0;
+    const zoneFee = zoneAvailable && dq.fee != null ? dq.fee : null;
+
+    let deliveryFee = type === 'collection' ? 0 : (zoneFee ?? standardFee);
+    let minimumOrder = 0;
+    if (type === 'delivery') {
+        if (zoneAvailable) {
+            if (tiered?.enabled && (tiered.lower_minimum ?? 0) > 0) {
+                const lowerMin = tiered.lower_minimum;
+                const lowerFee = tiered.lower_minimum_fee ?? 0;
+                if (subtotal < lowerMin) minimumOrder = lowerMin;
+                else if (subtotal < zoneMinimum) { deliveryFee = lowerFee; minimumOrder = zoneMinimum; }
+                else minimumOrder = zoneMinimum;
+            } else minimumOrder = zoneMinimum;
+        } else minimumOrder = standardMin;
+    }
+    // Checkout.jsx adds this whenever it is set (MED-8). Mirrored as-is for parity.
+    const smallOrderSurcharge = restaurant?.small_order_surcharge ?? 0;
+    const subtotalPence = Math.round(subtotal * 100);
+    const total = Math.max(0, subtotalPence + Math.round(deliveryFee * 100) + Math.round(smallOrderSurcharge * 100)) / 100;
+    return {
+        order_type: type,
+        subtotal: round2(subtotal),
+        delivery_fee: round2(deliveryFee),
+        small_order_surcharge: round2(smallOrderSurcharge),
+        discount: 0,
+        total: round2(total),
+        minimum_order: round2(minimumOrder),
+        below_minimum: type === 'delivery' && subtotal < minimumOrder,
+        short_by: type === 'delivery' && subtotal < minimumOrder ? round2(minimumOrder - subtotal) : 0,
+        delivery_checked: type !== 'delivery' || !!dq,
+        delivery_available: type !== 'delivery' ? null : (dq ? dq.available !== false : null),
+    };
+}
+
+function basketView(session) {
+    return (session.cart || []).map((l, i) => ({
+        line: i + 1, menu_item_id: l.menu_item_id, name: l.name, quantity: l.quantity,
+        unit_price: l.price, line_total: round2(l.price * l.quantity), options: l.options_summary || '',
+    }));
+}
+
+function basketSay(session, q) {
+    const cart = session.cart || [];
+    if (!cart.length) return 'Your basket is empty.';
+    const lines = cart.map((l) => `${l.quantity} ${l.name}${l.options_summary ? ` (${l.options_summary})` : ''}`).join(', ');
+    const fee = q.order_type === 'delivery' && q.delivery_fee ? `, plus ${money(q.delivery_fee)} delivery` : '';
+    return `You've got ${lines}. That's ${money(q.subtotal)}${fee}${q.small_order_surcharge ? ` and a ${money(q.small_order_surcharge)} service charge` : ''}, ${money(q.total)} in total.`;
+}
+
+/** Everything that must be true before an order can be paid for or placed. */
+function readiness(session, restaurant, menu) {
+    const closed = restaurantClosedReason(restaurant);
+    if (closed) return { code: 'CLOSED', error: closed };
+    if (session.pending_item?.queue?.length) {
+        const item = menu.byId.get(session.pending_item.menu_item_id);
+        if (item) return { code: 'OPTIONS_PENDING', error: `We still need to finish the ${item.name} first.`, question: nextQuestion(item, session.pending_item) };
+        session.pending_item = null;
+    }
+    const dropped = repriceCart(session, menu);
+    if (dropped.length) return { code: 'ITEM_UNAVAILABLE', error: `Sorry, ${dropped.join(', ')} ${dropped.length > 1 ? 'are' : 'is'} no longer available, so I've taken ${dropped.length > 1 ? 'them' : 'it'} off.` };
+    if (!(session.cart || []).length) return { code: 'EMPTY_BASKET', error: 'The basket is empty.' };
+    if (!session.order_type) return { code: 'ORDER_TYPE_NEEDED', error: 'Is this for delivery or collection?' };
+    if (session.order_type === 'collection' && !restaurant.collection_enabled) return { code: 'NO_COLLECTION', error: 'Sorry, we only do delivery.' };
+    const svc = hoursClosedReason(restaurant, session.order_type);
+    if (svc) return { code: 'SERVICE_CLOSED', error: svc };
+    const q = quote(session, restaurant);
+    if (session.order_type === 'delivery') {
+        if (!session.delivery_quote) return { code: 'POSTCODE_NEEDED', error: "What's the postcode for delivery?" };
+        if (session.delivery_quote.available === false) return { code: 'OUT_OF_AREA', error: 'Sorry, we don\'t deliver to that postcode.' };
+        if (q.below_minimum) return { code: 'BELOW_MINIMUM', error: `The minimum for delivery is ${money(q.minimum_order)}. You need ${money(q.short_by)} more, or you could collect instead.` };
+    }
+    return { q };
+}
+
+// ── Session persistence ─────────────────────────────────────────────────────
+const OWNED = ['cart', 'pending_item', 'order_type', 'delivery_address', 'delivery_postcode', 'delivery_quote',
+    'customer_name', 'customer_phone', 'state', 'checkout_token', 'checkout_token_expires_at', 'order_id',
+    'handoff_reason', 'ended_at'];
+
+async function saveSession(db, before, after, action, okFlag, note) {
+    const patch = {};
+    for (const f of OWNED) {
+        const a = after[f] ?? null;
+        if (JSON.stringify(a) !== JSON.stringify(before[f] ?? null)) patch[f] = a;
+    }
+    patch.last_activity_at = nowIso();
+    patch.event_log = [...(before.event_log || []), { at: nowIso(), action, ok: okFlag, note: clip(note || '', 200) }].slice(-EVENT_LOG_MAX);
+    await db.AiOrderSession.update(before.id, patch);
+}
+
+// ── Auth ────────────────────────────────────────────────────────────────────
+async function authorised(req, base44, body) {
+    const expected = Deno.env.get('AI_CORE_API_KEY');
+    const hdr = req.headers.get('x-ai-core-key') || (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    const given = hdr || (typeof body?.key === 'string' ? body.key : '');
+    if (expected && given && timingSafeEqual(given, expected)) return true;
+    try {
+        const user = await base44.auth.me();
+        return user?.role === 'admin';
+    } catch { return false; }
+}
+
+// ── Item availability (shared block) ────────────────────────────────────────
+// Copied verbatim from src/lib/item-availability.js - check-item-availability.mjs compares.
+// ── ITEM AVAILABILITY (shared - keep identical in every copy) ────────────────
+const AVAILABILITY_TZ = 'Europe/London';
+const SELLS_AT = {
+    till: ['both', 'pos_only'],
+    online: ['both', 'online_only'],
+    kiosk: ['both'],
+    qr: ['both'],
+};
+const WEEKDAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+/** An unknown or missing setting means "both" - never hide a menu by accident. */
+function channelOf(item) {
+    const c = item?.availability_channel;
+    return c === 'online_only' || c === 'pos_only' ? c : 'both';
+}
+
+function sellsAt(item, where) {
+    return (SELLS_AT[where] || []).includes(channelOf(item));
+}
+
+/** Weekday and minute-of-day in the UK, whatever the device's own zone. */
+function ukClock(date) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: AVAILABILITY_TZ, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const get = (t) => parts.find(p => p.type === t)?.value;
+    return { day: WEEKDAYS[get('weekday')], minutes: Number(get('hour')) * 60 + Number(get('minute')) };
+}
+
+function hhmmToMinutes(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
+    if (!m) return null;
+    const h = Number(m[1]), min = Number(m[2]);
+    return h > 23 || min > 59 ? null : h * 60 + min;
+}
+
+/** Same rule as the till: days, late menus past midnight, start === end is all day. */
+function inWindow(w, date) {
+    if (!w) return false;
+    const start = hhmmToMinutes(w.start), end = hhmmToMinutes(w.end);
+    if (start === null || end === null) return false;
+    const { day, minutes } = ukClock(date);
+    const days = Array.isArray(w.days) && w.days.length ? w.days : [0, 1, 2, 3, 4, 5, 6];
+    if (start === end) return days.includes(day);
+    if (start < end) return days.includes(day) && minutes >= start && minutes < end;
+    if (minutes >= start) return days.includes(day);           // evening part of a late menu
+    return minutes < end && days.includes((day + 6) % 7);       // after midnight: yesterday's window
+}
+
+/** No windows (or an empty list) means always - scheduling is opt-in. */
+function inHours(item, date) {
+    const ws = item?.availability_windows;
+    if (!Array.isArray(ws) || ws.length === 0) return true;
+    return ws.some(w => inWindow(w, date));
+}
+
+/**
+ * Why this item cannot be sold here at `date`, or null if it can.
+ * 'unavailable' - switched off; 'channel' - not sold here; 'hours' - outside its times.
+ */
+function whyNotSellable(item, where, date) {
+    if (!item || item.is_available === false) return 'unavailable';
+    if (!sellsAt(item, where)) return 'channel';
+    if (!inHours(item, date)) return 'hours';
+    return null;
+}
+/**
+ * When an order is FOR: a future scheduled slot, else now. A scheduled order is
+ * checked against the time it will be made, not the time it was placed.
+ */
+function forTime(isScheduled, scheduledFor, now = new Date()) {
+    const t = isScheduled !== false && scheduledFor ? new Date(scheduledFor) : null;
+    return t && Number.isFinite(t.getTime()) && t.getTime() > now.getTime() ? t : now;
+}
+
+/** Customer-facing wording for a refusal (servers use the same words). */
+function notSellableMessage(name, why) {
+    const n = `"${name || 'An item'}"`;
+    if (why === 'channel') return `${n} isn't sold here. Please remove it.`;
+    if (why === 'hours') return `${n} isn't available at this time. Please remove it.`;
+    return `${n} is currently unavailable. Please remove it.`;
+}
+// ── END ITEM AVAILABILITY ────────────────────────────────────────────────────
+
+// ── Entry point ─────────────────────────────────────────────────────────────
+Deno.serve(async (req) => {
+    if (req.method !== 'POST') return Response.json({ ok: false, error: 'POST only' }, { status: 405 });
+    let body;
+    try { body = await req.json(); } catch { return fail('BAD_JSON', 'Body must be JSON', {}, 400); }
+
+    const base44 = createClientFromRequest(req);
+    if (!(await authorised(req, base44, body))) return fail('UNAUTHORISED', 'Unauthorised', {}, 401);
+
+    const db = base44.asServiceRole.entities;
+    const action = String(body.action || '');
+
+    try {
+        // ── start_session: the only action without a session ──
+        if (action === 'start_session') {
+            const channel = ['phone', 'whatsapp', 'web_chat', 'test'].includes(body.channel) ? body.channel : 'test';
+            let restaurantId = body.restaurant_id || null;
+            if (!restaurantId && body.called_number) {
+                const num = phoneDigits(body.called_number);
+                const rows = num ? await db.AiChannelNumber.filter({ number: num }) : [];
+                const hit = rows.find((r) => r.is_active !== false && (r.channel === channel || channel === 'test'));
+                restaurantId = hit?.restaurant_id || null;
+                if (!restaurantId) return fail('NUMBER_NOT_LINKED', `No restaurant is linked to ${body.called_number}.`, { say: 'Sorry, this number is not set up for ordering yet.' });
+            }
+            if (!restaurantId) return fail('RESTAURANT_REQUIRED', 'Send restaurant_id or called_number.');
+            const restaurant = (await db.Restaurant.filter({ id: restaurantId }))[0];
+            if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
+
+            // Same call id twice (a platform retry) returns the same session
+            if (body.external_id) {
+                const existing = (await db.AiOrderSession.filter({ channel, external_id: String(body.external_id) }))[0];
+                if (existing) return ok({ session_id: existing.id, resumed: true, ...(await contextOf(db, existing, restaurant)) });
+            }
+            const phone = phoneDigits(body.customer_phone);
+            const session = await db.AiOrderSession.create({
+                channel, restaurant_id: restaurant.id,
+                external_id: body.external_id ? String(body.external_id) : undefined,
+                customer_phone: phone || undefined,
+                customer_name: body.customer_name ? clip(body.customer_name, 80) : undefined,
+                cart: [], state: 'active', started_at: nowIso(), last_activity_at: nowIso(),
+                event_log: [{ at: nowIso(), action, ok: true, note: `channel=${channel}` }],
+            });
+            return ok({ session_id: session.id, ...(await contextOf(db, session, restaurant)) });
+        }
+
+        if (!body.session_id) return fail('SESSION_REQUIRED', 'session_id is required.');
+        const before = (await db.AiOrderSession.filter({ id: body.session_id }))[0];
+        if (!before) return fail('SESSION_NOT_FOUND', 'Session not found.');
+        if (['closed'].includes(before.state) && action !== 'get_context') return fail('SESSION_CLOSED', 'This session has ended.');
+        const restaurant = (await db.Restaurant.filter({ id: before.restaurant_id }))[0];
+        if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
+
+        const s = JSON.parse(JSON.stringify(before)); // handlers mutate the copy; saveSession diffs it
+        const needsMenu = !['get_context', 'set_customer', 'handoff', 'end_session', 'check_delivery', 'set_order_type'].includes(action);
+        const menu = needsMenu ? await loadMenu(db, restaurant.id) : null;
+
+        let result;
+        let resultOk = true;
+        let note = '';
+        const done = (data) => { result = ok(data); };
+        const refuse = (code, error, extra = {}) => { resultOk = false; note = code; result = fail(code, error, extra); };
+
+        switch (action) {
+            case 'get_context':
+                done(await contextOf(db, s, restaurant));
+                break;
+
+            case 'search_menu': {
+                const qTokens = tokensOf(body.query);
+                const qPhrase = norm(body.query);
+                const limit = Math.max(1, Math.min(15, Number(body.limit) || 6));
+                const scored = menu.available.map((i) => ({ i, sc: scoreItem(i, qTokens, qPhrase) })).filter((x) => x.sc >= 1)
+                    .sort((a, b) => b.sc - a.sc || a.i.name.localeCompare(b.i.name)).slice(0, limit);
+                note = `"${clip(body.query, 40)}" -> ${scored.length}`;
+                if (!scored.length) {
+                    const cats = [...new Set(menu.available.map((i) => i.category || 'Other'))].sort();
+                    refuse('NO_MATCH', `Nothing on the menu matches "${clip(body.query, 60)}".`, { categories: cats, say: `Sorry, I couldn't find that. We have ${cats.slice(0, 6).join(', ')}.` });
+                    break;
+                }
+                done({ items: scored.map((x) => itemSummary(x.i)) });
+                break;
+            }
+
+            case 'get_item': {
+                const item = menu.byId.get(body.menu_item_id);
+                if (!item) { refuse('ITEM_NOT_FOUND', 'That item is not available right now.'); break; }
+                done({
+                    item: {
+                        ...itemSummary(item),
+                        description: item.description || '',
+                        allergens: Array.isArray(item.allergens) ? item.allergens : [],
+                        allergen_note: 'Read the listed allergens only. Never say an item is allergen-free; for a medical allergy, offer to transfer to staff.',
+                        option_groups: (item.customization_options || []).filter((g) => (g.options || []).length).map(groupForAgent),
+                    },
+                });
+                break;
+            }
+
+            case 'add_item': {
+                const item = menu.byId.get(body.menu_item_id);
+                if (!item) { refuse('ITEM_NOT_FOUND', "Sorry, that item isn't available right now."); break; }
+                if (s.pending_item?.queue?.length) {
+                    const cur = menu.byId.get(s.pending_item.menu_item_id);
+                    if (cur) { refuse('OPTIONS_PENDING', `Let's finish the ${cur.name} first.`, { question: nextQuestion(cur, s.pending_item) }); break; }
+                }
+                const { pending, ignored } = startPending(item, body.quantity, body.options);
+                s.pending_item = pending;
+                note = `${pending.quantity}x ${item.name}`;
+                if (pending.queue.length) {
+                    const question = nextQuestion(item, pending);
+                    done({ added: false, needs_choice: question, ignored_options: ignored, say: question.say });
+                } else {
+                    const added = finishPending(s, item);
+                    const q = quote(s, restaurant);
+                    done({ added: true, line: added, ignored_options: ignored, basket: basketView(s), quote: q, say: `Added ${added.quantity} ${added.name}${added.options ? ` (${added.options})` : ''}. Anything else?` });
+                }
+                break;
+            }
+
+            case 'choose_option': {
+                const p = s.pending_item;
+                const item = p && menu.byId.get(p.menu_item_id);
+                if (!p || !p.queue?.length || !item) { s.pending_item = null; refuse('NOTHING_PENDING', 'There is no question waiting for an answer.'); break; }
+                const step = p.queue[0];
+                const group = findGroup(item, step);
+                if (!group) { p.queue.shift(); }
+                else {
+                    const option = matchOption(group, body.option);
+                    if (!option) {
+                        refuse('OPTION_NOT_FOUND', `"${clip(body.option, 40)}" isn't one of the choices.`, { question: nextQuestion(item, p) });
+                        break;
+                    }
+                    p.queue.shift();
+                    recordChoice(p, item, step, option);
+                    note = `${group.name}=${option.label}`;
+                }
+                if (p.queue.length) {
+                    const question = nextQuestion(item, p);
+                    done({ added: false, needs_choice: question, say: question.say });
+                } else {
+                    const added = finishPending(s, item);
+                    const q = quote(s, restaurant);
+                    done({ added: true, line: added, basket: basketView(s), quote: q, say: `Added ${added.quantity} ${added.name}${added.options ? ` (${added.options})` : ''}. Anything else?` });
+                }
+                break;
+            }
+
+            case 'cancel_pending':
+                s.pending_item = null;
+                done({ say: 'No problem, I have left that one out.' });
+                break;
+
+            case 'remove_item':
+            case 'set_quantity': {
+                const cart = [...(s.cart || [])];
+                const idx = body.line ? Number(body.line) - 1 : cart.findIndex((l) => l.menu_item_id === body.menu_item_id);
+                if (!(idx >= 0 && cart[idx])) { refuse('LINE_NOT_FOUND', "I couldn't find that in the basket.", { basket: basketView(s) }); break; }
+                if (action === 'remove_item') {
+                    const n = Math.round(Number(body.quantity) || 0);
+                    if (n > 0 && cart[idx].quantity > n) cart[idx].quantity -= n; else cart.splice(idx, 1);
+                } else {
+                    const q = Math.round(Number(body.quantity) || 0);
+                    if (q <= 0) cart.splice(idx, 1); else cart[idx].quantity = Math.min(MAX_QTY, q);
+                }
+                s.cart = cart;
+                const q = quote(s, restaurant);
+                done({ basket: basketView(s), quote: q, say: basketSay(s, q) });
+                break;
+            }
+
+            case 'clear_basket':
+                s.cart = []; s.pending_item = null;
+                done({ basket: [], say: 'I have cleared the basket.' });
+                break;
+
+            case 'get_basket': {
+                const dropped = repriceCart(s, menu);
+                const q = quote(s, restaurant);
+                done({ basket: basketView(s), quote: q, removed_unavailable: dropped, say: (dropped.length ? `${dropped.join(', ')} is no longer available, so I took it off. ` : '') + basketSay(s, q) });
+                break;
+            }
+
+            case 'set_order_type': {
+                const t = body.order_type;
+                if (!['delivery', 'collection'].includes(t)) { refuse('BAD_ORDER_TYPE', 'order_type must be delivery or collection.'); break; }
+                if (t === 'collection' && !restaurant.collection_enabled) { refuse('NO_COLLECTION', 'Sorry, we only do delivery.'); break; }
+                const svc = hoursClosedReason(restaurant, t);
+                s.order_type = t;
+                note = t;
+                done({ order_type: t, service_note: svc || undefined, say: svc || (t === 'delivery' ? "Delivery it is. What's the postcode?" : 'Collection, great.') });
+                break;
+            }
+
+            case 'check_delivery': {
+                const pc = normPostcode(body.postcode);
+                if (!pc) { refuse('BAD_POSTCODE', "That doesn't sound like a full UK postcode.", { say: 'Sorry, could you tell me the full postcode again?' }); break; }
+                const [geo, zones] = await Promise.all([
+                    geocodePostcode(pc),
+                    db.DeliveryZone.filter({ restaurant_id: restaurant.id, is_active: true }).catch(() => []),
+                ]);
+                if (geo.valid === false) { refuse('UNKNOWN_POSTCODE', `${pc} isn't a postcode I can find.`, { say: `Sorry, I can't find ${pc}. Could you check it?` }); break; }
+                const address = `${body.address || s.delivery_address || ''} ${pc}`.trim();
+                let dq;
+                if (!zones?.length) {
+                    dq = { postcode: pc, zones_configured: false, available: true, fee: restaurant.delivery_fee ?? 0, minimum_order: restaurant.minimum_order ?? 0, eta: restaurant.delivery_time || null };
+                } else {
+                    const zone = matchZone(zones, geo.valid ? { lat: geo.lat, lng: geo.lng } : null, address);
+                    dq = zone
+                        ? { postcode: pc, zones_configured: true, available: true, fee: zone.delivery_fee, minimum_order: zone.min_order_value || 0, zone_name: zone.name, eta: zone.estimated_delivery_time || null }
+                        : { postcode: pc, zones_configured: true, available: false };
+                }
+                s.delivery_postcode = pc;
+                s.delivery_quote = dq;
+                if (body.address) s.delivery_address = clip(body.address, 300);
+                note = `${pc} -> ${dq.available ? 'yes' : 'no'}`;
+                if (!dq.available) { refuse('OUT_OF_AREA', `Sorry, we don't deliver to ${pc}.`, { delivery: dq, collection_enabled: !!restaurant.collection_enabled }); break; }
+                const q = quote(s, restaurant);
+                done({ delivery: dq, quote: q, say: `Yes, we deliver to ${pc}. Delivery is ${money(q.order_type === 'delivery' ? q.delivery_fee : dq.fee)}${dq.minimum_order ? `, minimum order ${money(dq.minimum_order)}` : ''}.` });
+                break;
+            }
+
+            case 'set_customer': {
+                if (body.name) s.customer_name = clip(body.name, 80);
+                if (body.phone) {
+                    const d = phoneDigits(body.phone);
+                    if (!d) { refuse('BAD_PHONE', "That phone number doesn't look right."); break; }
+                    s.customer_phone = d;
+                }
+                if (body.address) s.delivery_address = clip(body.address, 300);
+                if (body.postcode) {
+                    const pc = normPostcode(body.postcode);
+                    if (pc && pc !== s.delivery_postcode) { s.delivery_postcode = pc; s.delivery_quote = null; }
+                }
+                done({ customer: { name: s.customer_name || null, phone: s.customer_phone ? localPhone(s.customer_phone) : null, address: s.delivery_address || null, postcode: s.delivery_postcode || null }, say: 'Thanks.' });
+                break;
+            }
+
+            case 'send_payment_link': {
+                const r = readiness(s, restaurant, menu);
+                if (!r.q) { refuse(r.code, r.error, r.question ? { question: r.question } : {}); break; }
+                if (s.order_type === 'delivery' && !s.delivery_address) { refuse('ADDRESS_NEEDED', "What's the delivery address?"); break; }
+                s.checkout_token = randomToken();
+                s.checkout_token_expires_at = new Date(Date.now() + CHECKOUT_TTL_MS).toISOString();
+                s.state = 'awaiting_payment';
+                const url = `${APP_URL}/AiCheckout?t=${s.checkout_token}`;
+                let smsSent = false;
+                if (body.send_sms !== false && s.customer_phone) {
+                    const text = `${restaurant.name}: your order is ${money(r.q.total)}. Tap to pay and confirm: ${url} (link works for 2 hours)`;
+                    try {
+                        const res = await base44.asServiceRole.functions.invoke('sendSMS', {
+                            to: localPhone(s.customer_phone), message: text, restaurantId: restaurant.id,
+                            restaurantName: restaurant.name, smsType: 'ai_payment_link',
+                        });
+                        smsSent = res?.data?.success === true;
+                    } catch (e) { console.warn(`${LOG} pay link SMS failed: ${e?.message}`); }
+                }
+                note = smsSent ? 'sms sent' : 'link only';
+                done({ checkout_url: url, expires_at: s.checkout_token_expires_at, sms_sent: smsSent, quote: r.q,
+                    say: smsSent ? `I've texted you a link to pay ${money(r.q.total)}. Your order goes through as soon as you pay.` : `Your total is ${money(r.q.total)}. Here's your link to pay.` });
+                break;
+            }
+
+            case 'place_cash_order': {
+                if (restaurant.accepts_cash_on_delivery === false) { refuse('NO_CASH', "Sorry, we can't take cash for this order. I can send you a payment link instead."); break; }
+                if (s.order_id) { done({ order_id: s.order_id, duplicate: true, say: 'Your order is already placed.' }); break; }
+                const r = readiness(s, restaurant, menu);
+                if (!r.q) { refuse(r.code, r.error, r.question ? { question: r.question } : {}); break; }
+                if (!s.customer_name) { refuse('NAME_NEEDED', 'Can I take a name for the order?'); break; }
+                if (!s.customer_phone) { refuse('PHONE_NEEDED', "What's the best phone number for the order?"); break; }
+                if (s.order_type === 'delivery' && !s.delivery_address) { refuse('ADDRESS_NEEDED', "What's the delivery address?"); break; }
+
+                const q = r.q;
+                const address = s.order_type === 'delivery'
+                    ? clip(`${s.delivery_address}${s.delivery_postcode && !String(s.delivery_address).toUpperCase().includes(s.delivery_postcode.replace(' ', '')) && !String(s.delivery_address).toUpperCase().includes(s.delivery_postcode) ? `, ${s.delivery_postcode}` : ''}`, 500)
+                    : '';
+                const channelWord = s.channel === 'phone' ? 'phone' : s.channel === 'whatsapp' ? 'WhatsApp' : 'chat';
+                // Same shape as src/hooks/useCreateOrder.js builds for the website checkout
+                const orderData = {
+                    order_number: s.order_type === 'collection' ? `C-${Date.now().toString().slice(-6)}` : null,
+                    restaurant_id: restaurant.id,
+                    restaurant_name: restaurant.name,
+                    items: (s.cart || []).map((l) => ({
+                        menu_item_id: l.menu_item_id, name: l.name, price: l.price, quantity: l.quantity,
+                        customizations: l.customizations || {}, itemQuantities: l.itemQuantities || {},
+                    })),
+                    subtotal: q.subtotal,
+                    delivery_fee: q.delivery_fee,
+                    small_order_surcharge: q.small_order_surcharge,
+                    discount: 0,
+                    coupon_codes: [],
+                    promotion_codes: [],
+                    total: q.total,
+                    payment_method: 'cash',
+                    order_type: s.order_type,
+                    status: 'pending',
+                    delivery_address: address,
+                    delivery_coordinates: null,
+                    phone: localPhone(s.customer_phone),
+                    notes: clip(`AI ${channelWord} order.${body.notes ? ` ${String(body.notes).replace(/[<>]/g, '')}` : ''}`, 500),
+                    estimated_delivery: s.order_type === 'collection' ? '15-20 minutes' : '30-45 minutes',
+                    is_scheduled: false,
+                    scheduled_for: null,
+                    guest_name: s.customer_name,
+                    marketing_opt_in: { sms: false, email: false, whatsapp: false },
+                };
+                if (body.dry_run === true) {
+                    note = 'dry run';
+                    done({ dry_run: true, order_data: orderData, quote: q, say: `That's ${money(q.total)}, paid in cash on ${s.order_type}.` });
+                    break;
+                }
+                const res = await base44.asServiceRole.functions.invoke('verifyAndCreateOrder', {
+                    orderData, paymentIntentId: null, idempotency_key: `ai_${s.id}`,
+                });
+                const out = res?.data || {};
+                if (!out.success || !out.order_id) {
+                    console.error(`${LOG} order refused session=${s.id} code=${out.code} ${out.error}`);
+                    refuse(out.code || 'ORDER_FAILED', 'Sorry, something went wrong placing the order.', { detail: out.error, say: "Sorry, I couldn't place that order. Let me put you through to the team." });
+                    break;
+                }
+                await db.Order.update(out.order_id, { ai_channel: s.channel === 'test' ? 'web_chat' : s.channel, ai_session_id: s.id })
+                    .catch((e) => console.warn(`${LOG} could not tag order ${out.order_id}: ${e?.message}`));
+                s.order_id = out.order_id;
+                s.state = 'ordered';
+                s.checkout_token = null;
+                note = `order ${out.order_id}`;
+                const eta = s.order_type === 'collection' ? 'about 15 to 20 minutes' : (s.delivery_quote?.eta || restaurant.delivery_time || '30 to 45 minutes');
+                done({ order_id: out.order_id, order_number: out.order_number || null, total: q.total, eta,
+                    say: `Your order is placed${out.order_number ? `, number ${out.order_number}` : ''}. It's ${money(q.total)} in cash, ready in ${eta}. Thank you!` });
+                break;
+            }
+
+            case 'handoff':
+                s.state = 'handoff';
+                s.handoff_reason = clip(body.reason || 'customer asked for a person', 200);
+                note = s.handoff_reason;
+                done({ transfer_to: restaurant.alert_phone ? localPhone(phoneDigits(restaurant.alert_phone)) : null,
+                    say: 'No problem, let me put you through to the team.' });
+                break;
+
+            case 'end_session':
+                if (s.state === 'active' || s.state === 'awaiting_payment') s.state = s.order_id ? 'ordered' : 'closed';
+                if (!s.order_id && s.state !== 'awaiting_payment') s.state = 'closed';
+                s.ended_at = nowIso();
+                note = clip(body.outcome || '', 80);
+                done({ state: s.state });
+                break;
+
+            default:
+                return fail('UNKNOWN_ACTION', `Unknown action "${action}".`, {}, 400);
+        }
+
+        await saveSession(db, before, s, action, resultOk, note).catch((e) => console.error(`${LOG} save failed: ${e?.message}`));
+        return result;
+    } catch (e) {
+        console.error(`${LOG} ${action} failed:`, e?.message, e?.stack);
+        return fail('INTERNAL', 'Something went wrong.', { say: 'Sorry, something went wrong on our side.' }, 500);
+    }
+});
+
+/** What an agent needs at the start of (or back in) a conversation. */
+async function contextOf(db, session, restaurant) {
+    const closed = restaurantClosedReason(restaurant);
+    let returning = null;
+    if (session.customer_phone) {
+        const local = localPhone(session.customer_phone);
+        for (const p of [local, `+${session.customer_phone}`, session.customer_phone]) {
+            const rows = await db.Order.filter({ restaurant_id: restaurant.id, phone: p }, '-created_date', 1).catch(() => []);
+            if (rows?.[0]) {
+                const o = rows[0];
+                returning = {
+                    name: o.guest_name || null,
+                    last_order_type: o.order_type || null,
+                    last_delivery_address: o.order_type === 'delivery' ? o.delivery_address || null : null,
+                    last_items: (o.items || []).slice(0, 8).map((i) => `${i.quantity || 1}x ${i.name}`),
+                    last_order_date: o.created_date || null,
+                };
+                break;
+            }
+        }
+    }
+    const q = quote(session, restaurant);
+    return {
+        restaurant: {
+            id: restaurant.id,
+            name: restaurant.name,
+            open: !closed,
+            closed_reason: closed || null,
+            delivery_open: !closed && !hoursClosedReason(restaurant, 'delivery'),
+            collection_enabled: !!restaurant.collection_enabled,
+            collection_open: !!restaurant.collection_enabled && !closed && !hoursClosedReason(restaurant, 'collection'),
+            accepts_cash: restaurant.accepts_cash_on_delivery !== false,
+            delivery_fee: round2(restaurant.delivery_fee ?? 0),
+            minimum_order: round2(restaurant.minimum_order ?? 0),
+            delivery_time: restaurant.delivery_time || '30-45 mins',
+            address: restaurant.address || null,
+        },
+        session: {
+            id: session.id, channel: session.channel, state: session.state,
+            customer_name: session.customer_name || null,
+            customer_phone: session.customer_phone ? localPhone(session.customer_phone) : null,
+            order_type: session.order_type || null,
+            delivery_postcode: session.delivery_postcode || null,
+        },
+        basket: basketView(session),
+        quote: q,
+        returning_customer: returning,
+        say: closed ? `Thanks for calling ${restaurant.name}. ${closed}` : `Thanks for calling ${restaurant.name}. What can I get you?`,
+    };
+}
