@@ -187,7 +187,7 @@ function scoreItem(item, qTokens, qPhrase) {
 function itemSummary(item) {
     return {
         menu_item_id: item.id,
-        name: item.name,
+        name: String(item.name || '').trim(),
         category: item.category || 'Other',
         price: round2(item.price),
         description: item.description ? clip(item.description, 160) : undefined,
@@ -326,7 +326,7 @@ function finishPending(session, item) {
     const { serverPrice } = calcItemServerPrice(item, { customizations: p.customizations || {}, itemQuantities: p.itemQuantities || {} });
     addLine(session, {
         menu_item_id: item.id,
-        name: item.name,
+        name: String(item.name || '').trim(),
         price: round2(serverPrice),
         quantity: p.quantity,
         image_url: item.image_url || undefined,
@@ -335,7 +335,7 @@ function finishPending(session, item) {
         options_summary: (p.summary || []).join(', '),
     });
     session.pending_item = null;
-    return { quantity: p.quantity, name: item.name, unit_price: round2(serverPrice), options: (p.summary || []).join(', ') };
+    return { quantity: p.quantity, name: String(item.name || '').trim(), unit_price: round2(serverPrice), options: (p.summary || []).join(', ') };
 }
 
 // ── Pricing: COPY of calcItemServerPrice in verifyAndCreateOrder (online prices) ──
@@ -415,7 +415,7 @@ function repriceCart(session, menu) {
         const item = menu.byId.get(l.menu_item_id);
         if (!item) { dropped.push(l.name); continue; }
         const { serverPrice } = calcItemServerPrice(item, l);
-        cart.push({ ...l, name: item.name, price: round2(serverPrice) });
+        cart.push({ ...l, name: String(item.name || '').trim(), price: round2(serverPrice) });
     }
     session.cart = cart;
     return dropped;
