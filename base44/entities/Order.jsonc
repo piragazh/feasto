@@ -17,6 +17,19 @@
       "default": "online",
       "description": "Channel through which the order was placed."
     },
+    "ai_channel": {
+      "type": "string",
+      "enum": [
+        "phone",
+        "whatsapp",
+        "web_chat"
+      ],
+      "description": "Set when an AI agent took this order (aiOrderingCore). order_source stays 'online' so every existing screen, report and print rule treats it as an online order."
+    },
+    "ai_session_id": {
+      "type": "string",
+      "description": "AiOrderSession the order came from"
+    },
     "covers": {
       "type": "number",
       "description": "How many people are on the table. Used for seat numbering and for sales-per-cover."
