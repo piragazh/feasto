@@ -529,6 +529,23 @@ function quote(session, restaurant) {
     };
 }
 
+const feeSay = (n) => (Number(n) > 0 ? money(n) : 'free');
+
+/** "25 - 30" / "30-45 mins" -> "about 25 to 30 minutes" for reading out. */
+function etaSay(raw) {
+    const m = /(\d+)\s*(?:-|to|–)\s*(\d+)/.exec(String(raw || ''));
+    return m ? `about ${m[1]} to ${m[2]} minutes` : String(raw || 'about 30 to 45 minutes');
+}
+
+/** Delivery fee and minimum in words, including the tiered small-order rule Checkout applies. */
+function deliveryTermsSay(dq, restaurant) {
+    const t = restaurant?.tiered_delivery;
+    if (dq.zones_configured && t?.enabled && (t.lower_minimum ?? 0) > 0 && (dq.minimum_order || 0) > t.lower_minimum) {
+        return `Delivery is ${feeSay(dq.fee)} on orders over ${money(dq.minimum_order)}, or ${feeSay(t.lower_minimum_fee ?? 0)} from ${money(t.lower_minimum)}.`;
+    }
+    return `Delivery is ${feeSay(dq.fee)}${dq.minimum_order ? `, with a minimum order of ${money(dq.minimum_order)}` : ''}.`;
+}
+
 function basketView(session) {
     return (session.cart || []).map((l, i) => ({
         line: i + 1, menu_item_id: l.menu_item_id, name: l.name, quantity: l.quantity,
@@ -541,6 +558,7 @@ function basketSay(session, q) {
     if (!cart.length) return 'Your basket is empty.';
     const lines = cart.map((l) => `${l.quantity} ${l.name}${l.options_summary ? ` (${l.options_summary})` : ''}`).join(', ');
     const fee = q.order_type === 'delivery' && q.delivery_fee ? `, plus ${money(q.delivery_fee)} delivery` : '';
+    if (!fee && !q.small_order_surcharge) return `You've got ${lines}. That's ${money(q.total)} in total.`;
     return `You've got ${lines}. That's ${money(q.subtotal)}${fee}${q.small_order_surcharge ? ` and a ${money(q.small_order_surcharge)} service charge` : ''}, ${money(q.total)} in total.`;
 }
 
@@ -732,6 +750,11 @@ Deno.serve(async (req) => {
         const before = (await db.AiOrderSession.filter({ id: body.session_id }))[0];
         if (!before) return fail('SESSION_NOT_FOUND', 'Session not found.');
         if (['closed'].includes(before.state) && action !== 'get_context') return fail('SESSION_CLOSED', 'This session has ended.');
+        // Once an order exists (cash, or a paid link linked by aiOrderLink) the basket is frozen
+        const CHANGES_ORDER = ['add_item', 'choose_option', 'cancel_pending', 'remove_item', 'set_quantity', 'clear_basket', 'set_order_type', 'check_delivery', 'send_payment_link'];
+        if (before.order_id && CHANGES_ORDER.includes(action)) {
+            return fail('ALREADY_ORDERED', 'This order has already been placed.', { order_id: before.order_id, say: 'Your order is already placed. For any changes, let me put you through to the team.' });
+        }
         const restaurant = (await db.Restaurant.filter({ id: before.restaurant_id }))[0];
         if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
 
@@ -900,7 +923,7 @@ Deno.serve(async (req) => {
                 note = `${pc} -> ${dq.available ? 'yes' : 'no'}`;
                 if (!dq.available) { refuse('OUT_OF_AREA', `Sorry, we don't deliver to ${pc}.`, { delivery: dq, collection_enabled: !!restaurant.collection_enabled }); break; }
                 const q = quote(s, restaurant);
-                done({ delivery: dq, quote: q, say: `Yes, we deliver to ${pc}. Delivery is ${money(q.order_type === 'delivery' ? q.delivery_fee : dq.fee)}${dq.minimum_order ? `, minimum order ${money(dq.minimum_order)}` : ''}.` });
+                done({ delivery: dq, quote: q, say: `Yes, we deliver to ${pc}. ${deliveryTermsSay(dq, restaurant)}` });
                 break;
             }
 
@@ -1008,7 +1031,7 @@ Deno.serve(async (req) => {
                 s.state = 'ordered';
                 s.checkout_token = null;
                 note = `order ${out.order_id}`;
-                const eta = s.order_type === 'collection' ? 'about 15 to 20 minutes' : (s.delivery_quote?.eta || restaurant.delivery_time || '30 to 45 minutes');
+                const eta = s.order_type === 'collection' ? 'about 15 to 20 minutes' : etaSay(s.delivery_quote?.eta || restaurant.delivery_time || '30-45');
                 done({ order_id: out.order_id, order_number: out.order_number || null, total: q.total, eta,
                     say: `Your order is placed${out.order_number ? `, number ${out.order_number}` : ''}. It's ${money(q.total)} in cash, ready in ${eta}. Thank you!` });
                 break;
