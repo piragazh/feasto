@@ -1010,7 +1010,7 @@ Deno.serve(async (req) => {
                     } catch (e) { console.warn(`${LOG} pay link SMS failed: ${e?.message}`); }
                 }
                 note = smsSent ? 'sms sent' : 'link only';
-                done({ checkout_url: url, expires_at: s.checkout_token_expires_at, sms_sent: smsSent, quote: r.q,
+                done({ checkout_url: url, expires_at: s.checkout_token_expires_at, sms_sent: smsSent, quote: r.q, basket: basketView(s),
                     say: smsSent ? `I've texted you a link to pay ${money(r.q.total)}. Your order goes through as soon as you pay.` : `Your total is ${money(r.q.total)}. Here's your link to pay.` });
                 break;
             }
