@@ -1,0 +1,66 @@
+{
+  "description": "A phone number (or other channel address) that an AI ordering agent answers for one restaurant. aiOrderingCore start_session looks up the CALLED number here to know which restaurant's menu and settings to load. Managed from Super Admin.",
+  "name": "AiChannelNumber",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "phone",
+        "whatsapp",
+        "web_chat"
+      ],
+      "default": "phone"
+    },
+    "number": {
+      "type": "string",
+      "description": "E.164 digits with no + (e.g. 447700900123)"
+    },
+    "label": {
+      "type": "string",
+      "description": "Friendly name, e.g. 'Main line AI'"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Telephony or voice provider, e.g. twilio, vapi, retell"
+    },
+    "provider_ref": {
+      "type": "string",
+      "description": "The provider's own id for this number"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "channel",
+    "number"
+  ],
+  "type": "object",
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

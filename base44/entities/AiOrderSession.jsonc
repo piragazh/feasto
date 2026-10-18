@@ -1,0 +1,171 @@
+{
+  "description": "One AI ordering session (a phone call, a chat) between one customer and one restaurant, for ANY channel. Holds the server-side basket used by aiOrderingCore; prices in it are always copied from MenuItem, never from the AI. WhatsApp keeps WaConversation for now and moves onto this later.",
+  "name": "AiOrderSession",
+  "properties": {
+    "channel": {
+      "type": "string",
+      "enum": [
+        "phone",
+        "whatsapp",
+        "web_chat",
+        "test"
+      ],
+      "description": "Where the conversation is happening"
+    },
+    "external_id": {
+      "type": "string",
+      "description": "The channel's own id for this conversation, e.g. the voice platform's call id. Unique per channel; repeat calls to start_session with it return the same session."
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Caller or chat number, E.164 digits with no +"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "order_type": {
+      "type": "string",
+      "enum": [
+        "delivery",
+        "collection"
+      ]
+    },
+    "delivery_address": {
+      "type": "string"
+    },
+    "delivery_postcode": {
+      "type": "string"
+    },
+    "delivery_quote": {
+      "type": "object",
+      "description": "Result of the last delivery check: { available, fee, minimum_order, zone_name, eta, postcode }"
+    },
+    "cart": {
+      "description": "Same line shape as the website cart in localStorage, so checkout can reuse it unchanged.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "menu_item_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "description": "Unit price including chosen options, calculated server-side"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "customizations": {
+            "type": "object"
+          },
+          "itemQuantities": {
+            "type": "object"
+          },
+          "options_summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "pending_item": {
+      "type": "object",
+      "description": "An item waiting on required option choices: { menu_item_id, quantity, queue: [{ group_name, parent }], customizations, itemQuantities, extra_price, summary }"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "active",
+        "awaiting_payment",
+        "ordered",
+        "handoff",
+        "closed"
+      ],
+      "default": "active"
+    },
+    "checkout_token": {
+      "type": "string",
+      "description": "Random token in the pay link. Lets the public checkout page load this basket and nothing else."
+    },
+    "checkout_token_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Order placed from this session"
+    },
+    "handoff_reason": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_activity_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_log": {
+      "type": "array",
+      "description": "Last 50 core actions with their outcome, for debugging a session",
+      "items": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "channel",
+    "restaurant_id"
+  ],
+  "type": "object",
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
