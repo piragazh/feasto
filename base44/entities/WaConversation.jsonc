@@ -1,9 +1,13 @@
 {
-  "description": "A WhatsApp ordering chat between one customer and one restaurant number. Holds the server-side cart; prices in it are always copied from MenuItem, never from the AI.",
+  "description": "A WhatsApp ordering chat between one customer and one restaurant number. The real basket, option questions, prices and checkout live in the linked AiOrderSession (aiOrderingCore); this row holds the chat itself and a display copy of the basket for the staff inbox.",
   "name": "WaConversation",
   "properties": {
+    "ai_session_id": {
+      "description": "The AiOrderSession that owns this chat's current basket. A new one is started after each order.",
+      "type": "string"
+    },
     "cart": {
-      "description": "Same line shape as the website cart in localStorage, so checkout can reuse it unchanged.",
+      "description": "Display copy of the AiOrderSession basket, for the staff inbox. Never used for pricing or checkout.",
       "items": {
         "properties": {
           "customizations": {
@@ -96,7 +100,7 @@
       "type": "string"
     },
     "pending_item": {
-      "description": "An item waiting on required option choices: { menu_item_id, quantity, queue: [{ group_name, parent }], customizations, extra_price, summary }",
+      "description": "The option question last put to the customer: { menu_item_id, item_name, group, options: [label] }. The core holds the real state; this lets a tap or a typed label be matched.",
       "type": "object"
     },
     "restaurant_id": {
