@@ -24,7 +24,8 @@
  *   clear_basket       { session_id }
  *   import_basket      { session_id, lines }                replace the basket with the website cart (web chat):
  *                      menu lines re-priced from the menu, deals kept exactly as the website built them
- *   get_basket         { session_id }                       lines + full price quote
+ *   get_basket         { session_id, full? }                lines + full price quote; full: also cart_lines in the
+ *                      website cart shape (web chat writes them straight into the page's basket)
  *   set_order_type     { session_id, order_type }           delivery | collection
  *   check_delivery     { session_id, postcode, address? }   zone, fee, minimum
  *   set_customer       { session_id, name?, phone?, address?, postcode? }
@@ -568,6 +569,18 @@ function summarizeCustomizations(c) {
 
 const DEAL_FLAGS = ['is_deal', 'is_meal_deal', 'is_category_deal'];
 
+/** Basket lines exactly as the website cart (localStorage 'cart') stores them. */
+function webLines(session) {
+    return (session.cart || []).map((l) => {
+        if (l.external) { const { external: _e, ...rest } = l; return rest; }
+        return {
+            menu_item_id: l.menu_item_id, name: l.name, price: l.price, quantity: l.quantity,
+            image_url: l.image_url, customizations: l.customizations || {}, itemQuantities: l.itemQuantities || {},
+            options_summary: l.options_summary || '',
+        };
+    });
+}
+
 function basketView(session) {
     return (session.cart || []).map((l, i) => ({
         line: i + 1, menu_item_id: l.menu_item_id, name: l.name, quantity: l.quantity,
@@ -1003,7 +1016,8 @@ Deno.serve(async (req) => {
             case 'get_basket': {
                 const dropped = repriceCart(s, menu);
                 const q = quote(s, restaurant);
-                done({ basket: basketView(s), quote: q, removed_unavailable: dropped, pending: pendingQuestion(s, menu), say: (dropped.length ? `${dropped.join(', ')} is no longer available, so I took it off. ` : '') + basketSay(s, q) });
+                done({ basket: basketView(s), quote: q, removed_unavailable: dropped, pending: pendingQuestion(s, menu),
+                    ...(body.full === true ? { cart_lines: webLines(s) } : {}), say: (dropped.length ? `${dropped.join(', ')} is no longer available, so I took it off. ` : '') + basketSay(s, q) });
                 break;
             }
 
@@ -1216,7 +1230,8 @@ Deno.serve(async (req) => {
             }
             note = steps.map((x) => x?.action).join(',');
             resultOk = results.every((r) => r.ok);
-            response = ok({ results, basket: basketView(s), quote: quote(s, restaurant), pending: pendingQuestion(s, menu) });
+            response = ok({ results, basket: basketView(s), quote: quote(s, restaurant), pending: pendingQuestion(s, menu),
+                ...(body.full === true ? { cart_lines: webLines(s) } : {}) });
         } else {
             const r = await run(action, body);
             response = Response.json(r, { status: r.code === 'UNKNOWN_ACTION' ? 400 : 200 });
