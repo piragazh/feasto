@@ -635,6 +635,60 @@ function readInbound(m) {
 
 const GREETING = /^(hi|hii+|hello|hey|hiya|yo|good (morning|afternoon|evening)|salam|assalam.*|start|order)[!. ]*$/i;
 
+// ── CRM: WhatsApp marketing opt-in / opt-out ──────────────────────────────────────
+// Marketing templates carry "Stop offers" (STOP_OFFERS) and opt-in messages "Yes, send offers"
+// (YES_OFFERS) quick-reply buttons; the same words typed also work. Meta requires the customer's
+// own opt-in for WhatsApp marketing, so this is the only way WhatsApp consent is granted.
+const OPT_OUT = /^(stop offers|stop all|stopall|unsubscribe|no more offers|opt out)[!. ]*$/i;
+const OPT_IN = /^(yes,? send offers|yes offers|send me offers|offers on|opt in)[!. ]*$/i;
+
+async function crmSha256(s) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function handleMarketingKeyword(ctx, input) {
+    const { db, convo, channel } = ctx;
+    const id = input.id || '';
+    const text = String(input.text || '').trim();
+    const optOut = id === 'STOP_OFFERS' || OPT_OUT.test(text) || (text.toLowerCase() === 'stop' && !convo.pending_item?.menu_item_id);
+    const optIn = id === 'YES_OFFERS' || OPT_IN.test(text);
+    if (!optOut && !optIn) return false;
+
+    const phone = `+${String(convo.customer_wa_id || '').replace(/\D/g, '')}`;
+    const at = new Date().toISOString();
+    try {
+        const key_hash = await crmSha256(phone);
+        if (optOut && !(await db.Suppression.filter({ key_hash, channel: 'whatsapp' })).length) {
+            await db.Suppression.create({
+                key_hash, key_type: 'phone', key_hint: `${phone.slice(0, 5)}*****${phone.slice(-4)}`,
+                channel: 'whatsapp', scope: 'global', reason: 'stop_reply', restaurant_id: channel.restaurant_id, source_ref: 'whatsapp_chat',
+            });
+        }
+        if (optIn) {
+            // Opting back in lifts an earlier WhatsApp opt-out
+            for (const s of await db.Suppression.filter({ key_hash, channel: 'whatsapp' })) await db.Suppression.delete(s.id);
+        }
+        const profiles = await db.CustomerProfile.filter({ restaurant_id: channel.restaurant_id, phone_e164: phone });
+        for (const p of profiles) {
+            await db.ConsentRecord.create({
+                contact_id: p.contact_id || null, profile_id: p.id, restaurant_id: p.restaurant_id, scope: p.restaurant_id,
+                channel: 'whatsapp', action: optIn ? 'grant' : 'withdraw', method: optIn ? 'whatsapp_optin' : 'stop_reply',
+                wording_version: 'whatsapp_chat_v1', source_ref: convo.id, at,
+            });
+            await db.CustomerProfile.update(p.id, { consent: { ...(p.consent || {}), whatsapp: optIn }, consent_updated_at: at });
+        }
+    } catch (e) {
+        console.warn('[whatsappWebhook] marketing keyword handling failed:', e?.message);
+    }
+    const name = channel.restaurant_name || 'us';
+    const reply = optIn
+        ? `Thanks! You'll now get offers from ${name} on WhatsApp. Reply "Stop offers" any time to stop.`
+        : `Done — you won't get any more offers from ${name} on WhatsApp. You'll still get updates about orders you place.`;
+    await send(ctx, msg.text(reply), reply, 'system');
+    return true;
+}
+
 async function handleMessage(ctx, m) {
     const { convo, channel, isNew } = ctx;
     const input = readInbound(m);
@@ -642,6 +696,9 @@ async function handleMessage(ctx, m) {
     if (input.unsupported) {
         return send(ctx, msg.text('Sorry, I can only read text messages. Type what you would like, or send "menu".'), 'unsupported type', 'system');
     }
+
+    // Marketing opt-in / opt-out works even when staff have taken over the chat or the AI is off.
+    if (await handleMarketingKeyword(ctx, input)) return;
 
     // Staff are handling this chat, or the restaurant switched the AI off: just log it.
     const aiOn = channel.ai_enabled !== false;
