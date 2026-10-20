@@ -43,7 +43,8 @@ const CustomerAnalyticsDashboard = React.lazy(() => import('@/components/superad
 const LiveOrdersCommand = React.lazy(() => import('@/components/superadmin/LiveOrdersCommand'));
 const DeliveryHeatmap = React.lazy(() => import('@/components/superadmin/DeliveryHeatmap'));
 const MessageTemplates = React.lazy(() => import('@/components/superadmin/MessageTemplates'));
-import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap, FolderOpen, MapPin, FileText } from 'lucide-react';
+const AiOrderingAdmin = React.lazy(() => import('@/components/superadmin/AiOrderingAdmin'));
+import { Shield, Activity, MessageSquare, DollarSign, Settings, Users, Truck, LayoutDashboard, Store, ChefHat, Globe, CreditCard, Star, Tag, Award, Upload, Gift, Monitor, Clock, AlertCircle, Scale, Heart, Zap, FolderOpen, MapPin, FileText, Bot } from 'lucide-react';
 import { createPageUrl } from '@/utils/index.ts';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
 
@@ -127,6 +128,7 @@ function SuperAdminInner() {
                 { id: 'restaurants', label: 'Restaurants', icon: Store },
                 { id: 'messages', label: 'Messages', icon: MessageSquare },
                 { id: 'message-templates', label: 'Message Templates', icon: FileText },
+                { id: 'ai-ordering', label: 'AI Ordering', icon: Bot },
             ]
         },
         {
@@ -239,6 +241,7 @@ function SuperAdminInner() {
                     {activeTab === 'restaurants' && <RestaurantManagement />}
                     {activeTab === 'messages' && <MessagingCenter />}
                     {activeTab === 'message-templates' && <MessageTemplates />}
+                    {activeTab === 'ai-ordering' && <AiOrderingAdmin />}
                     {activeTab === 'commission' && <CommissionManagement />}
                     {activeTab === 'monitoring' && <SystemMonitoring />}
                     {activeTab === 'failures' && <FailureMonitoringDashboard />}
