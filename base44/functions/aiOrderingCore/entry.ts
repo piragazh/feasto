@@ -22,6 +22,8 @@
  *   remove_item        { session_id, line? | menu_item_id?, quantity? }
  *   set_quantity       { session_id, line, quantity }
  *   clear_basket       { session_id }
+ *   import_basket      { session_id, lines }                replace the basket with the website cart (web chat):
+ *                      menu lines re-priced from the menu, deals kept exactly as the website built them
  *   get_basket         { session_id }                       lines + full price quote
  *   set_order_type     { session_id, order_type }           delivery | collection
  *   check_delivery     { session_id, postcode, address? }   zone, fee, minimum
@@ -412,6 +414,8 @@ function repriceCart(session, menu) {
     const dropped = [];
     const cart = [];
     for (const l of session.cart || []) {
+        // Website deals (web chat basket) aren't menu items: checkout prices and validates them
+        if (l.external) { cart.push(l); continue; }
         const item = menu.byId.get(l.menu_item_id);
         if (!item) { dropped.push(l.name); continue; }
         const { serverPrice } = calcItemServerPrice(item, l);
@@ -548,6 +552,21 @@ function deliveryTermsSay(dq, restaurant) {
     }
     return `Delivery is ${feeSay(dq.fee)}${dq.minimum_order ? `, with a minimum order of ${money(dq.minimum_order)}` : ''}.`;
 }
+
+/** "Meal, Fanta" from a website line's customizations, for lines the core didn't build. */
+function summarizeCustomizations(c) {
+    const out = [];
+    const walk = (v) => {
+        if (v == null || v === '') return;
+        if (Array.isArray(v)) v.forEach(walk);
+        else if (typeof v === 'object') Object.values(v).forEach(walk);
+        else out.push(String(v));
+    };
+    walk(c);
+    return clip(out.join(', '), 120);
+}
+
+const DEAL_FLAGS = ['is_deal', 'is_meal_deal', 'is_category_deal'];
 
 function basketView(session) {
     return (session.cart || []).map((l, i) => ({
@@ -789,7 +808,7 @@ Deno.serve(async (req) => {
         if (!before) return fail('SESSION_NOT_FOUND', 'Session not found.');
         if (['closed'].includes(before.state) && action !== 'get_context') return fail('SESSION_CLOSED', 'This session has ended.');
         // Once an order exists (cash, or a paid link linked by aiOrderLink) the basket is frozen
-        const CHANGES_ORDER = ['add_item', 'choose_option', 'cancel_pending', 'remove_item', 'set_quantity', 'clear_basket', 'set_order_type', 'check_delivery', 'send_payment_link'];
+        const CHANGES_ORDER = ['add_item', 'choose_option', 'cancel_pending', 'remove_item', 'set_quantity', 'clear_basket', 'import_basket', 'set_order_type', 'check_delivery', 'send_payment_link'];
         if (before.order_id && CHANGES_ORDER.includes(action)) {
             return fail('ALREADY_ORDERED', 'This order has already been placed.', { order_id: before.order_id, say: 'Your order is already placed. For any changes, let me put you through to the team.' });
         }
@@ -946,10 +965,44 @@ Deno.serve(async (req) => {
                 done({ basket: [], say: 'I have cleared the basket.' });
                 break;
 
+            case 'import_basket': {
+                // The web chat shares ONE basket with the restaurant page: whatever the customer
+                // added by tapping the menu comes in here before the agent acts on it.
+                const lines = Array.isArray(body.lines) ? body.lines.slice(0, 60) : [];
+                const cart = [];
+                const dropped = [];
+                const allIds = new Set(menu.all.map((i) => i.id));
+                for (const raw of lines) {
+                    if (!raw || typeof raw !== 'object') continue;
+                    const quantity = Math.max(1, Math.min(MAX_QTY, Math.round(Number(raw.quantity) || 1)));
+                    const id = raw.menu_item_id || raw.id;
+                    if (DEAL_FLAGS.some((f) => raw[f]) || !allIds.has(id)) {
+                        // A deal (or something the website built that isn't a menu item): kept as-is
+                        if (typeof raw.price !== 'number' || !raw.name) continue;
+                        cart.push({ ...raw, quantity, external: true });
+                        continue;
+                    }
+                    const item = menu.byId.get(id);
+                    if (!item) { dropped.push(String(raw.name || 'an item')); continue; } // on the menu but not sellable now
+                    const { serverPrice } = calcItemServerPrice(item, raw);
+                    cart.push({
+                        menu_item_id: item.id, name: String(item.name || '').trim(), price: round2(serverPrice), quantity,
+                        image_url: raw.image_url || item.image_url || undefined,
+                        customizations: raw.customizations || {}, itemQuantities: raw.itemQuantities || {},
+                        options_summary: raw.options_summary || summarizeCustomizations(raw.customizations),
+                    });
+                }
+                s.cart = cart;
+                note = `${cart.length} lines${dropped.length ? `, dropped ${dropped.length}` : ''}`;
+                const q = quote(s, restaurant);
+                done({ basket: basketView(s), quote: q, removed_unavailable: dropped });
+                break;
+            }
+
             case 'get_basket': {
                 const dropped = repriceCart(s, menu);
                 const q = quote(s, restaurant);
-                done({ basket: basketView(s), quote: q, removed_unavailable: dropped, say: (dropped.length ? `${dropped.join(', ')} is no longer available, so I took it off. ` : '') + basketSay(s, q) });
+                done({ basket: basketView(s), quote: q, removed_unavailable: dropped, pending: pendingQuestion(s, menu), say: (dropped.length ? `${dropped.join(', ')} is no longer available, so I took it off. ` : '') + basketSay(s, q) });
                 break;
             }
 
@@ -1152,7 +1205,7 @@ Deno.serve(async (req) => {
             const results = [];
             for (const st of steps) {
                 const a = String(st?.action || '');
-                if (!a || ['apply', 'start_session', 'place_cash_order', 'send_payment_link', 'end_session'].includes(a)) {
+                if (!a || ['apply', 'start_session', 'place_cash_order', 'send_payment_link', 'end_session', 'import_basket'].includes(a)) {
                     results.push({ action: a, ok: false, code: 'NOT_ALLOWED_IN_APPLY', error: `${a || 'missing action'} must be its own call.` });
                     continue;
                 }
