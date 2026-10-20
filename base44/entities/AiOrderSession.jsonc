@@ -1,5 +1,5 @@
 {
-  "description": "One AI ordering session (a phone call, a chat) between one customer and one restaurant, for ANY channel. Holds the server-side basket used by aiOrderingCore; prices in it are always copied from MenuItem, never from the AI. WhatsApp keeps WaConversation for now and moves onto this later.",
+  "description": "One AI ordering session (a phone call, a chat) between one customer and one restaurant, for ANY channel. Holds the server-side basket used by aiOrderingCore; prices in it are always copied from MenuItem, never from the AI. WhatsApp chats (WaConversation.ai_session_id) use it for their basket.",
   "name": "AiOrderSession",
   "properties": {
     "channel": {
@@ -118,6 +118,11 @@
     "last_activity_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "rev": {
+      "type": "number",
+      "default": 0,
+      "description": "Counts basket/state changes. A call that finds it changed since it read the session re-runs on the fresh copy instead of overwriting another call's change."
     },
     "event_log": {
       "type": "array",
