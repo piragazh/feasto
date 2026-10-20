@@ -93,6 +93,7 @@ export default function Checkout() {
     const [traceError, setTraceError] = useState(null); // Dev-facing error detail
     // Atomic guard: prevents Express Checkout onConfirm from firing twice
     const expressConfirmFiredRef = useRef(false);
+    const aiPrefillRef = useRef(null); // { phone, name, address } from an AI pay link
     
     // Atomic guard: single source of truth for payment success handling (supersedes paymentCompleted state)
     const paymentSuccessHandledRef = useRef(false);
@@ -138,6 +139,18 @@ export default function Checkout() {
     // INITIALIZATION - Runs when page loads
     // ============================================
     useEffect(() => {
+        // Details the customer already gave an AI agent (phone call / WhatsApp), set by
+        // AiCheckout. Read once, before the account prefill, so the number and address
+        // from the conversation win - the paid order is matched back to the AI session
+        // by that phone number.
+        try {
+            const raw = localStorage.getItem('aiCheckoutPrefill');
+            if (raw) {
+                aiPrefillRef.current = JSON.parse(raw);
+                localStorage.removeItem('aiCheckoutPrefill');
+            }
+        } catch { aiPrefillRef.current = null; }
+
         // Check if user is logged in or guest
         checkAuthStatus();
         
@@ -181,6 +194,10 @@ export default function Checkout() {
         // Restore previously entered address
         if (savedAddress) {
             setFormData(prev => ({ ...prev, delivery_address: savedAddress }));
+        }
+        const aiPrefill = aiPrefillRef.current;
+        if (aiPrefill && (aiPrefill.phone || aiPrefill.name)) {
+            setFormData(prev => ({ ...prev, phone: aiPrefill.phone || prev.phone, guest_name: prev.guest_name || aiPrefill.name || '' }));
         }
         
         // Restore address coordinates — guarded against corrupted data
@@ -456,13 +473,13 @@ export default function Checkout() {
                     const userData = await base44.auth.me();
                     setUser(userData);
                     
-                    // Pre-fill phone if saved
-                    if (userData.phone) {
+                    // Pre-fill phone if saved (an AI order's number wins)
+                    if (userData.phone && !aiPrefillRef.current?.phone) {
                         setFormData(prev => ({ ...prev, phone: userData.phone }));
                         setIsExistingPhone(true);
                     }
                     // Pre-fill default or first saved address if available
-                    if (userData.saved_addresses && userData.saved_addresses.length > 0) {
+                    if (!aiPrefillRef.current?.address && userData.saved_addresses && userData.saved_addresses.length > 0) {
                         const defaultAddress = userData.saved_addresses.find(addr => addr.is_default) || userData.saved_addresses[0];
                         setFormData(prev => ({
                             ...prev,
