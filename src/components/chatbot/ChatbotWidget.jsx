@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { MessageCircle, X, Send, Loader2, Bot, ShoppingCart, ChevronRight, Zap, MapPin } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Bot, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EscalationDialog from './EscalationDialog';
 import { createPageUrl } from '@/utils';
