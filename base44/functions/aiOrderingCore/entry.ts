@@ -572,6 +572,7 @@ function basketView(session) {
     return (session.cart || []).map((l, i) => ({
         line: i + 1, menu_item_id: l.menu_item_id, name: l.name, quantity: l.quantity,
         unit_price: l.price, line_total: round2(l.price * l.quantity), options: l.options_summary || '',
+        ...(l.external ? { deal: true } : {}),
     }));
 }
 
