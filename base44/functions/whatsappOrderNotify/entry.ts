@@ -128,9 +128,10 @@ Deno.serve(async (req) => {
             convo = (await db.WaConversation.filter({ ai_session_id: order.ai_session_id }))[0];
             if (!convo) return Response.json({ skipped: 'no chat for this session' });
 
+            // A chat staff have taken over stays with staff; otherwise the AI is ready for the next order
             await db.WaConversation.update(convo.id, {
                 order_id: order.id, cart: [], pending_item: null, checkout_token: null,
-                checkout_token_expires_at: null, state: 'browsing', last_notified_status: null,
+                checkout_token_expires_at: null, state: convo.state === 'handoff' ? 'handoff' : 'browsing', last_notified_status: null,
             });
             convo = { ...convo, order_id: order.id, last_notified_status: null };
         }
