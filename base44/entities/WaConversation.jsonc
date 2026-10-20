@@ -103,6 +103,15 @@
       "description": "The option question last put to the customer: { menu_item_id, item_name, group, options: [label] }. The core holds the real state; this lets a tap or a typed label be matched.",
       "type": "object"
     },
+    "processing_lock": {
+      "description": "Which webhook run is answering this chat right now. Messages a customer sends in quick succession are handled one at a time, in order, so their replies and basket changes never interleave.",
+      "type": "string"
+    },
+    "processing_until": {
+      "description": "The lock expires at this time, so a crashed run can never block the chat",
+      "format": "date-time",
+      "type": "string"
+    },
     "restaurant_id": {
       "type": "string"
     },
