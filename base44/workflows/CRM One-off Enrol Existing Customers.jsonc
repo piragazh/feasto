@@ -1,0 +1,41 @@
+{
+  "name": "CRM One-off Enrol Existing Customers",
+  "description": "Run once by hand on 20 Oct 2026 (owner decision): enrols customers who ordered before the consent boxes existed for SMS and email offers, recorded in the ledger as an owner decision. Idempotent. Safe to delete after use.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "one_time",
+      "cron_expression": null,
+      "one_time_date": "2027-12-31T03:00:00",
+      "timezone": "Europe/London",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "crm_enrol_existing",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "crmEnrolExisting",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}
