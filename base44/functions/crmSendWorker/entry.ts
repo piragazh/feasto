@@ -193,6 +193,45 @@ async function routeSms(db, job, message, mode) {
     return t.ok ? { status: 'sent', provider: 'twilio', id: t.id } : { status: 'failed', provider: 'twilio', error: t.error, code: t.code };
 }
 
+// ── WhatsApp (Meta Cloud API, the restaurant's own number) ──────────────────────
+// Marketing outside a 24-hour chat window must be an approved MARKETING template. The template should
+// carry a "Stop offers" quick-reply button (payload STOP_OFFERS), handled by whatsappWebhook.
+const GRAPH = `https://graph.facebook.com/${Deno.env.get('WHATSAPP_GRAPH_VERSION') || 'v23.0'}`;
+async function sendWhatsAppTemplate(db, channel, templateId, to, tokens) {
+    if (!channel) return { status: 'failed', error: 'No connected WhatsApp number for this restaurant' };
+    const tpl = templateId ? (await withRetry(() => db.WaTemplate.filter({ id: templateId })))[0] : null;
+    if (!tpl) return { status: 'failed', error: 'No WhatsApp template chosen' };
+    if (tpl.category !== 'MARKETING') return { status: 'failed', error: 'Template is not a MARKETING template' };
+    if (!(tpl.submissions || []).some(s => s.waba_id === channel.waba_id && s.status === 'APPROVED')) {
+        return { status: 'failed', error: 'Template not approved by Meta for this number' };
+    }
+    const values = {
+        first_name: tokens.first_name || 'there', name: tokens.first_name || 'there', restaurant: tokens.restaurant,
+        restaurant_name: tokens.restaurant, coupon_code: tokens.coupon_code || '-', favourite_item: tokens.favourite_item || 'your favourites',
+        order_link: tokens.order_link, days_since_last_order: tokens.days_since != null ? String(tokens.days_since) : '-',
+    };
+    const params = (tpl.param_order || []).map(n => ({ type: 'text', text: String(values[n] ?? '-') || '-' }));
+    const res = await fetch(`${GRAPH}/${channel.phone_number_id}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${channel.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            messaging_product: 'whatsapp', recipient_type: 'individual', to: String(to).replace(/\D/g, ''), type: 'template',
+            template: { name: tpl.name, language: { code: tpl.language || 'en_GB' }, components: params.length ? [{ type: 'body', parameters: params }] : [] },
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { status: 'failed', error: `WhatsApp: ${data?.error?.message || `HTTP ${res.status}`}`.slice(0, 300) };
+    const body = String(tpl.body || '').replace(/\{(\w+)\}/g, (_, k) => values[k] ?? `{${k}}`);
+    return { status: 'sent', provider: 'whatsapp_cloud', id: data?.messages?.[0]?.id || null, body };
+}
+
+async function syncEnrolment(db, jobId, patch) {
+    try {
+        const e = (await withRetry(() => db.AutomationEnrolment.filter({ message_job_id: jobId })))[0];
+        if (e) await withRetry(() => db.AutomationEnrolment.update(e.id, patch));
+    } catch (err) { console.warn('[crmSendWorker] enrolment sync failed:', err?.message); }
+}
+
 // ── Worker ───────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
     const started = Date.now();
@@ -256,6 +295,21 @@ Deno.serve(async (req) => {
             return rows.length > 0;
         };
 
+        const automationCache = new Map();
+        const getAutomation = async (id) => {
+            if (!automationCache.has(id)) automationCache.set(id, (await withRetry(() => db.Automation.filter({ id })))[0] || null);
+            return automationCache.get(id);
+        };
+        const waChannelCache = new Map();
+        const getWaChannel = async (rid) => {
+            if (!waChannelCache.has(rid)) waChannelCache.set(rid, (await withRetry(() => db.WhatsAppChannel.filter({ restaurant_id: rid, status: 'connected' })))[0] || null);
+            return waChannelCache.get(rid);
+        };
+        const AUTOMATION_LABEL = {
+            welcome: 'Welcome', second_order: 'Second order', win_back: 'Win-back', lapsed: 'Lapsed',
+            birthday: 'Birthday', vip_milestone: 'VIP thank-you', review_request: 'Review request',
+        };
+
         const results = { processed: 0, sent: 0, failed: 0, skipped: 0, deferred: 0, uncertain: 0 };
         const touchedCampaigns = new Set();
         const lastSendAt = {};
@@ -265,6 +319,12 @@ Deno.serve(async (req) => {
             const campaign = job.campaign_id ? await getCampaign(job.campaign_id) : null;
             if (job.campaign_id && !campaign) { await withRetry(() => db.MessageJob.update(job.id, { status: 'skipped', skip_reason: 'cancelled' })); continue; }
             if (!job.is_test && campaign && campaign.status !== 'sending') { results.deferred++; continue; }
+            const automation = job.automation_id ? await getAutomation(job.automation_id) : null;
+            if (job.automation_id && (!automation || !automation.is_enabled)) {
+                await withRetry(() => db.MessageJob.update(job.id, { status: 'skipped', skip_reason: 'cancelled' }));
+                await syncEnrolment(db, job.id, { status: 'skipped', skip_reason: 'automation_turned_off' });
+                continue;
+            }
             const settings = await getSettings(job.restaurant_id);
             if (!job.is_test && inQuietHours(settings)) { results.deferred++; continue; }
 
@@ -294,14 +354,28 @@ Deno.serve(async (req) => {
                     if (await isSuppressed(keys, job.channel)) reason = 'suppressed';
                     else if ((await weeklyCount(profile.id)) >= (settings.max_marketing_per_week || 2)) reason = 'frequency_cap';
                 }
-                if (reason) { await finish({ status: 'skipped', skip_reason: reason }); results.skipped++; continue; }
+                if (reason) {
+                    await finish({ status: 'skipped', skip_reason: reason });
+                    if (job.automation_id) await syncEnrolment(db, job.id, { status: 'skipped', skip_reason: reason });
+                    results.skipped++; continue;
+                }
                 job.to = to;
             }
 
+            // What to send: the campaign, or this automation's content for the chosen channel
+            const c = campaign || (automation ? {
+                name: AUTOMATION_LABEL[automation.type] || 'Automation',
+                ...(automation.content?.[job.channel] || {}),
+                wa_template_id: automation.content?.whatsapp?.template_id || null,
+                coupon_mode: automation.coupon_mode || 'none',
+                coupon_config: automation.coupon_config || null,
+                sms_provider: automation.sms_provider || null,
+            } : { body: '', channel: job.channel });
+
             // Render
-            const coupon = campaign?.coupon_mode === 'unique'
+            const coupon = c.coupon_mode === 'unique'
                 ? `CRM-${crypto.randomUUID().replace(/-/g, '').slice(0, 7).toUpperCase()}`
-                : (campaign?.coupon_mode === 'shared' ? campaign.coupon_code : null);
+                : (c.coupon_mode === 'shared' ? c.coupon_code : null);
             const tokens = {
                 first_name: profile ? String(profile.display_name || '').trim().split(/\s+/)[0] : 'Sam',
                 restaurant: settings.sender_name || restaurant.name,
@@ -310,10 +384,8 @@ Deno.serve(async (req) => {
                 order_link: `${APP_URL}/Restaurant?id=${job.restaurant_id}`,
                 days_since: profile?.last_order_at ? Math.floor((Date.now() - new Date(profile.last_order_at).getTime()) / DAY) : null,
             };
-            const c = campaign || { body: '', channel: job.channel };
-
             // Budget (real SMS only)
-            const provider = job.channel === 'sms' ? (campaign?.sms_provider || settings.default_sms_provider || 'auto') : 'email';
+            const provider = job.channel === 'sms' ? (c.sms_provider || settings.default_sms_provider || 'auto') : job.channel;
             let smsText = null, costPence = 0;
             if (job.channel === 'sms') {
                 smsText = renderSms(c, settings, tokens);
@@ -328,7 +400,7 @@ Deno.serve(async (req) => {
             }
 
             // Pace per provider (one Android phone for httpSMS)
-            const lane = job.channel === 'email' ? 'email' : (provider === 'twilio' ? 'twilio' : 'httpsms');
+            const lane = job.channel === 'sms' ? (provider === 'twilio' ? 'twilio' : 'httpsms') : 'email';
             const wait = (lastSendAt[lane] || 0) + GAP_MS[lane] - Date.now();
             if (wait > 0) await sleep(wait);
             lastSendAt[lane] = Date.now();
@@ -346,8 +418,10 @@ Deno.serve(async (req) => {
                         body: html, from_name: settings.email_from_name || tokens.restaurant,
                     });
                     outcome = { status: 'sent', provider: 'base44_email', body: fillTokens(c.body, tokens) };
+                } else if (job.channel === 'whatsapp') {
+                    outcome = await sendWhatsAppTemplate(db, await getWaChannel(job.restaurant_id), c.wa_template_id, job.to, tokens);
                 } else {
-                    outcome = { status: 'failed', error: 'WhatsApp marketing is not enabled yet' };
+                    outcome = { status: 'failed', error: `Unknown channel ${job.channel}` };
                 }
             } catch (e) {
                 outcome = { status: 'failed', error: String(e?.message || e).slice(0, 300) };
@@ -365,12 +439,12 @@ Deno.serve(async (req) => {
             let couponCode = null;
             if (accepted && coupon) {
                 couponCode = coupon;
-                if (campaign?.coupon_mode === 'unique' && !job.is_test) {
-                    const cfg = campaign.coupon_config || {};
+                if (c.coupon_mode === 'unique' && !job.is_test) {
+                    const cfg = c.coupon_config || {};
                     try {
                         await withRetry(() => db.Coupon.create({
                             code: coupon,
-                            description: `${campaign.name} — ${profile?.display_name || 'customer'}`,
+                            description: `${c.name || 'CRM offer'} — ${profile?.display_name || 'customer'}`,
                             discount_type: cfg.discount_type === 'fixed' ? 'fixed' : 'percentage',
                             discount_value: Number(cfg.discount_value) || 10,
                             restaurant_id: job.restaurant_id,
@@ -397,6 +471,9 @@ Deno.serve(async (req) => {
                 sent_at: accepted ? new Date().toISOString() : null,
                 to: job.to,
             });
+            if (job.automation_id) {
+                await syncEnrolment(db, job.id, accepted ? { status: 'messaged' } : { status: 'skipped', skip_reason: `send_failed: ${String(outcome.error || '').slice(0, 120)}` });
+            }
             if (accepted && !job.is_test) {
                 cache.budgetUsed.set(job.restaurant_id, (cache.budgetUsed.get(job.restaurant_id) || 0) + costPence);
                 if (profile) cache.weekly.set(profile.id, (cache.weekly.get(profile.id) || 0) + 1);
