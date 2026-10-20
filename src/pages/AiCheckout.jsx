@@ -39,6 +39,11 @@ export default function AiCheckout() {
                     localStorage.setItem('cartRestaurantName', data.restaurant_name || '');
                     localStorage.setItem('orderType', data.order_type || 'delivery');
                     if (data.delivery_address) localStorage.setItem('userAddress', data.delivery_address);
+                    // Checkout prefills these, so the customer doesn't retype what they told the agent
+                    // and the paid order carries the same number the session is matched on
+                    localStorage.setItem('aiCheckoutPrefill', JSON.stringify({
+                        phone: data.phone || '', name: data.customer_name || '', address: data.delivery_address || '',
+                    }));
                     localStorage.removeItem('groupOrderId');
                     localStorage.removeItem('appliedPromotions');
                 } catch {
