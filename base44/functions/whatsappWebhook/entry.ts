@@ -216,6 +216,39 @@ async function markReadWithTyping(channel, wamid) {
     }
 }
 
+// ── One message per chat at a time ─────────────────────────────────────────────────────
+// Customers often send "hi", "can I get", "2 burgers" seconds apart, and Meta
+// delivers each as its own webhook. Answered in parallel, their replies interleave
+// and their basket changes race in the core. A short lease on the chat makes each
+// run wait for the previous one. Base44 has no atomic lock, so the lease is written,
+// then re-read to confirm; it expires on its own so a crashed run never blocks a chat.
+const TURN_LEASE_MS = 45_000;
+const TURN_WAIT_MS = 25_000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function acquireTurn(db, convoId) {
+    const token = crypto.randomUUID();
+    const deadline = Date.now() + TURN_WAIT_MS;
+    for (;;) {
+        const cur = (await db.WaConversation.filter({ id: convoId }))[0];
+        const busy = cur?.processing_lock && cur.processing_until && new Date(cur.processing_until).getTime() > Date.now();
+        if (!busy || Date.now() > deadline) {
+            await db.WaConversation.update(convoId, { processing_lock: token, processing_until: new Date(Date.now() + TURN_LEASE_MS).toISOString() });
+            await sleep(60);
+            const mine = (await db.WaConversation.filter({ id: convoId }))[0];
+            if (mine?.processing_lock === token || Date.now() > deadline) return { token, convo: mine || cur };
+        }
+        await sleep(300 + Math.floor(Math.random() * 300));
+    }
+}
+
+async function releaseTurn(db, convoId, token) {
+    try {
+        const cur = (await db.WaConversation.filter({ id: convoId }))[0];
+        if (cur?.processing_lock === token) await db.WaConversation.update(convoId, { processing_lock: null, processing_until: null });
+    } catch (e) { console.error('[whatsappWebhook] release failed:', e.message); }
+}
+
 // WhatsApp caps interactive message bodies at 1024 characters
 const BODY_LIMIT = 1000;
 function splitText(t, n = 4000) {
@@ -456,7 +489,8 @@ const AGENT_SCHEMA = {
 async function runAgent(ctx, userText) {
     const { convo, restaurant } = ctx;
     const menuRes = await core(ctx, 'browse_menu', { mode: 'agent' });
-    const basketRes = await core(ctx, 'get_basket');
+    // ensureSession already fetched the basket this turn; only ask again if it didn't
+    const basketRes = Array.isArray(ctx.context?.basket) ? { basket: ctx.context.basket, quote: ctx.context.quote } : await core(ctx, 'get_basket');
     syncCart(convo, basketRes.basket);
     const r = ctx.context?.restaurant || {};
     const waiting = convo.pending_item
@@ -784,6 +818,10 @@ Deno.serve(async (req) => {
                         status: 'received',
                     });
 
+                    // Wait for any earlier message in this chat to finish, then work on its result
+                    const turn = await acquireTurn(db, convo.id);
+                    try {
+                    if (turn.convo) convo = turn.convo;
                     // Deep copy: handlers mutate nested objects (cart copy, pending question)
                     const ctx = { base44, db, channel, restaurant, convo: JSON.parse(JSON.stringify(convo)), isNew, sentTexts: [] };
                     ctx.convo.customer_name = ctx.convo.customer_name || profileName;
@@ -813,6 +851,9 @@ Deno.serve(async (req) => {
                         if (JSON.stringify(after) !== JSON.stringify(convo[f] ?? null)) patch[f] = after;
                     }
                     if (Object.keys(patch).length) await db.WaConversation.update(convo.id, patch);
+                    } finally {
+                        await releaseTurn(db, convo.id, turn.token);
+                    }
                 } catch (e) {
                     console.error(`[whatsappWebhook] message ${m.id} failed:`, e.message);
                 }
