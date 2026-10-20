@@ -134,6 +134,19 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         }
     }, [cart, restaurantId]);
 
+    // The chat assistant shares this page's basket: when it adds or removes something
+    // it replaces the basket in storage and announces it here, so the page's own copy
+    // (which it saves back on every change) never overwrites the chat's items.
+    useEffect(() => {
+        const onChatCart = (e) => {
+            if (e?.detail?.restaurantId && e.detail.restaurantId === restaurantId && Array.isArray(e.detail.cart)) {
+                setCart(e.detail.cart);
+            }
+        };
+        window.addEventListener('mealdrop:cart-replaced', onChatCart);
+        return () => window.removeEventListener('mealdrop:cart-replaced', onChatCart);
+    }, [restaurantId]);
+
     const handleKeepOldCart = () => {
         setShowCartConflictDialog(false);
         navigate(sessionStorage.getItem('customDomainRestaurantId') ? '/' : createPageUrl('Home'));
