@@ -131,8 +131,12 @@ Deno.serve(async (req) => {
         if (message.length > MAX_MESSAGE) return refuse(400, `Messages can be up to ${MAX_MESSAGE} characters`);
         const pageCart = Array.isArray(body.cart) ? body.cart.slice(0, 60) : [];
 
+        // Only ask who the visitor is when they are signed in (guests send no token;
+        // asking anyway just fills the logs with 401s)
         let user = null;
-        try { user = await base44.auth.me(); } catch { user = null; }
+        if (req.headers.get('authorization')) {
+            try { user = await base44.auth.me(); } catch { user = null; }
+        }
 
         // ── Session ──
         let token = typeof body.chat_token === 'string' && /^[A-Za-z0-9_-]{24,64}$/.test(body.chat_token) ? body.chat_token : null;
