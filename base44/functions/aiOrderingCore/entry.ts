@@ -607,23 +607,44 @@ const OWNED = ['cart', 'pending_item', 'order_type', 'delivery_address', 'delive
     'customer_name', 'customer_phone', 'state', 'checkout_token', 'checkout_token_expires_at', 'order_id',
     'handoff_reason', 'ended_at'];
 
-async function saveSession(db, before, after, action, okFlag, note) {
+/**
+ * Writes only the fields this call changed. `rev` counts basket/state changes: if
+ * another call changed the session after this one read it (two chat messages, or
+ * parallel tool calls from a voice platform), this returns true WITHOUT writing so
+ * the caller re-runs the action on the fresh session instead of overwriting it.
+ * Base44 has no atomic compare-and-set, so this narrows the window rather than
+ * closing it; the WhatsApp webhook also processes one message per chat at a time.
+ */
+async function saveSession(db, before, after, action, okFlag, note, allowRetry = false) {
     const patch = {};
     for (const f of OWNED) {
         const a = after[f] ?? null;
         if (JSON.stringify(a) !== JSON.stringify(before[f] ?? null)) patch[f] = a;
     }
+    if (Object.keys(patch).length) {
+        const cur = (await db.AiOrderSession.filter({ id: before.id }))[0];
+        const curRev = Number(cur?.rev) || 0;
+        if (curRev !== (Number(before.rev) || 0) && allowRetry) return true;
+        patch.rev = curRev + 1;
+    }
     patch.last_activity_at = nowIso();
     patch.event_log = [...(before.event_log || []), { at: nowIso(), action, ok: okFlag, note: clip(note || '', 200) }].slice(-EVENT_LOG_MAX);
     await db.AiOrderSession.update(before.id, patch);
+    return false;
 }
 
 // ── Auth ────────────────────────────────────────────────────────────────────
 async function authorised(req, base44, body) {
     const expected = Deno.env.get('AI_CORE_API_KEY');
-    const hdr = req.headers.get('x-ai-core-key') || (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-    const given = hdr || (typeof body?.key === 'string' ? body.key : '');
-    if (expected && given && timingSafeEqual(given, expected)) return true;
+    // Each place a key can arrive is checked on its own. Calls from other Base44
+    // functions (the WhatsApp agent) carry the platform's own Authorization header,
+    // so that header must never shadow the key sent in the body.
+    const candidates = [
+        req.headers.get('x-ai-core-key'),
+        (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''),
+        typeof body?.key === 'string' ? body.key : '',
+    ];
+    if (expected && candidates.some((k) => k && timingSafeEqual(k, expected))) return true;
     try {
         const user = await base44.auth.me();
         return user?.role === 'admin';
@@ -762,6 +783,8 @@ Deno.serve(async (req) => {
         }
 
         if (!body.session_id) return fail('SESSION_REQUIRED', 'session_id is required.');
+        let sideEffect = false; // an SMS sent or an order placed: never re-run the action
+        for (let attempt = 0; ; attempt++) {
         const before = (await db.AiOrderSession.filter({ id: body.session_id }))[0];
         if (!before) return fail('SESSION_NOT_FOUND', 'Session not found.');
         if (['closed'].includes(before.state) && action !== 'get_context') return fail('SESSION_CLOSED', 'This session has ended.');
@@ -1001,6 +1024,7 @@ Deno.serve(async (req) => {
                 let smsSent = false;
                 if (body.send_sms !== false && s.customer_phone) {
                     const text = `${restaurant.name}: your order is ${money(r.q.total)}. Tap to pay and confirm: ${url} (link works for 2 hours)`;
+                    sideEffect = true;
                     try {
                         const res = await base44.asServiceRole.functions.invoke('sendSMS', {
                             to: localPhone(s.customer_phone), message: text, restaurantId: restaurant.id,
@@ -1063,13 +1087,24 @@ Deno.serve(async (req) => {
                     done({ dry_run: true, order_data: orderData, quote: q, say: `That's ${money(q.total)}, paid in cash on ${s.order_type}.` });
                     break;
                 }
+                sideEffect = true;
+                // verifyAndCreateOrder answers a refusal with a 4xx, which the SDK throws;
+                // read the refusal from the error so the agent can say what went wrong.
                 const res = await base44.asServiceRole.functions.invoke('verifyAndCreateOrder', {
                     orderData, paymentIntentId: null, idempotency_key: `ai_${s.id}`,
-                });
+                }).catch((e) => ({ data: e?.response?.data && typeof e.response.data === 'object'
+                    ? e.response.data
+                    : { success: false, code: 'ORDER_FAILED', error: e?.message } }));
                 const out = res?.data || {};
                 if (!out.success || !out.order_id) {
                     console.error(`${LOG} order refused session=${s.id} code=${out.code} ${out.error}`);
-                    refuse(out.code || 'ORDER_FAILED', 'Sorry, something went wrong placing the order.', { detail: out.error, say: "Sorry, I couldn't place that order. Let me put you through to the team." });
+                    const generic = !out.error || ['ORDER_CREATE_FAILED', 'ORDER_FAILED'].includes(out.code);
+                    refuse(out.code || 'ORDER_FAILED', out.error || 'Sorry, something went wrong placing the order.', {
+                        detail: out.error,
+                        say: generic
+                            ? "Sorry, I couldn't place that order. Let me put you through to the team."
+                            : `Sorry, I couldn't place that order: ${clip(out.error, 160)}`,
+                    });
                     break;
                 }
                 await db.Order.update(out.order_id, { ai_channel: s.channel === 'test' ? 'web_chat' : s.channel, ai_session_id: s.id })
@@ -1093,8 +1128,11 @@ Deno.serve(async (req) => {
                 break;
 
             case 'end_session':
-                if (s.state === 'active' || s.state === 'awaiting_payment') s.state = s.order_id ? 'ordered' : 'closed';
-                if (!s.order_id && s.state !== 'awaiting_payment') s.state = 'closed';
+                // A pay link outlives the call: the customer usually pays AFTER hanging up,
+                // so a session waiting for payment stays waiting (aiOrderLink links the
+                // paid order to it). Everything else without an order is closed.
+                if (s.order_id) s.state = 'ordered';
+                else if (s.state !== 'awaiting_payment' && s.state !== 'handoff') s.state = 'closed';
                 s.ended_at = nowIso();
                 note = clip(body.outcome || '', 80);
                 done({ state: s.state });
@@ -1130,8 +1168,11 @@ Deno.serve(async (req) => {
             response = Response.json(r, { status: r.code === 'UNKNOWN_ACTION' ? 400 : 200 });
         }
 
-        await saveSession(db, before, s, action, resultOk, note).catch((e) => console.error(`${LOG} save failed: ${e?.message}`));
+        const conflict = await saveSession(db, before, s, action, resultOk, note, attempt < 2 && !sideEffect)
+            .catch((e) => { console.error(`${LOG} save failed: ${e?.message}`); return false; });
+        if (conflict) { console.warn(`${LOG} ${action} session=${before.id} changed underneath - re-running on the fresh session`); continue; }
         return response;
+        }
     } catch (e) {
         console.error(`${LOG} ${action} failed:`, e?.message, e?.stack);
         return fail('INTERNAL', 'Something went wrong.', { say: 'Sorry, something went wrong on our side.' }, 500);
