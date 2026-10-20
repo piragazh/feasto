@@ -225,8 +225,7 @@ export default function ChatbotWidget() {
     useEffect(() => {
         const getRestaurant = async () => {
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const id = urlParams.get('id');
+                const id = pageRestaurantId();
                 if (id) {
                     const r = await base44.entities.Restaurant.filter({ id });
                     if (r[0]) setCurrentRestaurant(r[0]);
