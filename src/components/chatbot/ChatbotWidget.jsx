@@ -6,12 +6,53 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, X, Send, Loader2, Bot, ShoppingCart, ChevronRight, Zap, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EscalationDialog from './EscalationDialog';
+import { createPageUrl } from '@/utils';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const getCart = () => {
     try { return JSON.parse(localStorage.getItem('cart') || '[]'); } catch { return []; }
 };
 const getCartTotal = (cart) => cart.reduce((s, i) => s + i.price * i.quantity, 0);
+
+/**
+ * On a restaurant page the chat orders through the shared AI ordering core
+ * (webChatAgent) and shares ONE basket with the page. Elsewhere (home, orders...)
+ * it is the general MealDrop assistant (chatbotQuery).
+ */
+const pageRestaurantId = () => {
+    try {
+        const id = new URLSearchParams(window.location.search).get('id');
+        if (id) return id;
+        return window.location.pathname === '/' ? sessionStorage.getItem('customDomainRestaurantId') : null;
+    } catch { return null; }
+};
+const cartForRestaurant = (restaurantId) => {
+    try { return localStorage.getItem('cartRestaurantId') === restaurantId ? getCart() : []; } catch { return []; }
+};
+/** Same fingerprint as webChatAgent: did the basket actually change? */
+const cartKey = (lines) => JSON.stringify((lines || [])
+    .map((l) => [String(l.menu_item_id || l.id || ''), Number(l.quantity) || 1, JSON.stringify(l.customizations || {}), JSON.stringify(l.itemQuantities || {}),
+        l.is_deal || l.is_meal_deal || l.is_category_deal ? Number(l.price) : 0])
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
+/** Write the chat's basket into the page's basket and tell the restaurant page. */
+function writeCart(lines, restaurant) {
+    try {
+        if (lines.length) {
+            localStorage.setItem('cart', JSON.stringify(lines));
+            localStorage.setItem('cartRestaurantId', restaurant.id);
+            localStorage.setItem('cartRestaurantName', restaurant.name || '');
+        } else if (localStorage.getItem('cartRestaurantId') === restaurant.id) {
+            localStorage.removeItem('cart');
+            localStorage.removeItem('cartRestaurantId');
+            localStorage.removeItem('cartRestaurantName');
+        }
+        window.dispatchEvent(new CustomEvent('mealdrop:cart-replaced', { detail: { restaurantId: restaurant.id, cart: lines } }));
+    } catch { /* storage blocked: the chat still works, the page just won't see it */ }
+}
+const tokenKey = (restaurantId) => `aiChat:${restaurantId}`;
+const readToken = (restaurantId) => { try { return sessionStorage.getItem(tokenKey(restaurantId)); } catch { return null; } };
+const saveToken = (restaurantId, t) => { try { if (t) sessionStorage.setItem(tokenKey(restaurantId), t); } catch { /* ignore */ } };
+const unwrap = (res) => (res && typeof res === 'object' && 'data' in res && 'status' in res ? res.data : res);
 
 const STATUS_LABELS = {
     pending: '🕐 Received',
@@ -67,7 +108,7 @@ function OrderTracker({ trackData }) {
     );
 }
 
-function CartSummaryBar({ cart }) {
+function CartSummaryBar({ cart, onCheckout }) {
     if (!cart.length) return null;
     const total = getCartTotal(cart);
     const count = cart.reduce((s, i) => s + i.quantity, 0);
@@ -77,7 +118,7 @@ function CartSummaryBar({ cart }) {
             <span>{count} item{count !== 1 ? 's' : ''} • £{total.toFixed(2)}</span>
             <button
                 className="ml-auto text-white/80 hover:text-white underline text-xs"
-                onClick={() => window.location.href = '/Checkout'}
+                onClick={() => (onCheckout ? onCheckout() : (window.location.href = '/Checkout'))}
             >
                 Checkout →
             </button>
@@ -85,7 +126,24 @@ function CartSummaryBar({ cart }) {
     );
 }
 
-function MessageBubble({ msg, onAddItem, onQuickAction }) {
+function OptionQuestion({ question, onChoose, onCancel, disabled }) {
+    return (
+        <div className="bg-white border border-orange-100 rounded-xl p-2.5 w-full space-y-2">
+            <p className="text-xs font-semibold text-gray-700">{question.item_name}: choose {question.group}</p>
+            <div className="flex flex-wrap gap-1.5">
+                {(question.options || []).slice(0, 12).map((o, i) => (
+                    <button key={i} type="button" disabled={disabled} onClick={() => onChoose(i)}
+                        className="bg-orange-50 border border-orange-200 text-orange-800 text-xs font-medium px-3 py-1.5 rounded-full hover:bg-orange-100 disabled:opacity-50">
+                        {o.label}{o.extra_price ? ` +£${o.extra_price.toFixed(2)}` : ''}
+                    </button>
+                ))}
+                <button type="button" disabled={disabled} onClick={onCancel} className="text-xs text-gray-500 px-2 py-1.5 hover:text-gray-700 disabled:opacity-50">Cancel</button>
+            </div>
+        </div>
+    );
+}
+
+function MessageBubble({ msg, onAddItem, onQuickAction, onChooseOption, onCancelOption, isLast, busy }) {
     const isUser = msg.role === 'user';
     return (
         <div className={`flex gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -109,6 +167,11 @@ function MessageBubble({ msg, onAddItem, onQuickAction }) {
 
                 {/* Order tracker */}
                 {msg.trackData && <OrderTracker trackData={msg.trackData} />}
+
+                {/* Option question (only the latest one can still be answered) */}
+                {msg.question && isLast && (
+                    <OptionQuestion question={msg.question} onChoose={onChooseOption} onCancel={onCancelOption} disabled={busy} />
+                )}
 
                 {/* Suggested items */}
                 {msg.suggestedItems?.length > 0 && (
@@ -200,9 +263,55 @@ export default function ChatbotWidget() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
+    /** One turn with the restaurant's AI ordering agent (shared core). */
+    const sendToCore = useCallback(async ({ message, tap, label }) => {
+        const restaurantId = pageRestaurantId() || currentRestaurant?.id;
+        if (!restaurantId || isLoading) return;
+        if (label) setMessages(prev => [...prev, { role: 'user', content: label, timestamp: new Date().toISOString() }]);
+        setInputMessage('');
+        setIsLoading(true);
+        const sentCart = cartForRestaurant(restaurantId);
+        try {
+            const res = unwrap(await base44.functions.invoke('webChatAgent', {
+                restaurant_id: restaurantId,
+                chat_token: readToken(restaurantId),
+                message, tap,
+                cart: sentCart,
+                history: messages.slice(-8).map(m => ({ role: m.role, content: m.content })),
+            }));
+            if (!res?.ok) throw new Error(res?.error || 'failed');
+            saveToken(restaurantId, res.chat_token);
+            if (Array.isArray(res.cart_lines) && cartKey(res.cart_lines) !== cartKey(sentCart)) {
+                writeCart(res.cart_lines, currentRestaurant || { id: restaurantId, name: '' });
+                setCart(getCart());
+            }
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: res.reply,
+                suggestedItems: res.suggestions || [],
+                quickActions: res.question ? [] : (res.quick_replies || []),
+                trackData: res.track || null,
+                question: res.question || null,
+                timestamp: new Date().toISOString()
+            }]);
+            if (res.handoff) setTimeout(() => setShowEscalation(true), 800);
+            if (res.checkout) setTimeout(() => { window.location.href = createPageUrl('Checkout'); }, 900);
+        } catch (e) {
+            const msg = e?.response?.status === 429 ? 'Lots of chats right now - please try again in a bit.' : "Sorry, I had a hiccup! Try again, or add items from the menu. 😅";
+            setMessages(prev => [...prev, { role: 'assistant', content: msg, isError: true, timestamp: new Date().toISOString() }]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [isLoading, messages, currentRestaurant]);
+
     const sendMessage = useCallback(async (text) => {
         const msg = (text || inputMessage).trim();
         if (!msg || isLoading) return;
+
+        if (pageRestaurantId()) {
+            if (/^checkout\b|go to checkout/i.test(msg.replace(/[^a-z ]/gi, '').trim())) return sendToCore({ tap: { type: 'checkout' }, label: msg });
+            return sendToCore({ message: msg, label: msg });
+        }
 
         setMessages(prev => [...prev, { role: 'user', content: msg, timestamp: new Date().toISOString() }]);
         setInputMessage('');
@@ -243,9 +352,10 @@ export default function ChatbotWidget() {
         } finally {
             setIsLoading(false);
         }
-    }, [inputMessage, isLoading, messages, currentRestaurant]);
+    }, [inputMessage, isLoading, messages, currentRestaurant, sendToCore]);
 
     const handleAddItem = useCallback((item) => {
+        if (pageRestaurantId()) return sendToCore({ tap: { type: 'add', menu_item_id: item.menu_item_id || item.id }, label: `Add ${item.name}` });
         const cart = getCart();
         const existing = cart.find(c => c.id === item.id);
         if (existing) {
@@ -263,7 +373,7 @@ export default function ChatbotWidget() {
             quickActions: ['Add more', 'Show deals', 'Checkout →'],
             timestamp: new Date().toISOString()
         }]);
-    }, []);
+    }, [sendToCore]);
 
     const handleEscalationComplete = () => {
         setShowEscalation(false);
@@ -313,7 +423,10 @@ export default function ChatbotWidget() {
                             </div>
 
                             {/* Cart bar */}
-                            <CartSummaryBar cart={cart} />
+                            <CartSummaryBar
+                                cart={pageRestaurantId() ? cartForRestaurant(pageRestaurantId()) : cart}
+                                onCheckout={pageRestaurantId() ? () => sendToCore({ tap: { type: 'checkout' }, label: 'Checkout' }) : null}
+                            />
 
                             {/* Messages */}
                             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
@@ -321,8 +434,15 @@ export default function ChatbotWidget() {
                                     <MessageBubble
                                         key={idx}
                                         msg={msg}
+                                        isLast={idx === messages.length - 1}
+                                        busy={isLoading}
                                         onAddItem={handleAddItem}
                                         onQuickAction={(action) => sendMessage(action)}
+                                        onChooseOption={(i) => {
+                                            const o = msg.question?.options?.[i];
+                                            sendToCore({ tap: { type: 'option', index: i }, label: o?.label || 'This one' });
+                                        }}
+                                        onCancelOption={() => sendToCore({ tap: { type: 'cancel' }, label: 'Cancel' })}
                                     />
                                 ))}
                                 {isLoading && (
