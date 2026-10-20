@@ -1,0 +1,81 @@
+{
+  "description": "One customer entering one automation once. Prevents repeats within the cooldown and records whether they were messaged, held back as a control, skipped, or went on to order.",
+  "name": "AutomationEnrolment",
+  "properties": {
+    "automation_id": {
+      "type": "string"
+    },
+    "automation_type": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string"
+    },
+    "converted_order_id": {
+      "type": "string"
+    },
+    "converted_total": {
+      "type": "number"
+    },
+    "cycle_key": {
+      "description": "Unique per automation + profile + occurrence (e.g. year for birthdays, milestone number)",
+      "type": "string"
+    },
+    "enrolled_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "message_job_id": {
+      "type": "string"
+    },
+    "profile_id": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "skip_reason": {
+      "type": "string"
+    },
+    "status": {
+      "default": "queued",
+      "enum": [
+        "queued",
+        "messaged",
+        "holdout",
+        "skipped",
+        "converted"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "automation_id",
+    "profile_id",
+    "cycle_key"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}

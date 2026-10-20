@@ -101,6 +101,10 @@
     "subject": {
       "description": "Email subject",
       "type": "string"
+    },
+    "wa_template_id": {
+      "description": "WaTemplate (MARKETING, approved on this restaurant's WhatsApp account) for WhatsApp campaigns",
+      "type": "string"
     }
   },
   "required": [
@@ -108,6 +112,7 @@
     "name",
     "channel"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -129,6 +134,5 @@
         "role": "admin"
       }
     }
-  },
-  "type": "object"
+  }
 }

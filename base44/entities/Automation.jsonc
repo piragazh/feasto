@@ -1,0 +1,109 @@
+{
+  "description": "An always-on marketing message triggered by a customer's own behaviour (welcome, win-back, birthday...). The hourly crmAutomations job enrols customers who newly meet the trigger and queues MessageJobs for the send worker. Edited only through crmApi.",
+  "name": "Automation",
+  "properties": {
+    "channel_order": {
+      "description": "Channels to try in order; the first the customer agreed to and can be reached on is used",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "content": {
+      "description": "{ sms: { body }, email: { subject, heading, body, button_text }, whatsapp: { template_id } }",
+      "type": "object"
+    },
+    "cooldown_days": {
+      "description": "A customer can be enrolled again only after this many days",
+      "type": "number"
+    },
+    "coupon_config": {
+      "description": "{ discount_type, discount_value, validity_days, minimum_order }",
+      "type": "object"
+    },
+    "coupon_mode": {
+      "default": "none",
+      "enum": [
+        "none",
+        "unique"
+      ],
+      "type": "string"
+    },
+    "enabled_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "holdout_pct": {
+      "default": 10,
+      "type": "number"
+    },
+    "is_enabled": {
+      "default": false,
+      "type": "boolean"
+    },
+    "last_run_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "last_run_enrolled": {
+      "type": "number"
+    },
+    "migrated_from": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "settings": {
+      "description": "Type-specific, e.g. { milestones: [10,25,50] } or { delay_days: 14 }",
+      "type": "object"
+    },
+    "sms_provider": {
+      "enum": [
+        "auto",
+        "httpsms",
+        "twilio"
+      ],
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "welcome",
+        "second_order",
+        "win_back",
+        "lapsed",
+        "birthday",
+        "vip_milestone",
+        "review_request"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "type": "object"
+}
