@@ -270,6 +270,10 @@ async function attributeOrder(db, order, profile) {
         status: 'converted', converted_order_id: order.id, converted_total: Number(order.total) || 0,
         converted_at: order.created_date,
     });
+    if (job.automation_id) {
+        const e = (await db.AutomationEnrolment.filter({ message_job_id: job.id }))[0];
+        if (e) await db.AutomationEnrolment.update(e.id, { status: 'converted', converted_order_id: order.id, converted_total: Number(order.total) || 0 });
+    }
     return job.id;
 }
 
