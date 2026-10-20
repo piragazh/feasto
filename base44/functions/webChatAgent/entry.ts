@@ -203,7 +203,6 @@ Deno.serve(async (req) => {
             }
         } else {
             // ── Free text: the AI asks for actions, the core applies them ──
-            const turnsSince = started.session?.web_turns_since ? new Date(started.session.web_turns_since).getTime() : 0;
             const sess = (await db.AiOrderSession.filter({ id: sessionId }))[0] || {};
             const inWindow = sess.web_turns_since && Date.now() - new Date(sess.web_turns_since).getTime() < HOUR;
             const turns = inWindow ? Number(sess.web_turns) || 0 : 0;
@@ -211,7 +210,6 @@ Deno.serve(async (req) => {
                 return reply({ ...out, reply: "I've had a lot of messages from you this hour 😅 — you can keep ordering from the menu on the page, or try me again a little later." });
             }
             await db.AiOrderSession.update(sessionId, { web_turns: turns + 1, web_turns_since: inWindow ? sess.web_turns_since : new Date().toISOString() }).catch(() => {});
-            void turnsSince;
 
             const [menuRes, basketRes, promos, lastOrder] = await Promise.all([
                 call('browse_menu', { mode: 'agent' }),
