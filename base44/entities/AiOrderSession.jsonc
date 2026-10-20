@@ -119,6 +119,15 @@
       "type": "string",
       "format": "date-time"
     },
+    "web_turns": {
+      "type": "number",
+      "description": "Web chat: AI replies in the current hour (webChatAgent's spend limit)"
+    },
+    "web_turns_since": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Web chat: start of the hour web_turns counts"
+    },
     "rev": {
       "type": "number",
       "default": 0,
