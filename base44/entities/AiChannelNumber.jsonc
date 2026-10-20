@@ -1,5 +1,5 @@
 {
-  "description": "A phone number (or other channel address) that an AI ordering agent answers for one restaurant. aiOrderingCore start_session looks up the CALLED number here to know which restaurant's menu and settings to load. Managed from Super Admin.",
+  "description": "A phone number (or other channel address) that an AI ordering agent answers for one restaurant. aiOrderingCore start_session looks up the CALLED number here to know which restaurant's menu and settings to load. No admin screen yet: add rows in the Base44 data editor until the phone agent goes live.",
   "name": "AiChannelNumber",
   "properties": {
     "restaurant_id": {
