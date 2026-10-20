@@ -795,7 +795,8 @@ Deno.serve(async (req) => {
                 if (!restaurantId) return fail('NUMBER_NOT_LINKED', `No restaurant is linked to ${body.called_number}.`, { say: 'Sorry, this number is not set up for ordering yet.' });
             }
             if (!restaurantId) return fail('RESTAURANT_REQUIRED', 'Send restaurant_id or called_number.');
-            const restaurant = (await db.Restaurant.filter({ id: restaurantId }))[0];
+            // A malformed id makes the database throw rather than return nothing
+            const restaurant = (await db.Restaurant.filter({ id: String(restaurantId) }).catch(() => []))[0];
             if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
 
             // Same call id twice (a platform retry) returns the same session
@@ -818,7 +819,7 @@ Deno.serve(async (req) => {
         if (!body.session_id) return fail('SESSION_REQUIRED', 'session_id is required.');
         let sideEffect = false; // an SMS sent or an order placed: never re-run the action
         for (let attempt = 0; ; attempt++) {
-        const before = (await db.AiOrderSession.filter({ id: body.session_id }))[0];
+        const before = (await db.AiOrderSession.filter({ id: String(body.session_id) }).catch(() => []))[0];
         if (!before) return fail('SESSION_NOT_FOUND', 'Session not found.');
         if (['closed'].includes(before.state) && action !== 'get_context') return fail('SESSION_CLOSED', 'This session has ended.');
         // Once an order exists (cash, or a paid link linked by aiOrderLink) the basket is frozen
