@@ -32,15 +32,28 @@ Deno.serve(async (req) => {
         if ((order.order_source || 'online') !== 'online') return Response.json({ skipped: 'not an online order' });
         if (Date.now() - new Date(order.created_date).getTime() > LINK_WINDOW_MS) return Response.json({ skipped: 'too old' });
 
-        const waiting = (await db.AiOrderSession.filter({ restaurant_id: order.restaurant_id, state: 'awaiting_payment' }))
-            .filter((s) => s.checkout_token && !s.order_id && new Date(s.updated_date || s.last_activity_at).getTime() > Date.now() - LINK_WINDOW_MS);
+        // Any session with a live pay link counts - including one whose call has ended
+        // (sessions closed by an older version of end_session kept their link too).
+        const live = (s) => s.checkout_token && !s.order_id
+            && (!s.checkout_token_expires_at || new Date(s.checkout_token_expires_at).getTime() > Date.now() - 15 * 60 * 1000)
+            && new Date(s.updated_date || s.last_activity_at).getTime() > Date.now() - LINK_WINDOW_MS;
+        const waiting = (await db.AiOrderSession.filter({ restaurant_id: order.restaurant_id }, '-updated_date', 200))
+            .filter((s) => ['awaiting_payment', 'closed', 'active'].includes(s.state) && live(s));
         if (!waiting.length) return Response.json({ skipped: 'no waiting sessions' });
 
         const phone = last10(order.phone || order.customer_phone);
         const key = basketKey(order.items);
         const byPhone = phone.length === 10 ? waiting.filter((s) => last10(s.customer_phone) === phone) : [];
         const byBasket = waiting.filter((s) => basketKey(s.cart) === key);
-        const candidates = byPhone.length ? byPhone : byBasket;
+        let candidates = byPhone.length ? byPhone : byBasket;
+        // The same customer can have two links open (a call and a chat): the basket decides
+        if (candidates.length > 1) {
+            const same = candidates.filter((s) => basketKey(s.cart) === key);
+            if (same.length >= 1) candidates = same;
+        }
+        if (candidates.length > 1 && byPhone.length) {
+            candidates = [...candidates].sort((a, b) => String(b.last_activity_at || '').localeCompare(String(a.last_activity_at || ''))).slice(0, 1);
+        }
         if (candidates.length !== 1) return Response.json({ skipped: `no unique match (${candidates.length})` });
 
         const session = candidates[0];
