@@ -44,6 +44,7 @@ export default function CRMSettingsPanel({ restaurantId, restaurantName }) {
                 <CardContent className="space-y-3">
                     <Provider ok={data.providers.httpsms} label="httpSMS (Android phone gateway)" />
                     <Provider ok={data.providers.twilio} label="Twilio" />
+                    <Provider ok={data.providers.whatsapp} label={`WhatsApp${data.whatsapp?.channel?.display_phone_number ? ` (${data.whatsapp.channel.display_phone_number}, ${data.whatsapp.templates.length} approved marketing template${data.whatsapp.templates.length === 1 ? '' : 's'})` : ''}`} />
                     <div>
                         <Label>Default route</Label>
                         <Select value={s.default_sms_provider} onValueChange={(v) => set({ default_sms_provider: v })}>
