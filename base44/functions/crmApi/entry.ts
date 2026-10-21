@@ -29,6 +29,78 @@ const DEFAULT_SETTINGS = {
     attribution_days: 7,
 };
 
+// Default automations every restaurant gets (all off until switched on).
+const AUTOMATION_DEFAULTS = {
+    welcome: {
+        channel_order: ['email', 'sms'], cooldown_days: 0, holdout_pct: 10, coupon_mode: 'none',
+        content: {
+            sms: { body: 'Thanks for your first order, {first_name}! Hope you loved it. Order direct next time: {order_link}' },
+            email: { subject: 'Thanks for ordering, {first_name}!', heading: 'Welcome to {restaurant}', body: 'Thanks for your first order with us, {first_name}. We hope you enjoyed it!\n\nOrdering direct from us is always the best way to get your favourites.', button_text: 'Order again' },
+        },
+    },
+    second_order: {
+        channel_order: ['whatsapp', 'sms', 'email'], cooldown_days: 0, holdout_pct: 10, coupon_mode: 'unique',
+        coupon_config: { discount_type: 'fixed', discount_value: 3, validity_days: 14, minimum_order: 10 },
+        settings: { delay_days: 14 },
+        content: {
+            sms: { body: 'Hi {first_name}, fancy {favourite_item} again? £3 off your next order with code {coupon_code}' },
+            email: { subject: '£3 off your next order, {first_name}', heading: 'Ready for round two?', body: 'Fancy {favourite_item} again? Here is £3 off your next order.', button_text: 'Order now' },
+        },
+    },
+    win_back: {
+        channel_order: ['whatsapp', 'sms', 'email'], cooldown_days: 90, holdout_pct: 10, coupon_mode: 'unique',
+        coupon_config: { discount_type: 'percentage', discount_value: 15, validity_days: 14, minimum_order: 0 },
+        content: {
+            sms: { body: 'We miss you, {first_name}! 15% off your next order this fortnight with code {coupon_code}' },
+            email: { subject: 'We miss you, {first_name}', heading: "It's been a while!", body: "It's been {days_since_last_order} days since your last order. Here's 15% off to welcome you back.", button_text: 'Order now' },
+        },
+    },
+    lapsed: {
+        channel_order: ['email', 'sms'], cooldown_days: 180, holdout_pct: 10, coupon_mode: 'unique',
+        coupon_config: { discount_type: 'percentage', discount_value: 20, validity_days: 21, minimum_order: 0 },
+        content: {
+            sms: { body: 'Long time no see, {first_name}! 20% off with code {coupon_code} - valid 3 weeks' },
+            email: { subject: '20% off - come back and see us', heading: 'Long time no see!', body: "We'd love to cook for you again. Here's 20% off your next order.", button_text: 'Order now' },
+        },
+    },
+    birthday: {
+        channel_order: ['whatsapp', 'sms', 'email'], cooldown_days: 300, holdout_pct: 0, coupon_mode: 'unique',
+        coupon_config: { discount_type: 'percentage', discount_value: 20, validity_days: 10, minimum_order: 0 },
+        settings: { days_before: 3 },
+        content: {
+            sms: { body: 'Happy birthday soon, {first_name}! Treat yourself: 20% off with code {coupon_code}' },
+            email: { subject: 'A birthday treat for you, {first_name}', heading: 'Happy birthday!', body: 'Your birthday is coming up - celebrate with 20% off your order.', button_text: 'Claim my treat' },
+        },
+    },
+    vip_milestone: {
+        channel_order: ['whatsapp', 'email', 'sms'], cooldown_days: 0, holdout_pct: 0, coupon_mode: 'none',
+        settings: { milestones: [10, 25, 50] },
+        content: {
+            sms: { body: 'Thank you, {first_name}! You are one of our best customers. We really appreciate you.' },
+            email: { subject: 'Thank you, {first_name}', heading: 'You are one of our best customers', body: 'We just wanted to say thank you for ordering with us so often. It means a lot to a local business.', button_text: 'Order again' },
+        },
+    },
+    review_request: {
+        channel_order: ['sms', 'email'], cooldown_days: 30, holdout_pct: 0, coupon_mode: 'none',
+        content: {
+            sms: { body: 'Thanks for ordering, {first_name}! How was it? Tell us here: {order_link}' },
+            email: { subject: 'How was your order, {first_name}?', heading: 'How did we do?', body: 'Thanks for ordering from {restaurant}. We would love to hear what you thought.', button_text: 'Leave a review' },
+        },
+    },
+};
+const AUTOMATION_ORDER = ['welcome', 'second_order', 'win_back', 'lapsed', 'birthday', 'vip_milestone', 'review_request'];
+
+async function approvedWaTemplates(db, restaurantId) {
+    const ch = (await db.WhatsAppChannel.filter({ restaurant_id: restaurantId, status: 'connected' }))[0] || null;
+    if (!ch) return { channel: null, templates: [] };
+    const all = await db.WaTemplate.filter({ category: 'MARKETING' }).catch(() => []);
+    return {
+        channel: { display_phone_number: ch.display_phone_number, verified_name: ch.verified_name },
+        templates: all.filter(t => (t.submissions || []).some(s => s.waba_id === ch.waba_id && s.status === 'APPROVED'))
+            .map(t => ({ id: t.id, name: t.name, body: t.body, param_order: t.param_order || [], has_stop_button: (t.buttons || []).some(b => /stop/i.test(`${b.text || ''} ${b.payload || ''}`)) })),
+    };
+}
+
 const SYSTEM_SEGMENTS = [
     { key: 'sys:all', name: 'All customers', description: 'Everyone who has ordered' },
     { key: 'sys:marketable', name: 'All marketable', description: 'Customers who agreed to offers on at least one channel' },
@@ -217,7 +289,7 @@ async function blockReason(p, channel, ctx) {
 async function audienceBreakdown(db, restaurantId, members, settings) {
     const ctx = { suppressed: await suppressionSet(db), sentThisWeek: await recentSends(db, restaurantId), settings };
     const out = {};
-    for (const ch of ['sms', 'email']) {
+    for (const ch of ['sms', 'email', 'whatsapp']) {
         const reasons = {};
         let reachable = 0;
         for (const p of members) {
@@ -511,7 +583,14 @@ Deno.serve(async (req) => {
             case 'campaign_save': {
                 const f = body.campaign || {};
                 if (!String(f.name || '').trim()) return Response.json({ error: 'Name required' }, { status: 400 });
-                if (!['sms', 'email'].includes(f.channel)) return Response.json({ error: 'Choose SMS or email (WhatsApp campaigns arrive in the next phase)' }, { status: 400 });
+                if (!['sms', 'email', 'whatsapp'].includes(f.channel)) return Response.json({ error: 'Choose SMS, email or WhatsApp' }, { status: 400 });
+                let waTemplate = null;
+                if (f.channel === 'whatsapp') {
+                    const wa = await approvedWaTemplates(db, restaurantId);
+                    if (!wa.channel) return Response.json({ error: 'Connect this restaurant\'s WhatsApp number first' }, { status: 400 });
+                    waTemplate = wa.templates.find(t => t.id === f.wa_template_id);
+                    if (!waTemplate) return Response.json({ error: 'Choose a marketing template approved by Meta for this number' }, { status: 400 });
+                }
                 if (f.coupon_mode === 'shared') {
                     const code = String(f.coupon_code || '').trim().toUpperCase();
                     const cp = (await db.Coupon.filter({ code, restaurant_id: restaurantId, is_active: true }))[0];
@@ -526,8 +605,9 @@ Deno.serve(async (req) => {
                     segment_name: f.segment_name || '',
                     subject: String(f.subject || '').slice(0, 150),
                     heading: String(f.heading || '').slice(0, 150),
-                    body: String(f.body || '').slice(0, 2000),
+                    body: waTemplate ? String(waTemplate.body || '') : String(f.body || '').slice(0, 2000),
                     button_text: String(f.button_text || 'Order now').slice(0, 40),
+                    wa_template_id: waTemplate ? waTemplate.id : null,
                     coupon_mode: ['none', 'shared', 'unique'].includes(f.coupon_mode) ? f.coupon_mode : 'none',
                     coupon_code: f.coupon_mode === 'shared' ? String(f.coupon_code || '').trim().toUpperCase() : null,
                     coupon_config: f.coupon_mode === 'unique' ? {
@@ -658,9 +738,12 @@ Deno.serve(async (req) => {
             case 'settings_get': {
                 const s = await loadSettings(db, restaurantId, restaurant.name);
                 const { _id, ...settings } = s;
+                const wa = await approvedWaTemplates(db, restaurantId);
                 return Response.json({
                     settings,
+                    whatsapp: wa,
                     providers: {
+                        whatsapp: !!wa.channel,
                         httpsms: !!(Deno.env.get('HTTPSMS_API_KEY') && Deno.env.get('HTTPSMS_FROM')),
                         twilio: !!(Deno.env.get('TWILIO_ACCOUNT_SID') && Deno.env.get('TWILIO_AUTH_TOKEN') && Deno.env.get('TWILIO_PHONE_NUMBER')),
                         email: true,
@@ -700,6 +783,96 @@ Deno.serve(async (req) => {
                         .filter(c => !String(c.code).startsWith('WB-') && !String(c.code).startsWith('CRM-') && (!c.valid_until || c.valid_until >= today))
                         .map(c => ({ code: c.code, description: c.description, discount_type: c.discount_type, discount_value: c.discount_value, valid_until: c.valid_until })),
                 });
+            }
+
+            // ── Automations ──
+            case 'automations_list': {
+                let rows = await db.Automation.filter({ restaurant_id: restaurantId });
+                const missing = AUTOMATION_ORDER.filter(t => !rows.some(r => r.type === t));
+                if (missing.length) {
+                    await db.Automation.bulkCreate(missing.map(t => ({ restaurant_id: restaurantId, type: t, is_enabled: false, ...AUTOMATION_DEFAULTS[t] })));
+                    rows = await db.Automation.filter({ restaurant_id: restaurantId });
+                }
+                const since = new Date(Date.now() - 30 * DAY).toISOString();
+                const enrolments = await listAll(db.AutomationEnrolment, { restaurant_id: restaurantId, enrolled_at: { $gte: since } });
+                const profileIds = [...new Set(enrolments.filter(e => ['messaged', 'converted', 'holdout'].includes(e.status)).map(e => e.profile_id))];
+                const profs = [];
+                for (let i = 0; i < profileIds.length; i += 200) profs.push(...await withRetry(() => db.CustomerProfile.filter({ id: profileIds.slice(i, i + 200) })));
+                const lastOrder = new Map(profs.map(p => [p.id, p.last_order_at]));
+                const orderedSince = (e) => { const lo = lastOrder.get(e.profile_id); return !!lo && lo > e.enrolled_at; };
+                const wa = await approvedWaTemplates(db, restaurantId);
+                return Response.json({
+                    whatsapp: wa,
+                    automations: AUTOMATION_ORDER.map(t => rows.find(r => r.type === t)).filter(Boolean).map(a => {
+                        const es = enrolments.filter(e => e.automation_id === a.id);
+                        const messaged = es.filter(e => ['messaged', 'converted'].includes(e.status));
+                        const held = es.filter(e => e.status === 'holdout');
+                        const rate = (g) => g.length ? Math.round(g.filter(orderedSince).length / g.length * 1000) / 10 : null;
+                        return {
+                            ...a,
+                            stats_30d: {
+                                enrolled: es.length,
+                                messaged: messaged.length,
+                                holdout: held.length,
+                                skipped: es.filter(e => e.status === 'skipped').length,
+                                converted: es.filter(e => e.status === 'converted').length,
+                                revenue: Math.round(es.reduce((s, e) => s + (Number(e.converted_total) || 0), 0) * 100) / 100,
+                                messaged_order_rate: rate(messaged),
+                                holdout_order_rate: rate(held),
+                            },
+                        };
+                    }),
+                });
+            }
+
+            case 'automation_save': {
+                const f = body.automation || {};
+                const a = (await db.Automation.filter({ id: f.id, restaurant_id: restaurantId }))[0];
+                if (!a) return Response.json({ error: 'Automation not found' }, { status: 404 });
+                const channels = (Array.isArray(f.channel_order) ? f.channel_order : a.channel_order || [])
+                    .filter((c, i, arr) => ['sms', 'email', 'whatsapp'].includes(c) && arr.indexOf(c) === i);
+                if (f.is_enabled && !channels.length) return Response.json({ error: 'Choose at least one channel' }, { status: 400 });
+                const clip = (s, n) => String(s || '').slice(0, n);
+                const content = {
+                    sms: { body: clip(f.content?.sms?.body ?? a.content?.sms?.body, 600) },
+                    email: {
+                        subject: clip(f.content?.email?.subject ?? a.content?.email?.subject, 150),
+                        heading: clip(f.content?.email?.heading ?? a.content?.email?.heading, 150),
+                        body: clip(f.content?.email?.body ?? a.content?.email?.body, 2000),
+                        button_text: clip(f.content?.email?.button_text ?? a.content?.email?.button_text ?? 'Order now', 40),
+                    },
+                    whatsapp: { template_id: f.content?.whatsapp?.template_id ?? a.content?.whatsapp?.template_id ?? null },
+                };
+                if (f.is_enabled && channels.includes('whatsapp') && content.whatsapp.template_id) {
+                    const wa = await approvedWaTemplates(db, restaurantId);
+                    if (!wa.templates.some(t => t.id === content.whatsapp.template_id)) {
+                        return Response.json({ error: 'That WhatsApp template is not approved for this restaurant\'s number' }, { status: 400 });
+                    }
+                }
+                const s = f.settings || a.settings || {};
+                const patch = {
+                    is_enabled: !!f.is_enabled,
+                    channel_order: channels,
+                    sms_provider: ['auto', 'httpsms', 'twilio'].includes(f.sms_provider) ? f.sms_provider : null,
+                    content,
+                    coupon_mode: f.coupon_mode === 'unique' ? 'unique' : 'none',
+                    coupon_config: f.coupon_mode === 'unique' ? {
+                        discount_type: f.coupon_config?.discount_type === 'fixed' ? 'fixed' : 'percentage',
+                        discount_value: Math.max(0, Math.min(100, Number(f.coupon_config?.discount_value) || 10)),
+                        validity_days: Math.max(1, Math.min(90, Number(f.coupon_config?.validity_days) || 14)),
+                        minimum_order: Math.max(0, Number(f.coupon_config?.minimum_order) || 0),
+                    } : null,
+                    cooldown_days: Math.max(0, Math.min(365, Number(f.cooldown_days ?? a.cooldown_days) || 0)),
+                    holdout_pct: Math.max(0, Math.min(50, Number(f.holdout_pct ?? a.holdout_pct) || 0)),
+                    settings: {
+                        ...(a.type === 'second_order' ? { delay_days: Math.max(3, Math.min(60, Number(s.delay_days) || 14)) } : {}),
+                        ...(a.type === 'birthday' ? { days_before: Math.max(0, Math.min(14, Number(s.days_before ?? 3))) } : {}),
+                        ...(a.type === 'vip_milestone' ? { milestones: (s.milestones || [10, 25, 50]).map(Number).filter(n => n > 1 && n < 1000).slice(0, 6) } : {}),
+                    },
+                };
+                if (patch.is_enabled && !a.is_enabled) patch.enabled_at = new Date().toISOString();
+                await db.Automation.update(a.id, patch);
+                return Response.json({ success: true });
             }
 
             default:
