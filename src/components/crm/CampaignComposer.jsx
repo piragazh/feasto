@@ -106,7 +106,8 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
         try {
             const cid = await saveDraft();
             const r = await crm(restaurantId, 'campaign_send', { campaign_id: cid, schedule_at: when === 'later' && f.schedule_at ? new Date(f.schedule_at).toISOString() : null });
-            toast.success(r.scheduled_for ? 'Campaign scheduled' : `Sending to ${r.queued} customers`);
+            if (r.pending_approval) toast.success(`Sent to MealDrop for approval: ${r.reason}`);
+            else toast.success(r.scheduled_for ? 'Campaign scheduled' : `Sending to ${r.queued} customers`);
             qc.invalidateQueries({ queryKey: ['crm-campaigns', restaurantId] });
             onClose(cid);
         } catch (e) { toast.error(e.message); } finally { setBusy(false); }
