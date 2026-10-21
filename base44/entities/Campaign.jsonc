@@ -1,7 +1,14 @@
 {
-  "description": "A one-off marketing send to a segment on one channel. Sending snapshots the audience into MessageJob rows; the crmSendWorker sends them.",
+  "description": "A one-off marketing send to a segment on one channel. Sending snapshots the audience into MessageJob rows; the crmSendWorker sends them. When platform approval rules apply, a restaurant's send waits in pending_approval until Super Admin approves.",
   "name": "Campaign",
   "properties": {
+    "approval_reason": {
+      "description": "Why approval was needed",
+      "type": "string"
+    },
+    "approved_by": {
+      "type": "string"
+    },
     "body": {
       "description": "Message text with {first_name} {restaurant} {coupon_code} {favourite_item} {order_link} tokens",
       "type": "string"
@@ -56,6 +63,9 @@
       "default": false,
       "type": "boolean"
     },
+    "rejection_reason": {
+      "type": "string"
+    },
     "restaurant_id": {
       "type": "string"
     },
@@ -90,6 +100,7 @@
       "default": "draft",
       "enum": [
         "draft",
+        "pending_approval",
         "scheduled",
         "sending",
         "sent",
