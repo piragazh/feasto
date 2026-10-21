@@ -38,7 +38,7 @@ const OfflineRiskDigest = React.lazy(() => import('@/components/superadmin/Offli
 const WeeklyOpsHealthDashboard = React.lazy(() => import('@/components/superadmin/WeeklyOpsHealthDashboard'));
 const FailureMonitoringDashboard = React.lazy(() => import('@/components/superadmin/FailureMonitoringDashboard'));
 const KioskMonitoringDashboard = React.lazy(() => import('@/components/superadmin/KioskMonitoringDashboard'));
-const CustomerCRM = React.lazy(() => import('@/components/superadmin/CustomerCRM'));
+const CustomerCRM = React.lazy(() => import('@/components/crm/admin/SuperAdminCRM'));
 const CustomerAnalyticsDashboard = React.lazy(() => import('@/components/superadmin/CustomerAnalyticsDashboard'));
 const LiveOrdersCommand = React.lazy(() => import('@/components/superadmin/LiveOrdersCommand'));
 const DeliveryHeatmap = React.lazy(() => import('@/components/superadmin/DeliveryHeatmap'));
