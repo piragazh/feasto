@@ -1,6 +1,5 @@
 {
   "name": "CRM Automations",
-  "description": "Every hour: for each restaurant's switched-on automations (welcome, second-order nudge, win-back, lapsed, birthday, VIP thank-you, review request), enrols customers who newly meet the trigger, holds back a control group, and queues their message for the CRM Send Worker. Does nothing when no automation is switched on.",
   "trigger": {
     "condition": null,
     "config": {
@@ -12,12 +11,13 @@
       "timezone": "UTC",
       "interval_value": 1,
       "interval_unit": "hours",
-      "interval_anchor": "2026-10-21T06:20:00",
+      "interval_anchor": "2026-10-21T06:20:00Z",
       "ends_type": "never",
       "ends_on_date": null,
       "ends_after_count": null
     }
   },
+  "description": "Every hour: for each restaurant's switched-on automations (welcome, second-order nudge, win-back, lapsed, birthday, VIP thank-you, review request), enrols customers who newly meet the trigger, holds back a control group, and queues their message for the CRM Send Worker. Does nothing when no automation is switched on.",
   "definition": {
     "document": {
       "dsl": "1.0.0",
