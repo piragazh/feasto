@@ -145,6 +145,8 @@ export default function CRMCampaigns({ restaurantId, restaurantName, draft, onDr
                                                     {c.channel === 'sms' ? <Smartphone className="h-4 w-4 text-gray-400 shrink-0" /> : <Mail className="h-4 w-4 text-gray-400 shrink-0" />}{c.name}
                                                 </div>
                                                 <div className="text-xs text-gray-500">{c.segment_name || '—'} · {c.sent_at ? shortDate(c.sent_at) : c.schedule_at ? `scheduled ${shortDate(c.schedule_at)}` : `created ${shortDate(c.created_date)}`}</div>
+                                                {c.status === 'pending_approval' && <div className="text-xs text-purple-700">Waiting for MealDrop approval — {c.approval_reason}</div>}
+                                                {c.status === 'draft' && c.rejection_reason && <div className="text-xs text-red-600">Not approved: {c.rejection_reason}</div>}
                                             </button>
                                             <div className="flex items-center gap-3 shrink-0">
                                                 {c.status !== 'draft' && <div className="text-right text-xs text-gray-600 hidden sm:block">{c.stats?.sent ?? 0} sent · {c.stats?.converted ?? 0} ordered · {money(c.stats?.revenue)}</div>}
