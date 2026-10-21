@@ -9,7 +9,7 @@ import { crm, money, pence, shortDate, SKIP_REASON } from './crmClient';
 import CampaignComposer from './CampaignComposer';
 
 const STATUS = {
-    draft: 'bg-gray-100 text-gray-700', scheduled: 'bg-blue-100 text-blue-700', sending: 'bg-amber-100 text-amber-800',
+    draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-purple-100 text-purple-700', scheduled: 'bg-blue-100 text-blue-700', sending: 'bg-amber-100 text-amber-800',
     sent: 'bg-green-100 text-green-700', paused: 'bg-orange-100 text-orange-700', cancelled: 'bg-red-100 text-red-700',
 };
 const JOB_STATUS = {
