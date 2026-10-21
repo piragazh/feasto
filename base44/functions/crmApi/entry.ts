@@ -637,7 +637,11 @@ Deno.serve(async (req) => {
             case 'campaign_send': {
                 const c = (await db.Campaign.filter({ id: body.campaign_id, restaurant_id: restaurantId }))[0];
                 if (!c) return Response.json({ error: 'Campaign not found' }, { status: 404 });
-                if (c.status !== 'draft') return Response.json({ error: `Campaign is already ${c.status}` }, { status: 400 });
+                // Super Admin approves a waiting campaign by sending it; nobody else can send one.
+                const approving = c.status === 'pending_approval' && auth.isAdmin;
+                if (c.status !== 'draft' && !approving) {
+                    return Response.json({ error: c.status === 'pending_approval' ? 'This campaign is waiting for MealDrop approval' : `Campaign is already ${c.status}` }, { status: 400 });
+                }
                 if (!String(c.body || '').trim()) return Response.json({ error: 'Write a message first' }, { status: 400 });
                 if (c.channel === 'email' && !String(c.subject || '').trim()) return Response.json({ error: 'Add an email subject' }, { status: 400 });
 
@@ -648,6 +652,30 @@ Deno.serve(async (req) => {
 
                 const scheduleAt = body.schedule_at || c.schedule_at || null;
                 const future = scheduleAt && new Date(scheduleAt).getTime() > Date.now() + 60000;
+
+                // Platform approval rules (Super Admin → CRM → Approvals). Admins never need approval.
+                if (!auth.isAdmin) {
+                    const rules = (await db.CRMSettings.filter({ restaurant_id: 'platform' }))[0] || {};
+                    const firstN = Number(rules.approval_first_n) || 0;
+                    const overPence = Number(rules.approval_over_pence) || 0;
+                    let reason = null;
+                    if (firstN > 0) {
+                        const previous = (await db.Campaign.filter({ restaurant_id: restaurantId }, '-created_date', 200))
+                            .filter(x => x.id !== c.id && x.sent_at).length;
+                        if (previous < firstN) reason = `One of this restaurant's first ${firstN} campaigns`;
+                    }
+                    if (!reason && overPence > 0 && c.channel === 'sms') {
+                        let reachable = 0;
+                        for (const p of members) if (!(await blockReason(p, c.channel, ctx))) reachable++;
+                        const rate = c.sms_provider === 'twilio' ? settings.sms_cost_pence?.twilio : settings.sms_cost_pence?.httpsms;
+                        const est = reachable * smsSegments(c.body + '\nReply STOP to opt out') * (Number(rate) || 0);
+                        if (est > overPence) reason = `Estimated SMS cost £${(est / 100).toFixed(2)} is over the £${(overPence / 100).toFixed(2)} approval limit`;
+                    }
+                    if (reason) {
+                        await db.Campaign.update(c.id, { status: 'pending_approval', approval_reason: reason, schedule_at: future ? scheduleAt : null, rejection_reason: null });
+                        return Response.json({ success: true, pending_approval: true, reason });
+                    }
+                }
                 const jobs = [];
                 const eligible = [];
                 for (const p of members) {
@@ -668,6 +696,7 @@ Deno.serve(async (req) => {
                 const estSegments = c.channel === 'sms' ? smsSegments(c.body + '\nReply STOP to opt out') : 0;
                 const providerRate = c.sms_provider === 'twilio' ? settings.sms_cost_pence?.twilio : settings.sms_cost_pence?.httpsms;
                 await db.Campaign.update(c.id, {
+                    ...(approving ? { approved_by: user.email } : {}),
                     status: future ? 'scheduled' : (queued ? 'sending' : 'sent'),
                     schedule_at: future ? scheduleAt : null,
                     segment_name: segName,
