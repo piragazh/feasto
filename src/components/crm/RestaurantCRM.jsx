@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Filter, Send, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Filter, Send, Settings, Zap } from 'lucide-react';
 import CRMOverview from './CRMOverview';
 import CRMCustomers from './CRMCustomers';
 import CRMSegments from './CRMSegments';
 import CRMCampaigns from './CRMCampaigns';
 import CRMSettingsPanel from './CRMSettingsPanel';
+import CRMAutomations from './CRMAutomations';
 
 /**
  * Restaurant CRM — customers, segments, campaigns and marketing settings for one restaurant.
@@ -33,6 +34,7 @@ export default function RestaurantCRM({ restaurantId, restaurantName }) {
                     <TabsTrigger value="customers" className="gap-1.5"><Users className="h-4 w-4" />Customers</TabsTrigger>
                     <TabsTrigger value="segments" className="gap-1.5"><Filter className="h-4 w-4" />Segments</TabsTrigger>
                     <TabsTrigger value="campaigns" className="gap-1.5"><Send className="h-4 w-4" />Campaigns</TabsTrigger>
+                    <TabsTrigger value="automations" className="gap-1.5"><Zap className="h-4 w-4" />Automations</TabsTrigger>
                     <TabsTrigger value="settings" className="gap-1.5"><Settings className="h-4 w-4" />Settings</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="mt-4">
@@ -46,6 +48,9 @@ export default function RestaurantCRM({ restaurantId, restaurantName }) {
                 </TabsContent>
                 <TabsContent value="campaigns" className="mt-4">
                     <CRMCampaigns restaurantId={restaurantId} restaurantName={restaurantName} draft={campaignDraft} onDraftConsumed={() => setCampaignDraft(null)} />
+                </TabsContent>
+                <TabsContent value="automations" className="mt-4">
+                    <CRMAutomations restaurantId={restaurantId} />
                 </TabsContent>
                 <TabsContent value="settings" className="mt-4">
                     <CRMSettingsPanel restaurantId={restaurantId} restaurantName={restaurantName} />
