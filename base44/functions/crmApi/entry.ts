@@ -550,6 +550,7 @@ Deno.serve(async (req) => {
                     campaigns: campaigns.map(c => ({
                         id: c.id, name: c.name, channel: c.channel, status: c.status, segment_name: c.segment_name,
                         schedule_at: c.schedule_at, sent_at: c.sent_at, created_date: c.created_date, stats: c.stats || {},
+                        approval_reason: c.approval_reason || null, rejection_reason: c.rejection_reason || null,
                     })),
                 });
             }
