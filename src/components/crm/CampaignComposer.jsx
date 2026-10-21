@@ -65,7 +65,9 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
 
     const validStep = () => {
         if (step === 0) return !!f.segment_key;
-        if (step === 2) return f.name.trim() && f.body.trim() && (f.channel !== 'email' || f.subject.trim());
+        if (step === 2) return f.channel === 'whatsapp'
+            ? f.name.trim() && f.wa_template_id
+            : f.name.trim() && f.body.trim() && (f.channel !== 'email' || f.subject.trim());
         if (step === 3) return f.coupon_mode !== 'shared' || !!f.coupon_code;
         return true;
     };
@@ -141,10 +143,10 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
                     <div className="space-y-4">
                         <div className="grid grid-cols-3 gap-2">
                             {[['sms', 'SMS', Smartphone], ['email', 'Email', Mail], ['whatsapp', 'WhatsApp', MessageCircle]].map(([ch, label, Icon]) => (
-                                <button key={ch} disabled={ch === 'whatsapp'} onClick={() => set({ channel: ch })}
-                                    className={`rounded-xl border-2 p-4 text-left ${f.channel === ch ? 'border-orange-500 bg-orange-50' : 'border-gray-200'} ${ch === 'whatsapp' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                <button key={ch} disabled={ch === 'whatsapp' && !settingsData?.providers?.whatsapp} onClick={() => set({ channel: ch })}
+                                    className={`rounded-xl border-2 p-4 text-left ${f.channel === ch ? 'border-orange-500 bg-orange-50' : 'border-gray-200'} ${ch === 'whatsapp' && !settingsData?.providers?.whatsapp ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                     <Icon className="h-5 w-5 mb-1" /><div className="font-semibold">{label}</div>
-                                    <div className="text-xs text-gray-500">{ch === 'whatsapp' ? 'Coming next' : `${preview?.channels?.[ch]?.reachable ?? '…'} reachable`}</div>
+                                    <div className="text-xs text-gray-500">{ch === 'whatsapp' && !settingsData?.providers?.whatsapp ? 'Connect a WhatsApp number first' : `${preview?.channels?.[ch]?.reachable ?? '…'} reachable`}</div>
                                 </button>
                             ))}
                         </div>
@@ -168,22 +170,34 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
                     <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-3">
                             <div><Label>Campaign name (internal)</Label><Input value={f.name} onChange={e => set({ name: e.target.value })} placeholder="e.g. October win-back" /></div>
+                            {f.channel === 'whatsapp' && (
+                                <div className="space-y-1.5">
+                                    <Label>WhatsApp template</Label>
+                                    <Select value={f.wa_template_id || ''} onValueChange={(v) => { const t = settingsData?.whatsapp?.templates?.find(x => x.id === v); set({ wa_template_id: v, body: t?.body || '' }); }}>
+                                        <SelectTrigger><SelectValue placeholder="Choose an approved marketing template" /></SelectTrigger>
+                                        <SelectContent>{(settingsData?.whatsapp?.templates || []).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-500">WhatsApp offers must use a template Meta has approved. Make one in Super Admin → WhatsApp templates (category Marketing, with a “Stop offers” button).</p>
+                                </div>
+                            )}
                             {f.channel === 'email' && (
                                 <>
                                     <div><Label>Subject line</Label><Input value={f.subject} onChange={e => set({ subject: e.target.value })} placeholder="We've missed you, {first_name}" /></div>
                                     <div><Label>Headline</Label><Input value={f.heading} onChange={e => set({ heading: e.target.value })} placeholder="Your favourites are waiting" /></div>
                                 </>
                             )}
-                            <div>
+                            {f.channel !== 'whatsapp' && <div>
                                 <Label>Message</Label>
                                 <Textarea rows={f.channel === 'sms' ? 4 : 7} value={f.body} onChange={e => set({ body: e.target.value })} placeholder={f.channel === 'sms' ? "Hi {first_name}, it's been a while! Get 15% off your next order this week." : 'Write your message…'} />
                                 <div className="flex flex-wrap gap-1 mt-1.5">{TOKENS.map(t => <button key={t} onClick={() => insertToken(t)} className="text-[11px] px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200">{t}</button>)}</div>
-                            </div>
+                            </div>}
                             {f.channel === 'email' && <div><Label>Button text</Label><Input value={f.button_text} onChange={e => set({ button_text: e.target.value })} /></div>}
                         </div>
                         <div>
                             <Label>Preview</Label>
-                            {f.channel === 'sms' ? (
+                            {f.channel === 'whatsapp' ? (
+                                <div className="mt-1.5 rounded-2xl bg-[#e7fbe6] p-3 text-sm whitespace-pre-line">{sampleBody || 'Choose a template to preview it.'}</div>
+                            ) : f.channel === 'sms' ? (
                                 <div className="mt-1.5">
                                     <div className="rounded-2xl bg-gray-100 p-3 text-sm whitespace-pre-line">{smsText}</div>
                                     <p className={`text-xs mt-1 ${sms.segments > 2 ? 'text-amber-700' : 'text-gray-500'}`}>{sms.length} characters · {sms.segments} SMS part{sms.segments > 1 ? 's' : ''}{sms.unicode ? ' · emoji/special characters shorten each part to 70' : ''}</p>
@@ -241,7 +255,7 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
                     <div className="space-y-4">
                         <div className="rounded-xl bg-gray-50 p-4 text-sm space-y-1">
                             <div><span className="text-gray-500">Audience:</span> {f.segment_name || allSegs.find(s => s.key === f.segment_key)?.name}</div>
-                            <div><span className="text-gray-500">Channel:</span> {f.channel.toUpperCase()}{f.channel === 'sms' ? ` via ${f.sms_provider}` : ''}</div>
+                            <div><span className="text-gray-500">Channel:</span> {f.channel === 'whatsapp' ? `WhatsApp (${settingsData?.whatsapp?.channel?.display_phone_number || 'your number'})` : f.channel.toUpperCase()}{f.channel === 'sms' ? ` via ${f.sms_provider}` : ''}</div>
                             <div><span className="text-gray-500">Will receive it:</span> <b>{Math.round(reachable * (1 - (f.holdout_pct || 0) / 100))}</b> customers</div>
                             {f.channel === 'sms' && <div><span className="text-gray-500">Estimated cost:</span> £{estCost.toFixed(2)} ({sms.segments} part{sms.segments > 1 ? 's' : ''} each)</div>}
                             <div><span className="text-gray-500">Offer:</span> {f.coupon_mode === 'none' ? 'none' : f.coupon_mode === 'shared' ? f.coupon_code : `unique ${f.coupon_config.discount_type === 'fixed' ? '£' : ''}${f.coupon_config.discount_value}${f.coupon_config.discount_type === 'percentage' ? '%' : ''} off codes`}</div>
