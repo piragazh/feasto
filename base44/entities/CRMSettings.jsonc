@@ -1,7 +1,17 @@
 {
-  "description": "Per-restaurant CRM marketing settings. Read and written only through the crmApi function.",
+  "description": "Per-restaurant CRM marketing settings, read and written through crmApi. One extra row with restaurant_id = 'platform' holds Super Admin platform rules (campaign approval).",
   "name": "CRMSettings",
   "properties": {
+    "approval_first_n": {
+      "default": 0,
+      "description": "Platform row only: a restaurant's first N campaigns need Super Admin approval (0 = off)",
+      "type": "number"
+    },
+    "approval_over_pence": {
+      "default": 0,
+      "description": "Platform row only: campaigns estimated above this SMS cost need approval (0 = off)",
+      "type": "number"
+    },
     "attribution_days": {
       "default": 7,
       "type": "number"
@@ -43,6 +53,7 @@
       "type": "string"
     },
     "restaurant_id": {
+      "description": "Restaurant id, or 'platform' for platform-wide rules",
       "type": "string"
     },
     "sender_name": {
@@ -65,6 +76,7 @@
   "required": [
     "restaurant_id"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -86,6 +98,5 @@
         "role": "admin"
       }
     }
-  },
-  "type": "object"
+  }
 }
