@@ -1,5 +1,5 @@
 {
-  "description": "A phone number (or other channel address) that an AI ordering agent answers for one restaurant. aiOrderingCore start_session looks up the CALLED number here to know which restaurant's menu and settings to load. No admin screen yet: add rows in the Base44 data editor until the phone agent goes live.",
+  "description": "A phone number (or other channel address) that an AI ordering agent answers for one restaurant. aiOrderingCore start_session looks up the CALLED number here to know which restaurant's menu and settings to load. Managed in Super Admin > AI Ordering > Phone numbers. Calls reach retellVoice, which looks the dialled number up here.",
   "name": "AiChannelNumber",
   "properties": {
     "restaurant_id": {
@@ -29,6 +29,10 @@
     "provider_ref": {
       "type": "string",
       "description": "The provider's own id for this number"
+    },
+    "transfer_number": {
+      "type": "string",
+      "description": "Phone: where the agent transfers a caller who asks for a person. Empty = the restaurant's alert phone."
     },
     "is_active": {
       "type": "boolean",
