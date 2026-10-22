@@ -43,6 +43,9 @@
  * (zones, tiered delivery, small order surcharge) - so a basket total here is the
  * total the website checkout and the validator arrive at.
  *
+ * Option groups are addressed by POSITION as well as name: many menus leave group names
+ * blank (a meal upgrade and the drink inside it can both be ""). See isTop / findGroup.
+ *
  * ENV
  *   AI_CORE_API_KEY   shared secret for voice/chat platforms (required for non-admin callers)
  *   BASE44_APP_URL    public origin for pay links (default https://app.mealdrop.co.uk)
