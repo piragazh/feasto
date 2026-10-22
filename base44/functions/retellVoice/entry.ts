@@ -88,10 +88,13 @@ function quoteText(q) {
 }
 function question(q) {
     if (!q) return undefined;
+    const extras = (q.options || []).filter((o) => o.extra_price).map((o) => `${o.label} costs ${money(o.extra_price)} more`);
     return {
-        item: q.item_name, choose: q.group,
-        options: (q.options || []).map((o) => (o.extra_price ? `${o.label} (+${money(o.extra_price)})` : o.label)),
-        ask_caller: `Ask which ${q.group || 'option'} they want for the ${q.item_name}. Read out the options if they are unsure.`,
+        item: q.item_name, choosing: q.group,
+        options: (q.options || []).map((o) => o.label),
+        ...(extras.length ? { prices: extras } : {}),
+        ask_caller: q.say,
+        then: 'Call choose_option with exactly one of the options, as written. If they want something else on this item, ask this question first.',
     };
 }
 /** A core refusal in a form the agent can act on. */
@@ -127,9 +130,9 @@ const TOOLS = {
             allergens: i.allergens.length ? i.allergens : 'none listed',
             allergy_rule: 'Only repeat the listed allergens. Never say anything is allergen-free. For a serious allergy, offer to transfer to the team.',
             choices: (i.option_groups || []).map((g) => ({
-                group: g.group, required: g.required,
+                group: String(g.group || '').replace(/[:\s]+$/, '') || (g.type === 'meal_upgrade' ? 'Meal' : 'Option'), required: g.required,
                 options: g.options.map((o) => (o.extra_price ? `${o.label} (+${money(o.extra_price)})` : o.label)),
-                ...(g.meal_groups ? { if_meal: g.meal_groups.map((m) => ({ group: m.group, options: m.options.map((o) => o.label) })) } : {}),
+                ...(g.meal_groups ? { if_meal: g.meal_groups.map((m) => ({ group: String(m.group || '').replace(/[:\s]+$/, '') || 'Meal choice', options: m.options.map((o) => String(o.label).trim()) })) } : {}),
             })),
         };
     },
@@ -148,7 +151,7 @@ const TOOLS = {
     },
 
     async choose_option(ctx, a) {
-        const r = await core(ctx.base44, 'choose_option', { session_id: ctx.sid, option: clip(a.option, 80) });
+        const r = await core(ctx.base44, 'choose_option', { session_id: ctx.sid, option: clip(String(a.option || '').replace(/\(\s*\+?\s*£?\s*[\d.]+\s*\)/g, ''), 80) });
         if (!r.ok) return refusal(r);
         if (!r.added) return { ok: true, added: false, waiting_for: question(r.needs_choice) };
         return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), next: 'Ask if they would like anything else.' };
