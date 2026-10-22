@@ -236,8 +236,10 @@ function findGroup(item, step) {
 
 /** "Normal or Spicy:" -> "Normal or Spicy"; a blank name -> a sensible word for the question. */
 function groupLabel(group, nested) {
-    const n = String(group?.name || '').replace(/[:\s]+$/, '').trim();
-    if (n) return n;
+    const n = String(group?.name || '')
+        .replace(/\(\s*max\.?\s*\d+\s*\)/ig, '').replace(/[:\s]+$/, '')
+        .replace(/^(please\s+)?(choose|select|pick)\s+(a|an|your|one|\d+)?\s*/i, '').trim();
+    if (n) return /^[A-Z][a-z]/.test(n) && !/ or /i.test(n) ? n.toLowerCase() : n;
     if (group?.type === 'meal_upgrade') return 'on its own or as a meal';
     const labels = (group?.options || []).map((o) => norm(o.label)).join(' ');
     if (/(pepsi|coke|cola|tango|fanta|7up|sprite|water|drink|can|bottle|juice|shake)/.test(labels)) return 'drink';
@@ -357,7 +359,9 @@ function nextQuestion(item, pending) {
         options: opts,
         say: group.type === 'meal_upgrade' && !String(group.name || '').trim()
             ? `Would you like the ${name} on its own, or as a meal? ${list}.`
-            : `Which ${label} would you like for the ${name}? ${list}.`,
+            : opts.length <= 3 && group.type !== 'multiple'
+                ? `Would you like the ${name} ${opts.map((o) => o.label + (o.extra_price ? ` (plus ${money(o.extra_price)})` : '')).join(', ').replace(/, ([^,]*)$/, ' or $1')}?`
+                : `Which ${label} would you like for the ${name}? ${list}.`,
     };
 }
 
