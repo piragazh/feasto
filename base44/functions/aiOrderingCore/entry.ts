@@ -218,15 +218,36 @@ function requiredGroups(item) {
     return (item.customization_options || []).filter((g) => g.required && (g.options || []).length);
 }
 
+/**
+ * A step is { group_name, parent, index?, parent_index? }. parent === null means a top-level
+ * group; a STRING parent (even "") means a group inside that meal upgrade. Many menus leave
+ * group names blank - the meal upgrade AND the drink inside it can both be "" - so a blank
+ * parent must never be read as "no parent", and positions (index) win over names.
+ */
+const isTop = (step) => step.parent === null || step.parent === undefined;
+
 function findGroup(item, step) {
-    if (!step.parent) return (item.customization_options || []).find((g) => g.name === step.group_name);
-    const parent = (item.customization_options || []).find((g) => g.name === step.parent);
-    return (parent?.meal_customizations || []).find((g) => g.name === step.group_name);
+    const top = item.customization_options || [];
+    if (isTop(step)) return (Number.isInteger(step.index) && top[step.index]) || top.find((g) => g.name === step.group_name);
+    const parent = (Number.isInteger(step.parent_index) && top[step.parent_index]) || top.find((g) => g.name === step.parent);
+    const inner = parent?.meal_customizations || [];
+    return (Number.isInteger(step.index) && inner[step.index]) || inner.find((g) => g.name === step.group_name);
+}
+
+/** "Normal or Spicy:" -> "Normal or Spicy"; a blank name -> a sensible word for the question. */
+function groupLabel(group, nested) {
+    const n = String(group?.name || '').replace(/[:\s]+$/, '').trim();
+    if (n) return n;
+    if (group?.type === 'meal_upgrade') return 'on its own or as a meal';
+    const labels = (group?.options || []).map((o) => norm(o.label)).join(' ');
+    if (/(pepsi|coke|cola|tango|fanta|7up|sprite|water|drink|can|bottle|juice|shake)/.test(labels)) return 'drink';
+    if (/(chips|fries|coleslaw|beans|rice|salad|side)/.test(labels)) return 'side';
+    return nested ? 'meal choice' : 'option';
 }
 
 /** Match a spoken/typed label to one option: exact first, then a single unambiguous partial match. */
 function matchOption(group, raw) {
-    const want = norm(raw);
+    const want = norm(String(raw ?? '').replace(/\(\s*\+?\s*£?\s*[\d.]+\s*\)/g, ''));
     if (!want) return null;
     const opts = group?.options || [];
     const exact = opts.find((o) => norm(o.label) === want);
@@ -238,7 +259,7 @@ function matchOption(group, raw) {
 function recordChoice(pending, item, step, option) {
     const group = findGroup(item, step);
     const value = group?.type === 'multiple' ? [option.label] : option.label;
-    if (step.parent) {
+    if (!isTop(step)) {
         const key = `${step.parent}_meal_customizations`;
         const prev = pending.customizations[key]?.[step.group_name];
         const merged = group?.type === 'multiple' && Array.isArray(prev) ? [...prev, option.label] : value;
@@ -247,11 +268,13 @@ function recordChoice(pending, item, step, option) {
         const prev = pending.customizations[step.group_name];
         pending.customizations[step.group_name] = group?.type === 'multiple' && Array.isArray(prev) ? [...prev, option.label] : value;
     }
-    pending.summary.push(option.label);
+    pending.summary.push(String(option.label).trim());
     // A meal upgrade brings its own required meal choices (side, drink...)
-    if (!step.parent && group?.type === 'meal_upgrade' && (option.price || 0) > 0) {
-        const nested = (group.meal_customizations || []).filter((g) => g.required && (g.options || []).length);
-        pending.queue.unshift(...nested.map((g) => ({ group_name: g.name, parent: group.name })));
+    if (isTop(step) && group?.type === 'meal_upgrade' && (option.price || 0) > 0) {
+        const pIdx = (item.customization_options || []).indexOf(group);
+        const nested = (group.meal_customizations || [])
+            .map((g, index) => ({ g, index })).filter(({ g }) => g.required && (g.options || []).length);
+        pending.queue.unshift(...nested.map(({ g, index }) => ({ group_name: g.name, parent: group.name, index, parent_index: pIdx })));
     }
 }
 
@@ -260,13 +283,16 @@ function drainGiven(pending, item, given, ignored) {
     let guard = 0;
     while (pending.queue.length && guard++ < 20) {
         const step = pending.queue[0];
-        const key = Object.keys(given).find((k) => norm(k) === norm(step.group_name));
-        if (!key) return;
         const group = findGroup(item, step);
+        // By group name first; else any choice the caller gave whose VALUE fits this group
+        // ("drink: Pepsi" for a drink group the menu left unnamed)
+        let key = step.group_name ? Object.keys(given).find((k) => norm(k) === norm(step.group_name)) : undefined;
+        if (!key) key = Object.keys(given).find((k) => matchOption(group, Array.isArray(given[k]) ? given[k][0] : given[k]));
+        if (!key) return;
         const raw = Array.isArray(given[key]) ? given[key][0] : given[key];
         const option = matchOption(group, raw);
         delete given[key];
-        if (!option) { ignored.push(`${step.group_name}: ${raw}`); return; }
+        if (!option) { ignored.push(`${step.group_name || groupLabel(group, true)}: ${raw}`); return; }
         pending.queue.shift();
         recordChoice(pending, item, step, option);
     }
@@ -280,21 +306,36 @@ function startPending(item, quantity, chosen = {}) {
     };
     const given = { ...(chosen && typeof chosen === 'object' ? chosen : {}) };
     const ignored = [];
-    // Top-level groups first, in any order the customer said them
-    for (const g of item.customization_options || []) {
-        const key = Object.keys(given).find((k) => norm(k) === norm(g.name));
-        if (!key) continue;
+    const top = item.customization_options || [];
+    const answered = new Set();
+    const take = (g, index, key) => {
         const labels = Array.isArray(given[key]) ? given[key] : [given[key]];
         delete given[key];
         for (const raw of labels.slice(0, g.type === 'multiple' ? 10 : 1)) {
             const option = matchOption(g, raw);
-            if (!option) { ignored.push(`${g.name}: ${raw}`); continue; }
-            recordChoice(pending, item, { group_name: g.name, parent: null }, option);
+            if (!option) { ignored.push(`${g.name || groupLabel(g)}: ${raw}`); continue; }
+            recordChoice(pending, item, { group_name: g.name, parent: null, index }, option);
+            answered.add(index);
         }
+    };
+    // Top-level groups first, by name, in any order the customer said them
+    top.forEach((g, index) => {
+        if (!g.name) return;
+        const key = Object.keys(given).find((k) => norm(k) === norm(g.name) || norm(k) === norm(groupLabel(g)));
+        if (key) take(g, index, key);
+    });
+    // Then choices whose group the caller named differently ("Upgrade: Meal", "Flavour: hot" for
+    // "Normal or Spicy:"), matched by the option itself when exactly one unanswered group has it
+    for (const key of Object.keys(given)) {
+        const raw = Array.isArray(given[key]) ? given[key][0] : given[key];
+        const hits = top.map((g, index) => ({ g, index })).filter(({ g, index }) => !answered.has(index) && matchOption(g, raw));
+        if (hits.length === 1) take(hits[0].g, hits[0].index, key);
     }
-    for (const g of requiredGroups(item)) {
-        if (!(g.name in pending.customizations)) pending.queue.push({ group_name: g.name, parent: null });
-    }
+    top.forEach((g, index) => {
+        if (g.required && (g.options || []).length && !answered.has(index) && !(g.name in pending.customizations)) {
+            pending.queue.push({ group_name: g.name, parent: null, index });
+        }
+    });
     // Nested meal groups the upgrade queued, if the customer already named them
     drainGiven(pending, item, given, ignored);
     for (const k of Object.keys(given)) ignored.push(`${k}: ${given[k]}`);
@@ -305,12 +346,18 @@ function nextQuestion(item, pending) {
     const step = pending.queue[0];
     const group = findGroup(item, step);
     if (!group) return null;
+    const label = groupLabel(group, !isTop(step));
+    const name = String(item.name || '').trim();
+    const opts = (group.options || []).map((o) => ({ label: String(o.label).trim(), extra_price: round2(o.price || 0) }));
+    const list = opts.slice(0, 6).map((o) => o.label + (o.extra_price ? ` (plus ${money(o.extra_price)})` : '')).join(', ');
     return {
         menu_item_id: item.id,
-        item_name: item.name,
-        group: group.name,
-        options: (group.options || []).map((o) => ({ label: o.label, extra_price: round2(o.price || 0) })),
-        say: `Which ${group.name || 'option'} would you like for the ${item.name}? ${(group.options || []).slice(0, 6).map((o) => o.label + (o.price ? ` (plus ${money(o.price)})` : '')).join(', ')}.`,
+        item_name: name,
+        group: label,
+        options: opts,
+        say: group.type === 'meal_upgrade' && !String(group.name || '').trim()
+            ? `Would you like the ${name} on its own, or as a meal? ${list}.`
+            : `Which ${label} would you like for the ${name}? ${list}.`,
     };
 }
 
