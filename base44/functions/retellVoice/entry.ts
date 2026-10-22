@@ -105,7 +105,7 @@ function question(q) {
 const ITEMS_DONE = 'When they say that is everything, ';
 function nextFrom(q, customer) {
     if (!q || !q.subtotal) return 'Ask what they would like to order.';
-    if (!q.order_type) return `Ask if they would like anything else. ${ITEMS_DONE}ask: "Is that for delivery or collection?" and call set_order_type.`;
+    if (!q.order_type) return `Ask if they would like anything else. ${ITEMS_DONE}ASK the caller "Is that for delivery or collection?" and wait for their answer - never choose for them. Then call set_order_type with what they said.`;
     if (q.order_type === 'delivery' && !q.delivery_checked) return `${ITEMS_DONE}ask for the delivery postcode, read it back letter by letter, then call check_delivery.`;
     if (q.below_minimum) return `They are ${money(q.short_by)} under the delivery minimum: tell them, and offer to add something or switch to collection.`;
     if (q.order_type === 'delivery' && customer && !customer.address) return 'Ask for the house number and street, and save it with set_customer (address).';
@@ -198,7 +198,7 @@ const TOOLS = {
             ...(r.pending ? { waiting_for: question(r.pending) } : {}),
             ...(r.quote?.below_minimum ? { below_minimum: `Delivery minimum is ${money(r.quote.minimum_order)}; ${money(r.quote.short_by)} short.` } : {}),
             next: !(r.basket || []).length ? 'The order is empty. Ask what they would like.'
-                : !r.quote?.order_type ? 'Read the order back. Then ask: "Is that for delivery or collection?"'
+                : !r.quote?.order_type ? 'Read the order back. Then ASK "Is that for delivery or collection?" and wait for their answer before calling set_order_type.'
                 : 'Read the order and total back. If they have given a name (and address for delivery), ask: "Cash, or card with a link we text you?" and call place_order.',
         };
     },
@@ -208,7 +208,7 @@ const TOOLS = {
         if (!r.ok) return refusal(r);
         return { ok: true, order_type: r.order_type, ...(r.service_note ? { warning: r.service_note } : {}),
             next: r.order_type === 'delivery'
-                ? 'Ask for the delivery postcode, read it back letter by letter, then call check_delivery.'
+                ? 'Ask for the delivery postcode. If you only catch part of it, say back what you heard and ask for the rest. Read the full postcode back letter by letter, then call check_delivery.'
                 : 'Ask for a name for the order and save it with set_customer (name). Then read the order back and ask cash or card.' };
     },
 
