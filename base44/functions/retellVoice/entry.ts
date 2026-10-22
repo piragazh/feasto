@@ -97,6 +97,23 @@ function question(q) {
         then: 'Call choose_option with exactly one of the options, as written. If they want something else on this item, ask this question first.',
     };
 }
+/**
+ * What the agent should do next, from where the order has got to. Every answer carries one,
+ * so the call always walks: items -> delivery/collection -> postcode -> address -> name ->
+ * read-back -> payment -> place. (A voice model drifts; the tools keep it on the path.)
+ */
+const ITEMS_DONE = 'When they say that is everything, ';
+function nextFrom(q, customer) {
+    if (!q || !q.subtotal) return 'Ask what they would like to order.';
+    if (!q.order_type) return `Ask if they would like anything else. ${ITEMS_DONE}ask: "Is that for delivery or collection?" and call set_order_type.`;
+    if (q.order_type === 'delivery' && !q.delivery_checked) return `${ITEMS_DONE}ask for the delivery postcode, read it back letter by letter, then call check_delivery.`;
+    if (q.below_minimum) return `They are ${money(q.short_by)} under the delivery minimum: tell them, and offer to add something or switch to collection.`;
+    if (q.order_type === 'delivery' && customer && !customer.address) return 'Ask for the house number and street, and save it with set_customer (address).';
+    if (customer && !customer.name) return 'Ask for a name for the order and save it with set_customer (name).';
+    if (customer) return 'Call get_order, read the whole order and total back, then ask: "Would you like to pay cash, or by card with a link we text you?" and call place_order.';
+    return `Ask if they would like anything else. ${ITEMS_DONE}carry on: name, read the order back, then ask cash or card.`;
+}
+
 /** A core refusal in a form the agent can act on. */
 function refusal(r) {
     const out = { ok: false, problem: r.code, say: r.say || r.error };
@@ -147,26 +164,29 @@ const TOOLS = {
         if (!r.ok) return refusal(r);
         const ignored = r.ignored_options?.length ? { not_understood: r.ignored_options, note: 'Those choices did not match the menu; they will be asked again if needed.' } : {};
         if (!r.added) return { ok: true, added: false, waiting_for: question(r.needs_choice), ...ignored };
-        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), next: 'Ask if they would like anything else.', ...ignored };
+        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), next: nextFrom(r.quote), ...ignored };
     },
 
     async choose_option(ctx, a) {
         const r = await core(ctx.base44, 'choose_option', { session_id: ctx.sid, option: clip(String(a.option || '').replace(/\(\s*\+?\s*£?\s*[\d.]+\s*\)/g, ''), 80) });
         if (!r.ok) return refusal(r);
         if (!r.added) return { ok: true, added: false, waiting_for: question(r.needs_choice) };
-        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), next: 'Ask if they would like anything else.' };
+        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), next: nextFrom(r.quote) };
     },
 
     async skip_item(ctx) {
         const r = await core(ctx.base44, 'cancel_pending', { session_id: ctx.sid });
-        return r.ok ? { ok: true, say: 'Left that item out.' } : refusal(r);
+        if (!r.ok) return refusal(r);
+        const b = await core(ctx.base44, 'get_basket', { session_id: ctx.sid });
+        return { ok: true, say: 'Left that item out.', basket: basketLines(b.basket),
+            next: (b.basket || []).length ? nextFrom(b.quote) : 'Tell the caller you have left it out and ask what they would like instead. Do not end the call while they still want to order.' };
     },
 
     async change_quantity(ctx, a) {
         const q = Math.max(0, Math.round(Number(a.quantity) || 0));
         const r = await core(ctx.base44, q === 0 ? 'remove_item' : 'set_quantity', { session_id: ctx.sid, line: Number(a.line), quantity: q || undefined });
         if (!r.ok) return { ...refusal(r), basket: basketLines(r.basket) };
-        return { ok: true, basket: basketLines(r.basket), totals: quoteText(r.quote) };
+        return { ok: true, basket: basketLines(r.basket), totals: quoteText(r.quote), next: nextFrom(r.quote) };
     },
 
     async get_order(ctx) {
@@ -177,6 +197,9 @@ const TOOLS = {
             ...(r.removed_unavailable?.length ? { removed_because_unavailable: r.removed_unavailable } : {}),
             ...(r.pending ? { waiting_for: question(r.pending) } : {}),
             ...(r.quote?.below_minimum ? { below_minimum: `Delivery minimum is ${money(r.quote.minimum_order)}; ${money(r.quote.short_by)} short.` } : {}),
+            next: !(r.basket || []).length ? 'The order is empty. Ask what they would like.'
+                : !r.quote?.order_type ? 'Read the order back. Then ask: "Is that for delivery or collection?"'
+                : 'Read the order and total back. If they have given a name (and address for delivery), ask: "Cash, or card with a link we text you?" and call place_order.',
         };
     },
 
@@ -184,7 +207,9 @@ const TOOLS = {
         const r = await core(ctx.base44, 'set_order_type', { session_id: ctx.sid, order_type: a.order_type });
         if (!r.ok) return refusal(r);
         return { ok: true, order_type: r.order_type, ...(r.service_note ? { warning: r.service_note } : {}),
-            next: r.order_type === 'delivery' ? 'Ask for the delivery postcode, then call check_delivery.' : 'Carry on with the order.' };
+            next: r.order_type === 'delivery'
+                ? 'Ask for the delivery postcode, read it back letter by letter, then call check_delivery.'
+                : 'Ask for a name for the order and save it with set_customer (name). Then read the order back and ask cash or card.' };
     },
 
     async check_delivery(ctx, a) {
@@ -196,7 +221,8 @@ const TOOLS = {
             return out;
         }
         return { ok: true, postcode: r.delivery.postcode, say: r.say, totals: quoteText(r.quote),
-            ...(r.quote?.below_minimum ? { below_minimum: `They need ${money(r.quote.short_by)} more for delivery.` } : {}) };
+            ...(r.quote?.below_minimum ? { below_minimum: `They need ${money(r.quote.short_by)} more for delivery.` } : {}),
+            next: r.quote?.below_minimum ? nextFrom(r.quote) : 'Ask for the house number and street, and a name for the order; save both with set_customer.' };
     },
 
     async set_customer(ctx, a) {
@@ -205,7 +231,8 @@ const TOOLS = {
             address: a.address ? clip(a.address, 200) : undefined, postcode: a.postcode || undefined,
         });
         if (!r.ok) return refusal(r);
-        return { ok: true, saved: r.customer };
+        const b = await core(ctx.base44, 'get_basket', { session_id: ctx.sid });
+        return { ok: true, saved: r.customer, next: nextFrom(b.quote, r.customer) };
     },
 
     async place_order(ctx, a) {
