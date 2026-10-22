@@ -383,17 +383,99 @@ async function handleCancel(base44, body) {
     return ack();
 }
 
+/**
+ * store.provisioned / store.deprovisioned
+ *
+ * Uber's reference: on store.provisioned an app should fetch the integration
+ * details (GET .../stores/{id}/pos_data - the event's resource_href) and check
+ * them against its own records. A first store.provisioned can arrive BEFORE we
+ * are promoted to order manager; a follow-up one confirms the promotion.
+ *
+ * What this does with the details:
+ *   - the restaurant is found by store id, or - if no restaurant has that store
+ *     yet - by the integrator_store_id we set when activating (our restaurant id)
+ *   - a store already linked to a DIFFERENT restaurant is never re-pointed
+ *   - whether we are the order manager is recorded when Uber says so
+ * If the details cannot be fetched the event is still acknowledged: provisioning
+ * is also recorded by uberEatsConnect itself, and a 5xx here would only make
+ * Uber resend an event we cannot act on any better.
+ */
+async function fetchPosData(base44, storeId, href) {
+    const clientId = Deno.env.get('UBER_EATS_CLIENT_ID');
+    const clientSecret = Deno.env.get('UBER_EATS_CLIENT_SECRET');
+    if (!clientId || !clientSecret || !storeId) return null;
+    let url = `${UBER.apiOrigin}/v1/eats/stores/${encodeURIComponent(storeId)}/pos_data`;
+    try {
+        const u = new URL(String(href || ''));
+        if (u.protocol === 'https:' && UBER_API_HOSTS.includes(u.hostname)) url = u.toString();
+    } catch { /* keep the constructed URL */ }
+    try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const token = await getAppToken(base44, clientId, clientSecret);
+            const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+            if (res.status === 401) { await invalidateAppToken(base44); continue; }
+            if (!res.ok) {
+                console.error(`[UBER] pos_data for store ${storeId}: ${res.status} ${(await res.text().catch(() => '')).slice(0, 200)}`);
+                return null;
+            }
+            return await res.json();
+        }
+    } catch (e) {
+        console.error(`[UBER] pos_data for store ${storeId} failed:`, e?.message);
+    }
+    return null;
+}
+
 async function handleStoreEvent(base44, body, provisioned) {
-    const storeId = String(body?.store_id || body?.meta?.user_id || '').trim();
-    const restaurant = await findRestaurantByStore(base44, storeId);
-    if (!restaurant) {
-        console.log(`[UBER] ${body?.event_type} for store ${storeId || '(none)'} — not linked to any restaurant`);
+    const storeId = String(body?.store_id || body?.meta?.user_id || body?.meta?.resource_id || '').trim();
+
+    if (!provisioned) {
+        const restaurant = await findRestaurantByStore(base44, storeId);
+        if (!restaurant) {
+            console.log(`[UBER] store.deprovisioned for store ${storeId || '(none)'} — not linked to any restaurant`);
+            return ack();
+        }
+        await setUberIntegration(base44, restaurant, { provisioned: false, enabled: false, is_order_manager: false });
+        console.log(`[UBER] store ${storeId} DEPROVISIONED for restaurant ${restaurant.id}`);
         return ack();
     }
-    await setUberIntegration(base44, restaurant, provisioned
-        ? { provisioned: true, provisioned_at: new Date().toISOString() }
-        : { provisioned: false, enabled: false });
-    console.log(`[UBER] store ${storeId} ${provisioned ? 'provisioned' : 'DEPROVISIONED'} for restaurant ${restaurant.id}`);
+
+    const pos = await fetchPosData(base44, storeId, body?.resource_href);
+    const integratorStoreId = String(pos?.integrator_store_id || '').trim();
+    const orderManager = typeof pos?.is_order_manager === 'boolean' ? pos.is_order_manager : null;
+
+    let restaurant = await findRestaurantByStore(base44, storeId);
+    if (!restaurant && integratorStoreId) {
+        // Activated through our own Connect flow, which sets integrator_store_id
+        // to the restaurant id. Link it, unless that restaurant is already on a
+        // different Uber store - then a person has to decide.
+        const R = base44.asServiceRole.entities.Restaurant;
+        const candidate = (await R.filter({ id: integratorStoreId }))?.[0];
+        const existing = candidate?.third_party_integrations?.uber_eats?.store_id;
+        if (candidate && (!existing || existing === storeId)) {
+            restaurant = candidate;
+        } else if (candidate) {
+            console.error(`[UBER] store ${storeId} names restaurant ${integratorStoreId}, which is already linked to store ${existing} — not re-pointed`);
+            return ack();
+        }
+    }
+    if (!restaurant) {
+        console.log(`[UBER] store.provisioned for store ${storeId || '(none)'} — not linked to any restaurant${integratorStoreId ? ` (integrator_store_id=${integratorStoreId})` : ''}`);
+        return ack();
+    }
+    if (integratorStoreId && integratorStoreId !== restaurant.id) {
+        // Uber holds a different id for this store than ours: worth a look, but
+        // the store id match is what routes orders, so keep it.
+        console.error(`[UBER] store ${storeId}: Uber has integrator_store_id=${integratorStoreId} but it is linked to restaurant ${restaurant.id}`);
+    }
+
+    await setUberIntegration(base44, restaurant, {
+        store_id: storeId,
+        provisioned: true,
+        provisioned_at: new Date().toISOString(),
+        ...(orderManager !== null ? { is_order_manager: orderManager } : {}),
+    });
+    console.log(`[UBER] store ${storeId} provisioned for restaurant ${restaurant.id}${orderManager === null ? '' : ` (order manager: ${orderManager})`}${pos ? '' : ' — integration details not fetched'}`);
     return ack();
 }
 

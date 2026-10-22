@@ -144,6 +144,22 @@ const checks = []; const ck = (l, ok, d = '') => { checks.push(ok); console.log(
   const c = world({ env }); const rc = await c.send(notif(), { key: 'someone-elses-key' });
   ck('...but not with an unknown key', rc.status === 401 && c.db().Order.length === 0, `status ${rc.status}`); }
 
+{ // store.provisioned: verify by fetching pos_data, link by integrator_store_id
+  const w = world({ restaurants: [{ id: 'r9' }], order: { integrator_store_id: 'r9', is_order_manager: true } });
+  const r = await w.send({ event_type: 'store.provisioned', store_id: 'new-store', resource_href: 'https://api.uber.com/v1/eats/stores/new-store/pos_data' });
+  const u = w.db().Restaurant[0].third_party_integrations?.uber_eats;
+  ck('store.provisioned fetches pos_data from Uber', w.calls.includes('https://api.uber.com/v1/eats/stores/new-store/pos_data'), '');
+  ck('...links the store to the restaurant we named', r.status === 200 && u?.store_id === 'new-store' && u.provisioned === true, JSON.stringify(u?.store_id));
+  ck('...and records order-manager status', u?.is_order_manager === true, String(u?.is_order_manager)); }
+
+{ const w = world({ restaurants: [{ id: 'r9', third_party_integrations: { uber_eats: { store_id: 'other-store' } } }], order: { integrator_store_id: 'r9' } });
+  await w.send({ event_type: 'store.provisioned', store_id: 'new-store' });
+  ck('never re-points a restaurant already on another store', w.db().Restaurant[0].third_party_integrations.uber_eats.store_id === 'other-store', ''); }
+
+{ const w = world({ orderStatus: 500 }); const r = await w.send({ event_type: 'store.provisioned', store_id: STORE });
+  const u = w.db().Restaurant[0].third_party_integrations.uber_eats;
+  ck('pos_data unavailable: still acknowledged and recorded', r.status === 200 && u.provisioned === true && w.db().Order.length === 0, `status ${r.status}`); }
+
 const bad = checks.filter(x => !x).length;
 console.log(bad ? `\n${bad} check(s) WRONG` : `\nall ${checks.length} checks pass`);
 process.exit(bad ? 1 : 0);

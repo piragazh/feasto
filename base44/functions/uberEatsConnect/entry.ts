@@ -242,13 +242,16 @@ Deno.serve(async (req) => {
             const clash = (everyone || []).find(r => r.id !== restaurantId && r.third_party_integrations?.uber_eats?.store_id === storeId);
             if (clash) return fail(409, 'That Uber Eats store is already connected to another restaurant.', 'STORE_IN_USE');
 
-            // is_order_manager: we accept/deny orders for this store. Uber allows
-            // only one order manager, so this replaces any other app in that role.
-            const params = { integrator_store_id: restaurantId, is_order_manager: true };
+            // Per Uber's Activate Integration reference both settings are QUERY
+            // parameters: is_order_manager nominates us to accept/deny orders
+            // (Uber allows one order manager, so any other app is demoted) and
+            // integrator_store_id is our id for the store. The body is left empty:
+            // pos_integration_enabled is deprecated ("please do not send") and
+            // partner_store_id is only for integrators who are the merchant.
             const posRes = await fetch(`${UBER.api}/stores/${encodeURIComponent(storeId)}/pos_data?${new URLSearchParams({ integrator_store_id: restaurantId, is_order_manager: 'true' })}`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${g.t}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(params),
+                body: '{}',
             });
             if (!posRes.ok) {
                 const detail = (await posRes.text().catch(() => '')).slice(0, 300);
