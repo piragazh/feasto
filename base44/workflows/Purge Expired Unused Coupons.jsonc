@@ -1,23 +1,5 @@
 {
   "name": "Purge Expired Unused Coupons",
-  "description": "Run by hand: moves every coupon that has expired and was never used to Recently deleted (restorable). Coupons with no expiry date or that were used are kept.",
-  "trigger": {
-    "condition": null,
-    "config": {
-      "trigger_type": "scheduled",
-      "events": [],
-      "schedule_mode": "one_time",
-      "cron_expression": null,
-      "one_time_date": "2027-12-31T05:00:00",
-      "timezone": "Europe/London",
-      "interval_value": null,
-      "interval_unit": null,
-      "interval_anchor": null,
-      "ends_type": "never",
-      "ends_on_date": null,
-      "ends_after_count": null
-    }
-  },
   "definition": {
     "document": {
       "dsl": "1.0.0",
@@ -39,5 +21,23 @@
         }
       }
     ]
-  }
+  },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "one_time",
+      "cron_expression": null,
+      "one_time_date": "2027-12-31T05:00:00Z",
+      "timezone": "Europe/London",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Run by hand: moves every coupon that has expired and was never used to Recently deleted (restorable). Coupons with no expiry date or that were used are kept."
 }
