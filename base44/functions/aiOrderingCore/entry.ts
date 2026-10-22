@@ -1378,7 +1378,14 @@ function voiceMenu(menu) {
             if (g.type === 'meal_upgrade' && paid.length) {
                 out.push(`as a meal +${money(Math.min(...paid.map((o) => o.price)))}`);
             } else if (g.required || (g.options || []).length <= 4) {
-                const opts = (g.options || []).map(label).filter(Boolean);
+                // Items priced 0 take their price from the choice ("6 Wings"): say each price in full
+                const base = Number(i.price) || 0;
+                const opts = (g.options || []).map((o) => {
+                    const l = label(o);
+                    if (!l) return '';
+                    const p = Number(o.price) || 0;
+                    return p > 0 ? `${l} ${base > 0 ? '+' : ''}${money(p)}` : l;
+                }).filter(Boolean);
                 out.push(opts.length <= 5 ? opts.join(' or ') : `${opts.slice(0, 4).join(', ')} and more`);
             } else if (paid.length) out.push('optional extras');
         }
@@ -1387,7 +1394,8 @@ function voiceMenu(menu) {
     return cats.map((cat) => `${cat}:\n` + menu.available.filter((i) => (i.category || 'Other') === cat).map((i) => {
         const bits = extras(i);
         const about = i.description ? ` - ${clip(String(i.description).replace(/\s+/g, ' ').trim(), 70)}` : '';
-        return `- ${String(i.name || '').trim()} ${money(i.price)}${bits.length ? ` (${bits.join('; ')})` : ''}${about}`;
+        const price = Number(i.price) > 0 ? money(i.price) : 'price depends on choice';
+        return `- ${String(i.name || '').trim()} ${price}${bits.length ? ` (${bits.join('; ')})` : ''}${about}`;
     }).join('\n')).join('\n');
 }
 
