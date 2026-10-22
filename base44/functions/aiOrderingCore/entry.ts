@@ -876,7 +876,7 @@ Deno.serve(async (req) => {
             // Same call id twice (a platform retry) returns the same session
             if (body.external_id) {
                 const existing = (await db.AiOrderSession.filter({ channel, external_id: String(body.external_id) }))[0];
-                if (existing) return ok({ session_id: existing.id, resumed: true, ...(await contextOf(db, existing, restaurant)) });
+                if (existing) return ok({ session_id: existing.id, resumed: true, ...(await contextOf(db, existing, restaurant)), ...(body.include_menu ? { voice_menu: voiceMenu(await loadMenu(db, restaurant.id)) } : {}) });
             }
             const phone = phoneDigits(body.customer_phone);
             const session = await db.AiOrderSession.create({
@@ -887,7 +887,12 @@ Deno.serve(async (req) => {
                 cart: [], state: 'active', started_at: nowIso(), last_activity_at: nowIso(),
                 event_log: [{ at: nowIso(), action, ok: true, note: `channel=${channel}` }],
             });
-            return ok({ session_id: session.id, ...(await contextOf(db, session, restaurant)) });
+            // Menu and context in parallel: the voice agent waits on this before it can speak
+            const [ctxInfo, menuText] = await Promise.all([
+                contextOf(db, session, restaurant),
+                body.include_menu ? loadMenu(db, restaurant.id).then(voiceMenu) : Promise.resolve(null),
+            ]);
+            return ok({ session_id: session.id, ...ctxInfo, ...(menuText ? { voice_menu: menuText } : {}) });
         }
 
         if (!body.session_id) return fail('SESSION_REQUIRED', 'session_id is required.');
@@ -964,8 +969,9 @@ Deno.serve(async (req) => {
             }
 
             case 'get_item': {
-                const item = menu.byId.get(body.menu_item_id);
-                if (!item) { refuse('ITEM_NOT_FOUND', 'That item is not available right now.'); break; }
+                const found = resolveItem(menu, body);
+                const item = found.item;
+                if (!item) { refuse('ITEM_NOT_FOUND', 'That item is not available right now.', found.candidates?.length ? { did_you_mean: found.candidates } : {}); break; }
                 done({
                     item: {
                         ...itemSummary(item),
@@ -979,8 +985,9 @@ Deno.serve(async (req) => {
             }
 
             case 'add_item': {
-                const item = menu.byId.get(body.menu_item_id);
-                if (!item) { refuse('ITEM_NOT_FOUND', "Sorry, that item isn't available right now."); break; }
+                const found = resolveItem(menu, body);
+                const item = found.item;
+                if (!item) { refuse('ITEM_NOT_FOUND', "Sorry, that item isn't available right now.", found.candidates?.length ? { did_you_mean: found.candidates } : {}); break; }
                 if (s.pending_item?.queue?.length) {
                     const cur = menu.byId.get(s.pending_item.menu_item_id);
                     if (cur) { refuse('OPTIONS_PENDING', `Let's finish the ${cur.name} first.`, { question: nextQuestion(cur, s.pending_item) }); break; }
@@ -1353,6 +1360,58 @@ function menuForAgent(menu, cats) {
             + `${i.allergens?.length ? ` | allergens: ${i.allergens.join(', ')}` : ''}`
             + `${groups.length ? `\n      options: ${groups.join('; ')}` : ''}`;
     }).join('\n')).join('\n');
+}
+
+/**
+ * Short spoken-style menu for a voice agent's prompt: every orderable item by section with its
+ * price, a short description and what it comes with, so the agent can work out what a caller
+ * means ("the normal chicken burger as a meal", "a big Pepsi") instead of needing exact names.
+ * No ids - the agent names the item exactly as written here and the core resolves it.
+ */
+function voiceMenu(menu) {
+    const cats = [...new Set(menu.available.map((i) => i.category || 'Other'))];
+    const label = (o) => String(o.label || '').replace(/\s*\(\+?£?[\d.]+\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+    const extras = (i) => {
+        const out = [];
+        for (const g of (i.customization_options || []).filter((x) => (x.options || []).length)) {
+            const paid = (g.options || []).filter((o) => (o.price || 0) > 0);
+            if (g.type === 'meal_upgrade' && paid.length) {
+                out.push(`as a meal +${money(Math.min(...paid.map((o) => o.price)))}`);
+            } else if (g.required || (g.options || []).length <= 4) {
+                const opts = (g.options || []).map(label).filter(Boolean);
+                out.push(opts.length <= 5 ? opts.join(' or ') : `${opts.slice(0, 4).join(', ')} and more`);
+            } else if (paid.length) out.push('optional extras');
+        }
+        return out;
+    };
+    return cats.map((cat) => `${cat}:\n` + menu.available.filter((i) => (i.category || 'Other') === cat).map((i) => {
+        const bits = extras(i);
+        const about = i.description ? ` - ${clip(String(i.description).replace(/\s+/g, ' ').trim(), 70)}` : '';
+        return `- ${String(i.name || '').trim()} ${money(i.price)}${bits.length ? ` (${bits.join('; ')})` : ''}${about}`;
+    }).join('\n')).join('\n');
+}
+
+/**
+ * Finds the item an agent means: by id, else by the exact menu name (case, spacing and
+ * punctuation ignored), else by a search that clearly favours one item. Returns
+ * { item } or { candidates } so a near miss can be offered back rather than failing.
+ */
+function resolveItem(menu, body) {
+    if (body.menu_item_id) {
+        const hit = menu.byId.get(String(body.menu_item_id));
+        if (hit) return { item: hit };
+    }
+    const asked = String(body.item_name || '').trim();
+    if (!asked) return { candidates: [] };
+    const key = norm(asked);
+    const exact = menu.available.filter((i) => norm(i.name) === key);
+    if (exact.length === 1) return { item: exact[0] };
+    const qTokens = tokensOf(asked);
+    const weights = wordWeights(menu.available, qTokens);
+    const scored = menu.available.map((i) => ({ i, sc: scoreItem(i, qTokens, key, weights) })).filter((x) => x.sc >= 1)
+        .sort((a, b) => b.sc - a.sc);
+    if (scored[0] && (!scored[1] || scored[0].sc >= scored[1].sc * 1.5)) return { item: scored[0].i, guessed: true };
+    return { candidates: scored.slice(0, 4).map((x) => itemSummary(x.i)) };
 }
 
 /** What an agent needs at the start of (or back in) a conversation. */
