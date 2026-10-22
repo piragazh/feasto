@@ -52,7 +52,7 @@ async function callCore(action, args) {
 // ── Numbers ─────────────────────────────────────────────────────────────────
 function NumbersTab({ restaurants, byId }) {
     const [rows, setRows] = useState(null);
-    const [form, setForm] = useState({ restaurant_id: '', number: '', label: '', provider: '', provider_ref: '' });
+    const [form, setForm] = useState({ restaurant_id: '', number: '', label: '', provider: 'retell', provider_ref: '', transfer_number: '' });
     const [saving, setSaving] = useState(false);
     const load = async () => setRows(await base44.entities.AiChannelNumber.list('-created_date', 500).catch(() => []));
     useEffect(() => { load(); }, []);
@@ -61,6 +61,8 @@ function NumbersTab({ restaurants, byId }) {
         const number = phoneDigits(form.number);
         if (!form.restaurant_id) return toast.error('Choose a restaurant');
         if (!number) return toast.error("That doesn't look like a phone number");
+        const transfer = form.transfer_number.trim() ? phoneDigits(form.transfer_number) : '';
+        if (form.transfer_number.trim() && !transfer) return toast.error("The transfer number doesn't look right");
         const clash = (rows || []).find((r) => r.number === number && r.is_active !== false && r.channel === 'phone');
         if (clash) return toast.error(`${showPhone(number)} already answers for ${byId[clash.restaurant_id]?.name || 'another restaurant'}`);
         setSaving(true);
@@ -68,9 +70,10 @@ function NumbersTab({ restaurants, byId }) {
             await base44.entities.AiChannelNumber.create({
                 restaurant_id: form.restaurant_id, channel: 'phone', number, is_active: true,
                 label: form.label.trim() || undefined, provider: form.provider.trim() || undefined, provider_ref: form.provider_ref.trim() || undefined,
+                transfer_number: transfer || undefined,
             });
             toast.success('Number linked');
-            setForm({ restaurant_id: form.restaurant_id, number: '', label: '', provider: form.provider, provider_ref: '' });
+            setForm({ restaurant_id: form.restaurant_id, number: '', label: '', provider: form.provider, provider_ref: '', transfer_number: '' });
             load();
         } catch (e) { toast.error(e?.message || 'Could not save'); } finally { setSaving(false); }
     };
@@ -87,18 +90,18 @@ function NumbersTab({ restaurants, byId }) {
         await base44.entities.AiChannelNumber.delete(r.id);
         load();
     };
-    const endpoint = `${window.location.origin}/functions/aiOrderingCore`;
+    const endpoint = `${window.location.origin}/functions/retellVoice`;
 
     return (
         <div className="space-y-4">
             <div className="bg-white border rounded-xl p-4 text-sm text-gray-700 space-y-2">
                 <p className="font-semibold text-gray-900">How the phone agent finds the restaurant</p>
-                <p>The voice platform calls the ordering core with the number the customer dialled. That number must be linked to a restaurant here.</p>
+                <p>When a call comes in, Retell asks MealDrop which restaurant the dialled number belongs to. Link the number here, and in Retell set the number's <b>Inbound Webhook URL</b> (and the agent's webhook) to:</p>
                 <div className="flex items-center gap-2">
                     <code className="text-xs bg-gray-50 border rounded px-2 py-1 truncate flex-1">{endpoint}</code>
                     <Button size="sm" variant="ghost" aria-label="Copy endpoint" onClick={() => navigator.clipboard?.writeText(endpoint).then(() => toast.success('Copied'))}><Copy className="h-4 w-4" /></Button>
                 </div>
-                <p className="text-xs text-gray-500">Send header <code>x-ai-core-key</code> with the <code>AI_CORE_API_KEY</code> secret. First call: <code>{'{ "action": "start_session", "channel": "phone", "called_number": "<dialled>", "customer_phone": "<caller>", "external_id": "<call id>" }'}</code></p>
+                <p className="text-xs text-gray-500">Requests are checked with the <code>RETELL_API_KEY</code> secret. A call to a number that isn't linked (or is switched off) is rejected. Transfers go to the transfer number, or the restaurant's alert phone if that's empty.</p>
             </div>
 
             <div className="bg-white border rounded-xl p-4">
@@ -110,7 +113,7 @@ function NumbersTab({ restaurants, byId }) {
                     </Select>
                     <Input placeholder="Number, e.g. 01375 123456" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
                     <Input placeholder="Label (optional)" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
-                    <Input placeholder="Provider, e.g. vapi" value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })} />
+                    <Input placeholder="Transfer calls to (optional)" value={form.transfer_number} onChange={(e) => setForm({ ...form, transfer_number: e.target.value })} />
                     <Button onClick={add} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}Link number</Button>
                 </div>
                 {form.number && !phoneDigits(form.number) && <p className="text-xs text-red-600 mt-2">Enter a full number, e.g. 01375 123456 or +44 1375 123456.</p>}
@@ -126,7 +129,7 @@ function NumbersTab({ restaurants, byId }) {
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
                                 <th className="text-left p-3">Number</th><th className="text-left p-3">Restaurant</th><th className="text-left p-3">Label</th>
-                                <th className="text-left p-3">Provider</th><th className="text-left p-3">Active</th><th className="p-3" />
+                                <th className="text-left p-3">Transfers to</th><th className="text-left p-3">Active</th><th className="p-3" />
                             </tr></thead>
                             <tbody className="divide-y">
                                 {rows.map((r) => (
@@ -134,7 +137,7 @@ function NumbersTab({ restaurants, byId }) {
                                         <td className="p-3 font-medium whitespace-nowrap">{showPhone(r.number)}</td>
                                         <td className="p-3">{byId[r.restaurant_id]?.name || <span className="text-red-600">Missing restaurant</span>}</td>
                                         <td className="p-3 text-gray-600">{r.label || '—'}</td>
-                                        <td className="p-3 text-gray-600">{r.provider || '—'}{r.provider_ref ? <span className="text-gray-400"> · {r.provider_ref}</span> : null}</td>
+                                        <td className="p-3 text-gray-600">{r.transfer_number ? showPhone(r.transfer_number) : <span className="text-gray-400">alert phone</span>}</td>
                                         <td className="p-3"><Switch checked={r.is_active !== false} onCheckedChange={() => toggle(r)} /></td>
                                         <td className="p-3 text-right"><Button size="icon" variant="ghost" aria-label="Remove number" onClick={() => remove(r)}><Trash2 className="h-4 w-4 text-red-500" /></Button></td>
                                     </tr>
@@ -250,6 +253,22 @@ function SessionsTab({ restaurants, byId }) {
                             {open.order_id && <Badge className="bg-green-600 text-white">Order …{String(open.order_id).slice(-6)}</Badge>}
                         </div>
                         {open.handoff_reason && <p className="text-xs bg-purple-50 text-purple-900 rounded p-2">Handed to staff: {open.handoff_reason}</p>}
+                        {open.channel === 'phone' && (open.call_duration_ms || open.recording_url || open.call_summary) && (
+                            <div className="space-y-2">
+                                <p className="text-xs text-gray-600">
+                                    Call {open.call_duration_ms ? `${Math.floor(open.call_duration_ms / 60000)}m ${Math.round((open.call_duration_ms % 60000) / 1000)}s` : ''}
+                                    {open.disconnection_reason ? ` · ${open.disconnection_reason.replace(/_/g, ' ')}` : ''}
+                                </p>
+                                {open.call_summary && <p className="text-xs bg-gray-50 rounded p-2 text-gray-700">{open.call_summary}</p>}
+                                {open.recording_url && <audio controls preload="none" src={open.recording_url} className="w-full h-9" />}
+                                {open.transcript && (
+                                    <details className="text-xs">
+                                        <summary className="cursor-pointer text-gray-500">Transcript</summary>
+                                        <pre className="whitespace-pre-wrap bg-gray-50 rounded p-2 mt-1 max-h-72 overflow-y-auto font-sans">{open.transcript}</pre>
+                                    </details>
+                                )}
+                            </div>
+                        )}
                         <div>
                             <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Basket</p>
                             {(open.cart || []).length ? (

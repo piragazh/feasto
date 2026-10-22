@@ -128,6 +128,26 @@
       "format": "date-time",
       "description": "Web chat: start of the hour web_turns counts"
     },
+    "call_duration_ms": {
+      "type": "number",
+      "description": "Phone: call length, from the voice platform's call_ended event"
+    },
+    "recording_url": {
+      "type": "string",
+      "description": "Phone: call recording (voice platform URL)"
+    },
+    "transcript": {
+      "type": "string",
+      "description": "Phone: call transcript (clipped to 20k characters)"
+    },
+    "call_summary": {
+      "type": "string",
+      "description": "Phone: the voice platform's post-call summary"
+    },
+    "disconnection_reason": {
+      "type": "string",
+      "description": "Phone: why the call ended, e.g. user_hangup, agent_hangup, call_transfer"
+    },
     "rev": {
       "type": "number",
       "default": 0,
