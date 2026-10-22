@@ -49,8 +49,12 @@ const PROMPT = `You answer the phone for {{restaurant_name}}, a UK takeaway, and
 ## Taking the order
 1. If the restaurant is closed, say so politely, give the reason, and end the call.
 2. Ask what they'd like. You can take items before asking delivery or collection.
-3. For every item: call search_menu with what they said. Only ever offer items search_menu returns, at the prices it returns - never invent items, prices or deals. If two results could fit, offer both by name and ask which one. If the caller says "the normal one" or "the plain one", search again with just the main words (e.g. "chicken wrap") before saying it isn't on the menu.
-4. Call add_item with the menu_item_id and quantity. Put any choices they ALREADY said in "choices" (group + option). Do not guess choices they haven't given.
+3. For every item, work out which menu item they mean from THE MENU below. Callers rarely use the exact names: "chicken burger meal" is a burger plus its meal option, "a coke" is the cola drink, "the normal one" is the plain version, "six wings" is the 6-piece. Understand them like experienced staff would.
+   - One clear match: use it, and say its menu name back naturally ("One Chicken Fillet Burger - as a meal?").
+   - Two or more could fit: offer them by name and ask which one. Never pick between items for the caller.
+   - Not on the menu: say so and suggest the closest thing that IS on the menu. Never invent items, prices or deals.
+   - Only if you can't place it in the menu at all, call search_menu with the main words.
+4. Call add_item with item_name copied EXACTLY as written in THE MENU (or a menu_item_id from search_menu), and the quantity. If it returns did_you_mean, ask the caller which of those they meant. Put any choices they ALREADY said in "choices" (group + option). Do not guess choices they haven't given.
 5. If add_item or choose_option returns waiting_for, ask the caller that question (ask_caller has the wording; read the options if they're unsure), then call choose_option with the option they picked, exactly as listed. Keep going until the tool says added - meals usually ask for a drink or side next. Only call skip_item if the CALLER no longer wants the item. If the same question comes back twice after a clear answer, apologise and offer to put them through to the team - never drop the item without telling them.
    - If the caller says several choices at once ("spicy, as a meal, with a Pepsi"), put them all in add_item's choices; you will only be asked for what's missing.
 6. After each item, ask "Anything else?" Use change_quantity to change or remove a line (quantity 0 removes it); call get_order first if you need line numbers.
@@ -72,7 +76,11 @@ const PROMPT = `You answer the phone for {{restaurant_name}}, a UK takeaway, and
 - Questions you can't answer from the tools (complaints, refunds, an existing order, opening times you don't have, anything off-menu): offer to transfer. Before transferring, call note_transfer with a few words of reason, then call transfer_to_restaurant. If a person can't take over ({{transfer_available}} is no), apologise and suggest they call back later.
 - If the caller asks for a person, transfer straight away (note_transfer first).
 - If a tool returns ok false, use its "say" and "next" to decide what to do. Never read raw tool output aloud.
-- Stay on this restaurant's food orders. Politely decline anything else.`;
+- Stay on this restaurant's food orders. Politely decline anything else.
+- Use THE MENU to answer "what do you have?", "what burgers do you do?" or "what comes in a meal?" - name two to four options at a time, never read the whole list.
+
+## THE MENU (items, prices, and what they come with)
+{{menu}}`;
 
 const fn = (name, description, properties = {}, required = [], extra = {}) => ({
     type: 'custom', name, description, url: URL_, method: 'POST',
@@ -82,15 +90,16 @@ const fn = (name, description, properties = {}, required = [], extra = {}) => ({
 const waitLine = (text) => ({ speak_during_execution: true, execution_message_type: 'static_text', execution_message_description: text });
 
 const TOOLS = [
-    fn('search_menu', 'Find menu items matching what the caller asked for. Use before adding any item.',
+    fn('search_menu', 'Search the menu. Only needed when you cannot tell from THE MENU which item the caller means.',
         { query: { type: 'string', description: "What the caller said, e.g. 'chicken burger' or 'large chips'" } }, ['query']),
     fn('get_item_details', 'Description, allergens and choices of one menu item. Use for questions about an item or allergies.',
-        { menu_item_id: { type: 'string' } }, ['menu_item_id']),
+        { item_name: { type: 'string', description: 'Exact item name from THE MENU' }, menu_item_id: { type: 'string', description: 'Only if you have one from search_menu' } }, []),
     fn('add_item', 'Add an item to the order. Include only choices the caller already stated.', {
-        menu_item_id: { type: 'string' },
+        item_name: { type: 'string', description: 'Exact item name as written in THE MENU' },
+        menu_item_id: { type: 'string', description: 'Only if you have one from search_menu' },
         quantity: { type: 'integer', minimum: 1 },
         choices: { type: 'array', description: 'Choices the caller already gave', items: { type: 'object', properties: { group: { type: 'string', description: 'e.g. Size, Flavour, Drink' }, option: { type: 'string', description: 'e.g. Large, Hot, Pepsi' } }, required: ['group', 'option'] } },
-    }, ['menu_item_id', 'quantity']),
+    }, ['quantity']),
     fn('choose_option', 'Give the caller\'s answer to the waiting_for question.', { option: { type: 'string', description: 'The option the caller chose' } }, ['option']),
     fn('skip_item', 'Drop the item that is waiting for a choice, if the caller no longer wants it.'),
     fn('change_quantity', 'Change how many of a basket line. Quantity 0 removes the line.', {

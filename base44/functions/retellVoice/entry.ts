@@ -122,6 +122,16 @@ function refusal(r) {
     return out;
 }
 
+/** An item name that didn't match exactly: offer the near misses back instead of a dead end. */
+function notFound(r) {
+    if (r.code !== 'ITEM_NOT_FOUND' || !r.did_you_mean?.length) return refusal(r);
+    return {
+        ok: false, problem: 'WHICH_ITEM',
+        did_you_mean: r.did_you_mean.map((i) => ({ item_name: i.name, price: money(i.price) })),
+        next: 'Ask the caller which of these they meant, then call add_item again with that exact item_name.',
+    };
+}
+
 // ── Tools ───────────────────────────────────────────────────────────────────
 const TOOLS = {
     async search_menu(ctx, a) {
@@ -139,8 +149,8 @@ const TOOLS = {
     },
 
     async get_item_details(ctx, a) {
-        const r = await core(ctx.base44, 'get_item', { session_id: ctx.sid, menu_item_id: a.menu_item_id });
-        if (!r.ok) return refusal(r);
+        const r = await core(ctx.base44, 'get_item', { session_id: ctx.sid, menu_item_id: a.menu_item_id, item_name: clip(a.item_name, 120) });
+        if (!r.ok) return notFound(r);
         const i = r.item;
         return {
             ok: true, name: i.name, price: money(i.price), description: i.description || 'No description on the menu.',
@@ -160,8 +170,8 @@ const TOOLS = {
             if (!c?.group || !c?.option) continue;
             options[c.group] = options[c.group] ? [].concat(options[c.group], c.option) : c.option;
         }
-        const r = await core(ctx.base44, 'add_item', { session_id: ctx.sid, menu_item_id: a.menu_item_id, quantity: a.quantity || 1, options });
-        if (!r.ok) return refusal(r);
+        const r = await core(ctx.base44, 'add_item', { session_id: ctx.sid, menu_item_id: a.menu_item_id, item_name: clip(a.item_name, 120), quantity: a.quantity || 1, options });
+        if (!r.ok) return notFound(r);
         const ignored = r.ignored_options?.length ? { not_understood: r.ignored_options, note: 'Those choices did not match the menu; they will be asked again if needed.' } : {};
         if (!r.added) return { ok: true, added: false, waiting_for: question(r.needs_choice), ...ignored };
         return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), next: nextFrom(r.quote), ...ignored };
@@ -278,7 +288,7 @@ async function inbound(base44, db, ev) {
     }
     const caller = phoneDigits(c.from_number);
     const s = await core(base44, 'start_session', {
-        channel: 'phone', restaurant_id: link.restaurant_id, external_id: String(c.call_id || ''),
+        channel: 'phone', restaurant_id: link.restaurant_id, external_id: String(c.call_id || ''), include_menu: true,
         customer_phone: caller || undefined,
     });
     if (!s.ok) {
@@ -303,6 +313,7 @@ async function inbound(base44, db, ev) {
         caller_is_mobile: caller && /^447\d{9}$/.test(caller) ? 'yes' : 'no',
         transfer_available: transfer ? 'yes' : 'no',
         transfer_number: transfer || '',
+        menu: s.voice_menu || 'Menu not loaded - use search_menu for every item.',
         returning_customer: back
             ? `Yes. Name on last order: ${back.name || 'unknown'}. Last time: ${back.last_order_type || 'order'}${back.last_delivery_address ? ` to ${back.last_delivery_address}` : ''}, ${back.last_items.slice(0, 4).join(', ')}.`
             : 'no',
