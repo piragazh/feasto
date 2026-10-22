@@ -171,7 +171,23 @@ function closeEnough(a, b) {
     return prev[b.length] <= 2;
 }
 
-function scoreItem(item, qTokens, qPhrase) {
+/**
+ * How much each query word should count: words in many item names ("chicken", "meal") say
+ * little; rare ones ("wrap", "strips") say which item is meant. 1 for a word in every name,
+ * up to ~4 for a word in one name.
+ */
+function wordWeights(items, qTokens) {
+    const n = items.length || 1;
+    const names = items.map((i) => tokensOf(i.name));
+    const w = {};
+    for (const t of new Set(qTokens)) {
+        const df = names.filter((toks) => toks.includes(t)).length;
+        w[t] = 1 + Math.log((n + 1) / (df + 1));
+    }
+    return w;
+}
+
+function scoreItem(item, qTokens, qPhrase, weights = {}) {
     const name = norm(item.name);
     const nameTokens = tokensOf(item.name);
     const cat = norm(item.category);
@@ -180,9 +196,10 @@ function scoreItem(item, qTokens, qPhrase) {
     if (qPhrase && name === qPhrase) s += 20;
     else if (qPhrase && name.includes(qPhrase)) s += 8;
     for (const t of qTokens) {
-        if (nameTokens.includes(t)) s += 4;
-        else if (nameTokens.some((n) => n.startsWith(t) || t.startsWith(n))) s += 2;
-        else if (nameTokens.some((n) => closeEnough(n, t))) s += 3;
+        const w = weights[t] ?? 1;
+        if (nameTokens.includes(t)) s += 4 * w;
+        else if (nameTokens.some((n) => n.startsWith(t) || t.startsWith(n))) s += 2 * w;
+        else if (nameTokens.some((n) => closeEnough(n, t))) s += 3 * w;
         if (cat.includes(t)) s += 1;
         if (desc.includes(t)) s += 0.5;
     }
@@ -337,7 +354,10 @@ function startPending(item, quantity, chosen = {}) {
         if (hits.length === 1) take(hits[0].g, hits[0].index, key);
     }
     top.forEach((g, index) => {
-        if (g.required && (g.options || []).length && !answered.has(index) && !(g.name in pending.customizations)) {
+        // A paid meal upgrade is always asked, required or not: "on its own or as a meal?" is
+        // what any takeaway asks, and an optional one would otherwise never come up on the phone.
+        const offerMeal = g.type === 'meal_upgrade' && (g.options || []).some((o) => (o.price || 0) > 0);
+        if ((g.required || offerMeal) && (g.options || []).length && !answered.has(index) && !(g.name in pending.customizations)) {
             pending.queue.push({ group_name: g.name, parent: null, index });
         }
     });
@@ -930,7 +950,8 @@ Deno.serve(async (req) => {
                 const qTokens = tokensOf(body.query);
                 const qPhrase = norm(body.query);
                 const limit = Math.max(1, Math.min(15, Number(body.limit) || 6));
-                const scored = menu.available.map((i) => ({ i, sc: scoreItem(i, qTokens, qPhrase) })).filter((x) => x.sc >= 1)
+                const weights = wordWeights(menu.available, qTokens);
+                const scored = menu.available.map((i) => ({ i, sc: scoreItem(i, qTokens, qPhrase, weights) })).filter((x) => x.sc >= 1)
                     .sort((a, b) => b.sc - a.sc || a.i.name.localeCompare(b.i.name)).slice(0, limit);
                 note = `"${clip(body.query, 40)}" -> ${scored.length}`;
                 if (!scored.length) {
