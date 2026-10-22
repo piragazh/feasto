@@ -957,6 +957,15 @@ Deno.serve(async (req) => {
                     const cur = menu.byId.get(s.pending_item.menu_item_id);
                     if (cur) { refuse('OPTIONS_PENDING', `Let's finish the ${cur.name} first.`, { question: nextQuestion(cur, s.pending_item) }); break; }
                 }
+                // Choices are stored by group NAME (website, POS and the price check all read them that
+                // way), so two groups with the same name would overwrite each other and the order would
+                // be priced wrong. Refuse such an item rather than sell it at the wrong price.
+                const names = (item.customization_options || []).filter((g) => (g.options || []).length).map((g) => g.name || '');
+                if (new Set(names).size !== names.length) {
+                    console.error(`${LOG} menu item ${item.id} "${item.name}" has two option groups with the same name - fix it in the menu editor`);
+                    refuse('ITEM_SETUP_PROBLEM', `Sorry, I can't take the ${String(item.name).trim()} over the phone right now.`, { say: `Sorry, I can't take the ${String(item.name).trim()} through this line right now. Would you like something else, or shall I put you through to the team?` });
+                    break;
+                }
                 const { pending, ignored } = startPending(item, body.quantity, body.options);
                 s.pending_item = pending;
                 note = `${pending.quantity}x ${item.name}`;
