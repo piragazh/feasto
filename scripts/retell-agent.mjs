@@ -10,6 +10,11 @@
  *   RETELL_API_KEY=key node scripts/retell-agent.mjs voices          list British voices
  *
  * Optional: VOICE_ID (default below), MODEL (default gpt-5.4-mini), APP_URL.
+ *
+ * LIVE (22 Oct 2026): LLM_ID=llm_1ac40ff7333f66cb3f1fafa04293 AGENT_ID=agent_ac8c93a3e31efcc041a8d7a46a
+ * VOICE_ID=cartesia-Willa. Number +441473943323 (Tilbury Chicken pilot) on Twilio trunk
+ * mealdrop-retell (TK07f7278098658b5ec50b27c90fbaa9ec), origination sip:sip.retellai.com,
+ * termination by IP ACL 18.98.16.120/30; in Retell its inbound webhook is retellVoice.
  */
 const KEY = process.env.RETELL_API_KEY;
 if (!KEY) { console.error('Set RETELL_API_KEY'); process.exit(1); }
@@ -102,7 +107,8 @@ const TOOLS = [
     fn('note_transfer', 'Record why the caller is being put through to the team. Call right before transfer_to_restaurant.', { reason: { type: 'string' } }, ['reason']),
     { type: 'transfer_call', name: 'transfer_to_restaurant', description: 'Put the caller through to a person at the restaurant.',
         transfer_destination: { type: 'predefined', number: '{{transfer_number}}' },
-        transfer_option: { type: 'cold_transfer', show_transferee_as_caller: true },
+        // Twilio trunks only allow your own numbers as caller ID, so the restaurant sees the AI line calling
+        transfer_option: { type: 'cold_transfer', show_transferee_as_caller: false },
         speak_during_execution: true, execution_message_type: 'static_text', execution_message_description: "No problem, I'll put you through now." },
     { type: 'end_call', name: 'end_call', description: 'End the call once the order is placed or the link is sent and you have said goodbye, or if the restaurant is closed.' },
 ];
@@ -145,7 +151,7 @@ if (mode === 'voices') {
     process.exit(0);
 }
 
-const VOICE = process.env.VOICE_ID || '11labs-Anthony';
+const VOICE = process.env.VOICE_ID || 'cartesia-Willa';
 if (process.env.LLM_ID && process.env.AGENT_ID) {
     await api('PATCH', `/update-retell-llm/${process.env.LLM_ID}`, LLM);
     await api('PATCH', `/update-agent/${process.env.AGENT_ID}`, AGENT(process.env.LLM_ID, VOICE));
