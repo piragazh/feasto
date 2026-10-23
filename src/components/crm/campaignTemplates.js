@@ -1,7 +1,8 @@
 // Ready-made campaign templates for the composer.
 // SMS bodies are kept short: the send worker adds "<Restaurant>: " in front and
 // "Reply STOP to opt out" at the end, and the whole text should fit one SMS (160 characters).
-// Only plain characters are used (no emoji or curly quotes) so a message stays one part.
+// Only plain characters (and £, which SMS supports) are used - no emoji or curly quotes - so a
+// message stays one part.
 // Tokens: {first_name} {restaurant} {favourite_item} {coupon_code} {order_link} {days_since_last_order}
 
 const unique = (discount_type, discount_value, validity_days = 14, minimum_order = 0) => ({
@@ -48,11 +49,11 @@ export const CAMPAIGN_TEMPLATES = [
         description: 'Customers who have ordered once',
         segment_key: 'sys:once',
         offer: unique('fixed', 3, 14, 10),
-        sms: { body: "Hi {first_name}, fancy {favourite_item} again? Here's 3 pounds off your next order: {coupon_code}" },
+        sms: { body: "Hi {first_name}, fancy {favourite_item} again? Here's £3 off your next order: {coupon_code}" },
         email: {
-            subject: '3 pounds off your next order, {first_name}',
+            subject: '£3 off your next order, {first_name}',
             heading: 'Ready for round two?',
-            body: "Thanks for ordering with us! Fancy {favourite_item} again?\n\nHere's 3 pounds off your next order of 10 pounds or more.",
+            body: "Thanks for ordering with us! Fancy {favourite_item} again?\n\nHere's £3 off your next order of £10 or more.",
             button_text: 'Order again',
         },
     },
