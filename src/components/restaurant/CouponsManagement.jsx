@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Edit, Trash2, Tag, Send, Gift, Truck, Percent, DollarSign, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 import CRMCampaignDialog from './CRMCampaignDialog';
+import ClearExpiredCouponsButton from '@/components/coupons/ClearExpiredCouponsButton';
 
 const DISCOUNT_TYPES = [
     { value: 'percentage', label: '% Off', icon: Percent, color: 'text-blue-600', bgColor: 'bg-blue-50' },
@@ -159,6 +160,8 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Restaurant Coupons</h2>
+                <div className="flex gap-2">
+                <ClearExpiredCouponsButton restaurantId={restaurantId} coupons={coupons} queryKeys={[['restaurant-coupons', restaurantId]]} />
                 <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
                     <DialogTrigger asChild>
                         <Button className="bg-orange-500 hover:bg-orange-600">
