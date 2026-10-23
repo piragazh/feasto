@@ -304,6 +304,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                         </form>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
 
             {coupons.length === 0 && (
