@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Percent, DollarSign, Calendar, Trash2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
+import ClearExpiredCouponsButton from '@/components/coupons/ClearExpiredCouponsButton';
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
 
@@ -164,6 +165,9 @@ export default function ManageCoupons() {
                         <h1 className="text-3xl font-bold text-gray-900">Manage Coupons</h1>
                         <p className="text-gray-500 mt-1">Create and manage promotional codes</p>
                     </div>
+                    <div className="flex gap-2">
+                    {/* Platform-wide: every restaurant's expired, never-used coupons */}
+                    <ClearExpiredCouponsButton queryKeys={[['coupons']]} />
                     <Dialog open={isDialogOpen} onOpenChange={(open) => {
                         setIsDialogOpen(open);
                         if (!open) {
