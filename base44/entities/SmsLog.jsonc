@@ -49,6 +49,7 @@
       "enum": [
         "customer_notification",
         "restaurant_alert",
+        "promotional",
         "other"
       ],
       "default": "customer_notification",
