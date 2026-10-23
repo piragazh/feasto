@@ -90,13 +90,21 @@ Deno.serve(async (req: Request) => {
       const payouts = await stripe.payouts.list({ limit: 100, ...(createdFrom ? { created: { gte: createdFrom } } : {}) });
       const existing = await base44.entities.FinanceStripeSettlement.filter({ company_id: companyId }, "-created_date", 500, 0);
       const byStripeId = new Map((existing || []).map((r: any) => [r.stripe_payout_id, r]));
-      let imported = 0, skipped = 0;
+      let imported = 0, skipped = 0, skippedCurrency = 0;
       for (const payout of payouts.data || []) {
         if (byStripeId.has(payout.id)) { skipped++; continue; }
-        const txns = await stripe.balanceTransactions.list({ payout: payout.id, limit: 100 });
-        const gross = roundMoney((txns.data || []).reduce((s: number, tx: any) => s + Number(tx.amount || 0), 0) / 100);
-        const fees = roundMoney((txns.data || []).reduce((s: number, tx: any) => s + Number(tx.fee || 0), 0) / 100);
-        const net = roundMoney((txns.data || []).reduce((s: number, tx: any) => s + Number(tx.net || 0), 0) / 100);
+        if (String(payout.currency || "gbp").toLowerCase() !== "gbp") { skippedCurrency++; continue; }
+        let txns: any[] = [];
+        let txnPage = await stripe.balanceTransactions.list({ payout: payout.id, limit: 100 });
+        txns.push(...(txnPage.data || []));
+        while (txnPage.has_more && txnPage.data?.length) {
+          txnPage = await stripe.balanceTransactions.list({ payout: payout.id, limit: 100, starting_after: txnPage.data[txnPage.data.length - 1].id });
+          txns.push(...(txnPage.data || []));
+          if (txns.length >= 5000) break;
+        }
+        const gross = roundMoney(txns.reduce((s: number, tx: any) => s + Number(tx.amount || 0), 0) / 100);
+        const fees = roundMoney(txns.reduce((s: number, tx: any) => s + Number(tx.fee || 0), 0) / 100);
+        const net = roundMoney(txns.reduce((s: number, tx: any) => s + Number(tx.net || 0), 0) / 100);
         const amount = roundMoney(Number(payout.amount || 0) / 100);
         const matched = Math.abs(net - amount) <= 0.01;
         await base44.entities.FinanceStripeSettlement.create({
@@ -113,7 +121,7 @@ Deno.serve(async (req: Request) => {
         });
         imported++;
       }
-      return Response.json({ success: true, action, stripe_mode: mode, fetched: (payouts.data || []).length, imported, skipped, has_more: Boolean(payouts.has_more), message: "Imported Stripe account-to-bank payouts only. These are not restaurant transfers. Sync checks the latest 100 payouts; use a date filter for older history." });
+      return Response.json({ success: true, action, stripe_mode: mode, fetched: (payouts.data || []).length, imported, skipped, skipped_non_gbp: skippedCurrency, has_more: Boolean(payouts.has_more), message: "Imported GBP Stripe account-to-bank payouts only. These are not restaurant transfers. Sync checks the latest 100 payouts; use a date filter for older history." });
     }
 
     return responseError("Unsupported action. Use sync_order_commissions or sync_stripe_payouts");
