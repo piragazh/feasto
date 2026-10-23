@@ -114,8 +114,8 @@ export default function FinanceDashboard() {
       const summary = action === 'sync_order_commissions'
         ? `Commission sync complete: ${data.created} new order record(s), ${data.skipped} already recorded.`
         : `Stripe sync complete: ${data.imported} payout(s) imported, ${data.skipped} already recorded${data.stripe_mode ? ` (${data.stripe_mode} mode)` : ''}.`;
-      setNotice(summary + ' Stripe bank settlements are separate from restaurant payouts.');
       await loadData(companyId);
+      setNotice(summary + ' Stripe bank settlements are separate from restaurant payouts.');
     } catch (error) {
       console.error('Finance reconciliation sync failed:', error);
       setNotice(error?.response?.data?.error || error.message || 'Finance sync failed. Check Stripe configuration and access.');
