@@ -1,0 +1,92 @@
+{
+  "name": "FinanceStripeSettlement",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string"
+    },
+    "stripe_payout_id": {
+      "type": "string"
+    },
+    "payout_reference": {
+      "type": "string"
+    },
+    "payout_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "arrival_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "currency": {
+      "type": "string",
+      "default": "gbp"
+    },
+    "amount": {
+      "type": "number",
+      "default": 0
+    },
+    "gross_balance_transactions": {
+      "type": "number",
+      "default": 0
+    },
+    "stripe_fees": {
+      "type": "number",
+      "default": 0
+    },
+    "net_balance_transactions": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string"
+    },
+    "reconciliation_status": {
+      "type": "string",
+      "enum": [
+        "imported",
+        "matched",
+        "query"
+      ],
+      "default": "imported"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "stripe_api"
+      ],
+      "default": "stripe_api"
+    },
+    "livemode": {
+      "type": "boolean",
+      "default": false
+    },
+    "external_reference": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "stripe_payout_id",
+    "amount",
+    "reconciliation_status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

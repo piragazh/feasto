@@ -1,0 +1,105 @@
+{
+  "name": "FinanceOrderCommission",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string"
+    },
+    "order_id": {
+      "type": "string"
+    },
+    "order_number": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
+    "order_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "GBP"
+      ],
+      "default": "GBP"
+    },
+    "gross_order_value": {
+      "type": "number",
+      "default": 0
+    },
+    "commission_rate": {
+      "type": "number",
+      "default": 0
+    },
+    "commission_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "commission_vat": {
+      "type": "number",
+      "default": 0
+    },
+    "restaurant_earnings": {
+      "type": "number",
+      "default": 0
+    },
+    "payment_method": {
+      "type": "string"
+    },
+    "payment_intent_id": {
+      "type": "string"
+    },
+    "order_status": {
+      "type": "string"
+    },
+    "payment_status": {
+      "type": "string"
+    },
+    "reconciliation_status": {
+      "type": "string",
+      "enum": [
+        "recorded",
+        "matched",
+        "query",
+        "excluded"
+      ],
+      "default": "recorded"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "order_sync"
+      ],
+      "default": "order_sync"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "order_id",
+    "gross_order_value",
+    "commission_amount",
+    "reconciliation_status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
