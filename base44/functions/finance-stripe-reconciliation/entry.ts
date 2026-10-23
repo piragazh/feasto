@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
         payment_status: { $in: ["payment_confirmed", "paid_card"] },
         status: { $in: ["delivered", "collected", "refunded"] }
       }, "-created_date", 500, 0);
-      const existing = await db.entities.FinanceOrderCommission.filter({ company_id: companyId }, "-created_date", 500, 0);
+      const existing = await base44.entities.FinanceOrderCommission.filter({ company_id: companyId }, "-created_date", 500, 0);
       const byOrderId = new Map((existing || []).map((r: any) => [r.order_id, r]));
       const restaurantCache = new Map<string, any>();
       let created = 0, skipped = 0;
@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
         const earnings = order.restaurant_earnings !== undefined && order.restaurant_earnings !== null && Number.isFinite(Number(order.restaurant_earnings))
           ? roundMoney(Math.max(0, Number(order.restaurant_earnings)))
           : roundMoney(gross - commission);
-        await db.entities.FinanceOrderCommission.create({
+        await base44.entities.FinanceOrderCommission.create({
           company_id: companyId, order_id: String(order.id), order_number: String(order.order_number || ""),
           restaurant_id: restaurantId, restaurant_name: String(order.restaurant_name || restaurant?.name || "Unknown restaurant"),
           ...(order.created_date ? { order_date: new Date(order.created_date).toISOString() } : {}),
@@ -88,7 +88,7 @@ Deno.serve(async (req: Request) => {
       const createdFrom = Number(body.created_after || 0);
       if (!Number.isFinite(createdFrom) || createdFrom < 0) return responseError("created_after must be a Unix timestamp in seconds");
       const payouts = await stripe.payouts.list({ limit: 100, ...(createdFrom ? { created: { gte: createdFrom } } : {}) });
-      const existing = await db.entities.FinanceStripeSettlement.filter({ company_id: companyId }, "-created_date", 500, 0);
+      const existing = await base44.entities.FinanceStripeSettlement.filter({ company_id: companyId }, "-created_date", 500, 0);
       const byStripeId = new Map((existing || []).map((r: any) => [r.stripe_payout_id, r]));
       let imported = 0, skipped = 0;
       for (const payout of payouts.data || []) {
@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
         const net = roundMoney((txns.data || []).reduce((s: number, tx: any) => s + Number(tx.net || 0), 0) / 100);
         const amount = roundMoney(Number(payout.amount || 0) / 100);
         const matched = Math.abs(net - amount) <= 0.01;
-        await db.entities.FinanceStripeSettlement.create({
+        await base44.entities.FinanceStripeSettlement.create({
           company_id: companyId, stripe_payout_id: payout.id, payout_reference: payout.id,
           payout_date: new Date(Number(payout.created) * 1000).toISOString(),
           ...(payout.arrival_date ? { arrival_date: new Date(Number(payout.arrival_date) * 1000).toISOString() } : {}),
