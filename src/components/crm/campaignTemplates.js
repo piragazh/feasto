@@ -83,7 +83,7 @@ export const CAMPAIGN_TEMPLATES = [
         email: {
             subject: 'New on the menu at {restaurant}',
             heading: 'Say hello to [NEW ITEM]',
-            body: "We've just added [NEW ITEM] to the menu and we think you're going to love it.\n\n[One or two lines about what makes it special.]",
+            body: "We've just added [NEW ITEM] to the menu and we think you're going to love it.\n\n[DESCRIBE IT IN ONE OR TWO LINES]",
             button_text: 'See the menu',
         },
     },
