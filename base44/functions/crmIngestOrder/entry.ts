@@ -333,11 +333,12 @@ async function ingestOne(db, orderId) {
         created = true;
     }
 
-    // Identity enrichment
+    // Identity enrichment (never for an erased customer: their details stay removed)
     const patch = {};
-    if (phone && !profile.phone_e164) patch.phone_e164 = phone;
+    const erased = !!profile.is_anonymised;
+    if (!erased && phone && !profile.phone_e164) patch.phone_e164 = phone;
     const emails = profile.emails || [];
-    if (email && !emails.includes(email)) {
+    if (!erased && email && !emails.includes(email)) {
         if (phone && profile.phone_e164 === phone && emails.length && name && profile.display_name
             && firstToken(name) !== firstToken(profile.display_name)) {
             patch.possible_shared_number = true;
@@ -345,11 +346,13 @@ async function ingestOne(db, orderId) {
         patch.emails = [...emails, email];
     }
 
-    const contact = await ensureContact(db, {
-        phone: patch.phone_e164 || profile.phone_e164, email: (patch.emails || emails)[0] || email,
-        name, profileId: profile.id, restaurantId,
-    });
-    if (profile.contact_id !== contact.id) patch.contact_id = contact.id;
+    const contact = erased
+        ? { id: profile.contact_id }
+        : await ensureContact(db, {
+            phone: patch.phone_e164 || profile.phone_e164, email: (patch.emails || emails)[0] || email,
+            name, profileId: profile.id, restaurantId,
+        });
+    if (contact.id && profile.contact_id !== contact.id) patch.contact_id = contact.id;
 
     const orderIds = profile.order_ids || [];
     if (!orderIds.includes(order.id)) patch.order_ids = [...orderIds, order.id];
@@ -374,7 +377,8 @@ async function ingestOne(db, orderId) {
 
     await db.CustomerProfile.update(profile.id, {
         ...patch, ...stats, consent,
-        display_name: stats.display_name || profile.display_name || name || null,
+        display_name: erased ? 'Erased customer' : (stats.display_name || profile.display_name || name || null),
+        ...(erased ? { addresses: [], phone_raw: null } : {}),
     });
     let attributed = null;
     try { attributed = await attributeOrder(db, order, profile); }
@@ -435,7 +439,8 @@ async function backfill(db) {
             createdProfiles++;
             byId.set(p.id, p);
         }
-        // identity enrichment, applied in memory so later orders match
+        // identity enrichment, applied in memory so later orders match (never for erased customers)
+        if (p.is_anonymised) { if (!assigned.has(p.id)) assigned.set(p.id, []); assigned.get(p.id).push(order); continue; }
         if (phone && !p.phone_e164) { p.phone_e164 = phone; patchOf(p).phone_e164 = phone; }
         if (email && !(p.emails || []).includes(email)) {
             if (phone && p.phone_e164 === phone && (p.emails || []).length && name && p.display_name
@@ -545,7 +550,8 @@ async function backfill(db) {
         const update = {
             ...(patches.get(p.id) || {}), ...stats, consent,
             order_ids: list.map(o => o.id),
-            display_name: stats.display_name || p.display_name || null,
+            display_name: p.is_anonymised ? 'Erased customer' : (stats.display_name || p.display_name || null),
+            ...(p.is_anonymised ? { addresses: [], phone_raw: null } : {}),
         };
         const before = original.get(p.id);
         if (before && before.stats_updated_at && fingerprint({ ...before, ...update }) === fingerprint(before)) continue;
