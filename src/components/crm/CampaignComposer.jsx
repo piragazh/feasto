@@ -6,13 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Smartphone, Mail, MessageCircle, Check, Send, FlaskConical, CalendarClock } from 'lucide-react';
+import { Loader2, Smartphone, Mail, MessageCircle, Check, Send, FlaskConical, CalendarClock, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { crm } from './crmClient';
 import { Reach } from './CRMSegments';
+import { CAMPAIGN_TEMPLATES, applyTemplate, templateMessage } from './campaignTemplates';
+
+// Template text like [NEW ITEM] must be replaced before the campaign can go out.
+const PLACEHOLDER = /\[[A-Z][A-Z0-9 /-]*\]/;
 
 const STEPS = ['Audience', 'Channel', 'Message', 'Offer', 'Review'];
-const TOKENS = ['{first_name}', '{restaurant}', '{favourite_item}', '{coupon_code}', '{order_link}'];
+const TOKENS = ['{first_name}', '{restaurant}', '{favourite_item}', '{coupon_code}', '{order_link}', '{days_since_last_order}'];
 
 function smsInfo(text) {
     const unicode = /[^\x00-\x7F£€]/.test(text);
@@ -38,7 +42,31 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
     const [testTo, setTestTo] = useState('');
     const [testResult, setTestResult] = useState(null);
     const [when, setWhen] = useState(initial?.schedule_at ? 'later' : 'now');
+    const [templateId, setTemplateId] = useState(null);
     const set = (patch) => setF(prev => ({ ...prev, ...patch }));
+    const template = CAMPAIGN_TEMPLATES.find(t => t.id === templateId) || null;
+
+    const useTemplate = (t) => {
+        const seg = [...(segs?.system || []), ...(segs?.custom || [])].find(s => s.key === t.segment_key);
+        setF(prev => ({
+            ...prev,
+            ...applyTemplate(t, prev.channel),
+            segment_name: seg?.name || '',
+            coupon_code: t.offer.coupon_mode === 'shared' ? '' : prev.coupon_code,
+            coupon_config: t.offer.coupon_config || prev.coupon_config,
+        }));
+        setTemplateId(t.id);
+        toast.success(`"${t.name}" template applied — check the audience, then carry on`);
+    };
+    // Switching channel swaps a template's wording to that channel's version, if it hasn't been edited.
+    const chooseChannel = (ch) => {
+        if (template && ch !== f.channel && ch !== 'whatsapp') {
+            const current = templateMessage(template, f.channel);
+            if (f.body === current.body) { set({ channel: ch, ...templateMessage(template, ch) }); return; }
+        }
+        set({ channel: ch });
+    };
+    const hasPlaceholder = PLACEHOLDER.test(`${f.body} ${f.subject} ${f.heading}`);
 
     const { data: segs } = useQuery({ queryKey: ['crm-segments', restaurantId], queryFn: () => crm(restaurantId, 'segments_list') });
     const { data: coupons } = useQuery({ queryKey: ['crm-coupons', restaurantId], queryFn: () => crm(restaurantId, 'coupons_list') });
@@ -56,7 +84,7 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
     const sampleBody = (f.body || '')
         .replace(/\{first_name\}/g, 'Sam').replace(/\{restaurant\}/g, restaurantName)
         .replace(/\{favourite_item\}/g, 'Chicken Strips Meal').replace(/\{coupon_code\}/g, f.coupon_mode === 'shared' ? f.coupon_code : f.coupon_mode === 'unique' ? 'CRM-AB12CD3' : '')
-        .replace(/\{order_link\}/g, 'mealdrop.co.uk/…');
+        .replace(/\{order_link\}/g, 'mealdrop.co.uk/…').replace(/\{days_since_last_order\}/g, '45');
     const smsText = `${restaurantName}: ${sampleBody}${f.coupon_mode !== 'none' && !f.body.includes('{coupon_code}') ? `\nUse code ${f.coupon_mode === 'shared' ? f.coupon_code : 'CRM-AB12CD3'}` : ''}\nReply STOP to opt out`;
     const sms = smsInfo(smsText);
     const reachable = preview?.channels?.[f.channel]?.reachable ?? 0;
@@ -67,7 +95,7 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
         if (step === 0) return !!f.segment_key;
         if (step === 2) return f.channel === 'whatsapp'
             ? f.name.trim() && f.wa_template_id
-            : f.name.trim() && f.body.trim() && (f.channel !== 'email' || f.subject.trim());
+            : f.name.trim() && f.body.trim() && (f.channel !== 'email' || f.subject.trim()) && !hasPlaceholder;
         if (step === 3) return f.coupon_mode !== 'shared' || !!f.coupon_code;
         return true;
     };
@@ -130,6 +158,25 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
 
                 {step === 0 && (
                     <div className="space-y-3">
+                        {!id && (
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-1.5"><Sparkles className="h-4 w-4 text-orange-500" />Start from a template</Label>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+                                    {CAMPAIGN_TEMPLATES.map(t => (
+                                        <button key={t.id} type="button" onClick={() => useTemplate(t)}
+                                            className={`text-left rounded-lg border p-2.5 transition-colors ${templateId === t.id ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'}`}>
+                                            <div className="text-[10px] uppercase tracking-wide text-gray-400">{t.category}</div>
+                                            <div className="text-sm font-semibold text-gray-900">{t.name}</div>
+                                            <div className="text-xs text-gray-500 line-clamp-2">{t.description}</div>
+                                            <div className="text-[11px] text-orange-700 mt-1">
+                                                {t.offer.coupon_mode === 'unique' ? `${t.offer.coupon_config.discount_type === 'fixed' ? '£' : ''}${t.offer.coupon_config.discount_value}${t.offer.coupon_config.discount_type === 'percentage' ? '%' : ''} off code` : t.offer.coupon_mode === 'shared' ? 'Your coupon' : 'No offer'}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500">Or start from scratch: just choose an audience below. Everything a template fills in can be changed.</p>
+                            </div>
+                        )}
                         <Label>Who should get it?</Label>
                         <Select value={f.segment_key} onValueChange={(v) => set({ segment_key: v, segment_name: allSegs.find(s => s.key === v)?.name || '' })}>
                             <SelectTrigger><SelectValue placeholder="Choose an audience" /></SelectTrigger>
@@ -144,7 +191,7 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
                     <div className="space-y-4">
                         <div className="grid grid-cols-3 gap-2">
                             {[['sms', 'SMS', Smartphone], ['email', 'Email', Mail], ['whatsapp', 'WhatsApp', MessageCircle]].map(([ch, label, Icon]) => (
-                                <button key={ch} disabled={ch === 'whatsapp' && !settingsData?.providers?.whatsapp} onClick={() => set({ channel: ch })}
+                                <button key={ch} disabled={ch === 'whatsapp' && !settingsData?.providers?.whatsapp} onClick={() => chooseChannel(ch)}
                                     className={`rounded-xl border-2 p-4 text-left ${f.channel === ch ? 'border-orange-500 bg-orange-50' : 'border-gray-200'} ${ch === 'whatsapp' && !settingsData?.providers?.whatsapp ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                     <Icon className="h-5 w-5 mb-1" /><div className="font-semibold">{label}</div>
                                     <div className="text-xs text-gray-500">{ch === 'whatsapp' && !settingsData?.providers?.whatsapp ? 'Connect a WhatsApp number first' : `${preview?.channels?.[ch]?.reachable ?? '…'} reachable`}</div>
@@ -170,6 +217,15 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
                 {step === 2 && (
                     <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-3">
+                            {f.channel !== 'whatsapp' && (
+                                <div>
+                                    <Label>Wording from a template</Label>
+                                    <Select value={templateId || ''} onValueChange={(v) => { const t = CAMPAIGN_TEMPLATES.find(x => x.id === v); if (t) { setTemplateId(v); set(templateMessage(t, f.channel)); } }}>
+                                        <SelectTrigger><SelectValue placeholder="Choose a template (keeps audience and offer)" /></SelectTrigger>
+                                        <SelectContent>{CAMPAIGN_TEMPLATES.map(t => <SelectItem key={t.id} value={t.id}>{t.category} — {t.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                             <div><Label>Campaign name (internal)</Label><Input value={f.name} onChange={e => set({ name: e.target.value })} placeholder="e.g. October win-back" /></div>
                             {f.channel === 'whatsapp' && (
                                 <div className="space-y-1.5">
@@ -193,6 +249,8 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
                                 <div className="flex flex-wrap gap-1 mt-1.5">{TOKENS.map(t => <button key={t} onClick={() => insertToken(t)} className="text-[11px] px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200">{t}</button>)}</div>
                             </div>}
                             {f.channel === 'email' && <div><Label>Button text</Label><Input value={f.button_text} onChange={e => set({ button_text: e.target.value })} /></div>}
+                            {hasPlaceholder && <p className="text-xs text-red-600">Replace the text in [BRACKETS] with your own details before continuing.</p>}
+                            {f.body.includes('{coupon_code}') && f.coupon_mode === 'none' && <p className="text-xs text-amber-700">This message mentions a code — choose an offer on the next step, or remove {'{coupon_code}'}.</p>}
                         </div>
                         <div>
                             <Label>Preview</Label>
@@ -220,6 +278,7 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
 
                 {step === 3 && (
                     <div className="space-y-4">
+                        {template?.note && <p className="text-sm text-orange-700 bg-orange-50 rounded-lg p-2.5">{template.note}</p>}
                         <div className="grid grid-cols-3 gap-2">
                             {[['none', 'No offer'], ['shared', 'One shared code'], ['unique', 'Unique code each']].map(([m, l]) => (
                                 <button key={m} onClick={() => set({ coupon_mode: m })} className={`rounded-xl border-2 p-3 text-sm font-medium ${f.coupon_mode === m ? 'border-orange-500 bg-orange-50' : 'border-gray-200'}`}>{l}</button>
