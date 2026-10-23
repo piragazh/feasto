@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Tag, Send, Gift, Truck, Percent, DollarSign, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
-import CRMCampaignDialog from './CRMCampaignDialog';
+import CampaignComposer from '@/components/crm/CampaignComposer';
 import ClearExpiredCouponsButton from '@/components/coupons/ClearExpiredCouponsButton';
 
 const DISCOUNT_TYPES = [
@@ -375,15 +375,21 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                 })}
             </div>
 
-            {/* CRM Campaign Dialog triggered from coupon */}
+            {/* Promote a coupon: opens the CRM campaign composer with this code as a shared offer.
+                Sends go through the CRM pipeline (consent, opt-outs, quiet hours, weekly limit). */}
             {crmCoupon && (
-                <CRMCampaignDialog
-                    open={!!crmCoupon}
-                    onClose={() => setCrmCoupon(null)}
-                    coupon={crmCoupon}
+                <CampaignComposer
+                    restaurantId={restaurantId}
                     restaurantName={restaurantName || 'Our Restaurant'}
-                    targetSegment={{ segment: 'all', count: 0, recipients: [] }}
-                    segmentConfig={{ all: { label: 'All Customers' } }}
+                    initial={{
+                        name: `Promote ${crmCoupon.code}`,
+                        segment_key: 'sys:marketable',
+                        segment_name: 'All marketable',
+                        coupon_mode: 'shared',
+                        coupon_code: crmCoupon.code,
+                        body: `Hi {first_name}, use code {coupon_code} for ${getCouponLabel(crmCoupon).toLowerCase()} at {restaurant}. Order: {order_link}`,
+                    }}
+                    onClose={() => setCrmCoupon(null)}
                 />
             )}
         </div>
