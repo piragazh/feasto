@@ -644,6 +644,10 @@ Deno.serve(async (req) => {
                     return Response.json({ error: c.status === 'pending_approval' ? 'This campaign is waiting for MealDrop approval' : `Campaign is already ${c.status}` }, { status: 400 });
                 }
                 if (!String(c.body || '').trim()) return Response.json({ error: 'Write a message first' }, { status: 400 });
+                // Template placeholders like [NEW ITEM] must never reach customers
+                if (/\[[A-Z][A-Z0-9 /-]*\]/.test(`${c.body} ${c.subject || ''} ${c.heading || ''}`)) {
+                    return Response.json({ error: 'Replace the text in [BRACKETS] in your message before sending' }, { status: 400 });
+                }
                 if (c.channel === 'email' && !String(c.subject || '').trim()) return Response.json({ error: 'Add an email subject' }, { status: 400 });
 
                 const settings = await loadSettings(db, restaurantId, restaurant.name);
