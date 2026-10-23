@@ -487,7 +487,7 @@ async function backfill(db) {
     let createdContacts = 0;
     const contactPatches = new Map();
     for (const p of byId.values()) {
-        if (p.merged_into) continue;
+        if (p.merged_into || p.is_anonymised) continue;
         const email = (p.emails || [])[0] || null;
         let c = (p.phone_e164 && cByPhone.get(p.phone_e164)) || (email && cByEmail.get(email)) || null;
         if (!c) {
