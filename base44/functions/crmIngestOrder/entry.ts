@@ -122,11 +122,15 @@ async function listAll(entity, query = {}, sort = 'created_date') {
 }
 
 // Fingerprint of what a profile update would change, so an unchanged profile is not rewritten.
-const fingerprint = (o) => JSON.stringify([
+// Key order of stored objects is not guaranteed, so sort keys before comparing.
+const stable = (v) => Array.isArray(v) ? v.map(stable)
+    : (v && typeof v === 'object') ? Object.fromEntries(Object.keys(v).sort().map(k => [k, stable(v[k])])) : (v ?? null);
+const fingerprint = (o) => JSON.stringify(stable([
     o.order_count, o.total_spend, o.last_order_at, o.first_order_at, o.lifecycle_stage, o.is_vip,
     o.rfm, o.consent, o.contact_id, o.phone_e164, o.emails, o.display_name, o.marketing_eligible,
     o.favourite_items, o.addresses, o.avg_days_between_orders, [...(o.order_ids || [])].sort(),
-]);
+]));
+const NO_CONSENT = { sms: false, email: false, whatsapp: false };
 
 // ── Stats and lifecycle ───────────────────────────────────────────────────
 function computeStats(orders, now) {
@@ -365,7 +369,8 @@ async function ingestOne(db, orderId) {
     if (!orders.some(o => o.id === order.id)) orders.push(order);
     const stats = computeStats(orders, Date.now());
     const consentRecords = await db.ConsentRecord.filter({ profile_id: profile.id, scope: restaurantId });
-    const consent = currentConsent(consentRecords);
+    // An erased customer stays erased: never re-derive consent for them.
+    const consent = profile.is_anonymised ? NO_CONSENT : currentConsent(consentRecords);
 
     await db.CustomerProfile.update(profile.id, {
         ...patch, ...stats, consent,
@@ -536,7 +541,7 @@ async function backfill(db) {
         const stats = computeStats(list, now);
         reconcileOrders += stats.order_count;
         reconcileSpend += stats.total_spend;
-        const consent = currentConsent(allConsent.filter(r => r.profile_id === p.id && r.scope === p.restaurant_id));
+        const consent = p.is_anonymised ? NO_CONSENT : currentConsent(allConsent.filter(r => r.profile_id === p.id && r.scope === p.restaurant_id));
         const update = {
             ...(patches.get(p.id) || {}), ...stats, consent,
             order_ids: list.map(o => o.id),
