@@ -332,6 +332,7 @@ export default function ManageCoupons() {
                             </form>
                         </DialogContent>
                     </Dialog>
+                    </div>
                 </div>
 
                 {isLoading ? (
