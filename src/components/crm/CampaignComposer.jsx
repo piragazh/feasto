@@ -46,7 +46,7 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
     const set = (patch) => setF(prev => ({ ...prev, ...patch }));
     const template = CAMPAIGN_TEMPLATES.find(t => t.id === templateId) || null;
 
-    const useTemplate = (t) => {
+    const pickTemplate = (t) => {
         const seg = [...(segs?.system || []), ...(segs?.custom || [])].find(s => s.key === t.segment_key);
         setF(prev => ({
             ...prev,
@@ -163,7 +163,7 @@ export default function CampaignComposer({ restaurantId, restaurantName, initial
                                 <Label className="flex items-center gap-1.5"><Sparkles className="h-4 w-4 text-orange-500" />Start from a template</Label>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
                                     {CAMPAIGN_TEMPLATES.map(t => (
-                                        <button key={t.id} type="button" onClick={() => useTemplate(t)}
+                                        <button key={t.id} type="button" onClick={() => pickTemplate(t)}
                                             className={`text-left rounded-lg border p-2.5 transition-colors ${templateId === t.id ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'}`}>
                                             <div className="text-[10px] uppercase tracking-wide text-gray-400">{t.category}</div>
                                             <div className="text-sm font-semibold text-gray-900">{t.name}</div>
