@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Wallet, ReceiptText, Calculator, Plus, Search, ShieldCheck, Info, Store, ArrowDownToLine, Upload, RefreshCw, FileText } from 'lucide-react';
+import { Wallet, ReceiptText, Calculator, Plus, Search, ShieldCheck, Info, Store, ArrowDownToLine, Upload, RefreshCw, FileText, Landmark, BadgePoundSterling } from 'lucide-react';
 import { calculateVat, formatGBP } from './financeMath';
 import { base44 } from '@/api/base44Client';
 
@@ -10,6 +10,8 @@ const today = () => new Date().toISOString().slice(0, 10);
 const tabs = [
   { id: 'overview', label: 'Overview', icon: Wallet },
   { id: 'payouts', label: 'Restaurant payouts', icon: Store },
+  { id: 'commissions', label: 'Commission ledger', icon: BadgePoundSterling },
+  { id: 'stripe', label: 'Stripe settlements', icon: Landmark },
   { id: 'expenses', label: 'Expenses', icon: ReceiptText },
   { id: 'invoices', label: 'Sales invoices', icon: FileText },
   { id: 'vat', label: 'VAT workspace', icon: Calculator },
@@ -26,7 +28,10 @@ export default function FinanceDashboard() {
   const [companies, setCompanies] = useState([]);
   const [companyId, setCompanyId] = useState(MEALDROP_COMPANY_ID);
   const [payouts, setPayouts] = useState([]);
+  const [commissions, setCommissions] = useState([]);
+  const [stripeSettlements, setStripeSettlements] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [syncing, setSyncing] = useState(false);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,14 +47,18 @@ export default function FinanceDashboard() {
   const loadData = async (selectedId = companyId) => {
     setLoading(true);
     try {
-      const [companyRecords, payoutRecords, expenseRecords, invoiceRecords] = await Promise.all([
+      const [companyRecords, payoutRecords, commissionRecords, stripeRecords, expenseRecords, invoiceRecords] = await Promise.all([
         base44.entities.FinanceCompany.list('-created_date', 100),
         base44.entities.FinancePayout.filter({ company_id: selectedId }, '-payout_date', 500, 0),
+        base44.entities.FinanceOrderCommission.filter({ company_id: selectedId }, '-created_date', 500, 0),
+        base44.entities.FinanceStripeSettlement.filter({ company_id: selectedId }, '-payout_date', 500, 0),
         base44.entities.FinanceExpense.filter({ company_id: selectedId }, '-expense_date', 500, 0),
         base44.entities.FinanceInvoice.filter({ company_id: selectedId }, '-issue_date', 500, 0),
       ]);
       setCompanies(companyRecords || []);
       setPayouts(payoutRecords || []);
+      setCommissions(commissionRecords || []);
+      setStripeSettlements(stripeRecords || []);
       setExpenses(expenseRecords || []);
       setInvoices(invoiceRecords || []);
       setNotice('');
@@ -67,6 +76,17 @@ export default function FinanceDashboard() {
     pending: payouts.filter(p=>!['paid','reconciled'].includes(p.status)).reduce((s,p)=>s+Number(p.net_payout||0),0),
     commissionVat: payouts.reduce((s,p)=>s+Number(p.commission_vat||0),0),
   }), [payouts]);
+  const commissionTotals = useMemo(() => ({
+    gross: commissions.reduce((s,c)=>s+Number(c.gross_order_value||0),0),
+    commission: commissions.reduce((s,c)=>s+Number(c.commission_amount||0),0),
+    restaurantDue: commissions.reduce((s,c)=>s+Number(c.restaurant_earnings||0),0),
+    count: commissions.length,
+  }), [commissions]);
+  const stripeTotals = useMemo(() => ({
+    payouts: stripeSettlements.reduce((s,p)=>s+Number(p.amount||0),0),
+    fees: stripeSettlements.reduce((s,p)=>s+Number(p.stripe_fees||0),0),
+    unmatched: stripeSettlements.filter(p=>p.reconciliation_status!=='matched').length,
+  }), [stripeSettlements]);
   const expenseTotals = useMemo(() => ({
     gross: expenses.filter(e=>e.payment_status!=='void').reduce((s,e)=>s+Number(e.gross_amount||0),0),
     paid: expenses.filter(e=>e.payment_status==='paid').reduce((s,e)=>s+Number(e.gross_amount||0),0),
@@ -83,6 +103,23 @@ export default function FinanceDashboard() {
     const refunds = Number(draft.refunds_and_chargebacks || 0);
     const deductions = Number(draft.other_deductions || 0);
     return { commission, net: Math.round((gross - commission - commissionVat - refunds - deductions + Number.EPSILON) * 100) / 100 };
+  };
+  const syncFinance = async (action) => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const response = await base44.functions.invoke('finance-stripe-reconciliation', { action, company_id: companyId });
+      const data = response?.data ?? response;
+      if (!data?.success) throw new Error(data?.error || 'Finance sync failed');
+      const summary = action === 'sync_order_commissions'
+        ? `Commission sync complete: ${data.created} new order record(s), ${data.skipped} already recorded.`
+        : `Stripe sync complete: ${data.imported} payout(s) imported, ${data.skipped} already recorded${data.stripe_mode ? ` (${data.stripe_mode} mode)` : ''}.`;
+      setNotice(summary + ' Stripe bank settlements are separate from restaurant payouts.');
+      await loadData(companyId);
+    } catch (error) {
+      console.error('Finance reconciliation sync failed:', error);
+      setNotice(error?.response?.data?.error || error.message || 'Finance sync failed. Check Stripe configuration and access.');
+    } finally { setSyncing(false); }
   };
   const createExpense = async (event) => {
     event.preventDefault();
