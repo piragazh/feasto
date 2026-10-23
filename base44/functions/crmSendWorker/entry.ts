@@ -22,7 +22,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const DAY = 86400000;
 const enc = new TextEncoder();
-const BUDGET_MS = 100000;
+// Stay well inside the platform's request limit (runs over ~2 min were cut off with a 503).
+const BUDGET_MS = 60000;
+// Twilio reports delivery here (crmTwilioStatus verifies Twilio's signature).
+const FUNCTIONS_BASE = Deno.env.get('FUNCTIONS_BASE_URL') || 'https://mealdrop.base44.app/functions';
 const GAP_MS = { httpsms: 1500, twilio: 300, email: 300 };
 const APP_URL = Deno.env.get('BASE44_APP_URL') || 'https://mealdrop.co.uk';
 const SENT = ['sent', 'delivered', 'converted', 'uncertain'];
@@ -155,7 +158,7 @@ async function sendTwilio(to, message) {
         const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
             method: 'POST',
             headers: { Authorization: 'Basic ' + btoa(`${sid}:${token}`), 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ To: to, From: from, Body: message }),
+            body: new URLSearchParams({ To: to, From: from, Body: message, StatusCallback: `${FUNCTIONS_BASE}/crmTwilioStatus` }),
         });
         const data = await r.json().catch(() => ({}));
         if (!r.ok || data.code || data.error_code) return { ok: false, error: `Twilio ${data.code || r.status}: ${data.message || ''}`.slice(0, 300), code: String(data.code || '') };
