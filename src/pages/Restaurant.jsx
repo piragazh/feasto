@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSectionErrorBoundary';
 import TemporaryClosureBanner from '@/components/restaurant/TemporaryClosureBanner';
 import { sellsAt, inHours, nextOpening } from '@/lib/item-availability';
+import { sanitizeBranding, isValidHex } from '@/lib/branding';
 
 // Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
@@ -713,8 +714,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
 
     // Inject Google Font for branding font style
     useEffect(() => {
-        const bc = restaurant?.branding_config;
-        if (!bc?.enabled || !bc?.font_style || bc.font_style === 'modern') return;
+        const bc = sanitizeBranding(restaurant?.branding_config);
+        if (!bc.enabled || !bc.font_style || bc.font_style === 'modern') return;
         const fontMap = {
             classic: 'Playfair+Display:wght@400;700;800&family=Lora:wght@400;600',
             playful: 'Nunito:wght@400;600;700;800',
@@ -1004,10 +1005,13 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     }
 
     // ── Branding styles — computed inline (not a hook, safe after early returns) ──
+    // Every value is validated by sanitizeBranding before it reaches the CSS below.
+    const safeBranding = sanitizeBranding(restaurant?.branding_config);
     const brandingStyles = (() => {
-        const bc = restaurant?.branding_config;
-        const isBrandingOn = bc?.enabled === true;
-        const primary = (isBrandingOn && bc?.primary_color) ? bc.primary_color : (restaurant?.theme_primary_color || '#f97316');
+        const bc = safeBranding;
+        const isBrandingOn = bc.enabled === true;
+        const themeColor = isValidHex(restaurant?.theme_primary_color) ? restaurant.theme_primary_color : '#f97316';
+        const primary = (isBrandingOn && bc.primary_color) ? bc.primary_color : themeColor;
         const btnTextColor = (isBrandingOn && bc?.button_text_color) ? bc.button_text_color : '#ffffff';
         const btnRadius = isBrandingOn
             ? ({ rounded: '8px', pill: '9999px', sharp: '2px' }[bc?.button_style] || '8px')
@@ -1082,8 +1086,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     return (
         <div
             className="restaurant-page min-h-screen pb-32 md:pb-8"
-            style={restaurant?.branding_config?.enabled === true && restaurant?.branding_config?.background_color
-                ? { backgroundColor: restaurant.branding_config.background_color }
+            style={safeBranding.enabled && safeBranding.background_color
+                ? { backgroundColor: safeBranding.background_color }
                 : { backgroundColor: '#f9fafb' }
             }
         >
@@ -1091,7 +1095,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             {/* Hero */}
             <div className="relative h-56 sm:h-72 md:h-80 -mx-4 md:mx-0">
                 <img
-                    src={(restaurant?.branding_config?.enabled === true && restaurant?.branding_config?.hero_image_url) ? restaurant.branding_config.hero_image_url : (restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200')}
+                    src={(safeBranding.enabled && safeBranding.hero_image_url) ? safeBranding.hero_image_url : (restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200')}
                     alt={restaurant.name}
                     className="w-full h-full object-cover object-center"
                     loading="eager"
@@ -1099,7 +1103,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     style={{ objectPosition: 'center 30%' }}
                 />
                 {/* Gradient — uses custom class when branding enabled */}
-                <div className={`absolute inset-0 ${restaurant?.branding_config?.enabled === true ? 'hero-overlay-custom' : 'bg-gradient-to-t from-black/85 via-black/40 to-black/10'}`} />
+                <div className={`absolute inset-0 ${safeBranding.enabled ? 'hero-overlay-custom' : 'bg-gradient-to-t from-black/85 via-black/40 to-black/10'}`} />
 
                 {/* Top action buttons */}
                 <div className="absolute top-4 left-4 md:left-8 flex gap-2 z-10">
