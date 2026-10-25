@@ -259,6 +259,51 @@ export function brandTokens(restaurant) {
     };
 }
 
+// ── Brand colour across customer pages ─────────────────────────────────────────────────────
+//
+// Tailwind's orange-* and accent-50..900 classes read --pos-accent-* variables
+// (tailwind.config.js). Setting those from the brand colour makes every orange
+// button, badge, border and hover on a page follow the restaurant's brand.
+
+const SCALE_MIX = {
+    50: ['#ffffff', 0.92], 100: ['#ffffff', 0.84], 200: ['#ffffff', 0.7], 300: ['#ffffff', 0.5],
+    400: ['#ffffff', 0.25], 500: null, 600: ['#000000', 0.12], 700: ['#000000', 0.28],
+    800: ['#000000', 0.42], 900: ['#000000', 0.55],
+};
+const TAILWIND_ORANGE_500 = '#f97316';
+
+const channels = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(' ');
+
+/** Ten shades (50–900) of a colour, with 500 exactly equal to it, as "r g b" channel strings. */
+export function brandScale(hex) {
+    const scale = {};
+    for (const [step, m] of Object.entries(SCALE_MIX)) {
+        scale[step] = channels(m ? mix(hex, m[0], m[1]) : hex.toLowerCase());
+    }
+    return scale;
+}
+
+/**
+ * CSS variables that carry a restaurant's brand onto any customer page:
+ * the orange/accent scale, readable button text, and a text accent that
+ * is dark enough on white. Default-orange restaurants keep Tailwind's own
+ * orange shades exactly.
+ */
+export function brandAccentVars(restaurant) {
+    const t = brandTokens(restaurant);
+    const vars = {};
+    if (t.primary.toLowerCase() !== TAILWIND_ORANGE_500) {
+        for (const [step, ch] of Object.entries(brandScale(t.primary))) {
+            vars[`--pos-accent-${step}`] = ch;
+        }
+    }
+    vars['--brand-on-primary'] = t.onPrimary;
+    vars['--brand-accent-text'] = contrastRatio(t.primary, '#ffffff') >= MIN_TEXT_CONTRAST
+        ? t.primary
+        : (shadeForWhiteText(t.primary) || t.primary);
+    return { vars, fontStyle: t.fontStyle, fontFamily: t.fontFamily };
+}
+
 /** Names of colour fields in an editor config that aren't valid hex. */
 export function invalidColorFields(config) {
     return BRANDING_COLOR_FIELDS.filter((f) => config?.[f] && !isValidHex(config[f]));
