@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -108,8 +108,44 @@ const DEFAULT_CONFIG = {
     ai_palette_name: ''
 };
 
+// Editor state from the stored record. theme_primary_color is the restaurant's brand
+// colour (always live), so it is the source for primary_color.
+function seedConfig(restaurant) {
+    const bc = restaurant.branding_config;
+    const hasBc = bc && typeof bc === 'object' && !Array.isArray(bc);
+    const seeded = hasBc ? { ...DEFAULT_CONFIG, ...bc } : { ...DEFAULT_CONFIG };
+    if (isValidHex(restaurant.theme_primary_color)) {
+        seeded.primary_color = restaurant.theme_primary_color.toLowerCase();
+        if (!hasBc) seeded.add_to_cart_color = seeded.primary_color;
+    }
+    return seeded;
+}
+
+// What the storefront shows when custom styling is off: the standard layout in the brand colour.
+function offStateConfig(config) {
+    return {
+        ...config,
+        secondary_color: '#f3f4f6',
+        background_color: '#f9fafb',
+        nav_background: '#ffffff',
+        card_background: '#ffffff',
+        heading_color: '#111827',
+        button_text_color: '#ffffff',
+        add_to_cart_color: config.primary_color,
+        button_style: 'rounded',
+        font_style: 'modern',
+        hero_overlay_opacity: 0.55,
+        hero_image_url: '',
+    };
+}
+
 export default function BrandingManager({ restaurantId }) {
     const [config, setConfig] = useState(DEFAULT_CONFIG);
+    // Last saved state, for spotting unsaved edits.
+    const [baseline, setBaseline] = useState(null);
+    const isDirty = baseline !== null && JSON.stringify(config) !== JSON.stringify(baseline);
+    const dirtyRef = useRef(false);
+    dirtyRef.current = isDirty;
     const [analyzingBrand, setAnalyzingBrand] = useState(false);
     const [aiSuggestions, setAiSuggestions] = useState(null);
     const queryClient = useQueryClient();
@@ -123,20 +159,13 @@ export default function BrandingManager({ restaurantId }) {
         enabled: !!restaurantId
     });
 
-    // Sync local state from DB when restaurant loads
-    // Use restaurant.id as dependency key so re-mounting for a different restaurant resets properly
+    // Load the stored settings whenever fresh data arrives — but never over unsaved edits.
     useEffect(() => {
-        if (!restaurant) return;
-        const bc = restaurant.branding_config;
-        if (bc && typeof bc === 'object' && !Array.isArray(bc)) {
-            setConfig({ ...DEFAULT_CONFIG, ...bc });
-        } else {
-            setConfig({
-                ...DEFAULT_CONFIG,
-                primary_color: restaurant.theme_primary_color || DEFAULT_CONFIG.primary_color
-            });
-        }
-    }, [restaurant?.id]);
+        if (!restaurant || dirtyRef.current) return;
+        const seeded = seedConfig(restaurant);
+        setConfig(seeded);
+        setBaseline(seeded);
+    }, [restaurant]);
 
     const saveMutation = useMutation({
         // Saved through the server so the request is permission-checked, validated and audited.
@@ -154,11 +183,16 @@ export default function BrandingManager({ restaurantId }) {
             return res.data;
         },
         onSuccess: (_, variables) => {
+            // Mark as saved so the refetch below can reload the server's normalised values.
+            setBaseline(variables?.branding_config ?? null);
+            dirtyRef.current = false;
             queryClient.invalidateQueries({ queryKey: ['restaurant-branding', restaurantId] });
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
             // Read enabled from the saved data, not from stale closure state
             const savedEnabled = variables?.branding_config?.enabled === true;
-            toast.success(savedEnabled ? 'Brand settings saved and live!' : 'Brand settings saved (branding is off — enable to go live).');
+            toast.success(savedEnabled
+                ? 'Brand settings saved and live!'
+                : 'Brand colour saved and live. Custom styling is off.');
         },
         onError: (err) => toast.error(err?.message || 'Failed to save brand settings')
     });
@@ -190,12 +224,15 @@ export default function BrandingManager({ restaurantId }) {
         toast.success(`"${preset.name}" palette applied — click Save to go live`);
     };
 
+    // Resets styling only: keeps the brand colour and whether custom styling is on.
     const resetToDefaults = () => {
-        setConfig({
+        setConfig(prev => ({
             ...DEFAULT_CONFIG,
-            primary_color: restaurant?.theme_primary_color || DEFAULT_CONFIG.primary_color
-        });
-        toast.info('Reset to defaults');
+            enabled: prev.enabled,
+            primary_color: prev.primary_color,
+            add_to_cart_color: prev.primary_color,
+        }));
+        toast.info('Styling reset to defaults — click Save to apply');
     };
 
     // ── AI brand analysis ─────────────────────────────────────────────────────
@@ -250,7 +287,9 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
 
     // ── Mini live preview ─────────────────────────────────────────────────────
     const buttonRadiusMap = { rounded: '8px', pill: '9999px', sharp: '2px' };
-    const fontHeading = FONT_STYLES[config.font_style]?.heading || FONT_STYLES.modern.heading;
+    // The preview shows what customers will actually see after saving.
+    const pv = config.enabled ? config : offStateConfig(config);
+    const fontHeading = FONT_STYLES[pv.font_style]?.heading || FONT_STYLES.modern.heading;
 
     if (isLoading) {
         return <div className="text-center py-12 text-gray-500">Loading brand settings...</div>;
@@ -272,12 +311,14 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                 Brand Studio
                             </h2>
                             <p className="text-sm text-gray-600 mt-1">
-                                Customise your restaurant's look and feel. Enable the toggle below to make your custom branding live.
+                                Your brand colour is always live. Turn on custom styling to also apply your fonts, backgrounds, button style and hero image.
                             </p>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
                             <div className="flex items-center gap-2">
+                                <Label htmlFor="custom-styling" className="text-sm font-medium text-gray-700">Custom styling</Label>
                                 <Switch
+                                    id="custom-styling"
                                     checked={config.enabled}
                                     onCheckedChange={(v) => setConfig(prev => ({ ...prev, enabled: v }))}
                                 />
@@ -293,7 +334,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                     </div>
                     {!config.enabled && (
                         <div className="mt-3 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-800">
-                            ⚠️ Custom branding is <strong>off</strong> — your restaurant uses default platform styles. Enable the toggle above and Save to go live.
+                            Custom styling is <strong>off</strong> — your storefront uses the standard MealDrop look in your brand colour. Switch it on and save to apply everything else.
                         </div>
                     )}
                 </CardContent>
@@ -319,7 +360,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {[
-                                { key: 'primary_color', label: 'Primary (buttons, highlights)', hint: 'Main brand colour' },
+                                { key: 'primary_color', label: 'Brand colour (always live)', hint: 'Buttons and highlights on your storefront, plus media screens and app icon — even with custom styling off' },
                                 { key: 'secondary_color', label: 'Secondary (badges, accents)', hint: 'Lighter complementary colour' },
                                 { key: 'background_color', label: 'Page Background', hint: 'Main page background' },
                                 { key: 'nav_background', label: 'Navigation Background', hint: 'Top nav & category bar' },
@@ -748,6 +789,9 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                     <RotateCcw className="h-4 w-4" />
                     Reset
                 </Button>
+                {isDirty && (
+                    <span className="self-center text-sm text-amber-700" role="status">Unsaved changes</span>
+                )}
                 <Button
                     onClick={handleSave}
                     disabled={saveMutation.isPending}
