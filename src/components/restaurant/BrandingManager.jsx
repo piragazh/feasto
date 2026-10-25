@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap, ImageIcon, Upload } from 'lucide-react';
+import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap, ImageIcon, Upload, ExternalLink, History } from 'lucide-react';
+import { createPageUrl } from '@/utils';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { toast } from 'sonner';
 import DesignTemplates from './DesignTemplates';
 import {
@@ -15,6 +17,90 @@ import {
     ensureBrandFont, DEFAULT_HERO_FOCUS_Y,
 } from '@/lib/branding';
 import { prepareImage, ImageRejectedError, formatBytes } from '@/lib/prepareImage';
+
+// Fields a saved version may restore into the editor (anything else is ignored).
+const RESTORABLE_KEYS = [
+    'enabled', 'primary_color', 'secondary_color', 'background_color', 'nav_background', 'card_background',
+    'button_text_color', 'add_to_cart_color', 'heading_color', 'button_style', 'font_style',
+    'hero_overlay_opacity', 'hero_focus_y', 'hero_image_url', 'ai_palette_name',
+];
+
+function formatSavedAt(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return 'Earlier version';
+    return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+// Where customers see this restaurant: its own domain once verified, otherwise its MealDrop page.
+function storefrontUrl(restaurant) {
+    if (restaurant?.custom_domain && restaurant?.domain_verified) return `https://${restaurant.custom_domain}`;
+    return `${window.location.origin}${createPageUrl('Restaurant')}?id=${restaurant.id}`;
+}
+
+// ─── Logo: saved straight away, because it is not part of the styling draft ──────
+function LogoCard({ restaurant, onSaved }) {
+    const [busy, setBusy] = useState(false);
+    const save = async (logoUrl, message) => {
+        await saveRestaurantSettings(restaurant.id, { logo_url: logoUrl });
+        onSaved();
+        toast.success(message);
+    };
+    const handleFile = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setBusy(true);
+        try {
+            // Logos stay PNG so transparent backgrounds survive.
+            const prepared = await prepareImage(file, { maxWidth: 512, minWidth: 192, output: 'png', label: 'logo' });
+            const { file_url } = await base44.integrations.Core.UploadFile({ file: prepared.file });
+            await save(file_url, 'Logo updated');
+            if (prepared.warning) toast.warning(prepared.warning, { duration: 8000 });
+        } catch (err) {
+            toast.error(err instanceof ImageRejectedError ? err.message : (err?.message || 'Logo upload failed'));
+        } finally {
+            setBusy(false);
+            e.target.value = '';
+        }
+    };
+    const remove = async () => {
+        setBusy(true);
+        try { await save('', 'Logo removed'); } catch (err) { toast.error(err?.message || 'Could not remove the logo'); } finally { setBusy(false); }
+    };
+    return (
+        <Card>
+            <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-purple-500" />
+                    Logo
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                <p className="text-xs text-gray-400">
+                    Shown on your storefront banner. On your own domain it is also the browser tab icon, the app icon when customers add you to their home screen, and the picture in shared links. Saved as soon as you upload it.
+                </p>
+                <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-xl border bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {restaurant.logo_url
+                            ? <img src={restaurant.logo_url} alt={`${restaurant.name} logo`} className="w-full h-full object-contain" />
+                            : <span className="text-xs text-gray-400">No logo</span>}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <label className={`flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg border-2 border-dashed cursor-pointer text-sm font-medium ${busy ? 'border-gray-200 text-gray-400 bg-gray-50' : 'border-purple-300 text-purple-600 bg-purple-50 hover:bg-purple-100'}`}>
+                            {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><Upload className="h-4 w-4" /> {restaurant.logo_url ? 'Replace logo' : 'Upload logo'}</>}
+                            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={handleFile} disabled={busy} />
+                        </label>
+                        {restaurant.logo_url && (
+                            <Button type="button" variant="ghost" size="sm" className="w-full text-red-600 hover:text-red-700" onClick={remove} disabled={busy}>
+                                Remove logo
+                            </Button>
+                        )}
+                    </div>
+                </div>
+                <p className="text-xs text-gray-400">Square, at least 192px. PNG with a transparent background works best.</p>
+            </CardContent>
+        </Card>
+    );
+}
 
 // ─── Hero image uploader sub-component ───────────────────────────────────────
 function HeroImageUploader({ onUploaded }) {
@@ -289,6 +375,25 @@ export default function BrandingManager({ restaurantId }) {
         setConfig(prev => ({ ...prev, ...tpl.config }));
     };
 
+    // A quick palette counts as active only while every colour it sets is still in place.
+    const presetActive = (preset) => Object.entries(completePalette({
+        primary: preset.primary, secondary: preset.secondary, background: preset.background, nav: preset.nav,
+    })).every(([key, value]) => String(config[key] || '').toLowerCase() === value.toLowerCase());
+
+    // Load a previous version into the editor; it goes live only when saved.
+    const loadVersion = (entry) => {
+        const saved = entry?.config || {};
+        const restored = { ...DEFAULT_CONFIG };
+        for (const key of RESTORABLE_KEYS) {
+            if (saved[key] !== undefined && saved[key] !== null) restored[key] = saved[key];
+        }
+        if (!isValidHex(restored.primary_color) && isValidHex(entry?.theme_primary_color)) {
+            restored.primary_color = entry.theme_primary_color;
+        }
+        setConfig(restored);
+        toast.success(`Loaded the version from ${formatSavedAt(entry?.saved_at)} — check the preview, then Save to make it live`);
+    };
+
     // Palettes set every colour, so nothing is left over from a previous palette.
     const applyPreset = (preset) => {
         setConfig(prev => ({
@@ -321,7 +426,7 @@ export default function BrandingManager({ restaurantId }) {
         setAnalyzingBrand(true);
         setAiSuggestions(null);
         try {
-            const result = await base44.integrations.Core.InvokeLLM({
+            const request = {
                 prompt: `You are a professional restaurant branding consultant. Analyze this restaurant and suggest 4 distinct brand palette options, each suited to different personalities.
 
 Restaurant Name: ${restaurant.name}
@@ -356,7 +461,23 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                         top_improvements: { type: "array", items: { type: "string" } }
                     }
                 }
-            });
+            };
+            // Let the AI see the logo so its palettes match it. If the image can't be read,
+            // ask again without it rather than failing.
+            const logo = restaurant.logo_url;
+            let result;
+            if (typeof logo === 'string' && logo.startsWith('https://')) {
+                try {
+                    result = await base44.integrations.Core.InvokeLLM({
+                        ...request,
+                        prompt: request.prompt + "\n\nThe restaurant's logo is attached. Base at least two palettes on the logo's own colours, and say so in their rationale.",
+                        file_urls: [logo],
+                    });
+                } catch (logoErr) {
+                    console.warn('AI analysis with logo failed, retrying without it', logoErr);
+                }
+            }
+            if (!result) result = await base44.integrations.Core.InvokeLLM(request);
             setAiSuggestions(result);
             toast.success('AI analysis complete! See suggestions below.');
         } catch (e) {
@@ -398,7 +519,17 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                 Your brand colour is always live. Turn on custom styling to also apply your fonts, backgrounds, button style and hero image.
                             </p>
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <a
+                                href={storefrontUrl(restaurant)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm font-medium text-purple-700 hover:text-purple-900 hover:underline"
+                            >
+                                View live storefront
+                                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                                <span className="sr-only">(opens in a new tab)</span>
+                            </a>
                             <div className="flex items-center gap-2">
                                 <Label htmlFor="custom-styling" className="text-sm font-medium text-gray-700">Custom styling</Label>
                                 <Switch
@@ -441,6 +572,14 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
             <div className="grid lg:grid-cols-2 gap-6">
                 {/* ── Left: Controls ── */}
                 <div className="space-y-5">
+
+                    <LogoCard
+                        restaurant={restaurant}
+                        onSaved={() => {
+                            queryClient.invalidateQueries({ queryKey: ['restaurant-branding', restaurantId] });
+                            queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
+                        }}
+                    />
 
                     {/* Colours */}
                     <Card>
@@ -807,6 +946,39 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                         </CardContent>
                     </Card>
 
+                    {/* Version history */}
+                    {Array.isArray(restaurant.branding_history) && restaurant.branding_history.length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <History className="h-4 w-4 text-gray-500" />
+                                    Previous versions
+                                </CardTitle>
+                                <p className="text-xs text-gray-500">Your last {restaurant.branding_history.length} saved looks. Loading one lets you check it in the preview before saving.</p>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {restaurant.branding_history.map((entry, i) => {
+                                    const c = entry?.config || {};
+                                    const swatches = [c.primary_color || entry?.theme_primary_color, c.secondary_color, c.background_color].filter(isValidHex);
+                                    return (
+                                        <div key={`${entry?.saved_at}-${i}`} className="flex items-center justify-between gap-3 p-2 border rounded-lg">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="flex gap-1 flex-shrink-0" aria-hidden="true">
+                                                    {swatches.map((hex, j) => <div key={j} className="w-5 h-5 rounded-full border" style={{ backgroundColor: hex }} />)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-gray-800 truncate">{c.ai_palette_name || (c.enabled ? 'Custom styling' : 'Brand colour only')}</p>
+                                                    <p className="text-xs text-gray-500">Replaced {formatSavedAt(entry?.saved_at)}</p>
+                                                </div>
+                                            </div>
+                                            <Button type="button" size="sm" variant="outline" onClick={() => loadVersion(entry)}>Load</Button>
+                                        </div>
+                                    );
+                                })}
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Preset Palettes */}
                     <Card>
                         <CardHeader className="pb-3">
@@ -822,9 +994,9 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                         key={preset.name}
                                         type="button"
                                         onClick={() => applyPreset(preset)}
-                                        aria-pressed={config.ai_palette_name === preset.name}
+                                        aria-pressed={presetActive(preset)}
                                         className={`p-2 rounded-lg border-2 text-left transition-all hover:border-gray-400 ${
-                                            config.ai_palette_name === preset.name
+                                            presetActive(preset)
                                                 ? 'border-purple-500 bg-purple-50'
                                                 : 'border-gray-200'
                                         }`}
@@ -851,7 +1023,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                         </CardHeader>
                         <CardContent className="space-y-3">
                             <p className="text-sm text-gray-500">
-                                Let AI suggest 4 custom palettes based on your restaurant's name, cuisine, and description.
+                                Let AI suggest 4 custom palettes based on your restaurant's logo, name, cuisine and description.
                             </p>
                             <Button
                                 onClick={analyzeBranding}
