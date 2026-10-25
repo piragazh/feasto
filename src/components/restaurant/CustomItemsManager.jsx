@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,7 @@ export default function CustomItemsManager({ restaurantId }) {
         mutationFn: async (newItems) => {
             if (!restaurantId) throw new Error('No restaurantId');
             console.log('[CustomItemsManager] Saving items to restaurant:', restaurantId, newItems);
-            await base44.entities.Restaurant.update(restaurantId, { custom_pos_items: newItems });
+            await saveRestaurantSettings(restaurantId, { custom_pos_items: newItems });
             return newItems;
         },
         onSuccess: (newItems) => {

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +52,7 @@ export default function TableManagement({ restaurantId }) {
     const qrEnabled = restaurant?.qr_ordering_enabled !== false; // default on
 
     const qrToggleMutation = useMutation({
-        mutationFn: (enabled) => base44.entities.Restaurant.update(restaurantId, { qr_ordering_enabled: enabled }),
+        mutationFn: (enabled) => saveRestaurantSettings(restaurantId, { qr_ordering_enabled: enabled }),
         onSuccess: (_d, enabled) => {
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
             toast.success(enabled

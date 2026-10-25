@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -916,7 +917,7 @@ function PrinterSettingsSection({ restaurant, onRestaurantUpdate }) {
 
     const saveConfig = async (updates) => {
         const newConfig = { ...(restaurant?.printer_config || {}), ...updates };
-        await base44.entities.Restaurant.update(restaurant.id, { printer_config: newConfig });
+        await saveRestaurantSettings(restaurant.id, { printer_config: newConfig });
         queryClient.invalidateQueries({ queryKey: ['tablet-restaurant'] });
         toast.success('Printer settings saved');
     };
@@ -947,7 +948,7 @@ function PrinterSettingsSection({ restaurant, onRestaurantUpdate }) {
         printerService.disconnect();
         const newConfig = { ...(restaurant?.printer_config || {}) };
         delete newConfig.bluetooth_printer;
-        await base44.entities.Restaurant.update(restaurant.id, { printer_config: newConfig });
+        await saveRestaurantSettings(restaurant.id, { printer_config: newConfig });
         queryClient.invalidateQueries({ queryKey: ['tablet-restaurant'] });
         setConnStatus('disconnected');
         toast.success('Printer disconnected');

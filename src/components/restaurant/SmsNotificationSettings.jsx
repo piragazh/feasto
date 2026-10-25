@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -36,7 +37,7 @@ export default function SmsNotificationSettings({ restaurantId, currentSettings 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await base44.entities.Restaurant.update(restaurantId, {
+      await saveRestaurantSettings(restaurantId, {
         sms_notification_settings: settings
       });
       toast.success('SMS notification settings saved');

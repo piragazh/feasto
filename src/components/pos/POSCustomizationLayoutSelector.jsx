@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { Check, Rows, Grid3x3, Maximize2, List } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,7 +43,7 @@ export default function POSCustomizationLayoutSelector({ restaurantId }) {
     const current = restaurant?.pos_customization_layout || 'classic';
 
     const mutation = useMutation({
-        mutationFn: (layout) => base44.entities.Restaurant.update(restaurantId, { pos_customization_layout: layout }),
+        mutationFn: (layout) => saveRestaurantSettings(restaurantId, { pos_customization_layout: layout }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
             toast.success('Customisation layout saved');

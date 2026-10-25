@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -37,7 +38,7 @@ export default function POSQuickSaleSettings({ restaurantId, restaurant }) {
     const save = async (next) => {
         setSaving(true);
         try {
-            await base44.entities.Restaurant.update(restaurantId, { quick_sale_items: next });
+            await saveRestaurantSettings(restaurantId, { quick_sale_items: next });
             setItems(next);
             toast.success('Quick sale buttons updated');
         } catch (e) {

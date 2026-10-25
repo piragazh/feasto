@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export default function TemporaryClosureSettings({ restaurantId }) {
 
     const saveMutation = useMutation({
         mutationFn: async (data) => {
-            await base44.entities.Restaurant.update(restaurantId, {
+            await saveRestaurantSettings(restaurantId, {
                 temporary_closure: data
             });
         },

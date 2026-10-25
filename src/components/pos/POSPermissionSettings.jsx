@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -54,7 +55,7 @@ export default function POSPermissionSettings({ restaurantId, restaurant }) {
     const save = async () => {
         setSaving(true);
         try {
-            await base44.entities.Restaurant.update(restaurantId, { role_permissions: matrix });
+            await saveRestaurantSettings(restaurantId, { role_permissions: matrix });
             toast.success('Permissions updated');
             setDirty(false);
         } catch (e) {

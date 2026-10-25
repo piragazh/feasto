@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,7 +129,7 @@ export default function MenuManagement({ restaurantId }) {
             const currentImages = restaurant?.category_images || {};
             const updates = { menu_categories: [...currentCategories, categoryName] };
             if (imageUrl) updates.category_images = { ...currentImages, [categoryName]: imageUrl };
-            return base44.entities.Restaurant.update(restaurantId, updates);
+            return saveRestaurantSettings(restaurantId, updates);
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['restaurant']);
@@ -151,7 +152,7 @@ export default function MenuManagement({ restaurantId }) {
                 delete currentImages[oldName];
             }
             if (imageUrl !== undefined) currentImages[newName] = imageUrl;
-            return base44.entities.Restaurant.update(restaurantId, {
+            return saveRestaurantSettings(restaurantId, {
                 menu_categories: updatedCategories,
                 category_images: currentImages
             });
@@ -177,7 +178,7 @@ export default function MenuManagement({ restaurantId }) {
             const currentOrder = restaurant?.category_order || [];
             const currentImages = { ...(restaurant?.category_images || {}) };
             delete currentImages[categoryName];
-            return base44.entities.Restaurant.update(restaurantId, {
+            return saveRestaurantSettings(restaurantId, {
                 menu_categories: currentCategories.filter(c => c !== categoryName),
                 category_order: currentOrder.filter(c => c !== categoryName),
                 category_images: currentImages
@@ -191,7 +192,7 @@ export default function MenuManagement({ restaurantId }) {
 
     const reorderCategoriesMutation = useMutation({
         mutationFn: (newOrder) => {
-            return base44.entities.Restaurant.update(restaurantId, {
+            return saveRestaurantSettings(restaurantId, {
                 category_order: newOrder
             });
         },
@@ -259,7 +260,7 @@ export default function MenuManagement({ restaurantId }) {
             [category]: newOrder.map(item => item.id)
         };
         
-        base44.entities.Restaurant.update(restaurantId, { item_order: updatedItemOrder }).then(() => {
+        saveRestaurantSettings(restaurantId, { item_order: updatedItemOrder }).then(() => {
             queryClient.invalidateQueries(['restaurant']);
             toast.success('Item order updated');
         });

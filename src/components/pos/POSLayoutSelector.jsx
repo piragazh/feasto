@@ -1,5 +1,6 @@
 import React from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CheckCircle2 } from 'lucide-react';
@@ -87,7 +88,7 @@ export default function POSLayoutSelector({ restaurantId }) {
     });
 
     const mutation = useMutation({
-        mutationFn: (layout) => base44.entities.Restaurant.update(restaurantId, { pos_layout: layout }),
+        mutationFn: (layout) => saveRestaurantSettings(restaurantId, { pos_layout: layout }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
             toast.success('POS layout saved');

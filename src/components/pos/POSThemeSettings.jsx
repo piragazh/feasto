@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Palette, Check, Info, Sun, Moon } from 'lucide-react';
@@ -52,7 +53,7 @@ export default function POSThemeSettings({ restaurantId, restaurant, onPaletteCh
         onPaletteChange?.(key);
         setSaving(true);
         try {
-            await base44.entities.Restaurant.update(restaurantId, { pos_palette: key });
+            await saveRestaurantSettings(restaurantId, { pos_palette: key });
             toast.success(`${POS_PALETTES[key].label} applied to all tills`);
         } catch (e) {
             setSelected(previous);

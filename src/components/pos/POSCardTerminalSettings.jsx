@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +49,7 @@ export default function POSCardTerminalSettings({ restaurantId }) {
     }, [restaurant]);
 
     const mutation = useMutation({
-        mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
+        mutationFn: (data) => saveRestaurantSettings(restaurantId, data),
         onSuccess: () => {
             queryClient.invalidateQueries(['restaurant-pos-card-terminal', restaurantId]);
             toast.success('Card terminal settings saved');

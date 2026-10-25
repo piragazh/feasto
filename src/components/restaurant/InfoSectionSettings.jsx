@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -29,7 +30,7 @@ export default function InfoSectionSettings({ restaurantId, initialData }) {
 
         setIsLoading(true);
         try {
-            await base44.entities.Restaurant.update(restaurantId, {
+            await saveRestaurantSettings(restaurantId, {
                 info_section: data
             });
             toast.success('Info section updated');

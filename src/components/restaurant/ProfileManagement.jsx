@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ export default function ProfileManagement({ restaurantId }) {
     }, [restaurant]);
 
     const updateMutation = useMutation({
-        mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
+        mutationFn: (data) => saveRestaurantSettings(restaurantId, data),
         onSuccess: () => {
             queryClient.invalidateQueries(['restaurant', restaurantId]);
             toast.success('Profile updated successfully');

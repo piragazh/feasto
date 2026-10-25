@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { saveRestaurantSettings } from '@/lib/restaurantSettings';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export default function RestaurantOnboarding({ restaurant, onComplete }) {
     const queryClient = useQueryClient();
 
     const updateRestaurantMutation = useMutation({
-        mutationFn: (data) => base44.entities.Restaurant.update(restaurant.id, data),
+        mutationFn: (data) => saveRestaurantSettings(restaurant.id, data),
         onSuccess: () => queryClient.invalidateQueries(['restaurant']),
     });
 
