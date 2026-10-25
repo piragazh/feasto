@@ -5,7 +5,7 @@
 // updateRestaurantSettings applies the same rules on save; this is the second
 // line of defence for anything already stored.
 
-import { sanitizeSeasonal } from '@/lib/seasonalEffects';
+import { sanitizeSeasonal } from './seasonalEffects';
 
 export const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
