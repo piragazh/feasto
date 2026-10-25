@@ -178,14 +178,21 @@ export const DESIGN_TEMPLATES = [
     },
 ];
 
-export default function DesignTemplates({ currentTemplateName, onApply }) {
+// A template counts as active only while every colour and style it sets is still in place,
+// so tweaking a colour afterwards clears the badge instead of leaving it misleading.
+export function matchesConfig(templateConfig, config) {
+    return Object.entries(templateConfig)
+        .filter(([key]) => key !== 'ai_palette_name')
+        .every(([key, value]) => String(config?.[key] ?? '').toLowerCase() === String(value).toLowerCase());
+}
+
+export default function DesignTemplates({ currentConfig, onApply }) {
     return (
         <Card className="border-2 border-blue-100">
             <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                     <LayoutTemplate className="h-4 w-4 text-blue-500" />
                     Professional Templates
-                    <Badge variant="outline" className="text-xs ml-1">New</Badge>
                 </CardTitle>
                 <p className="text-xs text-gray-500 mt-0.5">
                     One-click full design templates — colours, fonts and button style all set together.
@@ -194,7 +201,7 @@ export default function DesignTemplates({ currentTemplateName, onApply }) {
             <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     {DESIGN_TEMPLATES.map((tpl) => {
-                        const isActive = currentTemplateName === tpl.name;
+                        const isActive = matchesConfig(tpl.config, currentConfig);
                         return (
                             <button
                                 key={tpl.id}

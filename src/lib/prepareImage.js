@@ -2,7 +2,7 @@
 // multi-megabyte phone photo doesn't slow down the storefront's first paint.
 
 const MAX_INPUT_BYTES = 20 * 1024 * 1024;           // refuse anything bigger than 20 MB
-const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/avif'];
+const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/avif'];
 
 export class ImageRejectedError extends Error {}
 
@@ -39,7 +39,7 @@ async function decode(file) {
  */
 export async function prepareImage(file, { maxWidth = 1920, minWidth = 1200, quality = 0.82, output = 'photo', label = 'photo' } = {}) {
     if (!file || !ACCEPTED.includes(file.type)) {
-        throw new ImageRejectedError('Please choose a JPG, PNG, WebP or HEIC photo.');
+        throw new ImageRejectedError('Please choose a JPG, PNG, WebP, GIF or HEIC image.');
     }
     if (file.size > MAX_INPUT_BYTES) {
         throw new ImageRejectedError('That photo is over 20 MB. Please choose a smaller one.');

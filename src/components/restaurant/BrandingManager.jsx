@@ -434,7 +434,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
 
             {/* Design Templates */}
             <DesignTemplates
-                currentTemplateName={config.ai_palette_name}
+                currentConfig={config}
                 onApply={applyTemplate}
             />
 
