@@ -199,6 +199,7 @@ export default function DesignTemplates({ currentTemplateName, onApply }) {
                             <button
                                 key={tpl.id}
                                 type="button"
+                                aria-pressed={isActive}
                                 onClick={() => {
                                     onApply(tpl);
                                     toast.success(`"${tpl.name}" template applied — click Save to go live`);

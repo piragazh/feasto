@@ -543,6 +543,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                         key={key}
                                         type="button"
                                         onClick={() => setConfig(prev => ({ ...prev, button_style: key }))}
+                                        aria-pressed={config.button_style === key}
                                         className={`p-3 border-2 transition-all text-center ${
                                             config.button_style === key
                                                 ? 'border-purple-500 bg-purple-50'
@@ -582,6 +583,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                         key={key}
                                         type="button"
                                         onClick={() => setConfig(prev => ({ ...prev, font_style: key }))}
+                                        aria-pressed={config.font_style === key}
                                         className={`p-3 border-2 text-left transition-all ${
                                             config.font_style === key
                                                 ? 'border-purple-500 bg-purple-50'
@@ -718,6 +720,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                         src={pv.hero_image_url || restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600'}
                                         alt="preview"
                                         className="w-full h-full object-cover"
+                                        style={{ objectPosition: `center ${pv.hero_focus_y ?? DEFAULT_HERO_FOCUS_Y}%` }}
                                     />
                                     <div
                                         className="absolute inset-0"
@@ -819,6 +822,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                         key={preset.name}
                                         type="button"
                                         onClick={() => applyPreset(preset)}
+                                        aria-pressed={config.ai_palette_name === preset.name}
                                         className={`p-2 rounded-lg border-2 text-left transition-all hover:border-gray-400 ${
                                             config.ai_palette_name === preset.name
                                                 ? 'border-purple-500 bg-purple-50'
