@@ -295,8 +295,6 @@ Deno.serve(async (req) => {
             // so switching branding off really leaves the platform defaults.
             if (value!.enabled === true && typeof value!.primary_color === 'string') {
                 safeUpdates.theme_primary_color = value!.primary_color;
-            } else if (!('theme_primary_color' in updates)) {
-                delete safeUpdates.theme_primary_color;
             }
         }
 
