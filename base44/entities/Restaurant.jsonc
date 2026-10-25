@@ -197,6 +197,39 @@
           "type": "string",
           "description": "Custom hero image URL (overrides restaurant image_url on storefront)"
         },
+        "seasonal_effect": {
+          "type": "object",
+          "description": "Seasonal storefront animation shown between starts_on and ends_on (inclusive, YYYY-MM-DD). type 'none' = off.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "none",
+                "bats",
+                "snow",
+                "hearts",
+                "stars",
+                "sparkles"
+              ]
+            },
+            "intensity": {
+              "type": "string",
+              "enum": [
+                "light",
+                "medium"
+              ],
+              "default": "light"
+            },
+            "starts_on": {
+              "type": "string",
+              "description": "First day shown, YYYY-MM-DD"
+            },
+            "ends_on": {
+              "type": "string",
+              "description": "Last day shown, YYYY-MM-DD"
+            }
+          }
+        },
         "hero_focus_y": {
           "type": "number",
           "default": 30,
