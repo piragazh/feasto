@@ -83,7 +83,7 @@ const BUTTON_STYLES = {
 
 // ─── AI palette presets ───────────────────────────────────────────────────────
 const PRESET_PALETTES = [
-    { name: 'Flame Orange', primary: '#f97316', secondary: '#fed7aa', background: '#fff7ed', nav: '#ffffff' },
+    { name: 'Flame Orange', primary: '#c2410c', secondary: '#fed7aa', background: '#fff7ed', nav: '#ffffff' },
     { name: 'Midnight Blue', primary: '#1e40af', secondary: '#bfdbfe', background: '#eff6ff', nav: '#ffffff' },
     { name: 'Forest Green', primary: '#15803d', secondary: '#bbf7d0', background: '#f0fdf4', nav: '#ffffff' },
     { name: 'Rose Gold', primary: '#e11d48', secondary: '#fecdd3', background: '#fff1f2', nav: '#ffffff' },
