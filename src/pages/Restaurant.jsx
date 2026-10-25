@@ -1020,7 +1020,12 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 --brand-page-muted: ${t.pageMuted};
             }
             .restaurant-page .bg-orange-500,
-            .restaurant-page [class*="bg-orange-500"] { background-color: ${t.primary} !important; }
+            .restaurant-page [class*="bg-orange-500"] {
+                background-color: ${t.primary} !important;
+                color: ${t.onPrimary} !important;
+            }
+            /* Text and icons inside brand-coloured buttons and badges */
+            .restaurant-page [class*="bg-orange-500"] .text-white { color: ${t.onPrimary} !important; }
             .restaurant-page .text-orange-500,
             .restaurant-page [class*="text-orange-500"] { color: ${t.primary} !important; }
             .restaurant-page .border-orange-300 { border-color: ${t.primary}60 !important; }
@@ -1031,7 +1036,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             .restaurant-page .category-heading { color: ${t.heading} !important; }
             .restaurant-page .add-to-cart-btn {
                 background-color: ${t.addToCart} !important;
-                color: ${t.onPrimary} !important;
+                color: ${t.onAddToCart} !important;
             }
             .restaurant-page .add-to-cart-btn:hover {
                 background-color: ${t.addToCart}dd !important;
