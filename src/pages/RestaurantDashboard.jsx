@@ -501,7 +501,7 @@ function RestaurantDashboardInner() {
         if (activeSection === 'settings') {
             return (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsContent value="settings"><RestaurantSettings restaurantId={restaurant.id} /></TabsContent>
+                    <TabsContent value="settings"><RestaurantSettings restaurantId={restaurant.id} onOpenBranding={() => navigate('settings', 'branding')} /></TabsContent>
                     <TabsContent value="branding"><BrandingManager restaurantId={restaurant.id} /></TabsContent>
                     <TabsContent value="zones">
                         <DeliveryZoneManagement
