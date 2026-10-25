@@ -121,6 +121,7 @@ function brandingChanged(before: Record<string, unknown>, after: Record<string, 
             const v = c[key];
             if (v === undefined || v === null || v === '') continue;
             if (key === 'hero_focus_y' && v === 30) continue; // the default, same as unset
+            if (key === 'seasonal_effect' && (v as { type?: string })?.type === 'none') continue;
             out[key] = typeof v === 'string' && HEX_COLOR.test(v) ? v.toLowerCase() : v;
         }
         return JSON.stringify(out);
@@ -151,7 +152,41 @@ const BRANDING_KEYS = new Set([
     'hero_focus_y',
     'hero_image_url',
     'ai_palette_name',
+    'seasonal_effect',
 ]);
+
+// Seasonal storefront animations (src/lib/seasonalEffects.js has the same rules).
+const SEASONAL_TYPES = ['bats', 'snow', 'hearts', 'stars', 'sparkles'];
+const SEASONAL_INTENSITIES = ['light', 'medium'];
+const SEASONAL_MAX_DAYS = 92;
+
+function isRealDate(s: unknown): s is string {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const [y, m, d] = s.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+function sanitizeSeasonal(input: unknown): { value?: Record<string, unknown>; error?: string } {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+        return { error: 'seasonal_effect must be an object' };
+    }
+    const se = input as Record<string, unknown>;
+    if (se.type === 'none' || se.type === undefined || se.type === null || se.type === '') {
+        return { value: { type: 'none' } };
+    }
+    if (typeof se.type !== 'string' || !SEASONAL_TYPES.includes(se.type)) {
+        return { error: `seasonal_effect.type must be one of none, ${SEASONAL_TYPES.join(', ')}` };
+    }
+    if (!isRealDate(se.starts_on) || !isRealDate(se.ends_on)) {
+        return { error: 'Choose a start and end date for the seasonal animation' };
+    }
+    if (se.ends_on < se.starts_on) return { error: 'The seasonal animation ends before it starts' };
+    const span = (Date.parse(se.ends_on) - Date.parse(se.starts_on)) / 86400000;
+    if (span > SEASONAL_MAX_DAYS) return { error: 'A seasonal animation can run for up to 3 months' };
+    const intensity = typeof se.intensity === 'string' && SEASONAL_INTENSITIES.includes(se.intensity) ? se.intensity : 'light';
+    return { value: { type: se.type, intensity, starts_on: se.starts_on, ends_on: se.ends_on } };
+}
 
 function sanitizeBrandingConfig(input: unknown): { value?: Record<string, unknown>; errors: string[] } {
     const errors: string[] = [];
@@ -218,6 +253,12 @@ function sanitizeBrandingConfig(input: unknown): { value?: Record<string, unknow
         }
         if (ok) out.hero_image_url = hero;
         else errors.push('hero_image_url must be an image uploaded to MealDrop');
+    }
+
+    if (raw.seasonal_effect !== undefined && raw.seasonal_effect !== null) {
+        const { value, error } = sanitizeSeasonal(raw.seasonal_effect);
+        if (error) errors.push(error);
+        else out.seasonal_effect = value;
     }
 
     if (raw.ai_palette_name !== undefined && raw.ai_palette_name !== null) {
