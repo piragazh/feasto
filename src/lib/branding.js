@@ -5,6 +5,8 @@
 // updateRestaurantSettings applies the same rules on save; this is the second
 // line of defence for anything already stored.
 
+import { sanitizeSeasonal } from '@/lib/seasonalEffects';
+
 export const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 export const BRANDING_COLOR_FIELDS = [
@@ -56,6 +58,8 @@ export function sanitizeBranding(bc) {
     if (bc.hero_focus_y != null && Number.isFinite(focus)) {
         out.hero_focus_y = Math.min(100, Math.max(0, Math.round(focus)));
     }
+    const seasonal = sanitizeSeasonal(bc.seasonal_effect);
+    if (seasonal) out.seasonal_effect = seasonal;
     return out;
 }
 
