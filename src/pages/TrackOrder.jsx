@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useBrandAccent } from '@/lib/useBrandAccent';
 import { useQuery } from '@tanstack/react-query';
 import { useSEO } from '@/lib/useSEO';
 import { Link } from 'react-router-dom';
@@ -112,6 +113,7 @@ export default function TrackOrder() {
         enabled: !!order?.restaurant_id,
         staleTime: 10 * 60 * 1000, // Cache restaurant data for 10 minutes
     });
+    useBrandAccent(restaurant);
 
     const { data: driverRatings = [] } = useQuery({
         queryKey: ['driver-ratings', order?.driver_id, order?.id],

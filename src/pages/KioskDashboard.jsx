@@ -12,6 +12,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useBrandAccent } from '@/lib/useBrandAccent';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import KioskWelcome from '@/components/kiosk/KioskWelcome';
@@ -41,6 +42,7 @@ export default function KioskDashboard() {
      const [placedOrder, setPlacedOrder] = useState(null);
      const [printerError, setPrinterError] = useState(false);
      const [restaurant, setRestaurant] = useState(null);
+     useBrandAccent(restaurant);
      const [loading, setLoading] = useState(true);
      const [showAdmin, setShowAdmin] = useState(false);
      const [adminTapCount, setAdminTapCount] = useState(0);

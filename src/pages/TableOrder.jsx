@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useBrandAccent } from '@/lib/useBrandAccent';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, ShoppingCart, X, ChevronRight, CheckCircle, Search } from 'lucide-react';
@@ -21,6 +22,7 @@ export default function TableOrder() {
 
     const [step, setStep] = useState('loading'); // loading | error | menu | cart | confirm | success
     const [restaurant, setRestaurant] = useState(null);
+    useBrandAccent(restaurant);
     const [table, setTable] = useState(null);
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);

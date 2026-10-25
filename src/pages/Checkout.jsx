@@ -41,6 +41,7 @@ import { usePaymentInit } from '@/hooks/usePaymentInit';
 import { useCreateOrder } from '@/hooks/useCreateOrder';
 import { pendingPayment } from '@/lib/pendingPayment';
 import { handleRecoveryResult } from '@/lib/checkoutRecovery';
+import { useBrandAccent } from '@/lib/useBrandAccent';
 
 // Main Checkout Component
 export default function Checkout() {
@@ -56,6 +57,7 @@ export default function Checkout() {
     const [restaurantId, setRestaurantId] = useState(null); // ID of restaurant being ordered from
     const [restaurantName, setRestaurantName] = useState(''); // Name of restaurant
     const [restaurant, setRestaurant] = useState(null); // Full restaurant object
+    useBrandAccent(restaurant); // restaurant's brand colour on checkout
     const [orderType, setOrderType] = useState('delivery'); // 'delivery' or 'collection'
     
     // Order Status

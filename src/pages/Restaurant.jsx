@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
 import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 import { base44 } from '@/api/base44Client';
+import { useBrandAccent } from '@/lib/useBrandAccent';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -749,6 +750,9 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         const bc = sanitizeBranding(restaurant?.branding_config);
         if (bc.enabled && bc.font_style) ensureBrandFont(bc.font_style);
     }, [restaurant?.branding_config?.font_style, restaurant?.branding_config?.enabled]);
+
+    // Brand colour on the cart drawer, dialogs and other pop-ups
+    useBrandAccent(restaurant);
 
     // SEO Meta Tags - must be before any conditional returns
     useEffect(() => {
