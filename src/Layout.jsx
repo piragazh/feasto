@@ -292,7 +292,6 @@ export default function Layout({ children, currentPageName }) {
     }, [location, customDomainRestaurant]);
 
     useEffect(() => {
-        initializeGTM();
         addSkipLink();
         initializeLiveRegions();
         loadUser();
@@ -301,6 +300,37 @@ export default function Layout({ children, currentPageName }) {
         const interval = setInterval(updateCartCount, 1000);
         return () => clearInterval(interval);
     }, []);
+
+    // Google Ads SIGNUP conversion — fires once on the first authenticated render after a
+    // brand-new signup (not a returning login), never double-fires
+    useEffect(() => {
+        if (typeof window === 'undefined' || !user || !user.id) return;
+        // brand-new signup, not a returning login: created_date within the
+        // delayed OTP/resend window (Google/social signups are near-instant)
+        const createdDate = String(user.created_date || '');
+        const createdDateUtc = /(?:Z|[+-]\d{2}:?\d{2})$/.test(createdDate)
+            ? createdDate
+            : createdDate + 'Z';
+        const createdAtMs = Date.parse(createdDateUtc);
+        const isNewSignup = Number.isFinite(createdAtMs) &&
+            Date.now() - createdAtMs < 24 * 60 * 60 * 1000;
+        const key = '_aw_signup_fired_AW-18537041821/FcPMCKXEu6kdEJ2fk4dF_' + user.id;
+        if (!isNewSignup || localStorage.getItem(key)) return;
+        // gtag may not exist yet, so retry briefly rather than skipping for good
+        let tries = 0;
+        const fire = () => {
+            if (!window.gtag) { if (tries++ < 20) setTimeout(fire, 250); return; }
+            // re-check inside the callback: a remount can start a second
+            // retry loop that also passed the guard before gtag existed
+            if (localStorage.getItem(key)) return;
+            localStorage.setItem(key, '1');
+            window.gtag('event', 'conversion', {
+                send_to: 'AW-18537041821/FcPMCKXEu6kdEJ2fk4dF',
+                transaction_id: user.id,
+            });
+        };
+        fire();
+    }, [user]);
 
     // Remove trackDashboardActivity calls that cause 404 errors
 
