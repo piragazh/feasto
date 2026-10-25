@@ -157,13 +157,13 @@ function PopularItemCard({ item, onClick }) {
 
             {/* Text */}
             <div className="px-0.5">
-                <p className="text-sm font-bold text-gray-900 leading-snug line-clamp-2 mb-1">
+                <p className="text-sm font-bold text-gray-900 leading-snug line-clamp-2 mb-1 brand-page-text">
                     {item.name}
                 </p>
                 {calories && (
-                    <p className="text-xs text-gray-500 mb-0.5">{calories} kcal</p>
+                    <p className="text-xs text-gray-500 mb-0.5 brand-page-muted">{calories} kcal</p>
                 )}
-                <p className="text-sm font-semibold text-gray-900">£{(item.price || 0).toFixed(2)}</p>
+                <p className="text-sm font-semibold text-gray-900 brand-page-text">£{(item.price || 0).toFixed(2)}</p>
             </div>
         </button>
     );
