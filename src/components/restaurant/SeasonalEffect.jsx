@@ -159,7 +159,8 @@ function spawn(type, w, h, initial) {
     }
 }
 
-function step(type, p, dt, t, w, h, sprites, ctx) {
+// `base` is the overall opacity (scroll fade); each particle sets its own on top of it.
+function step(type, p, dt, t, w, h, sprites, ctx, base) {
     switch (type) {
         case 'bats': {
             // gentle random wandering, kept mostly in the top half of the screen
@@ -178,23 +179,23 @@ function step(type, p, dt, t, w, h, sprites, ctx) {
             p.y += p.vy * dt;
             p.x += Math.sin(t * p.swaySpeed + p.phase) * p.sway * dt;
             if (p.y > h + 10) Object.assign(p, spawn(type, w, h, false));
-            ctx.globalAlpha *= p.alpha;
+            ctx.globalAlpha = base * p.alpha;
             ctx.drawImage(sprites[0], p.x - p.r * 2, p.y - p.r * 2, p.r * 4, p.r * 4);
-            ctx.globalAlpha /= p.alpha;
+            ctx.globalAlpha = base;
             return;
         }
         case 'hearts': {
             p.y -= p.vy * dt;
             p.x += Math.sin(t * p.swaySpeed + p.phase) * p.sway * dt;
             if (p.y < -p.size) Object.assign(p, spawn(type, w, h, false));
-            const fade = Math.min(1, p.y / (h * 0.25));
-            ctx.globalAlpha *= 0.85 * Math.max(0, fade);
+            const fade = Math.max(0, Math.min(1, p.y / (h * 0.25)));
+            ctx.globalAlpha = base * 0.85 * fade;
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(Math.sin(t * 0.8 + p.phase) * p.spin);
             ctx.drawImage(sprites[p.sprite], -p.size / 2, -p.size / 2, p.size, p.size);
             ctx.restore();
-            ctx.globalAlpha /= 0.85 * Math.max(0.0001, fade) || 1;
+            ctx.globalAlpha = base;
             return;
         }
         case 'stars': {
@@ -203,9 +204,9 @@ function step(type, p, dt, t, w, h, sprites, ctx) {
             if (p.x > w + 20) p.x = -20;
             // slow twinkle: well under one cycle per second
             const a = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * p.twinkle + p.phase));
-            ctx.globalAlpha *= a;
+            ctx.globalAlpha = base * a;
             ctx.drawImage(sprites[p.sprite], p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-            ctx.globalAlpha /= a;
+            ctx.globalAlpha = base;
             return;
         }
         default: { // sparkles drift up and fade in and out over a few seconds
@@ -215,9 +216,9 @@ function step(type, p, dt, t, w, h, sprites, ctx) {
             if (p.age > p.life || p.y < -20) Object.assign(p, spawn(type, w, h, false));
             const k = p.age / p.life;
             const a = Math.sin(Math.PI * Math.min(1, Math.max(0, k)));
-            ctx.globalAlpha *= a;
+            ctx.globalAlpha = base * a;
             ctx.drawImage(sprites[p.sprite], p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-            ctx.globalAlpha /= a || 1;
+            ctx.globalAlpha = base;
         }
     }
 }
@@ -283,7 +284,7 @@ export default function SeasonalEffect({ type, intensity = 'light', preview = fa
             // thin out as the customer scrolls down the menu
             const scrollFade = preview ? 1 : 1 - Math.min(0.7, (window.scrollY || 0) / 900);
             ctx.globalAlpha = scrollFade;
-            for (const p of particles) step(type, p, dt, t, w, h, sprites, ctx);
+            for (const p of particles) step(type, p, dt, t, w, h, sprites, ctx, scrollFade);
             ctx.globalAlpha = 1;
         };
 
