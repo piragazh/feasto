@@ -197,6 +197,11 @@
           "type": "string",
           "description": "Custom hero image URL (overrides restaurant image_url on storefront)"
         },
+        "hero_focus_y": {
+          "type": "number",
+          "default": 30,
+          "description": "Vertical focal point of the hero image, 0 (top) to 100 (bottom), used as CSS object-position"
+        },
         "card_background": {
           "type": "string",
           "description": "Menu item card background color",
