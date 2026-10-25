@@ -132,6 +132,7 @@ const BRANDING_KEYS = new Set([
     ...BRANDING_COLOR_FIELDS,
     ...Object.keys(BRANDING_ENUMS),
     'hero_overlay_opacity',
+    'hero_focus_y',
     'hero_image_url',
     'ai_palette_name',
 ]);
@@ -176,6 +177,15 @@ function sanitizeBrandingConfig(input: unknown): { value?: Record<string, unknow
             errors.push('hero_overlay_opacity must be a number');
         } else {
             out.hero_overlay_opacity = Math.min(1, Math.max(0, Math.round(n * 100) / 100));
+        }
+    }
+
+    if (raw.hero_focus_y !== undefined && raw.hero_focus_y !== null) {
+        const n = Number(raw.hero_focus_y);
+        if (!Number.isFinite(n)) {
+            errors.push('hero_focus_y must be a number');
+        } else {
+            out.hero_focus_y = Math.min(100, Math.max(0, Math.round(n)));
         }
     }
 
