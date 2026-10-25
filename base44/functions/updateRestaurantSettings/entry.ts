@@ -112,6 +112,20 @@ const ALLOWED_FIELDS = new Set([
 // nothing is stored unless it matches a strict format.
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const BRANDING_HISTORY_LIMIT = 5;
+
+/** True when two brand configs differ in substance (ignores hex case and key order). */
+function brandingChanged(before: Record<string, unknown>, after: Record<string, unknown>): boolean {
+    const norm = (c: Record<string, unknown>) => {
+        const out: Record<string, unknown> = {};
+        for (const key of Object.keys(c).sort()) {
+            const v = c[key];
+            if (v === undefined || v === null || v === '') continue;
+            out[key] = typeof v === 'string' && HEX_COLOR.test(v) ? v.toLowerCase() : v;
+        }
+        return JSON.stringify(out);
+    };
+    return norm(before) !== norm(after);
+}
 const BRANDING_COLOR_FIELDS = [
     'primary_color',
     'secondary_color',
@@ -348,7 +362,7 @@ Deno.serve(async (req) => {
             // Keep the previous brand settings so they can be restored (newest first, last 5).
             // No user names or emails: restaurant records are publicly readable.
             const previous = current.branding_config;
-            if (previous && typeof previous === 'object' && JSON.stringify(previous) !== JSON.stringify(value)) {
+            if (previous && typeof previous === 'object' && brandingChanged(previous, value!)) {
                 const history = Array.isArray(current.branding_history) ? current.branding_history : [];
                 safeUpdates.branding_history = [
                     {
