@@ -542,24 +542,29 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                 <Eye className="h-4 w-4 text-blue-500" />
                                 Live Preview
                             </CardTitle>
+                            <p className="text-xs text-gray-500">
+                                {config.enabled
+                                    ? 'How your storefront looks with custom styling'
+                                    : 'How your storefront looks now — custom styling is off'}
+                            </p>
                         </CardHeader>
                         <CardContent>
                             {/* Mini restaurant page mockup */}
                             <div
                                 className="rounded-xl overflow-hidden border shadow-sm"
-                                style={{ backgroundColor: config.background_color || '#f9fafb', fontFamily: fontHeading }}
+                                style={{ backgroundColor: pv.background_color || '#f9fafb', fontFamily: fontHeading }}
                             >
                                 {/* Hero */}
                                 <div className="relative h-28 overflow-hidden">
                                     <img
-                                        src={config.hero_image_url || restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600'}
+                                        src={pv.hero_image_url || restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600'}
                                         alt="preview"
                                         className="w-full h-full object-cover"
                                     />
                                     <div
                                         className="absolute inset-0"
                                         style={{
-                                            background: `linear-gradient(to top, rgba(0,0,0,${config.hero_overlay_opacity || 0.55}), rgba(0,0,0,0.1))`
+                                            background: `linear-gradient(to top, rgba(0,0,0,${pv.hero_overlay_opacity || 0.55}), rgba(0,0,0,0.1))`
                                         }}
                                     />
                                     <div className="absolute bottom-2 left-3">
@@ -573,20 +578,20 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                 {/* Nav bar */}
                                 <div
                                     className="px-3 py-2 border-b flex gap-2"
-                                    style={{ backgroundColor: config.nav_background || '#ffffff' }}
+                                    style={{ backgroundColor: pv.nav_background || '#ffffff' }}
                                 >
                                     {['Starters', 'Mains', 'Desserts'].map((cat, i) => (
                                         <span
                                             key={cat}
                                             className="px-2 py-1 text-xs font-medium rounded"
                                             style={i === 0 ? {
-                                                backgroundColor: config.primary_color || '#f97316',
-                                                color: config.button_text_color || '#ffffff',
-                                                borderRadius: buttonRadiusMap[config.button_style] || '8px'
+                                                backgroundColor: pv.primary_color || '#f97316',
+                                                color: pv.button_text_color || '#ffffff',
+                                                borderRadius: buttonRadiusMap[pv.button_style] || '8px'
                                             } : {
-                                                backgroundColor: config.secondary_color || '#fed7aa',
+                                                backgroundColor: pv.secondary_color || '#fed7aa',
                                                 color: '#374151',
-                                                borderRadius: buttonRadiusMap[config.button_style] || '8px'
+                                                borderRadius: buttonRadiusMap[pv.button_style] || '8px'
                                             }}
                                         >
                                             {cat}
@@ -596,7 +601,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
 
                                 {/* Menu card sample */}
                                 <div className="px-3 pt-2 pb-1">
-                                    <p className="text-xs font-bold uppercase tracking-wide border-b pb-1 mb-2" style={{ color: config.heading_color || '#111827', borderColor: (config.heading_color || '#111827') + '30', fontFamily: fontHeading }}>
+                                    <p className="text-xs font-bold uppercase tracking-wide border-b pb-1 mb-2" style={{ color: pv.heading_color || '#111827', borderColor: (pv.heading_color || '#111827') + '30', fontFamily: fontHeading }}>
                                         Mains
                                     </p>
                                     <div className="space-y-2">
@@ -604,7 +609,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                             <div
                                                 key={item}
                                                 className="flex items-center justify-between p-2 rounded-lg border"
-                                                style={{ backgroundColor: config.card_background || '#ffffff' }}
+                                                style={{ backgroundColor: pv.card_background || '#ffffff' }}
                                             >
                                                 <div>
                                                     <p className="text-xs font-semibold text-gray-800" style={{ fontFamily: fontHeading }}>{item}</p>
@@ -613,8 +618,8 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                                 <button
                                                     className="text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full"
                                                     style={{
-                                                        backgroundColor: config.add_to_cart_color || config.primary_color || '#f97316',
-                                                        color: config.button_text_color || '#ffffff',
+                                                        backgroundColor: pv.add_to_cart_color || pv.primary_color || '#f97316',
+                                                        color: pv.button_text_color || '#ffffff',
                                                     }}
                                                 >
                                                     +
@@ -629,9 +634,9 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                     <button
                                         className="w-full py-2 text-sm font-bold"
                                         style={{
-                                            backgroundColor: config.primary_color || '#f97316',
-                                            color: config.button_text_color || '#ffffff',
-                                            borderRadius: buttonRadiusMap[config.button_style] || '8px'
+                                            backgroundColor: pv.primary_color || '#f97316',
+                                            color: pv.button_text_color || '#ffffff',
+                                            borderRadius: buttonRadiusMap[pv.button_style] || '8px'
                                         }}
                                     >
                                         View Cart — £12.99
