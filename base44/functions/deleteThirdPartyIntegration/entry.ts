@@ -10,9 +10,25 @@ Deno.serve(async (req) => {
         }
 
         const { restaurantId, platform } = await req.json();
+        if (!restaurantId || typeof platform !== 'string') {
+            return Response.json({ error: 'restaurantId and platform required' }, { status: 400 });
+        }
+
+        // Only admins or active managers of this restaurant may remove its integrations
+        if (user.role !== 'admin') {
+            const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
+                user_email: user.email,
+                is_active: true,
+            });
+            const allowed = (managers || []).some((m) => m.restaurant_ids?.includes(restaurantId));
+            if (!allowed) {
+                console.error(`[SECURITY] ${user.email} tried to remove ${platform} from restaurant ${restaurantId}`);
+                return Response.json({ error: 'Access denied to this restaurant' }, { status: 403 });
+            }
+        }
 
         // Get current integrations
-        const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
+        const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId });
         if (!restaurants || restaurants.length === 0) {
             return Response.json({ error: 'Restaurant not found' }, { status: 404 });
         }
@@ -21,7 +37,7 @@ Deno.serve(async (req) => {
         delete currentIntegrations[platform];
 
         // Save to restaurant
-        await base44.entities.Restaurant.update(restaurantId, {
+        await base44.asServiceRole.entities.Restaurant.update(restaurantId, {
             third_party_integrations: currentIntegrations
         });
 
