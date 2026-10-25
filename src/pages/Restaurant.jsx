@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSectionErrorBoundary';
 import TemporaryClosureBanner from '@/components/restaurant/TemporaryClosureBanner';
 import { sellsAt, inHours, nextOpening } from '@/lib/item-availability';
-import { sanitizeBranding, brandTokens } from '@/lib/branding';
+import { sanitizeBranding, brandTokens, ensureBrandFont } from '@/lib/branding';
 
 // Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
@@ -712,23 +712,10 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         }
     }, [restaurantId]);
 
-    // Inject Google Font for branding font style
+    // Load the brand font (custom styling only; the standard look uses the app font)
     useEffect(() => {
         const bc = sanitizeBranding(restaurant?.branding_config);
-        if (!bc.enabled || !bc.font_style || bc.font_style === 'modern') return;
-        const fontMap = {
-            classic: 'Playfair+Display:wght@400;700;800&family=Lora:wght@400;600',
-            playful: 'Nunito:wght@400;600;700;800',
-            elegant: 'Cormorant+Garamond:wght@400;600;700&family=Raleway:wght@400;500;600'
-        };
-        const fontQuery = fontMap[bc.font_style];
-        if (fontQuery && !document.getElementById(`font-${bc.font_style}`)) {
-            const link = document.createElement('link');
-            link.id = `font-${bc.font_style}`;
-            link.rel = 'stylesheet';
-            link.href = `https://fonts.googleapis.com/css2?family=${fontQuery}&display=swap`;
-            document.head.appendChild(link);
-        }
+        if (bc.enabled && bc.font_style) ensureBrandFont(bc.font_style);
     }, [restaurant?.branding_config?.font_style, restaurant?.branding_config?.enabled]);
 
     // SEO Meta Tags - must be before any conditional returns
@@ -1139,7 +1126,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                     className="w-full h-full object-cover object-center"
                     loading="eager"
                     fetchpriority="high"
-                    style={{ objectPosition: 'center 30%' }}
+                    style={{ objectPosition: `center ${brand.heroFocusY}%` }}
                 />
                 {/* Gradient — uses custom class when branding enabled */}
                 <div className={`absolute inset-0 ${safeBranding.enabled ? 'hero-overlay-custom' : 'bg-gradient-to-t from-black/85 via-black/40 to-black/10'}`} />
