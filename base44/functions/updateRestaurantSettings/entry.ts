@@ -6,12 +6,16 @@
  *     food_hygiene_rating, food_hygiene_certificate_url, seo_keywords, seo_description,
  *     theme_primary_color, cuisine_types, cuisine_type, whatsapp_alerts_enabled,
  *     sms_alerts_enabled, order_alert_channel, collection_enabled, printer_config,
- *     opening_hours, delivery_hours, collection_hours, name
+ *     opening_hours, delivery_hours, collection_hours, name, branding_config
  *   - High-risk (financial/order-affecting, audited with before/after):
  *     delivery_fee, minimum_order, tiered_delivery, accepts_cash_on_delivery,
  *     loyalty_program_enabled, loyalty_points_multiplier
  *
  * Fields NOT on the allowlist are silently stripped and logged.
+ * branding_config is validated field by field (see sanitizeBrandingConfig); any invalid
+ * value rejects the whole request, because these values are written into the public
+ * storefront's CSS. When branding is enabled, theme_primary_color is kept in step with
+ * branding_config.primary_color; when it is off, theme_primary_color is left alone.
  * commission_rate is admin-only and requires a note.
  */
 
@@ -65,7 +69,108 @@ const ALLOWED_FIELDS = new Set([
     // Notification settings
     'sms_notification_settings',
     'whatsapp_notification_settings',
+    // Brand Studio
+    'branding_config',
 ]);
+
+// ── Brand Studio validation ──────────────────────────────────────────────────
+// Every value here ends up inside a <style> block on the public storefront, so
+// nothing is stored unless it matches a strict format.
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const BRANDING_COLOR_FIELDS = [
+    'primary_color',
+    'secondary_color',
+    'background_color',
+    'nav_background',
+    'card_background',
+    'button_text_color',
+    'add_to_cart_color',
+    'heading_color',
+];
+const BRANDING_ENUMS: Record<string, string[]> = {
+    button_style: ['rounded', 'pill', 'sharp'],
+    font_style: ['modern', 'classic', 'playful', 'elegant'],
+};
+// Hero images must be files uploaded to this app.
+const HERO_IMAGE_HOSTS = new Set(['base44.app', 'media.base44.com']);
+const BRANDING_KEYS = new Set([
+    'enabled',
+    ...BRANDING_COLOR_FIELDS,
+    ...Object.keys(BRANDING_ENUMS),
+    'hero_overlay_opacity',
+    'hero_image_url',
+    'ai_palette_name',
+]);
+
+function sanitizeBrandingConfig(input: unknown): { value?: Record<string, unknown>; errors: string[] } {
+    const errors: string[] = [];
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+        return { errors: ['branding_config must be an object'] };
+    }
+    const raw = input as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+
+    for (const key of Object.keys(raw)) {
+        if (!BRANDING_KEYS.has(key)) errors.push(`unknown field ${key}`);
+    }
+
+    out.enabled = raw.enabled === true;
+
+    for (const field of BRANDING_COLOR_FIELDS) {
+        const v = raw[field];
+        if (v === undefined || v === null || v === '') continue;
+        if (typeof v !== 'string' || !HEX_COLOR.test(v)) {
+            errors.push(`${field} must be a colour like #1a2b3c`);
+        } else {
+            out[field] = v.toLowerCase();
+        }
+    }
+
+    for (const [field, allowed] of Object.entries(BRANDING_ENUMS)) {
+        const v = raw[field];
+        if (v === undefined || v === null || v === '') continue;
+        if (typeof v !== 'string' || !allowed.includes(v)) {
+            errors.push(`${field} must be one of ${allowed.join(', ')}`);
+        } else {
+            out[field] = v;
+        }
+    }
+
+    if (raw.hero_overlay_opacity !== undefined && raw.hero_overlay_opacity !== null) {
+        const n = Number(raw.hero_overlay_opacity);
+        if (!Number.isFinite(n)) {
+            errors.push('hero_overlay_opacity must be a number');
+        } else {
+            out.hero_overlay_opacity = Math.min(1, Math.max(0, Math.round(n * 100) / 100));
+        }
+    }
+
+    const hero = raw.hero_image_url;
+    if (hero === undefined || hero === null || hero === '') {
+        out.hero_image_url = '';
+    } else {
+        let ok = false;
+        if (typeof hero === 'string' && hero.length <= 2048) {
+            try {
+                const u = new URL(hero);
+                ok = u.protocol === 'https:' && HERO_IMAGE_HOSTS.has(u.hostname);
+            } catch { /* invalid URL */ }
+        }
+        if (ok) out.hero_image_url = hero;
+        else errors.push('hero_image_url must be an image uploaded to MealDrop');
+    }
+
+    if (raw.ai_palette_name !== undefined && raw.ai_palette_name !== null) {
+        if (typeof raw.ai_palette_name !== 'string') {
+            errors.push('ai_palette_name must be text');
+        } else {
+            // Display-only label; strip anything that isn't plain text and cap length.
+            out.ai_palette_name = raw.ai_palette_name.replace(/[<>{}\\]/g, '').slice(0, 60);
+        }
+    }
+
+    return errors.length ? { errors } : { value: out, errors };
+}
 
 // commission_rate and related fields are admin-only
 const ADMIN_ONLY_FIELDS = new Set([
@@ -175,6 +280,24 @@ Deno.serve(async (req) => {
 
         if (Object.keys(safeUpdates).length === 0) {
             return Response.json({ error: 'No allowed fields to update' }, { status: 400 });
+        }
+
+        // Validate Brand Studio settings before anything is written
+        if ('branding_config' in safeUpdates) {
+            const { value, errors } = sanitizeBrandingConfig(safeUpdates.branding_config);
+            if (errors.length) {
+                return Response.json({
+                    error: `Invalid brand settings: ${errors.join('; ')}`,
+                }, { status: 400 });
+            }
+            safeUpdates.branding_config = value;
+            // Keep the legacy theme colour in step only while branding is live,
+            // so switching branding off really leaves the platform defaults.
+            if (value!.enabled === true && typeof value!.primary_color === 'string') {
+                safeUpdates.theme_primary_color = value!.primary_color;
+            } else if (!('theme_primary_color' in updates)) {
+                delete safeUpdates.theme_primary_color;
+            }
         }
 
         if (strippedFields.length > 0) {
