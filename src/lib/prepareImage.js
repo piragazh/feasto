@@ -32,11 +32,12 @@ async function decode(file) {
 
 /**
  * @param {File} file
- * @param {{ maxWidth?: number, minWidth?: number, quality?: number }} [opts]
+ * @param {{ maxWidth?: number, minWidth?: number, quality?: number, output?: 'photo'|'png', label?: string }} [opts]
+ *   output 'png' keeps transparency (logos); 'photo' (default) compresses to WebP or JPEG.
  * @returns {Promise<{ file: File, width: number, height: number, originalBytes: number, warning: string|null }>}
  * Throws ImageRejectedError with a user-facing message when the file can't be used.
  */
-export async function prepareImage(file, { maxWidth = 1920, minWidth = 1200, quality = 0.82 } = {}) {
+export async function prepareImage(file, { maxWidth = 1920, minWidth = 1200, quality = 0.82, output = 'photo', label = 'photo' } = {}) {
     if (!file || !ACCEPTED.includes(file.type)) {
         throw new ImageRejectedError('Please choose a JPG, PNG, WebP or HEIC photo.');
     }
@@ -63,14 +64,19 @@ export async function prepareImage(file, { maxWidth = 1920, minWidth = 1200, qua
     canvas.getContext('2d').drawImage(bitmap, 0, 0, outW, outH);
     bitmap.close?.();
 
-    // WebP where supported; browsers that can't encode it fall back to PNG, so use JPEG then.
-    let blob = await canvasToBlob(canvas, 'image/webp', quality);
-    if (!blob || blob.type !== 'image/webp') blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+    let blob;
+    if (output === 'png') {
+        blob = await canvasToBlob(canvas, 'image/png');
+    } else {
+        // WebP where supported; browsers that can't encode it fall back to PNG, so use JPEG then.
+        blob = await canvasToBlob(canvas, 'image/webp', quality);
+        if (!blob || blob.type !== 'image/webp') blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+    }
     if (!blob) throw new ImageRejectedError('Could not process that photo. Please try another.');
 
     // Keep the original when it was already small and needed no resizing.
     const useOriginal = scale === 1 && file.size <= blob.size && file.type !== 'image/heic' && file.type !== 'image/heif';
-    const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const ext = { 'image/webp': 'webp', 'image/png': 'png' }[blob.type] || 'jpg';
     const base = (file.name || 'hero').replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]+/gi, '-').slice(0, 40) || 'hero';
     const out = useOriginal ? file : new File([blob], `${base}.${ext}`, { type: blob.type });
 
@@ -80,7 +86,7 @@ export async function prepareImage(file, { maxWidth = 1920, minWidth = 1200, qua
         height: outH,
         originalBytes: file.size,
         warning: width < minWidth
-            ? `This photo is only ${width}px wide, so it may look blurry on large screens. ${minWidth}px or wider works best.`
+            ? `This ${label} is only ${width}px wide, so it may look blurry. ${minWidth}px or wider works best.`
             : null,
     };
 }
