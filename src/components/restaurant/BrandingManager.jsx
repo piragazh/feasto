@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap, ImageIcon, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import DesignTemplates from './DesignTemplates';
-import { isValidHex, invalidColorFields } from '@/lib/branding';
+import { isValidHex, invalidColorFields, readableTextOn } from '@/lib/branding';
 
 // ─── Hero image uploader sub-component ───────────────────────────────────────
 function HeroImageUploader({ onUploaded }) {
@@ -590,7 +590,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                                 borderRadius: buttonRadiusMap[pv.button_style] || '8px'
                                             } : {
                                                 backgroundColor: pv.secondary_color || '#fed7aa',
-                                                color: '#374151',
+                                                color: readableTextOn(pv.secondary_color).text,
                                                 borderRadius: buttonRadiusMap[pv.button_style] || '8px'
                                             }}
                                         >
@@ -612,8 +612,8 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                                 style={{ backgroundColor: pv.card_background || '#ffffff' }}
                                             >
                                                 <div>
-                                                    <p className="text-xs font-semibold text-gray-800" style={{ fontFamily: fontHeading }}>{item}</p>
-                                                    <p className="text-xs text-gray-400">£{(8.99 + i * 2).toFixed(2)}</p>
+                                                    <p className="text-xs font-semibold" style={{ fontFamily: fontHeading, color: readableTextOn(pv.card_background).text }}>{item}</p>
+                                                    <p className="text-xs" style={{ color: readableTextOn(pv.card_background).muted }}>£{(8.99 + i * 2).toFixed(2)}</p>
                                                 </div>
                                                 <button
                                                     className="text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full"
