@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap, ImageIcon, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import DesignTemplates from './DesignTemplates';
-import { isValidHex, invalidColorFields, readableTextOn } from '@/lib/branding';
+import {
+    isValidHex, invalidColorFields, readableTextOn, buttonTextOn, completePalette, contrastIssues,
+} from '@/lib/branding';
 
 // ─── Hero image uploader sub-component ───────────────────────────────────────
 function HeroImageUploader({ onUploaded }) {
@@ -147,6 +149,8 @@ export default function BrandingManager({ restaurantId }) {
     const dirtyRef = useRef(false);
     dirtyRef.current = isDirty;
     const [analyzingBrand, setAnalyzingBrand] = useState(false);
+    // Short pause between AI runs, so repeated clicks don't spend credits.
+    const [aiCooling, setAiCooling] = useState(false);
     const [aiSuggestions, setAiSuggestions] = useState(null);
     const queryClient = useQueryClient();
 
@@ -212,13 +216,16 @@ export default function BrandingManager({ restaurantId }) {
         setConfig(prev => ({ ...prev, ...tpl.config }));
     };
 
+    // Palettes set every colour, so nothing is left over from a previous palette.
     const applyPreset = (preset) => {
         setConfig(prev => ({
             ...prev,
-            primary_color: preset.primary,
-            secondary_color: preset.secondary,
-            background_color: preset.background,
-            nav_background: preset.nav,
+            ...completePalette({
+                primary: preset.primary,
+                secondary: preset.secondary,
+                background: preset.background,
+                nav: preset.nav,
+            }),
             ai_palette_name: preset.name
         }));
         toast.success(`"${preset.name}" palette applied — click Save to go live`);
@@ -237,7 +244,7 @@ export default function BrandingManager({ restaurantId }) {
 
     // ── AI brand analysis ─────────────────────────────────────────────────────
     const analyzeBranding = async () => {
-        if (!restaurant || analyzingBrand) return;
+        if (!restaurant || analyzingBrand || aiCooling) return;
         setAnalyzingBrand(true);
         setAiSuggestions(null);
         try {
@@ -245,11 +252,13 @@ export default function BrandingManager({ restaurantId }) {
                 prompt: `You are a professional restaurant branding consultant. Analyze this restaurant and suggest 4 distinct brand palette options, each suited to different personalities.
 
 Restaurant Name: ${restaurant.name}
-Cuisine: ${restaurant.cuisine_type || 'Not specified'}
+Cuisine: ${(restaurant.cuisine_types?.length ? restaurant.cuisine_types.join(', ') : restaurant.cuisine_type) || 'Not specified'}
 Description: ${restaurant.description || 'No description'}
 Current Color: ${restaurant.theme_primary_color || 'Default orange'}
 
-Return 4 palette suggestions. Each must have: a creative name, primary hex, secondary hex (lighter tint of primary), background hex (very light, near-white), a button_style recommendation, a font_style recommendation, and 1-sentence rationale.
+Return 4 palette suggestions. Each must have: a creative name, primary hex, secondary hex (lighter tint of primary), background hex, a button_style recommendation (rounded, pill or sharp), a font_style recommendation (modern, classic, playful or elegant), and 1-sentence rationale.
+
+Readability rules: white text on the primary colour must have a contrast ratio of at least 4.5:1, so choose a deep primary rather than a bright one. Backgrounds should be very light (near-white), except the dark/premium option, which may use a very dark background.
 
 Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one dark/premium, one natural/earthy.`,
                 response_json_schema: {
@@ -282,6 +291,8 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
             console.error(e);
         } finally {
             setAnalyzingBrand(false);
+            setAiCooling(true);
+            setTimeout(() => setAiCooling(false), 30000);
         }
     };
 
@@ -398,6 +409,46 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                             ))}
                         </CardContent>
                     </Card>
+
+                    {/* Readability check */}
+                    {(() => {
+                        const issues = contrastIssues(config);
+                        return (
+                            <Card className={issues.length ? 'border-amber-300' : 'border-green-200'}>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-base">Readability check</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3" aria-live="polite">
+                                    {issues.length === 0 ? (
+                                        <p className="text-sm text-green-700 flex items-center gap-2">
+                                            <CheckCircle className="h-4 w-4" />
+                                            All colour pairs are easy to read.
+                                        </p>
+                                    ) : issues.map((issue) => (
+                                        <div key={issue.id} className="flex items-start justify-between gap-3 text-sm">
+                                            <div>
+                                                <p className="font-medium text-gray-800">{issue.label}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    Contrast {issue.ratio.toFixed(1)}:1 — needs {issue.min}:1. {issue.note}
+                                                </p>
+                                            </div>
+                                            {issue.fix && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="flex-shrink-0"
+                                                    onClick={() => setConfig(prev => ({ ...prev, ...issue.fix }))}
+                                                >
+                                                    Fix
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        );
+                    })()}
 
                     {/* Button Style */}
                     <Card>
@@ -693,7 +744,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                             </p>
                             <Button
                                 onClick={analyzeBranding}
-                                disabled={analyzingBrand}
+                                disabled={analyzingBrand || aiCooling}
                                 className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
                             >
                                 {analyzingBrand ? (
@@ -704,7 +755,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                 ) : (
                                     <>
                                         <Wand2 className="h-4 w-4" />
-                                        Analyse & Suggest Palettes
+                                        {aiCooling ? 'Ready again in a moment…' : 'Analyse & Suggest Palettes'}
                                     </>
                                 )}
                             </Button>
@@ -747,9 +798,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                                             ? palette.font_style : 'modern';
                                                         setConfig(prev => ({
                                                             ...prev,
-                                                            primary_color: primary,
-                                                            secondary_color: secondary,
-                                                            background_color: background,
+                                                            ...completePalette({ primary, secondary, background }),
                                                             button_style: validBtnStyle,
                                                             font_style: validFontStyle,
                                                             ai_palette_name: palette.name
