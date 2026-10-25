@@ -92,7 +92,6 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
             }
         }
     });
-    const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingCertificate, setUploadingCertificate] = useState(false);
     const [newKeyword, setNewKeyword] = useState('');
     React.useEffect(() => {
@@ -192,21 +191,6 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
         }
     });
 
-    const handleLogoUpload = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setUploadingLogo(true);
-        try {
-            const { file_url } = await base44.integrations.Core.UploadFile({ file });
-            setFormData({ ...formData, logo_url: file_url });
-            toast.success('Logo uploaded successfully');
-        } catch (error) {
-            toast.error('Failed to upload logo');
-        } finally {
-            setUploadingLogo(false);
-        }
-    };
 
     const handleCertificateUpload = async (e) => {
         const file = e.target.files?.[0];
@@ -252,7 +236,7 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
             collection_enabled: formData.collection_enabled,
             accepts_cash_on_delivery: formData.accepts_cash_on_delivery,
             show_review_count: Boolean(formData.show_review_count),
-            logo_url: formData.logo_url,
+            // logo_url is owned by Brand Studio — not saved here.
             food_hygiene_rating: formData.food_hygiene_rating ? parseInt(formData.food_hygiene_rating) : null,
             food_hygiene_certificate_url: formData.food_hygiene_certificate_url,
             seo_keywords: formData.seo_keywords,
@@ -434,57 +418,21 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
                         <CardTitle>General Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div>
-                            <Label>Restaurant Logo</Label>
-                            <div className="flex gap-4 items-start">
-                                {formData.logo_url && (
-                                    <img 
-                                        src={formData.logo_url} 
-                                        alt="Restaurant Logo" 
-                                        className="w-20 h-20 rounded-lg object-cover border"
-                                    />
-                                )}
-                                <div className="flex-1 space-y-2">
-                                    <div className="flex gap-2">
-                                        <label className="flex-1">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className="w-full"
-                                                disabled={uploadingLogo}
-                                                asChild
-                                            >
-                                                <span>
-                                                    {uploadingLogo ? (
-                                                        <>
-                                                            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
-                                                            Uploading...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Upload className="h-4 w-4 mr-2" />
-                                                            Upload Logo
-                                                        </>
-                                                    )}
-                                                </span>
-                                            </Button>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={handleLogoUpload}
-                                                disabled={uploadingLogo}
-                                            />
-                                        </label>
-                                    </div>
-                                    <div className="text-xs text-gray-500">Or enter URL:</div>
-                                    <Input
-                                        placeholder="https://example.com/logo.png"
-                                        value={formData.logo_url}
-                                        onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                                    />
-                                </div>
+                        <div className="flex items-center gap-4 p-4 border rounded-lg bg-purple-50/50 border-purple-200">
+                            <div className="w-14 h-14 rounded-lg border bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+                                {restaurant?.logo_url
+                                    ? <img src={restaurant.logo_url} alt="Restaurant logo" className="w-full h-full object-contain" />
+                                    : <span className="text-[10px] text-gray-400">No logo</span>}
                             </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm">Restaurant logo</p>
+                                <p className="text-xs text-gray-500 mt-0.5">Your logo is managed in Brand Studio, with your colours and storefront styling.</p>
+                            </div>
+                            {onOpenBranding && (
+                                <Button type="button" variant="outline" onClick={onOpenBranding} className="border-purple-300 text-purple-700 hover:bg-purple-50 flex-shrink-0">
+                                    Open Brand Studio
+                                </Button>
+                            )}
                         </div>
                         <div>
                             <Label>Restaurant Name *</Label>
