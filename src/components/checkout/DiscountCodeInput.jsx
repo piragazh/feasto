@@ -1,5 +1,4 @@
 /**
-import { couponValidFromInstant, couponValidUntilInstant } from '@/lib/order-logic';
  * DiscountCodeInput — Checkout coupon + promotion entry
  *
  * Coupon stacking policy (mirrored from server):
@@ -9,6 +8,7 @@ import { couponValidFromInstant, couponValidUntilInstant } from '@/lib/order-log
  *   - Server is the authority — client-side checks are UX convenience only
  */
 import React, { useState } from 'react';
+import { couponValidFromInstant, couponValidUntilInstant } from '@/lib/order-logic';
 import { base44 } from '@/api/base44Client';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

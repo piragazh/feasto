@@ -291,7 +291,8 @@ export async function openCashDrawer(restaurant) {
                 await service.sendCommand(drawerBytes);
                 return true;
             } else if (type === 'network') {
-                await printViaNetwork(dummyOrder, restaurant, printerConfig, globalCfg, { openCashDrawer: true });
+                // Drawer kick only — no receipt content, so an empty order placeholder is enough
+                await printViaNetwork({}, restaurant, printerConfig, globalCfg, { openCashDrawer: true });
                 return true;
             }
         } catch (e) {
