@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Clock, Truck, Store, Save, Upload, BookOpen, Search, X, Palette, Printer, Info, Bell, ShieldOff, Wand2 } from 'lucide-react';
+import { Clock, Truck, Store, Save, Upload, BookOpen, Search, X, Palette, Printer, Info, Bell, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileManagement from './ProfileManagement';
 import InfoSectionSettings from './InfoSectionSettings';
@@ -15,11 +15,12 @@ import CentralizedPrinterSettings from './CentralizedPrinterSettings';
 import SmsNotificationSettings from './SmsNotificationSettings';
 import WhatsAppNotificationSettings from './WhatsAppNotificationSettings';
 import TemporaryClosureSettings from './TemporaryClosureSettings';
-import BrandingManager from './BrandingManager';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-export default function RestaurantSettings({ restaurantId }) {
+// Colours and styling live only in Brand Studio (the dashboard's Settings → Branding tab).
+// onOpenBranding switches the dashboard to that tab.
+export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
     const queryClient = useQueryClient();
     const [activeSection, setActiveSection] = useState('general');
 
@@ -257,8 +258,8 @@ export default function RestaurantSettings({ restaurantId }) {
             seo_keywords: formData.seo_keywords,
             seo_description: formData.seo_description,
             loyalty_program_enabled: formData.loyalty_program_enabled,
-            loyalty_points_multiplier: formData.loyalty_points_multiplier,
-            theme_primary_color: formData.theme_primary_color
+            loyalty_points_multiplier: formData.loyalty_points_multiplier
+            // theme_primary_color is the brand colour, owned by Brand Studio — not saved here.
         });
     };
 
@@ -386,17 +387,6 @@ export default function RestaurantSettings({ restaurantId }) {
                     Notifications
                 </Button>
                 <Button
-                    variant={activeSection === 'branding' ? 'default' : 'outline'}
-                    onClick={() => setActiveSection('branding')}
-                    className={activeSection === 'branding' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
-                >
-                    <Wand2 className="h-4 w-4 mr-2" />
-                    Brand Studio
-                    {restaurant?.branding_config?.enabled === true && (
-                        <span className="ml-2 bg-purple-500 text-white text-xs rounded-full px-1.5 py-0.5">ON</span>
-                    )}
-                </Button>
-                <Button
                     variant={activeSection === 'closure' ? 'default' : 'outline'}
                     onClick={() => setActiveSection('closure')}
                     className={restaurant?.temporary_closure?.enabled ? 'border-red-400 text-red-600' : ''}
@@ -408,10 +398,6 @@ export default function RestaurantSettings({ restaurantId }) {
                     )}
                 </Button>
             </div>
-
-            {activeSection === 'branding' && (
-                <BrandingManager restaurantId={restaurantId} />
-            )}
 
             {activeSection === 'closure' && (
                 <TemporaryClosureSettings restaurantId={restaurantId} />
@@ -825,32 +811,26 @@ export default function RestaurantSettings({ restaurantId }) {
                                 <Palette className="h-5 w-5 text-purple-500" />
                                 Theme & Branding
                             </h3>
-                            <div>
-                                <Label>Primary Theme Color</Label>
-                                <div className="flex gap-4 items-center">
-                                    <Input
-                                        type="color"
-                                        value={formData.theme_primary_color}
-                                        onChange={(e) => setFormData({ ...formData, theme_primary_color: e.target.value })}
-                                        className="h-12 w-20 cursor-pointer"
-                                    />
-                                    <div className="flex-1">
-                                        <Input
-                                            type="text"
-                                            value={formData.theme_primary_color}
-                                            onChange={(e) => setFormData({ ...formData, theme_primary_color: e.target.value })}
-                                            placeholder="#f97316"
-                                            className="font-mono"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Customize your restaurant's theme color for a unique look
-                                        </p>
-                                    </div>
-                                    <div 
-                                        className="w-12 h-12 rounded-lg border-2 shadow-sm"
-                                        style={{ backgroundColor: formData.theme_primary_color }}
-                                    />
+                            <div className="flex items-center gap-4 p-4 border rounded-lg bg-purple-50/50 border-purple-200">
+                                <div
+                                    className="w-12 h-12 rounded-lg border-2 shadow-sm flex-shrink-0"
+                                    style={{ backgroundColor: /^#[0-9a-fA-F]{6}$/.test(restaurant?.theme_primary_color || '') ? restaurant.theme_primary_color : '#f97316' }}
+                                    aria-hidden="true"
+                                />
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm">
+                                        Brand colour{' '}
+                                        <span className="font-mono text-gray-500">{restaurant?.theme_primary_color || '#f97316'}</span>
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        Your brand colour, fonts and storefront styling are managed in Brand Studio.
+                                    </p>
                                 </div>
+                                {onOpenBranding && (
+                                    <Button type="button" variant="outline" onClick={onOpenBranding} className="border-purple-300 text-purple-700 hover:bg-purple-50 flex-shrink-0">
+                                        Open Brand Studio
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
