@@ -637,7 +637,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                             className="px-2 py-1 text-xs font-medium rounded"
                                             style={i === 0 ? {
                                                 backgroundColor: pv.primary_color || '#f97316',
-                                                color: pv.button_text_color || '#ffffff',
+                                                color: buttonTextOn(pv.primary_color, pv.button_text_color),
                                                 borderRadius: buttonRadiusMap[pv.button_style] || '8px'
                                             } : {
                                                 backgroundColor: pv.secondary_color || '#fed7aa',
@@ -670,7 +670,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                                     className="text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full"
                                                     style={{
                                                         backgroundColor: pv.add_to_cart_color || pv.primary_color || '#f97316',
-                                                        color: pv.button_text_color || '#ffffff',
+                                                        color: buttonTextOn(pv.add_to_cart_color || pv.primary_color, pv.button_text_color),
                                                     }}
                                                 >
                                                     +
@@ -686,7 +686,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                         className="w-full py-2 text-sm font-bold"
                                         style={{
                                             backgroundColor: pv.primary_color || '#f97316',
-                                            color: pv.button_text_color || '#ffffff',
+                                            color: buttonTextOn(pv.primary_color, pv.button_text_color),
                                             borderRadius: buttonRadiusMap[pv.button_style] || '8px'
                                         }}
                                     >
