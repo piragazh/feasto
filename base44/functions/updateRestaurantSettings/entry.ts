@@ -120,6 +120,7 @@ function brandingChanged(before: Record<string, unknown>, after: Record<string, 
         for (const key of Object.keys(c).sort()) {
             const v = c[key];
             if (v === undefined || v === null || v === '') continue;
+            if (key === 'hero_focus_y' && v === 30) continue; // the default, same as unset
             out[key] = typeof v === 'string' && HEX_COLOR.test(v) ? v.toLowerCase() : v;
         }
         return JSON.stringify(out);
