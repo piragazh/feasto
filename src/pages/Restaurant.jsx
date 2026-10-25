@@ -1213,7 +1213,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             </div>
 
             {/* Info Bar */}
-            <div className="bg-white border-b">
+            <div className="bg-white border-b brand-nav-surface">
                 <div className="max-w-4xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div className="hidden md:flex items-center gap-6 text-sm text-gray-600">
@@ -1245,15 +1245,15 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 </div>
             </div>
 
-                        <div className="bg-white border-b sticky top-0 z-10">
+                        <div className="bg-white border-b sticky top-0 z-10 brand-nav-surface">
                 <div className="max-w-4xl mx-auto px-4 py-3">
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setOrderType('delivery')}
                             className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
                                 orderType === 'delivery'
-                                    ? 'bg-orange-500 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-orange-500 text-white shadow-md brand-pill-active'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 brand-pill'
                             }`}
                         >
                             🚚 Delivery
@@ -1263,8 +1263,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                                 onClick={() => setOrderType('collection')}
                                 className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
                                     orderType === 'collection'
-                                        ? 'bg-orange-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        ? 'bg-orange-500 text-white shadow-md brand-pill-active'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 brand-pill'
                                 }`}
                             >
                                 🏪 Collection
@@ -1409,8 +1409,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                                         onClick={() => scrollToCategory(cat)}
                                         className={`px-4 py-2 rounded-lg whitespace-nowrap capitalize text-sm font-medium transition-all flex-shrink-0 ${
                                             activeCategoryScroll === cat
-                                                ? 'bg-orange-500 text-white shadow-sm'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-600'
+                                                ? 'bg-orange-500 text-white shadow-sm brand-pill-active'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-600 brand-pill'
                                         }`}
                                     >
                                         {cat}
@@ -1516,13 +1516,13 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 <motion.div
                     initial={{ y: 100 }}
                     animate={{ y: 0 }}
-                    className="fixed bottom-0 left-0 right-0 p-4 pb-20 md:pb-4 bg-white border-t shadow-lg z-40"
+                    className="fixed bottom-0 left-0 right-0 p-4 pb-20 md:pb-4 bg-white border-t shadow-lg z-40 brand-nav-surface"
                 >
                     <div className="max-w-4xl mx-auto">
                         <Button
                             onClick={() => !restaurant?.temporary_closure?.enabled && setCartOpen(true)}
                             disabled={!!restaurant?.temporary_closure?.enabled}
-                            className={`w-full h-14 text-white font-semibold rounded-xl text-lg flex items-center justify-between px-6 ${
+                            className={`brand-btn-primary w-full h-14 text-white font-semibold rounded-xl text-lg flex items-center justify-between px-6 ${
                                 restaurant?.temporary_closure?.enabled
                                     ? 'bg-gray-400 cursor-not-allowed'
                                     : 'bg-orange-500 hover:bg-orange-600'
