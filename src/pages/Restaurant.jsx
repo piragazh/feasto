@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSectionErrorBoundary';
 import TemporaryClosureBanner from '@/components/restaurant/TemporaryClosureBanner';
 import { sellsAt, inHours, nextOpening } from '@/lib/item-availability';
-import { sanitizeBranding, isValidHex } from '@/lib/branding';
+import { sanitizeBranding, brandTokens } from '@/lib/branding';
 
 // Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
@@ -1005,66 +1005,100 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     }
 
     // ── Branding styles — computed inline (not a hook, safe after early returns) ──
-    // Every value is validated by sanitizeBranding before it reaches the CSS below.
+    // brandTokens() returns only validated colours, so everything below is safe CSS.
+    // Text colours are derived from each background so dark themes stay readable.
     const safeBranding = sanitizeBranding(restaurant?.branding_config);
+    const brand = brandTokens(restaurant);
     const brandingStyles = (() => {
-        const bc = safeBranding;
-        const isBrandingOn = bc.enabled === true;
-        const themeColor = isValidHex(restaurant?.theme_primary_color) ? restaurant.theme_primary_color : '#f97316';
-        const primary = (isBrandingOn && bc.primary_color) ? bc.primary_color : themeColor;
-        const btnTextColor = (isBrandingOn && bc?.button_text_color) ? bc.button_text_color : '#ffffff';
-        const btnRadius = isBrandingOn
-            ? ({ rounded: '8px', pill: '9999px', sharp: '2px' }[bc?.button_style] || '8px')
-            : '12px';
-        const heroOpacity = (isBrandingOn && bc?.hero_overlay_opacity != null) ? bc.hero_overlay_opacity : 0.55;
-        const headingColor = (isBrandingOn && bc?.heading_color) ? bc.heading_color : '#111827';
-        const addToCartColor = (isBrandingOn && bc?.add_to_cart_color) ? bc.add_to_cart_color : primary;
-        const fontFamilyMap = {
-            modern: 'Inter, system-ui, sans-serif',
-            classic: '"Playfair Display", Georgia, serif',
-            playful: '"Nunito", sans-serif',
-            elegant: '"Cormorant Garamond", serif'
-        };
-        const fontFamily = (isBrandingOn && bc?.font_style) ? (fontFamilyMap[bc.font_style] || 'inherit') : 'inherit';
+        const t = brand;
         return `
-            .restaurant-page { font-family: ${fontFamily}; }
+            .restaurant-page {
+                font-family: ${t.fontFamily};
+                --brand-primary: ${t.primary};
+                --brand-on-primary: ${t.onPrimary};
+                --brand-page-text: ${t.pageText};
+                --brand-page-muted: ${t.pageMuted};
+            }
             .restaurant-page .bg-orange-500,
-            .restaurant-page [class*="bg-orange-500"] { background-color: ${primary} !important; }
+            .restaurant-page [class*="bg-orange-500"] { background-color: ${t.primary} !important; }
             .restaurant-page .text-orange-500,
-            .restaurant-page [class*="text-orange-500"] { color: ${primary} !important; }
-            .restaurant-page .border-orange-300 { border-color: ${primary}60 !important; }
-            .restaurant-page .bg-orange-50 { background-color: ${primary}10 !important; }
-            .restaurant-page .hover\\:bg-orange-100:hover { background-color: ${primary}20 !important; }
-            .restaurant-page .hover\\:bg-orange-600:hover { background-color: ${primary}dd !important; }
-            .restaurant-page .hover\\:text-orange-600:hover { color: ${primary} !important; }
-            .restaurant-page .category-heading { color: ${headingColor} !important; }
+            .restaurant-page [class*="text-orange-500"] { color: ${t.primary} !important; }
+            .restaurant-page .border-orange-300 { border-color: ${t.primary}60 !important; }
+            .restaurant-page .bg-orange-50 { background-color: ${t.primary}10 !important; }
+            .restaurant-page .hover\\:bg-orange-100:hover { background-color: ${t.primary}20 !important; }
+            .restaurant-page .hover\\:bg-orange-600:hover { background-color: ${t.primary}dd !important; }
+            .restaurant-page .hover\\:text-orange-600:hover { color: ${t.primary} !important; }
+            .restaurant-page .category-heading { color: ${t.heading} !important; }
             .restaurant-page .add-to-cart-btn {
-                background-color: ${addToCartColor} !important;
-                color: ${btnTextColor} !important;
+                background-color: ${t.addToCart} !important;
+                color: ${t.onPrimary} !important;
             }
             .restaurant-page .add-to-cart-btn:hover {
-                background-color: ${addToCartColor}dd !important;
+                background-color: ${t.addToCart}dd !important;
                 opacity: 0.9;
             }
-            .restaurant-page .nav-bar-custom {
-                background-color: ${isBrandingOn ? (bc?.nav_background || '#ffffff') : '#ffffff'} !important;
-            }
-            .restaurant-page .menu-card-custom {
-                background-color: ${isBrandingOn ? (bc?.card_background || '#ffffff') : '#ffffff'} !important;
-            }
+            .restaurant-page .nav-bar-custom { background-color: ${t.nav} !important; }
+            .restaurant-page .menu-card-custom { background-color: ${t.surface} !important; }
             .restaurant-page .menu-card-compact-item:hover {
-                background-color: ${isBrandingOn ? (bc?.card_background || '#f3f4f6') : '#f9fafb'} !important;
+                background-color: ${t.on ? t.surface : '#f9fafb'} !important;
             }
-            ${isBrandingOn ? `
-            .restaurant-page .btn-primary-custom {
-                background-color: ${primary};
-                color: ${btnTextColor};
-                border-radius: ${btnRadius};
-            }
+            /* Text sitting directly on the page background */
+            .restaurant-page .brand-page-text,
+            .restaurant-page h2.text-gray-900 { color: ${t.pageText} !important; }
+            .restaurant-page .brand-page-muted { color: ${t.pageMuted} !important; }
+            ${t.on ? `
             .restaurant-page .hero-overlay-custom {
-                background: linear-gradient(to top, rgba(0,0,0,${heroOpacity}), rgba(0,0,0,${heroOpacity * 0.4}), rgba(0,0,0,0.1)) !important;
+                background: linear-gradient(to top, rgba(0,0,0,${t.heroOpacity}), rgba(0,0,0,${t.heroOpacity * 0.4}), rgba(0,0,0,0.1)) !important;
             }
-            .restaurant-page .category-heading { border-color: ${headingColor}30 !important; }
+            .restaurant-page .category-heading { border-color: ${t.heading}30 !important; }
+
+            /* Menu cards: text follows the card colour */
+            .restaurant-page .menu-card-custom .text-gray-900 { color: ${t.surfaceText} !important; }
+            .restaurant-page .menu-card-custom .text-gray-600,
+            .restaurant-page .menu-card-custom .text-gray-500 { color: ${t.surfaceMuted} !important; }
+            .restaurant-page .menu-card-custom .text-orange-600,
+            .restaurant-page .menu-card-custom .text-orange-700 { color: ${t.accentOnSurface} !important; }
+
+            /* Bars that use the navigation colour */
+            .restaurant-page .brand-nav-surface,
+            .restaurant-page .nav-bar-custom { background-color: ${t.nav} !important; color: ${t.navText}; }
+            .restaurant-page .brand-nav-surface .text-gray-600,
+            .restaurant-page .brand-nav-surface .text-gray-400,
+            .restaurant-page .nav-bar-custom .text-gray-700 { color: ${t.navMuted} !important; }
+
+            /* Buttons and pills: button style + brand colours */
+            .restaurant-page .brand-pill-active {
+                background-color: ${t.primary} !important;
+                color: ${t.onPrimary} !important;
+                border-radius: ${t.radius} !important;
+            }
+            .restaurant-page .brand-pill {
+                background-color: ${t.secondary} !important;
+                color: ${t.onSecondary} !important;
+                border-radius: ${t.radius} !important;
+            }
+            .restaurant-page .brand-pill:hover { filter: brightness(0.95); }
+            .restaurant-page .brand-btn-primary {
+                color: ${t.onPrimary} !important;
+                border-radius: ${t.radius} !important;
+            }
+
+            /* Secondary colour for badges and placeholders */
+            .restaurant-page .from-orange-100.to-orange-200,
+            .restaurant-page .bg-orange-100 {
+                background-image: none !important;
+                background-color: ${t.secondary} !important;
+                color: ${t.onSecondary} !important;
+            }
+            .restaurant-page .from-orange-100.to-orange-50 {
+                background-image: none !important;
+                background-color: ${t.secondary} !important;
+            }
+            .restaurant-page .from-orange-500.to-orange-600 {
+                background-image: none !important;
+                background-color: ${t.primary} !important;
+            }
+            .restaurant-page .border-orange-100 { border-color: ${t.primary}30 !important; }
             ` : ''}
         `;
     })();
