@@ -255,10 +255,15 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+        let user = null;
+        try {
+            user = await base44.auth.me();
+        } catch {
+            user = null;
+        }
 
         if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            return Response.json({ error: 'Your session has expired. Please sign in again.' }, { status: 401 });
         }
 
         const { restaurant_id, updates, note } = await req.json();
