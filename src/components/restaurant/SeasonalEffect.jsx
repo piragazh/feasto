@@ -80,10 +80,11 @@ function makeSprites(type) {
     if (type === 'snow') {
         return [sprite(32, (ctx, s) => {
             const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-            g.addColorStop(0, 'rgba(255,255,255,1)');
-            g.addColorStop(0.35, 'rgba(241,245,249,0.98)');
-            g.addColorStop(0.62, 'rgba(186,200,218,0.9)'); // pale blue-grey body: visible on white pages
-            g.addColorStop(1, 'rgba(186,200,218,0)');
+            // One even pale blue-grey tone (no white centre), so a flake reads as a
+            // soft dot on white pages and as a light flake on dark photos.
+            g.addColorStop(0, 'rgba(214,224,236,1)');
+            g.addColorStop(0.5, 'rgba(214,224,236,0.95)');
+            g.addColorStop(1, 'rgba(214,224,236,0)');
             ctx.fillStyle = g;
             ctx.fillRect(0, 0, s, s);
         })];
