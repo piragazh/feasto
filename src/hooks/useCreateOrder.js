@@ -230,6 +230,16 @@ export function useCreateOrder({
 
             setOrderPlaced(true);
 
+            // Google Ads PURCHASE conversion — real order id de-dups repeat fires
+            if (typeof window !== 'undefined' && window.gtag) {
+                window.gtag('event', 'conversion', {
+                    send_to: 'AW-18537041821/-08mCKetsqkdEJ2fk4dF',
+                    value: total,
+                    currency: 'GBP',
+                    transaction_id: newOrder.id,
+                });
+            }
+
             const backgroundTasks = [];
 
             if (!isGuest && user) {

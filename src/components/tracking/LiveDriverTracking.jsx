@@ -124,6 +124,14 @@ export default function LiveDriverTracking({ order }) {
                     {driver.phone && (
                         <a 
                             href={`tel:${driver.phone}`}
+                            onClick={() => {
+                                // Google Ads PHONE_CALL_LEAD conversion (click-to-call)
+                                if (typeof window !== 'undefined' && window.gtag) {
+                                    window.gtag('event', 'conversion', {
+                                        send_to: 'AW-18537041821/_6aTCMfkuKkdEJ2fk4dF',
+                                    });
+                                }
+                            }}
                             className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-orange-300 hover:bg-orange-50 transition-colors"
                         >
                             <Phone className="h-4 w-4 text-orange-600" />

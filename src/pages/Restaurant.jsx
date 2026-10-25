@@ -499,6 +499,14 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 setCart(prev => [...prev, newItem]);
             }
             
+            // Google Ads ADD_TO_CART conversion
+            if (typeof window !== 'undefined' && window.gtag) {
+                window.gtag('event', 'conversion', {
+                    send_to: 'AW-18537041821/_S3lCJXiuKkdEJ2fk4dF',
+                    value: item.price * quantityToAdd,
+                    currency: 'GBP',
+                });
+            }
             toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
                 duration: 3000,
                 style: {
@@ -561,6 +569,14 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 }]);
             }
             
+            // Google Ads ADD_TO_CART conversion
+            if (typeof window !== 'undefined' && window.gtag) {
+                window.gtag('event', 'conversion', {
+                    send_to: 'AW-18537041821/_S3lCJXiuKkdEJ2fk4dF',
+                    value: (itemData.final_price || 0) * (itemData.quantity || 1),
+                    currency: 'GBP',
+                });
+            }
             toast.success(`🛒 ${itemData.name} added to cart`, {
                 duration: 2000,
                 style: {
@@ -587,6 +603,14 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             fixed_items: deal.items || [],
             selected_items: deal.category_rules?.length === 0 ? null : {}
         }]);
+        // Google Ads ADD_TO_CART conversion
+        if (typeof window !== 'undefined' && window.gtag) {
+            window.gtag('event', 'conversion', {
+                send_to: 'AW-18537041821/_S3lCJXiuKkdEJ2fk4dF',
+                value: deal.deal_price,
+                currency: 'GBP',
+            });
+        }
         toast.success(`🛒 ${deal.name} added to cart`, {
             duration: 2000,
             style: {
@@ -621,6 +645,14 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             is_category_deal: true,
             selected_items: dealData.selected_items
         }]);
+        // Google Ads ADD_TO_CART conversion
+        if (typeof window !== 'undefined' && window.gtag) {
+            window.gtag('event', 'conversion', {
+                send_to: 'AW-18537041821/_S3lCJXiuKkdEJ2fk4dF',
+                value: (dealData.deal_price || 0) * (dealData.quantity || 1),
+                currency: 'GBP',
+            });
+        }
         toast.success(`🛒 ${dealData.deal_name} added to cart`, {
             duration: 2000,
             style: {
@@ -937,6 +969,14 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             return;
         }
         
+        // Google Ads BEGIN_CHECKOUT conversion
+        if (typeof window !== 'undefined' && window.gtag) {
+            window.gtag('event', 'conversion', {
+                send_to: 'AW-18537041821/hxvPCI_Du6kdEJ2fk4dF',
+                value: cartTotal,
+                currency: 'GBP',
+            });
+        }
         // Close drawer and navigate using React Router
         setCartOpen(false);
         setShowOutsideHoursConfirmation(false);

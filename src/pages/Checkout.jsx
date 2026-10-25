@@ -418,6 +418,15 @@ export default function Checkout() {
                 if (didRecover) {
                     setOrderPlaced(true);
                     toast.success('Your previous order has been confirmed!');
+                    // Google Ads PURCHASE conversion (Stripe-redirect recovery path)
+                    if (typeof window !== 'undefined' && window.gtag && result?.order_id) {
+                        window.gtag('event', 'conversion', {
+                            send_to: 'AW-18537041821/-08mCKetsqkdEJ2fk4dF',
+                            value: pending.orderData?.total,
+                            currency: 'GBP',
+                            transaction_id: result.order_id,
+                        });
+                    }
                     setTimeout(() => navigate(createPageUrl('Orders')), 2000);
                 } else if (errMsg) {
                     setRecoveryError(errMsg);
@@ -436,6 +445,15 @@ export default function Checkout() {
                             pendingPayment.clear();
                             setOrderPlaced(true);
                             toast.success('Your order has been confirmed!');
+                            // Google Ads PURCHASE conversion (idempotency-lookup recovery path)
+                            if (typeof window !== 'undefined' && window.gtag) {
+                                window.gtag('event', 'conversion', {
+                                    send_to: 'AW-18537041821/-08mCKetsqkdEJ2fk4dF',
+                                    value: currentPending?.orderData?.total,
+                                    currency: 'GBP',
+                                    transaction_id: maybeOrders[0].id,
+                                });
+                            }
                             setTimeout(() => navigate(createPageUrl('Orders')), 2000);
                             setIsRecovering(false);
                             return;
