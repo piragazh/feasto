@@ -218,6 +218,27 @@
         }
       }
     },
+    "branding_history": {
+      "type": "array",
+      "description": "Previous Brand Studio settings, newest first (max 5). Written only by updateRestaurantSettings when branding_config changes; restored from Brand Studio.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "saved_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this version was replaced"
+          },
+          "theme_primary_color": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "description": "The branding_config as it was"
+          }
+        }
+      }
+    },
     "cuisine_type": {
       "type": "string"
     },
