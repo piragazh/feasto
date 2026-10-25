@@ -456,8 +456,14 @@
       "items": {
         "type": "object",
         "properties": {
-          "menu_item_id": { "type": "string", "description": "MenuItem this button sells." },
-          "label": { "type": "string", "description": "Short button label. Defaults to the item name." }
+          "menu_item_id": {
+            "type": "string",
+            "description": "MenuItem this button sells."
+          },
+          "label": {
+            "type": "string",
+            "description": "Short button label. Defaults to the item name."
+          }
         }
       }
     },
@@ -603,5 +609,22 @@
   "required": [
     "name",
     "cuisine_type"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }
