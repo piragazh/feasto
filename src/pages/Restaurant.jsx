@@ -797,7 +797,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 { property: 'og:description', content: metaDescription.content },
                 { property: 'og:type', content: 'restaurant' },
                 { property: 'og:url', content: window.location.href },
-                { property: 'og:image', content: restaurant.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png' }
+                { property: 'og:image', content: (() => { const bc = sanitizeBranding(restaurant.branding_config); return (bc.enabled && bc.hero_image_url) || restaurant.image_url || 'https://res.cloudinary.com/dbbjc1cre/image/upload/v1767479445/my-project-page-1_qsv0xc.png'; })() }
             ];
 
             ogTags.forEach(({ property, content }) => {
