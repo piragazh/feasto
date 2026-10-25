@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, ShoppingBag, Trash2, ArrowLeft, Lock, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { useBrandAccent } from '@/lib/useBrandAccent';
 
 export default function GroupOrder() {
     const navigate = useNavigate();
@@ -42,6 +43,15 @@ export default function GroupOrder() {
         enabled: !!shareCode,
         refetchInterval: 3000,
     });
+
+    // The restaurant's brand colour on the group order page
+    const { data: restaurant } = useQuery({
+        queryKey: ['restaurant-brand', groupOrder?.restaurant_id],
+        queryFn: async () => (await base44.entities.Restaurant.filter({ id: groupOrder.restaurant_id }))[0] || null,
+        enabled: !!groupOrder?.restaurant_id,
+        staleTime: 10 * 60 * 1000,
+    });
+    useBrandAccent(restaurant);
 
     const updateGroupOrderMutation = useMutation({
         mutationFn: ({ id, data }) => base44.entities.GroupOrder.update(id, data),
