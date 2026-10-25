@@ -34,7 +34,6 @@ export function useBrandAccent(restaurant) {
             root.style.removeProperty('--brand-font');
             root.classList.remove('brand-accent', 'brand-font');
         };
-        // key captures every field that affects the result
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // `key` captures every field of `restaurant` that affects the result.
     }, [key]);
 }
