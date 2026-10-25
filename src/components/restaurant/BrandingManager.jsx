@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Palette, Wand2, Loader2, CheckCircle, Eye, RotateCcw, Zap, ImageIcon, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import DesignTemplates from './DesignTemplates';
+import { isValidHex, invalidColorFields } from '@/lib/branding';
 
 // ─── Hero image uploader sub-component ───────────────────────────────────────
 function HeroImageUploader({ onUploaded }) {
@@ -138,7 +139,20 @@ export default function BrandingManager({ restaurantId }) {
     }, [restaurant?.id]);
 
     const saveMutation = useMutation({
-        mutationFn: (data) => base44.entities.Restaurant.update(restaurantId, data),
+        // Saved through the server so the request is permission-checked, validated and audited.
+        mutationFn: async (data) => {
+            let res;
+            try {
+                res = await base44.functions.invoke('updateRestaurantSettings', {
+                    restaurant_id: restaurantId,
+                    updates: data,
+                });
+            } catch (err) {
+                throw new Error(err?.response?.data?.error || err?.message || 'Save failed');
+            }
+            if (!res?.data?.success) throw new Error(res?.data?.error || 'Save failed');
+            return res.data;
+        },
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['restaurant-branding', restaurantId] });
             queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
@@ -146,19 +160,18 @@ export default function BrandingManager({ restaurantId }) {
             const savedEnabled = variables?.branding_config?.enabled === true;
             toast.success(savedEnabled ? 'Brand settings saved and live!' : 'Brand settings saved (branding is off — enable to go live).');
         },
-        onError: (err) => toast.error('Failed to save brand settings: ' + (err?.message || 'unknown error'))
+        onError: (err) => toast.error(err?.message || 'Failed to save brand settings')
     });
 
     const handleSave = () => {
         if (saveMutation.isPending) return;
-        // Validate primary_color is a valid hex before saving
-        const isValidHex = (h) => typeof h === 'string' && /^#[0-9a-fA-F]{6}$/.test(h);
-        const safePrimary = isValidHex(config.primary_color) ? config.primary_color : DEFAULT_CONFIG.primary_color;
-        const safeConfig = { ...config, primary_color: safePrimary };
-        saveMutation.mutate({
-            branding_config: safeConfig,
-            theme_primary_color: safePrimary
-        });
+        const bad = invalidColorFields(config);
+        if (bad.length) {
+            toast.error('Fix the highlighted colours before saving — use the format #1a2b3c.');
+            return;
+        }
+        // theme_primary_color is kept in step by the server, and only while branding is live.
+        saveMutation.mutate({ branding_config: config });
     };
 
     const applyTemplate = (tpl) => {
@@ -321,15 +334,19 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                     <div className="flex items-center gap-3">
                                         <input
                                             type="color"
-                                            value={config[key] || '#ffffff'}
+                                            aria-label={`${label} colour picker`}
+                                            value={isValidHex(config[key]) ? config[key].toLowerCase() : '#ffffff'}
                                             onChange={(e) => setConfig(prev => ({ ...prev, [key]: e.target.value }))}
                                             className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5 bg-white"
                                         />
                                         <Input
                                             value={config[key] || ''}
-                                            onChange={(e) => setConfig(prev => ({ ...prev, [key]: e.target.value }))}
+                                            onChange={(e) => setConfig(prev => ({ ...prev, [key]: e.target.value.trim() }))}
                                             placeholder="#f97316"
-                                            className="font-mono text-sm h-10"
+                                            maxLength={7}
+                                            aria-label={`${label} hex value`}
+                                            aria-invalid={!!config[key] && !isValidHex(config[key])}
+                                            className={`font-mono text-sm h-10 ${config[key] && !isValidHex(config[key]) ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                                         />
                                         <div
                                             className="w-10 h-10 rounded-lg border border-gray-200 flex-shrink-0"
@@ -656,7 +673,6 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
 
                                     {aiSuggestions.palettes?.map((palette, idx) => {
                                         // Validate hex values from AI before rendering
-                                        const isValidHex = (h) => typeof h === 'string' && /^#[0-9a-fA-F]{6}$/.test(h);
                                         const primary = isValidHex(palette.primary) ? palette.primary : '#f97316';
                                         const secondary = isValidHex(palette.secondary) ? palette.secondary : '#fed7aa';
                                         const background = isValidHex(palette.background) ? palette.background : '#f9fafb';
