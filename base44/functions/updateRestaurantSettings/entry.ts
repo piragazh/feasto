@@ -32,6 +32,10 @@ const HIGH_RISK_FIELDS = new Set([
     'commission_rate',
     'commission_type',
     'fixed_commission_amount',
+    // Access and availability controls
+    'role_permissions',
+    'qr_ordering_enabled',
+    'temporary_closure',
 ]);
 
 // Full allowlist of fields a restaurant manager may update
@@ -71,6 +75,34 @@ const ALLOWED_FIELDS = new Set([
     'whatsapp_notification_settings',
     // Brand Studio
     'branding_config',
+    // Onboarding
+    'delivery_time',
+    // Profile & story
+    'about_us',
+    'our_story',
+    'is_halal',
+    'card_style',
+    'menu_layout',
+    'gallery_images',
+    'social_media',
+    'awards_certifications',
+    // Menu structure
+    'menu_categories',
+    'category_order',
+    'category_images',
+    'item_order',
+    'custom_option_templates',
+    'custom_pos_items',
+    // Order pause
+    'temporary_closure',
+    // Kiosk, POS and table ordering
+    'kiosk_config',
+    'role_permissions',
+    'pos_palette',
+    'pos_layout',
+    'pos_customization_layout',
+    'quick_sale_items',
+    'qr_ordering_enabled',
 ]);
 
 // ── Brand Studio validation ──────────────────────────────────────────────────
