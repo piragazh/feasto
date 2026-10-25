@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,16 @@ import {
     ensureBrandFont, DEFAULT_HERO_FOCUS_Y,
 } from '@/lib/branding';
 import { prepareImage, ImageRejectedError, formatBytes } from '@/lib/prepareImage';
+import { SEASONAL_EFFECTS, usualDates, seasonalProblem, seasonalStatus } from '@/lib/seasonalEffects';
+
+// Loaded only when an animation is picked, so Brand Studio stays light otherwise.
+const SeasonalEffect = lazy(() => import('./SeasonalEffect'));
 
 // Fields a saved version may restore into the editor (anything else is ignored).
 const RESTORABLE_KEYS = [
     'enabled', 'primary_color', 'secondary_color', 'background_color', 'nav_background', 'card_background',
     'button_text_color', 'add_to_cart_color', 'heading_color', 'button_style', 'font_style',
-    'hero_overlay_opacity', 'hero_focus_y', 'hero_image_url', 'ai_palette_name',
+    'hero_overlay_opacity', 'hero_focus_y', 'hero_image_url', 'ai_palette_name', 'seasonal_effect',
 ];
 
 function formatSavedAt(iso) {
@@ -201,6 +205,7 @@ const DEFAULT_CONFIG = {
     font_style: 'modern',
     hero_overlay_opacity: 0.55,
     hero_focus_y: DEFAULT_HERO_FOCUS_Y,
+    seasonal_effect: { type: 'none' },
     hero_image_url: '',
     card_background: '#ffffff',
     nav_background: '#ffffff',
@@ -367,7 +372,11 @@ export default function BrandingManager({ restaurantId }) {
             toast.error('Fix the highlighted colours before saving — use the format #1a2b3c.');
             return;
         }
-        // theme_primary_color is kept in step by the server, and only while branding is live.
+        const seasonalIssue = seasonalProblem(config.seasonal_effect);
+        if (seasonalIssue) {
+            toast.error(seasonalIssue);
+            return;
+        }
         saveMutation.mutate({ branding_config: config });
     };
 
@@ -379,6 +388,24 @@ export default function BrandingManager({ restaurantId }) {
     const presetActive = (preset) => Object.entries(completePalette({
         primary: preset.primary, secondary: preset.secondary, background: preset.background, nav: preset.nav,
     })).every(([key, value]) => String(config[key] || '').toLowerCase() === value.toLowerCase());
+
+    // Seasonal animation: picking an effect fills in its usual dates.
+    const seasonal = config.seasonal_effect?.type ? config.seasonal_effect : { type: 'none' };
+    const chooseSeasonal = (id) => {
+        if (id === 'none') {
+            setConfig(prev => ({ ...prev, seasonal_effect: { type: 'none' } }));
+            return;
+        }
+        setConfig(prev => ({
+            ...prev,
+            seasonal_effect: {
+                type: id,
+                intensity: prev.seasonal_effect?.intensity || 'light',
+                ...usualDates(id),
+            },
+        }));
+    };
+    const updateSeasonal = (patch) => setConfig(prev => ({ ...prev, seasonal_effect: { ...prev.seasonal_effect, ...patch } }));
 
     // Load a previous version into the editor; it goes live only when saved.
     const loadVersion = (entry) => {
@@ -829,6 +856,96 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Seasonal animation */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-purple-500" />
+                                Seasonal animation
+                            </CardTitle>
+                            <p className="text-xs text-gray-500">
+                                A light animation over your menu page for special occasions, on phones and computers. Taps still go through to your menu, customers can switch it off, and it stays hidden for anyone who has turned on Reduce Motion.
+                            </p>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {[{ id: 'none', label: 'None', occasion: 'No animation' }, ...SEASONAL_EFFECTS].map((effect) => {
+                                    const selected = seasonal.type === effect.id;
+                                    return (
+                                        <button
+                                            key={effect.id}
+                                            type="button"
+                                            aria-pressed={selected}
+                                            onClick={() => chooseSeasonal(effect.id)}
+                                            className={`p-2.5 rounded-lg border-2 text-left transition-all ${selected ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                                        >
+                                            <p className="text-sm font-semibold text-gray-800">{effect.label}</p>
+                                            <p className="text-xs text-gray-400 leading-snug">{effect.occasion}</p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {seasonal.type !== 'none' && (
+                                <>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <Label htmlFor="seasonal-start" className="text-sm">From</Label>
+                                            <Input
+                                                id="seasonal-start"
+                                                type="date"
+                                                value={seasonal.starts_on || ''}
+                                                onChange={(e) => updateSeasonal({ starts_on: e.target.value })}
+                                                className="h-10"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="seasonal-end" className="text-sm">Until (last day)</Label>
+                                            <Input
+                                                id="seasonal-end"
+                                                type="date"
+                                                value={seasonal.ends_on || ''}
+                                                min={seasonal.starts_on || undefined}
+                                                onChange={(e) => updateSeasonal({ ends_on: e.target.value })}
+                                                className="h-10"
+                                            />
+                                        </div>
+                                    </div>
+                                    {SEASONAL_EFFECTS.find((e) => e.id === seasonal.type)?.usual && (
+                                        <Button type="button" variant="outline" size="sm" onClick={() => updateSeasonal(usualDates(seasonal.type))}>
+                                            Use the usual dates
+                                        </Button>
+                                    )}
+                                    <div>
+                                        <p className="text-sm font-medium mb-1.5">Amount</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[['light', 'Light', 'A few, subtle'], ['medium', 'Busier', 'More noticeable']].map(([id, label, desc]) => (
+                                                <button
+                                                    key={id}
+                                                    type="button"
+                                                    aria-pressed={(seasonal.intensity || 'light') === id}
+                                                    onClick={() => updateSeasonal({ intensity: id })}
+                                                    className={`p-2 rounded-lg border-2 text-left ${(seasonal.intensity || 'light') === id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                                                >
+                                                    <p className="text-sm font-semibold text-gray-800">{label}</p>
+                                                    <p className="text-xs text-gray-400">{desc}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {(() => {
+                                        const problem = seasonalProblem(seasonal);
+                                        if (problem) return <p className="text-xs text-red-600" role="alert">{problem}</p>;
+                                        const status = seasonalStatus(seasonal);
+                                        if (!status) return null;
+                                        const tone = { live: 'text-green-700', upcoming: 'text-blue-700', ended: 'text-amber-700' }[status.state];
+                                        return <p className={`text-xs font-medium ${tone}`} role="status">{status.text}{isDirty ? ' (after you save)' : ''}</p>;
+                                    })()}
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* ── Right: Preview + AI + Presets ── */}
@@ -850,7 +967,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                         <CardContent>
                             {/* Mini restaurant page mockup */}
                             <div
-                                className="rounded-xl overflow-hidden border shadow-sm"
+                                className="relative rounded-xl overflow-hidden border shadow-sm"
                                 style={{ backgroundColor: pv.background_color || '#f9fafb', fontFamily: fontHeading }}
                             >
                                 {/* Hero */}
@@ -942,6 +1059,11 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                         View Cart — £12.99
                                     </button>
                                 </div>
+                                {seasonal.type !== 'none' && (
+                                    <Suspense fallback={null}>
+                                        <SeasonalEffect preview type={seasonal.type} intensity={seasonal.intensity || 'light'} />
+                                    </Suspense>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

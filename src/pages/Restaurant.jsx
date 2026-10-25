@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, laz
 import RestaurantInfoDialog from '@/components/restaurant/RestaurantInfoDialog';
 import { base44 } from '@/api/base44Client';
 import { useBrandAccent } from '@/lib/useBrandAccent';
+import { activeSeasonal } from '@/lib/seasonalEffects';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -32,6 +33,8 @@ const InfoSection = lazy(() => import('@/components/restaurant/InfoSection'));
 const RestaurantProfileSection = lazy(() => import('@/components/restaurant/RestaurantProfileSection'));
 const MealDealsSection = lazy(() => import('@/components/restaurant/MealDealsSection'));
 const CategoryDealCustomizationModal = lazy(() => import('@/components/restaurant/CategoryDealCustomizationModal'));
+// Loaded only while a seasonal animation is scheduled for today.
+const SeasonalEffect = lazy(() => import('@/components/restaurant/SeasonalEffect'));
 
 export default function Restaurant({ restaurantId: propRestaurantId }) {
     const navigate = useNavigate();
@@ -1162,6 +1165,14 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             }
         >
             <style id="restaurant-branding-styles">{brandingStyles}</style>
+            {(() => {
+                const seasonalNow = activeSeasonal(safeBranding.seasonal_effect);
+                return seasonalNow ? (
+                    <Suspense fallback={null}>
+                        <SeasonalEffect type={seasonalNow.type} intensity={seasonalNow.intensity} restaurantId={restaurant.id} />
+                    </Suspense>
+                ) : null;
+            })()}
             {/* Hero */}
             <div className="relative h-56 sm:h-72 md:h-80 -mx-4 md:mx-0">
                 <img
