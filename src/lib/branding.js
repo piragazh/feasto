@@ -84,6 +84,92 @@ export function readableTextOn(bg) {
     return contrastRatio(DARK_TEXT.text, bg) >= contrastRatio(LIGHT_TEXT.text, bg) ? DARK_TEXT : LIGHT_TEXT;
 }
 
+/** WCAG AA: 4.5:1 for normal text, 3:1 for large text and icons. */
+export const MIN_TEXT_CONTRAST = 4.5;
+export const MIN_LARGE_CONTRAST = 3;
+
+/**
+ * Text colour for a button filled with `bg`. Keeps `preferred` when it reads
+ * well; otherwise switches to white or near-black, whichever passes.
+ * If neither passes, keeps `preferred` (the owner needs a different colour).
+ */
+export function buttonTextOn(bg, preferred = '#ffffff') {
+    const pref = isValidHex(preferred) ? preferred : '#ffffff';
+    if (!isValidHex(bg) || contrastRatio(pref, bg) >= MIN_TEXT_CONTRAST) return pref;
+    const best = contrastRatio('#ffffff', bg) >= contrastRatio(DARK_TEXT.text, bg) ? '#ffffff' : DARK_TEXT.text;
+    return contrastRatio(best, bg) >= MIN_TEXT_CONTRAST ? best : pref;
+}
+
+function toHex(r, g, b) {
+    return '#' + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+}
+
+/** Blend a colour towards another by `amount` (0–1). */
+export function mix(hex, target, amount) {
+    const a = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const b = [1, 3, 5].map((i) => parseInt(target.slice(i, i + 2), 16));
+    return toHex(...a.map((v, i) => v + (b[i] - v) * amount));
+}
+
+/** The nearest darker shade of `hex` on which white text passes AA, or null if already fine. */
+export function shadeForWhiteText(hex) {
+    if (!isValidHex(hex) || contrastRatio('#ffffff', hex) >= MIN_TEXT_CONTRAST) return null;
+    for (let k = 0.05; k <= 0.9; k += 0.05) {
+        const shade = mix(hex, '#000000', k);
+        if (contrastRatio('#ffffff', shade) >= MIN_TEXT_CONTRAST) return shade;
+    }
+    return '#000000';
+}
+
+/**
+ * A complete, readable set of storefront colours from a primary, secondary and
+ * background colour, so applying a palette never leaves colours from a previous one.
+ */
+export function completePalette({ primary, secondary, background, nav }) {
+    const bg = isValidHex(background) ? background.toLowerCase() : '#f9fafb';
+    const p = isValidHex(primary) ? primary.toLowerCase() : '#c2410c';
+    const darkBg = luminance(bg) < 0.2;
+    return {
+        primary_color: p,
+        secondary_color: isValidHex(secondary) ? secondary.toLowerCase() : mix(p, '#ffffff', 0.75),
+        background_color: bg,
+        nav_background: isValidHex(nav) ? nav.toLowerCase() : (darkBg ? mix(bg, '#ffffff', 0.06) : '#ffffff'),
+        card_background: darkBg ? mix(bg, '#ffffff', 0.1) : '#ffffff',
+        heading_color: contrastRatio(p, bg) >= MIN_LARGE_CONTRAST ? p : readableTextOn(bg).text,
+        button_text_color: buttonTextOn(p, '#ffffff'),
+        add_to_cart_color: p,
+    };
+}
+
+/**
+ * Readability problems in an editor config, worst first. Each has a `fix`
+ * object of fields to apply, or null when only the owner can choose.
+ */
+export function contrastIssues(config) {
+    const issues = [];
+    const c = config || {};
+    const check = (id, label, fg, bg, min, fix, note) => {
+        if (!isValidHex(fg) || !isValidHex(bg)) return;
+        const ratio = contrastRatio(fg, bg);
+        if (ratio < min) issues.push({ id, label, ratio, min, fix, note });
+    };
+    const btnText = c.button_text_color || '#ffffff';
+    const autoText = buttonTextOn(c.primary_color, btnText);
+    const darker = shadeForWhiteText(c.primary_color);
+    check('button', 'Button text on brand colour', btnText, c.primary_color, MIN_TEXT_CONTRAST,
+        autoText !== btnText ? { button_text_color: autoText } : (darker ? { primary_color: darker } : null),
+        autoText !== btnText
+            ? `Your storefront will use ${autoText === '#ffffff' ? 'white' : 'dark'} button text automatically.`
+            : 'Neither white nor dark text reads well — try a deeper brand colour.');
+    const cartColour = c.add_to_cart_color || c.primary_color;
+    check('cart', 'Add-to-cart button icon', buttonTextOn(cartColour, btnText), cartColour, MIN_LARGE_CONTRAST,
+        { add_to_cart_color: c.primary_color }, 'Use your brand colour for the + button.');
+    check('heading', 'Category headings on page background', c.heading_color, c.background_color, MIN_LARGE_CONTRAST,
+        { heading_color: readableTextOn(c.background_color).text },
+        'Your storefront will use a readable heading colour automatically.');
+    return issues.sort((a, b) => a.ratio / a.min - b.ratio / b.min);
+}
+
 const RADIUS = { rounded: '8px', pill: '9999px', sharp: '2px' };
 const FONT_FAMILY = {
     modern: 'Inter, system-ui, sans-serif',
@@ -112,10 +198,16 @@ export function brandTokens(restaurant) {
     const navText = readableTextOn(nav);
     // Links and small accents on cards use the primary colour only when it is legible there.
     const accentOnSurface = contrastRatio(primary, surface) >= 3 ? primary : card.text;
+    // Button text is switched to dark or white automatically when the chosen one is hard to read.
+    const preferredText = (on && bc.button_text_color) || '#ffffff';
+    const onPrimary = buttonTextOn(primary, preferredText);
+    const addToCart = (on && bc.add_to_cart_color) || primary;
+    const headingWanted = (on && bc.heading_color) || '#111827';
     return {
         on,
         primary,
-        onPrimary: (on && bc.button_text_color) || '#ffffff',
+        onPrimary,
+        onAddToCart: buttonTextOn(addToCart, preferredText),
         secondary,
         onSecondary: readableTextOn(secondary).text,
         pageBg,
@@ -128,8 +220,8 @@ export function brandTokens(restaurant) {
         nav,
         navText: navText.text,
         navMuted: navText.muted,
-        heading: (on && bc.heading_color) || '#111827',
-        addToCart: (on && bc.add_to_cart_color) || primary,
+        heading: contrastRatio(headingWanted, pageBg) >= MIN_LARGE_CONTRAST ? headingWanted : page.text,
+        addToCart,
         radius: on ? (RADIUS[bc.button_style] || RADIUS.rounded) : null,
         fontFamily: on && bc.font_style ? FONT_FAMILY[bc.font_style] : 'inherit',
         heroOpacity: on && bc.hero_overlay_opacity != null ? bc.hero_overlay_opacity : 0.55,
