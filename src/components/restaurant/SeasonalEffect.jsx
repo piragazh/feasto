@@ -40,17 +40,17 @@ function drawBat(ctx, s, lift) {
     const cx = s / 2;
     const cy = s / 2;
     const span = s * 0.46;
-    const tipY = cy - lift * s * 0.2;
+    const tipY = cy - lift * s * 0.22;
     ctx.beginPath();
     ctx.moveTo(cx, cy - s * 0.04);
     ctx.quadraticCurveTo(cx - span * 0.5, tipY - s * 0.08, cx - span, tipY);
     // scalloped trailing edge
-    ctx.quadraticCurveTo(cx - span * 0.8, tipY + s * 0.06, cx - span * 0.66, tipY + s * 0.1);
-    ctx.quadraticCurveTo(cx - span * 0.5, tipY + s * 0.06, cx - span * 0.36, tipY + s * 0.13);
-    ctx.quadraticCurveTo(cx - span * 0.2, cy + s * 0.06, cx, cy + s * 0.12);
-    ctx.quadraticCurveTo(cx + span * 0.2, cy + s * 0.06, cx + span * 0.36, tipY + s * 0.13);
-    ctx.quadraticCurveTo(cx + span * 0.5, tipY + s * 0.06, cx + span * 0.66, tipY + s * 0.1);
-    ctx.quadraticCurveTo(cx + span * 0.8, tipY + s * 0.06, cx + span, tipY);
+    ctx.quadraticCurveTo(cx - span * 0.8, tipY + s * 0.1, cx - span * 0.66, tipY + s * 0.16);
+    ctx.quadraticCurveTo(cx - span * 0.5, tipY + s * 0.1, cx - span * 0.34, tipY + s * 0.2);
+    ctx.quadraticCurveTo(cx - span * 0.18, cy + s * 0.1, cx, cy + s * 0.15);
+    ctx.quadraticCurveTo(cx + span * 0.18, cy + s * 0.1, cx + span * 0.34, tipY + s * 0.2);
+    ctx.quadraticCurveTo(cx + span * 0.5, tipY + s * 0.1, cx + span * 0.66, tipY + s * 0.16);
+    ctx.quadraticCurveTo(cx + span * 0.8, tipY + s * 0.1, cx + span, tipY);
     ctx.quadraticCurveTo(cx + span * 0.5, tipY - s * 0.08, cx, cy - s * 0.04);
     ctx.closePath();
     // head with ears
@@ -62,9 +62,13 @@ function drawBat(ctx, s, lift) {
     ctx.lineTo(cx + s * 0.05, cy - s * 0.02);
     ctx.closePath();
     ctx.fillStyle = '#1c1426';
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-    ctx.lineWidth = Math.max(1, s * 0.018);
     ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(255, 228, 196, 0.75)';
+    ctx.shadowBlur = s * 0.09;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = Math.max(1, s * 0.02);
     ctx.stroke();
     ctx.fill();
 }
@@ -77,9 +81,9 @@ function makeSprites(type) {
         return [sprite(32, (ctx, s) => {
             const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
             g.addColorStop(0, 'rgba(255,255,255,1)');
-            g.addColorStop(0.55, 'rgba(255,255,255,0.95)');
-            g.addColorStop(0.75, 'rgba(148,163,184,0.55)'); // soft grey rim: visible on white pages
-            g.addColorStop(1, 'rgba(148,163,184,0)');
+            g.addColorStop(0.35, 'rgba(241,245,249,0.98)');
+            g.addColorStop(0.62, 'rgba(186,200,218,0.9)'); // pale blue-grey body: visible on white pages
+            g.addColorStop(1, 'rgba(186,200,218,0)');
             ctx.fillStyle = g;
             ctx.fillRect(0, 0, s, s);
         })];
@@ -131,14 +135,14 @@ function makeSprites(type) {
 function spawn(type, w, h, initial) {
     switch (type) {
         case 'bats': {
-            const size = rand(22, 44);
+            const size = rand(28, 52);
             const fromLeft = Math.random() < 0.5;
             return {
                 x: initial ? rand(0, w) : (fromLeft ? -size : w + size),
                 y: rand(h * 0.05, h * 0.55),
                 size,
                 heading: fromLeft ? rand(-0.4, 0.4) : Math.PI + rand(-0.4, 0.4),
-                speed: rand(55, 105) * (size / 34),
+                speed: rand(55, 105) * (size / 40),
                 phase: Math.random(),
                 flap: rand(2.6, 4.2), // wing beats per second
                 wobble: rand(0, Math.PI * 2),
@@ -268,7 +272,7 @@ export default function SeasonalEffect({ type, intensity = 'light', preview = fa
             // fewer particles on small screens and in the small preview
             const [light, medium] = COUNTS[type];
             const base = intensity === 'medium' ? medium : light;
-            const scale = preview ? 0.45 : Math.min(1, Math.max(0.55, w / 1100));
+            const scale = preview ? 0.45 : Math.min(1, Math.max(0.8, w / 1100));
             const target = Math.max(4, Math.round(base * scale));
             while (particles.length < target) particles.push(spawn(type, w, h, true));
             particles.length = target;
