@@ -23,43 +23,48 @@ import { addSkipLink } from '@/lib/a11y-utils';
 import { initializeLiveRegions } from '@/lib/aria-utils.jsx';
 import { getApiUrl } from '@/lib/api-origin';
 
-// Google Tag Manager initialization
-const initializeGTM = () => {
-    const gtmId = import.meta.env.VITE_GTM_ID || 'GTM-PJ3JPPSN';
-    
-    // Store for later use
-    window.__gtmId = gtmId;
-    
-    // Initialize dataLayer
+// Google tag bootstrap: Google Ads conversion tracking (AW-18537041821), kept at module
+// scope so window.gtag exists before any child effect fires a conversion (e.g. the return
+// from Stripe checkout). window.__gads_loaded prevents double-init on hot-reload.
+if (typeof document !== 'undefined' && !window.__gads_loaded) {
+    window.__gads_loaded = true;
     window.dataLayer = window.dataLayer || [];
-    
-    // Define gtag function PK
-    window.gtag = function() { 
-        window.dataLayer.push(arguments); 
+    const inIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
+    window.gtag = function gtag() {
+        window.dataLayer.push(arguments);
+        if (inIframe) {
+            try {
+                const args = Array.prototype.slice.call(arguments);
+                const cmd = args[0];
+                window.parent.postMessage({
+                    type: 'base44_gtag_event',
+                    event: {
+                        source: 'gtag',
+                        timestamp: new Date().toLocaleTimeString(),
+                        command: cmd,
+                        params: args.slice(1),
+                        type: cmd === 'event' ? (args[1] || 'event') : cmd,
+                    },
+                }, '*');
+            } catch (_e) { /* relay must not break gtag */ }
+        }
     };
-    
-    // Set defaults
+    const s = document.createElement('script');
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=AW-18537041821';
+    s.async = true;
+    document.head.appendChild(s);
     window.gtag('js', new Date());
-    
-    // Configure GTM with privacy settings
-    window.gtag('config', gtmId, { 
+    window.gtag('config', 'AW-18537041821', { send_page_view: false });
+    // Keep the existing Google Tag Manager container alive (page views are sent by the
+    // route-change effect below, which reads window.__gtmId)
+    const gtmId = import.meta.env.VITE_GTM_ID || 'GTM-PJ3JPPSN';
+    window.__gtmId = gtmId;
+    window.gtag('config', gtmId, {
         'anonymize_ip': true,
         'allow_google_signals': false,
-        'send_page_view': true
+        'send_page_view': false,
     });
-    
-    // Load GTM script
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${gtmId}`;
-    script.onload = () => {
-        if (import.meta.env.DEV) console.log('GTM script loaded successfully');
-    };
-    script.onerror = () => {
-        if (import.meta.env.DEV) console.error('Failed to load GTM script');
-    };
-    document.head.insertBefore(script, document.head.firstChild);
-};
+}
 
 class LayoutErrorBoundary extends React.Component {
   constructor(props) {
