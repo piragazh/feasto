@@ -1045,8 +1045,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             /* Text sitting directly on the page background */
             .restaurant-page .brand-page-text,
             .restaurant-page h2.text-gray-900 { color: ${t.pageText} !important; }
-            .restaurant-page .brand-page-muted { color: ${t.pageMuted} !important; }
             ${t.on ? `
+            .restaurant-page .brand-page-muted { color: ${t.pageMuted} !important; }
             .restaurant-page .hero-overlay-custom {
                 background: linear-gradient(to top, rgba(0,0,0,${t.heroOpacity}), rgba(0,0,0,${t.heroOpacity * 0.4}), rgba(0,0,0,0.1)) !important;
             }
