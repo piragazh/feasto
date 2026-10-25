@@ -111,6 +111,7 @@ const ALLOWED_FIELDS = new Set([
 // Every value here ends up inside a <style> block on the public storefront, so
 // nothing is stored unless it matches a strict format.
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const BRANDING_HISTORY_LIMIT = 5;
 const BRANDING_COLOR_FIELDS = [
     'primary_color',
     'secondary_color',
@@ -343,6 +344,20 @@ Deno.serve(async (req) => {
             // The brand colour is always live; the enabled switch only covers extra styling.
             if (typeof value!.primary_color === 'string') {
                 safeUpdates.theme_primary_color = value!.primary_color;
+            }
+            // Keep the previous brand settings so they can be restored (newest first, last 5).
+            // No user names or emails: restaurant records are publicly readable.
+            const previous = current.branding_config;
+            if (previous && typeof previous === 'object' && JSON.stringify(previous) !== JSON.stringify(value)) {
+                const history = Array.isArray(current.branding_history) ? current.branding_history : [];
+                safeUpdates.branding_history = [
+                    {
+                        saved_at: current.updated_date || new Date().toISOString(),
+                        theme_primary_color: current.theme_primary_color || null,
+                        config: previous,
+                    },
+                    ...history,
+                ].slice(0, BRANDING_HISTORY_LIMIT);
             }
         }
 
