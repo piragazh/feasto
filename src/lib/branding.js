@@ -52,8 +52,36 @@ export function sanitizeBranding(bc) {
         out.hero_overlay_opacity = Math.min(1, Math.max(0, opacity));
     }
     if (isAllowedHeroUrl(bc.hero_image_url)) out.hero_image_url = bc.hero_image_url;
+    const focus = Number(bc.hero_focus_y);
+    if (bc.hero_focus_y != null && Number.isFinite(focus)) {
+        out.hero_focus_y = Math.min(100, Math.max(0, Math.round(focus)));
+    }
     return out;
 }
+
+// ── Fonts ───────────────────────────────────────────────────────────────────────────
+
+const GOOGLE_FONTS = {
+    modern: 'Inter:wght@400;600;700;800',
+    classic: 'Playfair+Display:wght@400;700;800&family=Lora:wght@400;600',
+    playful: 'Nunito:wght@400;600;700;800',
+    elegant: 'Cormorant+Garamond:wght@400;600;700&family=Raleway:wght@400;500;600',
+};
+
+/** Load a font style's Google Fonts stylesheet once per page. */
+export function ensureBrandFont(style) {
+    const query = GOOGLE_FONTS[style];
+    if (!query || typeof document === 'undefined') return;
+    const id = `brand-font-${style}`;
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${query}&display=swap`;
+    document.head.appendChild(link);
+}
+
+export const DEFAULT_HERO_FOCUS_Y = 30;
 
 // ── Contrast ─────────────────────────────────────────────────────────────────────────
 
@@ -226,6 +254,8 @@ export function brandTokens(restaurant) {
         fontFamily: on && bc.font_style ? FONT_FAMILY[bc.font_style] : 'inherit',
         heroOpacity: on && bc.hero_overlay_opacity != null ? bc.hero_overlay_opacity : 0.55,
         heroImage: on ? bc.hero_image_url || null : null,
+        heroFocusY: on && bc.hero_focus_y != null ? bc.hero_focus_y : DEFAULT_HERO_FOCUS_Y,
+        fontStyle: on ? bc.font_style || null : null,
     };
 }
 
