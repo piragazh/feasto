@@ -389,3 +389,22 @@
 [data-pos-v2] .hover\:bg-yellow-700:hover { background-color: #854d0e; }
 [data-pos-v2] .hover\:bg-green-700:hover, [data-pos-v2] .hover\:bg-green-500:hover { background-color: #166534; }
 [data-pos-v2] .hover\:bg-emerald-700:hover { background-color: #065f46; }
+
+/* ── Brand colours on customer pages ─────────────────────────────────────────
+ * Active while useBrandAccent (src/lib/useBrandAccent.js) has set the
+ * restaurant's brand on <html>: Checkout, TrackOrder, TableOrder, Kiosk and the
+ * storefront (including its cart drawer). The orange/accent scale itself
+ * follows --pos-accent-*; these rules keep text on it readable. */
+html.brand-accent .bg-orange-500.text-white,
+html.brand-accent .bg-orange-600.text-white,
+html.brand-accent .bg-orange-500 .text-white,
+html.brand-accent .bg-orange-600 .text-white,
+html.brand-accent .bg-accent-500.text-white,
+html.brand-accent .bg-accent-600.text-white,
+html.brand-accent .bg-accent-500 .text-white { color: var(--brand-on-primary) !important; }
+html.brand-accent .text-orange-500,
+html.brand-accent .text-orange-600,
+html.brand-accent .text-orange-700,
+html.brand-accent .hover\:text-orange-600:hover,
+html.brand-accent .hover\:text-orange-700:hover { color: var(--brand-accent-text) !important; }
+html.brand-font body { font-family: var(--brand-font); }
