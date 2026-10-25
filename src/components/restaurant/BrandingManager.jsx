@@ -12,7 +12,9 @@ import { toast } from 'sonner';
 import DesignTemplates from './DesignTemplates';
 import {
     isValidHex, invalidColorFields, readableTextOn, buttonTextOn, completePalette, contrastIssues,
+    ensureBrandFont, DEFAULT_HERO_FOCUS_Y,
 } from '@/lib/branding';
+import { prepareImage, ImageRejectedError, formatBytes } from '@/lib/prepareImage';
 
 // ─── Hero image uploader sub-component ───────────────────────────────────────
 function HeroImageUploader({ onUploaded }) {
@@ -22,11 +24,19 @@ function HeroImageUploader({ onUploaded }) {
         if (!file) return;
         setUploading(true);
         try {
-            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            // Resize to at most 1920px wide and compress before uploading.
+            const prepared = await prepareImage(file);
+            const { file_url } = await base44.integrations.Core.UploadFile({ file: prepared.file });
             onUploaded(file_url);
-            toast.success('Hero image uploaded!');
+            const saved = prepared.originalBytes - prepared.file.size;
+            toast.success(saved > 100 * 1024
+                ? `Hero image uploaded — optimised from ${formatBytes(prepared.originalBytes)} to ${formatBytes(prepared.file.size)}`
+                : 'Hero image uploaded');
+            if (prepared.warning) toast.warning(prepared.warning, { duration: 8000 });
         } catch (err) {
-            toast.error('Upload failed: ' + (err?.message || 'unknown error'));
+            toast.error(err instanceof ImageRejectedError
+                ? err.message
+                : 'Upload failed: ' + (err?.message || 'unknown error'));
         } finally {
             setUploading(false);
             e.target.value = '';
@@ -35,7 +45,7 @@ function HeroImageUploader({ onUploaded }) {
     return (
         <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg border-2 border-dashed cursor-pointer transition-colors text-sm font-medium ${uploading ? 'border-gray-200 text-gray-400 bg-gray-50' : 'border-purple-300 text-purple-600 bg-purple-50 hover:bg-purple-100'}`}>
             {uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</> : <><Upload className="h-4 w-4" /> Upload Hero Image</>}
-            <input type="file" accept="image/*" className="sr-only" onChange={handleFile} disabled={uploading} />
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif" className="sr-only" onChange={handleFile} disabled={uploading} />
         </label>
     );
 }
@@ -104,11 +114,30 @@ const DEFAULT_CONFIG = {
     heading_color: '#111827',
     font_style: 'modern',
     hero_overlay_opacity: 0.55,
+    hero_focus_y: DEFAULT_HERO_FOCUS_Y,
     hero_image_url: '',
     card_background: '#ffffff',
     nav_background: '#ffffff',
     ai_palette_name: ''
 };
+
+const draftKey = (restaurantId) => `brand-studio-draft:${restaurantId}`;
+function readDraft(restaurantId) {
+    try {
+        const raw = sessionStorage.getItem(draftKey(restaurantId));
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+function writeDraft(restaurantId, config) {
+    try {
+        if (config) sessionStorage.setItem(draftKey(restaurantId), JSON.stringify(config));
+        else sessionStorage.removeItem(draftKey(restaurantId));
+    } catch {
+        /* storage unavailable (private mode): drafts just aren't kept */
+    }
+}
 
 // Editor state from the stored record. theme_primary_color is the restaurant's brand
 // colour (always live), so it is the source for primary_color.
@@ -137,6 +166,7 @@ function offStateConfig(config) {
         button_style: 'rounded',
         font_style: 'modern',
         hero_overlay_opacity: 0.55,
+        hero_focus_y: DEFAULT_HERO_FOCUS_Y,
         hero_image_url: '',
     };
 }
@@ -148,6 +178,10 @@ export default function BrandingManager({ restaurantId }) {
     const isDirty = baseline !== null && JSON.stringify(config) !== JSON.stringify(baseline);
     const dirtyRef = useRef(false);
     dirtyRef.current = isDirty;
+    // Unsaved edits are kept as a draft for this browser tab, so switching dashboard
+    // tabs doesn't lose them. restoredDraft shows the "restored" notice.
+    const [restoredDraft, setRestoredDraft] = useState(false);
+    const draftCheckedRef = useRef(false);
     const [analyzingBrand, setAnalyzingBrand] = useState(false);
     // Short pause between AI runs, so repeated clicks don't spend credits.
     const [aiCooling, setAiCooling] = useState(false);
@@ -167,9 +201,48 @@ export default function BrandingManager({ restaurantId }) {
     useEffect(() => {
         if (!restaurant || dirtyRef.current) return;
         const seeded = seedConfig(restaurant);
-        setConfig(seeded);
         setBaseline(seeded);
+        if (!draftCheckedRef.current) {
+            draftCheckedRef.current = true;
+            const draft = readDraft(restaurantId);
+            if (draft && JSON.stringify({ ...seeded, ...draft }) !== JSON.stringify(seeded)) {
+                setConfig({ ...seeded, ...draft });
+                setRestoredDraft(true);
+                return;
+            }
+        }
+        setConfig(seeded);
     }, [restaurant]);
+
+    // Keep the draft in step with unsaved edits; clear it once everything is saved.
+    useEffect(() => {
+        if (!restaurantId || baseline === null) return;
+        writeDraft(restaurantId, isDirty ? config : null);
+        if (!isDirty) setRestoredDraft(false);
+    }, [config, isDirty, baseline, restaurantId]);
+
+    // Warn before closing or reloading the page with unsaved edits.
+    useEffect(() => {
+        if (!isDirty) return;
+        const onBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [isDirty]);
+
+    // Load every font style so the font cards and preview show the real typefaces.
+    useEffect(() => {
+        ['modern', 'classic', 'playful', 'elegant'].forEach(ensureBrandFont);
+    }, []);
+
+    const discardDraft = () => {
+        if (baseline) setConfig(baseline);
+        writeDraft(restaurantId, null);
+        setRestoredDraft(false);
+        toast.info('Unsaved changes discarded');
+    };
 
     const saveMutation = useMutation({
         // Saved through the server so the request is permission-checked, validated and audited.
@@ -343,6 +416,14 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                             </div>
                         </div>
                     </div>
+                    {restoredDraft && (
+                        <div className="mt-3 flex items-center justify-between gap-3 text-xs bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-blue-800" role="status">
+                            <span>We restored changes you hadn't saved yet. Save them, or discard to go back to your live settings.</span>
+                            <Button type="button" size="sm" variant="outline" className="h-7 flex-shrink-0" onClick={discardDraft}>
+                                Discard
+                            </Button>
+                        </div>
+                    )}
                     {!config.enabled && (
                         <div className="mt-3 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-800">
                             Custom styling is <strong>off</strong> — your storefront uses the standard MealDrop look in your brand colour. Switch it on and save to apply everything else.
@@ -567,6 +648,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                     />
                                     <button
                                         type="button"
+                                        aria-label="Remove hero image"
                                         onClick={() => setConfig(prev => ({ ...prev, hero_image_url: '' }))}
                                         className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600"
                                     >✕</button>
@@ -579,6 +661,31 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                             <HeroImageUploader
                                 onUploaded={(url) => setConfig(prev => ({ ...prev, hero_image_url: url }))}
                             />
+                            <p className="text-xs text-gray-400">
+                                Large photos are resized to 1920px wide and compressed automatically. A landscape photo at least 1200px wide looks best.
+                            </p>
+                            {(config.hero_image_url || restaurant.image_url) && (
+                                <div>
+                                    <Label htmlFor="hero-focus" className="text-sm">
+                                        Image position: {config.hero_focus_y <= 20 ? 'top' : config.hero_focus_y >= 80 ? 'bottom' : 'middle'} ({config.hero_focus_y ?? DEFAULT_HERO_FOCUS_Y}%)
+                                    </Label>
+                                    <p className="text-xs text-gray-400 mb-2">Choose which part of the photo shows in the banner — check the preview.</p>
+                                    <input
+                                        id="hero-focus"
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        step="5"
+                                        value={config.hero_focus_y ?? DEFAULT_HERO_FOCUS_Y}
+                                        onChange={(e) => setConfig(prev => ({ ...prev, hero_focus_y: parseInt(e.target.value, 10) }))}
+                                        className="w-full h-2 accent-purple-500 cursor-pointer"
+                                    />
+                                    <div className="flex justify-between text-xs text-gray-400 mt-1" aria-hidden="true">
+                                        <span>Top</span>
+                                        <span>Bottom</span>
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
