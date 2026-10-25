@@ -14,8 +14,10 @@
  * Fields NOT on the allowlist are silently stripped and logged.
  * branding_config is validated field by field (see sanitizeBrandingConfig); any invalid
  * value rejects the whole request, because these values are written into the public
- * storefront's CSS. When branding is enabled, theme_primary_color is kept in step with
- * branding_config.primary_color; when it is off, theme_primary_color is left alone.
+ * storefront's CSS. branding_config.primary_color is the restaurant's brand colour and is
+ * always copied to theme_primary_color, which the storefront (when custom styling is off),
+ * media screens, menu icons and the app manifest use. branding_config.enabled only
+ * switches the extra styling: fonts, backgrounds, buttons, hero image.
  * commission_rate is admin-only and requires a note.
  */
 
@@ -328,9 +330,8 @@ Deno.serve(async (req) => {
                 }, { status: 400 });
             }
             safeUpdates.branding_config = value;
-            // Keep the legacy theme colour in step only while branding is live,
-            // so switching branding off really leaves the platform defaults.
-            if (value!.enabled === true && typeof value!.primary_color === 'string') {
+            // The brand colour is always live; the enabled switch only covers extra styling.
+            if (typeof value!.primary_color === 'string') {
                 safeUpdates.theme_primary_color = value!.primary_color;
             }
         }
