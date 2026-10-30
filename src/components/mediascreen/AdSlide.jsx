@@ -108,13 +108,17 @@ export default function AdSlide({ item, menuItems, now = new Date(), onError, ac
 
     return (
         <div ref={boxRef} className="relative w-full h-full overflow-hidden bg-black" data-ad-slide={item.id}>
-            <img
-                src={item.media_url}
-                alt=""
-                onError={onError}
-                className="absolute inset-0 w-full h-full object-cover"
-                style={ov.motion === 'zoom' && active ? { animation: `mdAdZoom ${Math.max(6, Number(item.duration) || 10)}s ease-out both`, transformOrigin: 'center' } : undefined}
-            />
+            {item.media_url ? (
+                <img
+                    src={item.media_url}
+                    alt=""
+                    onError={onError}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={ov.motion === 'zoom' && active ? { animation: `mdAdZoom ${Math.max(6, Number(item.duration) || 10)}s ease-out both`, transformOrigin: 'center' } : undefined}
+                />
+            ) : (
+                <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 75% 35%, ${accent}66, #0b0b0f 70%)` }} />
+            )}
 
             {ov.logo_url && (
                 <img src={ov.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }}
