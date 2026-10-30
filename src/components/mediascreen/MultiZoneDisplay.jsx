@@ -4,10 +4,11 @@ import { base44 } from '@/api/base44Client';
 import WidgetRenderer from './WidgetRenderer';
 import { filterActiveContent } from './scheduleUtils';
 import { useScreenManifest } from './ScreenManifestContext';
+import AdSlide, { isAdPlayable, adNeedsMenu } from './AdSlide';
 
 const EMPTY = [];
 
-function ZoneRenderer({ zone, restaurant, content, widgetConfigs, restaurantId }) {
+function ZoneRenderer({ zone, restaurant, content, widgetConfigs, restaurantId, menuItems, now }) {
     const [carouselIndex, setCarouselIndex] = useState(0);
     const [videoLoopCount, setVideoLoopCount] = useState(0);
 
@@ -85,6 +86,8 @@ function ZoneRenderer({ zone, restaurant, content, widgetConfigs, restaurantId }
                     <div className="relative w-full h-full">
                         {item.media_type === 'video' ? (
                             <video key={`${item.id}-${carouselIndex}`} src={item.media_url} autoPlay muted playsInline loop={content.length === 1} onEnded={() => handleVideoEnd(item)} onError={skipToNext} className="w-full h-full object-cover" />
+                        ) : item.ad_overlay ? (
+                            <AdSlide key={`${item.id}-${carouselIndex}`} item={item} menuItems={menuItems} now={now} onError={skipToNext} />
                         ) : (
                             <img src={item.media_url} alt={item.title} onError={skipToNext} className="w-full h-full object-cover" />
                         )}
