@@ -155,7 +155,8 @@ async function buildManifest(sr, screen, { includeWall = true } = {}) {
     const needsMenu =
         content.some(c => c.media_type === 'widget' && (c.widget_type === 'menu_widget' || menuWidgetIds.has(c.widget_config_id))) ||
         zonesOf(screen.layout_template).some(z => (z.type || z.content_type) === 'menu') ||
-        content.some(c => zonesOf(c.layout_template).some(z => (z.type || z.content_type) === 'menu'));
+        content.some(c => zonesOf(c.layout_template).some(z => (z.type || z.content_type) === 'menu')) ||
+        content.some(c => Array.isArray(c.ad_overlay?.item_ids) && c.ad_overlay.item_ids.length > 0);   // AI ads with live prices
     let menuItems;
     if (needsMenu) {
         const items = await sr.entities.MenuItem.filter({ restaurant_id: screen.restaurant_id });

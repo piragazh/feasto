@@ -160,6 +160,70 @@
     "zone_id": {
       "type": "string",
       "description": "Layout zone this item plays in (e.g. 'left'). Empty = any media zone that has no items of its own."
+    },
+    "ad_overlay": {
+      "type": "object",
+      "description": "AI ad text layer drawn live on top of the image by the player: exact wording, live till prices for the linked menu items, promo code. The ad hides itself when the hero item is sold out or the code has expired.",
+      "properties": {
+        "headline": {
+          "type": "string"
+        },
+        "hook": {
+          "type": "string"
+        },
+        "cta": {
+          "type": "string"
+        },
+        "item_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Linked menu items; the first is the hero"
+        },
+        "show_prices": {
+          "type": "boolean"
+        },
+        "promo_text": {
+          "type": "string"
+        },
+        "promo_code": {
+          "type": "string"
+        },
+        "coupon_id": {
+          "type": "string"
+        },
+        "promo_expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "accent": {
+          "type": "string"
+        },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "left",
+            "right",
+            "bottom",
+            "center"
+          ]
+        },
+        "motion": {
+          "type": "string",
+          "enum": [
+            "none",
+            "zoom"
+          ]
+        },
+        "logo_url": {
+          "type": "string"
+        },
+        "ad_type": {
+          "type": "string"
+        }
+      }
     }
   },
   "required": [
