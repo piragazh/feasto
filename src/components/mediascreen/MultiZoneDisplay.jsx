@@ -205,7 +205,23 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
         return () => clearInterval(t);
     }, []);
 
-    const scheduled = useMemo(() => filterActiveContent(rawContent), [rawContent, scheduleTick]);
+    // Menu for AI ad slides (live prices, sold-out hiding)
+    const needsMenu = useMemo(() => (rawContent || []).some(adNeedsMenu), [rawContent]);
+    const { data: queriedMenu } = useQuery({
+        queryKey: ['screen-ad-menu', restaurantId],
+        queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurantId }),
+        enabled: !!restaurantId && needsMenu && !paired,
+        staleTime: 60000,
+        refetchInterval: 60000,
+    });
+    const menuItems = paired ? manifest.menu_items : queriedMenu;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const adNow = useMemo(() => new Date(), [scheduleTick, menuItems]);
+
+    const scheduled = useMemo(
+        () => filterActiveContent(rawContent).filter(c => isAdPlayable(c, menuItems, adNow)),
+        [rawContent, scheduleTick, menuItems, adNow]
+    );
     const sig = scheduled.map(c => `${c.id}:${c.updated_date || ''}`).join('|');
     const allContent = useMemo(() => scheduled, [sig]);
 
@@ -255,6 +271,8 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
                     content={contentByZone.map.get(zone.id) || contentByZone.unassigned}
                     widgetConfigs={widgetConfigs}
                     restaurantId={restaurantId}
+                    menuItems={menuItems}
+                    now={adNow}
                 />
             ))}
         </div>
