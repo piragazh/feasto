@@ -9,6 +9,7 @@ import { useMediaPrecache } from '@/hooks/useMediaPrecache';
 import { filterActiveContent, filterActivePlaylists, clearScreenCache } from './scheduleUtils';
 import { useScreenManifest } from './ScreenManifestContext';
 import TakeoverScreen, { isTakeoverActive } from './TakeoverScreen';
+import AdSlide, { isAdPlayable, adNeedsMenu } from './AdSlide';
 
 // --- localStorage cache helpers ---
 // The cache stores RAW records; schedules are applied at display time so an
@@ -263,10 +264,33 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
     const rawContent = paired ? (manifest.content || EMPTY) : queriedContent;
     const contentLoading = paired ? false : queriedContentLoading;
 
+    // Menu items for AI ad slides (live prices, sold-out hiding). Paired screens
+    // get them in the manifest; legacy screens fetch only when an ad needs them.
+    const needsMenu = useMemo(() => (rawContent || []).some(adNeedsMenu), [rawContent]);
+    const { data: queriedMenu } = useQuery({
+        queryKey: ['screen-ad-menu', restaurantId],
+        queryFn: async () => {
+            const data = await base44.entities.MenuItem.filter({ restaurant_id: restaurantId });
+            writeCache(`menu_${restaurantId}`, data);
+            return data;
+        },
+        enabled: !!restaurantId && needsMenu && !paired && isOnline,
+        staleTime: 60 * 1000,
+        refetchInterval: isOnline ? 60 * 1000 : false,
+        initialData: () => readCache(`menu_${restaurantId}`).data,
+        initialDataUpdatedAt: () => readCache(`menu_${restaurantId}`).ts,
+        retry: 1,
+    });
+    const menuItems = paired ? manifest.menu_items : queriedMenu;
+    // Re-evaluated with the 30s schedule tick (prices, deals, sold-out)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const adNow = useMemo(() => new Date(), [scheduleTick, menuItems]);
+
     // Schedule-filtered, stably sorted content with failed media skipped
+    // (AI ads whose hero dish is sold out or whose code expired are skipped too)
     const scheduledContent = useStableList(useMemo(
-        () => filterActiveContent(rawContent),
-        [rawContent, scheduleTick]
+        () => filterActiveContent(rawContent).filter(c => isAdPlayable(c, menuItems, adNow)),
+        [rawContent, scheduleTick, menuItems, adNow]
     ));
     const content = useStableList(useMemo(
         () => scheduledContent.filter((c) => !failedIds.has(c.id)),
@@ -836,6 +860,14 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                                     onEnded={() => isActive && handleVideoEnd(item)}
                                     onError={() => handleMediaError(item)}
                                     className="w-full h-full object-cover"
+                                />
+                            ) : item.ad_overlay ? (
+                                <AdSlide
+                                    item={item}
+                                    menuItems={menuItems}
+                                    now={adNow}
+                                    active={isActive}
+                                    onError={() => handleMediaError(item)}
                                 />
                             ) : (
                                 <img
