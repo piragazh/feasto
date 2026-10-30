@@ -112,26 +112,17 @@ export default function MediaScreenManagement() {
                 return (
                     <div className="p-6">
                         <div className="mb-6">
-                            <h1 className="text-2xl font-bold text-gray-900">AI Content Generator</h1>
-                            <p className="text-gray-500 text-sm mt-1">Generate promotional images using AI</p>
+                            <h1 className="text-2xl font-bold text-gray-900">AI Ad Creator</h1>
+                            <p className="text-gray-500 text-sm mt-1">Turn your real dishes and offers into screen ads — prices stay in sync with the till</p>
                         </div>
                         <AIContentGenerator
                             onClose={() => setActiveSection('library')}
-                            onContentGenerated={(content) => {
-                                base44.entities.PromotionalContent.create({
-                                    restaurant_id: restaurant.id,
-                                    ...content,
-                                    screen_name: '',
-                                    transition: 'fade',
-                                    display_order: 0,
-                                    is_active: true
-                                });
-                                setActiveSection('library');
-                            }}
+                            onNavigate={setActiveSection}
                             restaurantName={restaurant.name}
                             restaurantId={restaurant.id}
                             restaurantColor={restaurant.theme_primary_color || '#f97316'}
                             websiteUrl={restaurant.custom_domain || ''}
+                            logoUrl={restaurant.logo_url || ''}
                         />
                     </div>
                 );
