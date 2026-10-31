@@ -16,7 +16,7 @@ import CanvasEditor from './CanvasEditor';
 import AdSlide, { livePrice } from './AdSlide';
 import {
     AD_TYPES, STYLES, buildImagePrompt, referencePhotos, buildCopyPrompt, COPY_SCHEMA, cleanCopy,
-    advertisableCoupons, couponExpiry, describeCoupon, adEligibleItems, pickCategoryItems, buildContentRecord,
+    advertisableCoupons, isPlatformCoupon, couponExpiry, describeCoupon, adEligibleItems, pickCategoryItems, buildContentRecord,
 } from './aiAdLogic';
 
 /**
@@ -109,7 +109,15 @@ export default function AIContentGenerator({
     });
     const { data: coupons = [] } = useQuery({
         queryKey: ['coupons-ai', restaurantId],
-        queryFn: () => base44.entities.Coupon.filter({ restaurant_id: restaurantId }),
+        // This restaurant's own coupons plus MealDrop-wide ones (no restaurant set).
+        queryFn: async () => {
+            const [own, platform] = await Promise.all([
+                base44.entities.Coupon.filter({ restaurant_id: restaurantId }),
+                base44.entities.Coupon.filter({ restaurant_id: null }).catch(() => []),
+            ]);
+            const seen = new Set();
+            return [...own, ...platform].filter(c => c && !seen.has(c.id) && seen.add(c.id));
+        },
         enabled: !!restaurantId,
     });
     const { data: screens = [] } = useQuery({
@@ -410,7 +418,7 @@ export default function AIContentGenerator({
                                     <option value="">Choose a coupon…</option>
                                     {liveCoupons.map(c => {
                                         const exp = couponExpiry(c);
-                                        return <option key={c.id} value={c.id}>{c.code} — {describeCoupon(c)}{exp ? ` (ends ${exp.toLocaleDateString('en-GB')})` : ''}</option>;
+                                        return <option key={c.id} value={c.id}>{c.code} — {describeCoupon(c)}{exp ? ` (ends ${exp.toLocaleDateString('en-GB')})` : ''}{isPlatformCoupon(c) ? ' · all MealDrop restaurants' : ''}</option>;
                                     })}
                                 </select>
                             )
