@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import moment from 'moment';
 import { toast } from 'sonner';
 import InlinePhotoEditor from './InlinePhotoEditor';
-import VideoEditor from './VideoEditor';
+import { MEDIA_ACCEPT, checkMediaFile } from './mediaInputs';
 
 export default function StudioMediaLibrary({ restaurantId }) {
     const queryClient = useQueryClient();
@@ -19,7 +19,6 @@ export default function StudioMediaLibrary({ restaurantId }) {
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [editingPhoto, setEditingPhoto] = useState(null); // { id, file_url }
-    const [editingVideo, setEditingVideo] = useState(null);
     const [previewFile, setPreviewFile] = useState(null);
     const [addToPlaylistFile, setAddToPlaylistFile] = useState(null); // file to add to a playlist
     const [selectedScreenId, setSelectedScreenId] = useState('');
@@ -80,8 +79,14 @@ export default function StudioMediaLibrary({ restaurantId }) {
     });
 
     const handleUpload = async (e) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
+        const picked = Array.from(e.target.files);
+        if (!picked.length) return;
+        const files = picked.filter(file => {
+            const problem = checkMediaFile(file);
+            if (problem) toast.error(problem, { duration: 8000 });
+            return !problem;
+        });
+        if (!files.length) { e.target.value = ''; return; }
         setUploading(true);
         setUploadProgress(0);
         let done = 0;
@@ -156,7 +161,7 @@ export default function StudioMediaLibrary({ restaurantId }) {
                             </>
                         )}
                     </Button>
-                    <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleUpload} className="hidden" />
+                    <input ref={fileInputRef} type="file" accept={MEDIA_ACCEPT} multiple onChange={handleUpload} className="hidden" />
                 </div>
             </div>
 
@@ -240,15 +245,6 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                                 <Edit className="h-3.5 w-3.5 text-gray-700" />
                                             </button>
                                         )}
-                                        {fileType === 'video' && (
-                                            <button
-                                                onClick={() => setEditingVideo(file.file_url)}
-                                                className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors shadow"
-                                                title="Edit video"
-                                            >
-                                                <Scissors className="h-3.5 w-3.5 text-gray-700" />
-                                            </button>
-                                        )}
                                         <button
                                             onClick={() => deleteFileMutation.mutate(file.id)}
                                             className="w-7 h-7 rounded-full bg-red-500/90 flex items-center justify-center hover:bg-red-600 transition-colors shadow"
@@ -323,11 +319,6 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                                    {fileType === 'image' && (
                                                        <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: file.id, file_url: file.file_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
                                                            <Edit className="h-3.5 w-3.5" />
-                                                       </Button>
-                                                   )}
-                                                   {fileType === 'video' && (
-                                                       <Button size="sm" variant="ghost" onClick={() => setEditingVideo(file.file_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600">
-                                                           <Scissors className="h-3.5 w-3.5" />
                                                        </Button>
                                                    )}
                                                    <Button size="sm" variant="ghost" onClick={() => deleteFileMutation.mutate(file.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
@@ -446,15 +437,6 @@ export default function StudioMediaLibrary({ restaurantId }) {
                     setEditingPhoto(null);
                     queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
                     toast.success('Photo saved');
-                }}
-            />
-            <VideoEditor
-                open={!!editingVideo}
-                videoUrl={editingVideo}
-                onClose={() => setEditingVideo(null)}
-                onSave={() => {
-                    setEditingVideo(null);
-                    toast.success('Video saved');
                 }}
             />
         </div>
