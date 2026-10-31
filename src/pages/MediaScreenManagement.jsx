@@ -316,7 +316,7 @@ export default function MediaScreenManagement() {
 
                 {/* Content */}
                 <main className="flex-1 overflow-y-auto bg-gray-50">
-                    {renderContent()}
+                    <React.Fragment key={restaurant.id}>{renderContent()}</React.Fragment>
                 </main>
             </div>
         </div>
