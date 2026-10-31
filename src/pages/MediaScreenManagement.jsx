@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
     Monitor, ArrowLeft, BarChart3, Play, Image as ImageIcon,
-    Palette, Grid3x3, Zap, Wifi, ChevronRight, Settings, Radio, Menu, X
+    Palette, Grid3x3, Zap, Wifi, ChevronRight, Settings, Radio, Menu
 } from 'lucide-react';
 import StudioOverview from '@/components/mediascreen/StudioOverview';
 import StudioPlaylists from '@/components/mediascreen/StudioPlaylists';
