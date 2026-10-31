@@ -90,6 +90,19 @@ export function filterActivePlaylists(playlists = [], now = new Date()) {
         .sort((a, b) => (Number(b.priority) || 1) - (Number(a.priority) || 1));
 }
 
+/**
+ * Items worth keeping in the offline cache: everything not permanently over.
+ * Items outside today's time window or not started yet are KEPT, so a lunch
+ * promo isn't deleted every evening and re-downloaded every morning (and is
+ * still there if the internet is down at opening).
+ */
+export function notExpired(item, now = new Date()) {
+    if (!item || item.is_active === false) return false;
+    const s = item.schedule;
+    if (s?.enabled && s.end_date && new Date(s.end_date) < now) return false;
+    return true;
+}
+
 /** Only removes this player's own cache keys — never auth tokens or kiosk settings. */
 export function clearScreenCache() {
     try {
