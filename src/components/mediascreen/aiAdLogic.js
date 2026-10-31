@@ -110,9 +110,22 @@ export function advertisableCoupons(coupons = [], restaurantId, now = new Date()
         if (c.valid_from && couponValidFromInstant(c.valid_from) > now) return false;
         if (couponExpiry(c) && couponExpiry(c) <= now) return false;
         if (c.usage_limit && (Number(c.usage_count) || 0) >= Number(c.usage_limit)) return false;
+        // One-off codes made for a single customer (CRM campaigns, win-back offers)
+        // must never go on a public screen: the first person to use it kills the ad,
+        // and the offer was meant for someone else.
+        if (isPersonalCode(c)) return false;
         return true;
     });
 }
+
+/** A code generated for one customer, or one that only works once. */
+export function isPersonalCode(c) {
+    if (Number(c?.usage_limit) === 1) return true;
+    return /^(CRM|WB)-/i.test(String(c?.code || ''));
+}
+
+/** Platform-wide coupons (no restaurant) work at every MealDrop restaurant. */
+export const isPlatformCoupon = (c) => !couponRestaurantScope(c) && !couponOwner(c);
 
 export function couponExpiry(c) {
     if (c?.expires_at) return new Date(c.expires_at);
