@@ -202,15 +202,26 @@ export default function AIContentGenerator({
         setImgBusy(true);
         setFlattened(false);
         setPublished(null);
-        const refs = useRealPhotos ? realPhotos : [];
-        const prompt = buildImagePrompt({ adType, restaurantName, items, styleValue: style, accent, extra, useRealPhotos: refs.length > 0, message });
+        let refs = useRealPhotos ? realPhotos : [];
+        let prompt = buildImagePrompt({ adType, restaurantName, items, styleValue: style, accent, extra, useRealPhotos: refs.length > 0, message });
         const angles = ['', ' Alternative: a closer, more dramatic angle.', ' Alternative: a wider shot with more background atmosphere.'];
+        const run = () => Promise.allSettled(Array.from({ length: count }, (_, i) =>
+            base44.integrations.Core.GenerateImage({
+                prompt: prompt + angles[i % angles.length],
+                ...(refs.length ? { existing_image_urls: refs } : {}),
+            })));
         try {
-            const results = await Promise.allSettled(Array.from({ length: count }, (_, i) =>
-                base44.integrations.Core.GenerateImage({
-                    prompt: prompt + angles[i % angles.length],
-                    ...(refs.length ? { existing_image_urls: refs } : {}),
-                })));
+            let results = await run();
+            // A dish photo the image service can't read (HEIC, private link, deleted
+            // file) fails every request. Retry once from the description alone.
+            if (refs.length && !results.some(r => r.status === 'fulfilled' && r.value?.url)) {
+                refs = [];
+                prompt = buildImagePrompt({ adType, restaurantName, items, styleValue: style, accent, extra, useRealPhotos: false, message });
+                results = await run();
+                if (results.some(r => r.status === 'fulfilled' && r.value?.url)) {
+                    toast.warning("Your dish photo couldn't be used, so this image was created from the description instead.");
+                }
+            }
             const urls = results.filter(r => r.status === 'fulfilled' && r.value?.url).map(r => r.value.url);
             if (!urls.length) {
                 const firstErr = results.find(r => r.status === 'rejected')?.reason;
