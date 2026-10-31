@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import WidgetRenderer from './WidgetRenderer';
+import { toLocalInputValue, fromLocalInputValue } from './mediaInputs';
 
 function MenuCategorySelect({ restaurantId, value, onChange }) {
     const { data: menuItems = [] } = useQuery({
