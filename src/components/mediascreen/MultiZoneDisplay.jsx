@@ -171,7 +171,7 @@ function ZoneRenderer({ zone, restaurant, content, widgetConfigs, restaurantId, 
     );
 }
 
-export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
+export default function MultiZoneDisplay({ restaurantId, screenName, layout, coupons }) {
     const manifest = useScreenManifest();
     const paired = !!manifest;
 
@@ -215,12 +215,13 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
         refetchInterval: 60000,
     });
     const menuItems = paired ? manifest.menu_items : queriedMenu;
+    const adCoupons = paired ? manifest.coupons : coupons;      // promo-code ads stop when the code stops working
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    const adNow = useMemo(() => new Date(), [scheduleTick, menuItems]);
+    const adNow = useMemo(() => new Date(), [scheduleTick, menuItems, adCoupons]);
 
     const scheduled = useMemo(
-        () => filterActiveContent(rawContent).filter(c => isAdPlayable(c, menuItems, adNow)),
-        [rawContent, scheduleTick, menuItems, adNow]
+        () => filterActiveContent(rawContent).filter(c => isAdPlayable(c, menuItems, adNow, adCoupons)),
+        [rawContent, scheduleTick, menuItems, adNow, adCoupons]
     );
     const sig = scheduled.map(c => `${c.id}:${c.updated_date || ''}`).join('|');
     const allContent = useMemo(() => scheduled, [sig]);
@@ -262,7 +263,8 @@ export default function MultiZoneDisplay({ restaurantId, screenName, layout }) {
     }
 
     return (
-        <div className="h-screen w-screen bg-black relative overflow-hidden">
+        // Fills its parent, so the player can rotate it for portrait-mounted screens
+        <div className="h-full w-full bg-black relative overflow-hidden">
             {layout.zones.map((zone) => (
                 <ZoneRenderer
                     key={zone.id}
