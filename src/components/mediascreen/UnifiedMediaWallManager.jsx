@@ -23,6 +23,7 @@ import MediaWallContentTimeline from './MediaWallContentTimeline';
 import LayoutTemplateManager from './LayoutTemplateManager';
 import WidgetConfigurationManager from './WidgetConfigurationManager';
 import WidgetLayoutManager from './WidgetLayoutManager';
+import { MEDIA_ACCEPT, checkMediaFile } from './mediaInputs';
 
 export default function UnifiedMediaWallManager({ restaurantId, wallName, wallConfig }) {
     const queryClient = useQueryClient();

@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trash2, Image, Video, File, Search, Folder, FolderPlus, Tag, Edit, Eye, X, Grid3x3, List, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
+import { MEDIA_ACCEPT, checkMediaFile } from './mediaInputs';
 
 export default function FileManager({ restaurantId, open, onClose, onSelectFile, allowMultiSelect = false }) {
     const [searchQuery, setSearchQuery] = useState('');

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from 'sonner';
 import ContentScheduler from './ContentScheduler';
 import FileManager from './FileManager';
+import { MEDIA_ACCEPT, checkMediaFile } from './mediaInputs';
 
 export default function MediaWallContentManager({ restaurantId, wallName }) {
     const queryClient = useQueryClient();

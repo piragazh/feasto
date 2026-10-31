@@ -11,6 +11,7 @@ import { Plus, Trash2, GripVertical, Save, X, FolderOpen, Upload, Zap, Clock, Cl
 import { toast } from 'sonner';
 import FileManager from './FileManager';
 import TimelineRowPreview from './TimelineRowPreview';
+import { MEDIA_ACCEPT, checkMediaFile } from './mediaInputs';
 
 // ── Template definitions ──────────────────────────────────────────────────────
 const TEMPLATES = [
