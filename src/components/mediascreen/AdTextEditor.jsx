@@ -52,8 +52,17 @@ export default function AdTextEditor({ item, restaurantId, open, onClose, onSave
         try {
             const ad_overlay = { ...ov, ...cleaned, accent, show_prices: form.show_prices };
             const title = cleaned.headline || item.title;
-            await base44.entities.PromotionalContent.update(item.id, { ad_overlay, title });
-            toast.success('Ad updated — screens pick it up within a minute');
+            // The same ad published to several screens is one copy per screen:
+            // update them all so the screens don't disagree.
+            const copies = item.media_url
+                ? (await base44.entities.PromotionalContent.filter({ restaurant_id: restaurantId, media_url: item.media_url }).catch(() => []))
+                    .filter(c => c.ad_overlay)
+                : [];
+            const ids = [...new Set([item.id, ...copies.map(c => c.id)])];
+            await Promise.all(ids.map(id => base44.entities.PromotionalContent.update(id, { ad_overlay, title })));
+            toast.success(ids.length > 1
+                ? `Ad updated on ${ids.length} screens — they pick it up within a minute`
+                : 'Ad updated — screens pick it up within a minute');
             onSaved?.();
             onClose();
         } catch {
