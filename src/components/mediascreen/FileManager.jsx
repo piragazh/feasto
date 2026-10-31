@@ -147,8 +147,12 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile,
     };
 
     const handleMultiUpload = async (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
+        const files = Array.from(e.target.files).filter(file => {
+            const problem = checkMediaFile(file);
+            if (problem) toast.error(problem, { duration: 8000 });
+            return !problem;
+        });
+        if (files.length === 0) { e.target.value = ''; return; }
 
         setUploading(true);
         const uploadedFiles = [];
@@ -214,7 +218,7 @@ export default function FileManager({ restaurantId, open, onClose, onSelectFile,
                             <input
                                 type="file"
                                 multiple
-                                accept="image/*,video/*"
+                                accept={MEDIA_ACCEPT}
                                 onChange={handleMultiUpload}
                                 className="hidden"
                                 id="multi-upload"
