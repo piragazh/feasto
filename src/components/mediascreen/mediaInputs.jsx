@@ -86,6 +86,16 @@ export function CommitNumberInput({ value, onCommit, min = 1, max = 3600, fallba
     );
 }
 
+/** display_order for a new item: one after the highest existing, never a reused number. */
+export function nextDisplayOrder(items = []) {
+    let max = -1;
+    for (const i of items) {
+        const n = Number(i?.display_order);
+        if (Number.isFinite(n) && n > max) max = n;
+    }
+    return Math.max(max + 1, items.length);
+}
+
 // ---------------------------------------------------------------------------
 // <input type="datetime-local"> works in the viewer's own clock. Feeding it
 // toISOString() shows UTC, so in British Summer Time every saved time looked
