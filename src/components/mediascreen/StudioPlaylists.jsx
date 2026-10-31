@@ -21,6 +21,7 @@ import VideoEditor from './VideoEditor';
 import { LAYOUT_TEMPLATES } from './layoutTemplates';
 import { TemplatePreview } from './StudioTemplateGallery';
 import ScreenPairingDialog from './ScreenPairingDialog';
+import LowResBadge from './LowResBadge';
 
 const WIDGET_TYPE_META = {
     weather: { label: 'Weather', icon: Cloud, color: 'text-sky-500' },
@@ -418,6 +419,7 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                             <Badge variant="outline" className="text-[10px] h-5 px-1.5">
                                                                                 {item.transition || 'fade'}
                                                                             </Badge>
+                                                                            <LowResBadge item={item} screen={liveSelectedScreen} />
                                                                             {item.layout_template?.name && (
                                                                                 <Badge className="text-[10px] h-5 px-1.5 bg-orange-100 text-orange-700 border-orange-200 gap-1">
                                                                                     <Layout className="h-2.5 w-2.5" />
