@@ -6,12 +6,15 @@ const SPEED_MAP = { slow: 60, medium: 40, fast: 25 };
 
 export default function StockTickerWidget({ config = {}, className = '' }) {
     const {
-        symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'],
+        symbols: rawSymbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'],
         refresh_interval = 60,
         show_change = true,
         scroll_speed = 'medium',
         theme = 'dark'
     } = config;
+    const symbols = Array.isArray(rawSymbols)
+        ? rawSymbols
+        : String(rawSymbols || '').split(',').map(s => s.trim()).filter(Boolean);
 
     const [quotes, setQuotes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,7 +24,8 @@ export default function StockTickerWidget({ config = {}, className = '' }) {
     const fetchQuotes = async () => {
         try {
             const res = await base44.functions.invoke('getStockData', { symbols });
-            if (res.data?.quotes) {
+            // Only real prices replace what's showing; an outage keeps the last real ones.
+            if (Array.isArray(res.data?.quotes) && res.data.quotes.length) {
                 setQuotes(res.data.quotes);
                 setLastUpdated(new Date());
             }
@@ -58,6 +62,14 @@ export default function StockTickerWidget({ config = {}, className = '' }) {
                     <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                     <span className="text-sm font-mono">Loading market data...</span>
                 </div>
+            </div>
+        );
+    }
+
+    if (!quotes.length) {
+        return (
+            <div className={`${t.bg} ${t.labelText} h-full flex items-center justify-center ${className}`}>
+                <span className="text-sm font-mono">Market data unavailable</span>
             </div>
         );
     }
