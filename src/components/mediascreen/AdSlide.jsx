@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { scheduledPrice } from '@/lib/pos-schedule-logic';
 import { whyNotSellable, sellsAt } from '@/lib/item-availability';
+import { couponValidFromInstant, couponValidUntilInstant } from '@/lib/order-logic';
 
 /**
  * AI ad slide: an AI-generated picture with the words drawn live on top.
@@ -28,15 +29,36 @@ export function livePrice(item, now = new Date()) {
 }
 
 /**
+ * Can this coupon be used right now? Same date rules as checkout (UK days).
+ * Accepts the full Coupon record or the slim copy in a screen manifest
+ * (where `used_up` replaces usage_limit/usage_count).
+ */
+export function couponUsableNow(c, now = new Date()) {
+    if (!c || c.is_active === false) return false;
+    if (c.used_up) return false;
+    if (c.usage_limit && (Number(c.usage_count) || 0) >= Number(c.usage_limit)) return false;
+    if (c.valid_from && couponValidFromInstant(c.valid_from) > now) return false;
+    const end = c.expires_at ? new Date(c.expires_at) : c.valid_until ? couponValidUntilInstant(c.valid_until) : null;
+    if (end && end <= now) return false;
+    return true;
+}
+
+export const adCouponId = (item) => item?.ad_overlay?.coupon_id || '';
+
+/**
  * Should this ad be on screen right now?
  * - hero dish sold out / outside its hours / not sold in store → hide the ad
- * - linked promo code expired → hide the ad
- * Menu not loaded yet (undefined) → don't hide anything.
+ * - linked promo code expired, switched off, used up or deleted → hide the ad
+ * Menu / coupons not loaded yet (undefined) → don't hide anything.
  */
-export function isAdPlayable(item, menuItems, now = new Date()) {
+export function isAdPlayable(item, menuItems, now = new Date(), coupons) {
     const ov = item?.ad_overlay;
     if (!ov) return true;
     if (ov.promo_expires_at && new Date(ov.promo_expires_at).getTime() <= now.getTime()) return false;
+    if (ov.coupon_id && Array.isArray(coupons)) {
+        const c = coupons.find(x => x.id === ov.coupon_id);
+        if (!couponUsableNow(c, now)) return false;
+    }
     const ids = Array.isArray(ov.item_ids) ? ov.item_ids : [];
     if (!ids.length || !Array.isArray(menuItems)) return true;
     const hero = menuItems.find(m => m.id === ids[0]);
