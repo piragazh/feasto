@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import ContentScheduler from './ContentScheduler';
 import InlinePhotoEditor from './InlinePhotoEditor';
-import VideoEditor from './VideoEditor';
+import { CommitNumberInput, MEDIA_ACCEPT, checkMediaFile, mediaTypeForFile } from './mediaInputs';
 import { LAYOUT_TEMPLATES } from './layoutTemplates';
 import { TemplatePreview } from './StudioTemplateGallery';
 import ScreenPairingDialog from './ScreenPairingDialog';
@@ -45,7 +45,6 @@ export default function StudioPlaylists({ restaurantId }) {
     const [showPairing, setShowPairing] = useState(false);
 
     const [editingPhoto, setEditingPhoto] = useState(null); // { id, media_url }
-    const [editingVideo, setEditingVideo] = useState(null);
     const [showWidgetPicker, setShowWidgetPicker] = useState(false);
     const [templatePickerItem, setTemplatePickerItem] = useState(null); // content item to assign template to
 
@@ -464,24 +463,25 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                         <div className="flex items-center gap-1 md:gap-2">
                                                                             {item.media_type !== 'video' ? (
                                                                                 <div className="flex items-center gap-1">
-                                                                                    <Input
-                                                                                        type="number"
+                                                                                    <CommitNumberInput
                                                                                         value={item.duration || 10}
-                                                                                        onChange={(e) => updateContentMutation.mutate({ id: item.id, data: { duration: parseInt(e.target.value) || 10 } })}
-                                                                                        className="w-12 h-7 text-xs text-center p-1"
-                                                                                        min="1"
-                                                                                        onClick={e => e.stopPropagation()}
+                                                                                        onCommit={(v) => updateContentMutation.mutate({ id: item.id, data: { duration: v } })}
+                                                                                        min={1}
+                                                                                        max={3600}
+                                                                                        aria-label="Seconds on screen"
+                                                                                        className="w-14 h-7 text-xs text-center p-1"
                                                                                     />
                                                                                     <span className="text-xs text-gray-400">s</span>
                                                                                 </div>
                                                                             ) : (
                                                                                 <div className="flex items-center gap-1">
-                                                                                    <Input
-                                                                                        type="number"
+                                                                                    <CommitNumberInput
                                                                                         value={item.video_loop_count || 1}
-                                                                                        onChange={(e) => updateContentMutation.mutate({ id: item.id, data: { video_loop_count: parseInt(e.target.value) || 1 } })}
-                                                                                        className="w-12 h-7 text-xs text-center p-1"
-                                                                                        min="1"
+                                                                                        onCommit={(v) => updateContentMutation.mutate({ id: item.id, data: { video_loop_count: v } })}
+                                                                                        min={1}
+                                                                                        max={50}
+                                                                                        aria-label="Times to play"
+                                                                                        className="w-14 h-7 text-xs text-center p-1"
                                                                                     />
                                                                                     <span className="text-xs text-gray-400">×</span>
                                                                                 </div>
@@ -510,11 +510,6 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                             {item.media_type === 'image' && (
                                                                                 <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: item.id, media_url: item.media_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit photo">
                                                                                     <Edit className="h-3.5 w-3.5" />
-                                                                                </Button>
-                                                                            )}
-                                                                            {item.media_type === 'video' && (
-                                                                                <Button size="sm" variant="ghost" onClick={() => setEditingVideo(item.media_url)} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit video">
-                                                                                    <RotateCw className="h-3.5 w-3.5" />
                                                                                 </Button>
                                                                             )}
                                                                             <Button size="sm" variant="ghost" onClick={() => { setSchedulingContent(item); setShowScheduler(true); }} className={`h-8 w-8 p-0 hover:text-violet-600 ${item.schedule?.enabled ? 'text-violet-500' : 'text-gray-400'}`} title="Schedule">
@@ -715,14 +710,6 @@ export default function StudioPlaylists({ restaurantId }) {
                 </DialogContent>
             </Dialog>
 
-            {/* Video editor */}
-            <VideoEditor
-                open={!!editingVideo}
-                videoUrl={editingVideo}
-                onClose={() => setEditingVideo(null)}
-                onSave={() => { setEditingVideo(null); toast.success('Video updated'); }}
-            />
-
             {/* Per-item Template Picker */}
             <Dialog open={!!templatePickerItem} onOpenChange={(open) => { if (!open) setTemplatePickerItem(null); }}>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -791,10 +778,16 @@ function AddMediaForm({ restaurantId, screenName, displayOrder, onSuccess, onCan
     const handleFileUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        const problem = checkMediaFile(file);
+        if (problem) {
+            toast.error(problem, { duration: 8000 });
+            e.target.value = '';
+            return;
+        }
         setUploading(true);
         try {
             const { file_url } = await base44.integrations.Core.UploadFile({ file });
-            const type = file.type.startsWith('video/') ? 'video' : file.type === 'image/gif' ? 'gif' : 'image';
+            const type = mediaTypeForFile(file);
             await base44.entities.MediaFile.create({
                 restaurant_id: restaurantId,
                 file_url,
@@ -853,12 +846,12 @@ function AddMediaForm({ restaurantId, screenName, displayOrder, onSuccess, onCan
                             <>
                                 <ImageIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
                                 <p className="text-sm text-gray-500 font-medium">Click to upload</p>
-                                <p className="text-xs text-gray-400 mt-0.5">Images, videos, GIFs</p>
+                                <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP, GIF or MP4</p>
                             </>
                         )}
                     </div>
                 )}
-                <input type="file" accept="image/*,video/*" onChange={handleFileUpload} className="hidden" />
+                <input type="file" accept={MEDIA_ACCEPT} onChange={handleFileUpload} className="hidden" />
             </label>
             <div>
                 <label className="text-sm font-semibold text-gray-700 block mb-1.5">Title</label>
@@ -867,7 +860,7 @@ function AddMediaForm({ restaurantId, screenName, displayOrder, onSuccess, onCan
             {mediaType !== 'video' && (
                 <div>
                     <label className="text-sm font-semibold text-gray-700 block mb-1.5">Duration (seconds)</label>
-                    <Input type="number" value={duration} onChange={(e) => setDuration(parseInt(e.target.value) || 10)} min="1" max="3600" />
+                    <CommitNumberInput value={duration} onCommit={setDuration} min={1} max={3600} />
                 </div>
             )}
             <div className="flex gap-2 pt-1">
