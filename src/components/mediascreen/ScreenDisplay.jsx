@@ -4,12 +4,13 @@ import { base44 } from '@/api/base44Client';
 import { Cloud, CloudRain, CloudSnow, Sun, Wind } from 'lucide-react';
 import MultiZoneDisplay from './MultiZoneDisplay';
 import SyncedMediaWallDisplay from './SyncedMediaWallDisplay';
+import CustomContentWidget from './CustomContentWidget';
 import WidgetRenderer from './WidgetRenderer';
 import { useMediaPrecache } from '@/hooks/useMediaPrecache';
-import { filterActiveContent, filterActivePlaylists, clearScreenCache } from './scheduleUtils';
+import { filterActiveContent, filterActivePlaylists, clearScreenCache, notExpired } from './scheduleUtils';
 import { useScreenManifest } from './ScreenManifestContext';
 import TakeoverScreen, { isTakeoverActive } from './TakeoverScreen';
-import AdSlide, { isAdPlayable, adNeedsMenu } from './AdSlide';
+import AdSlide, { isAdPlayable, adNeedsMenu, adCouponId } from './AdSlide';
 import { measureDrawing } from './screenResolution';
 
 // --- localStorage cache helpers ---
@@ -283,15 +284,38 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
         retry: 1,
     });
     const menuItems = paired ? manifest.menu_items : queriedMenu;
+
+    // Coupons behind promo-code ads: an ad must stop the moment its code stops
+    // working (switched off, used up, deleted) — not only on its expiry date.
+    const adCouponIds = useMemo(
+        () => [...new Set((rawContent || []).map(adCouponId).filter(Boolean))].sort(),
+        [rawContent]
+    );
+    const { data: queriedCoupons } = useQuery({
+        queryKey: ['screen-ad-coupons', restaurantId, adCouponIds.join(',')],
+        queryFn: async () => {
+            const rows = await Promise.all(adCouponIds.map(id => base44.entities.Coupon.filter({ id }).catch(() => [])));
+            const data = rows.flat();
+            writeCache(`coupons_${restaurantId}`, data);
+            return data;
+        },
+        enabled: !!restaurantId && adCouponIds.length > 0 && !paired && isOnline,
+        staleTime: 60 * 1000,
+        refetchInterval: isOnline ? 60 * 1000 : false,
+        initialData: () => readCache(`coupons_${restaurantId}`).data,
+        initialDataUpdatedAt: () => readCache(`coupons_${restaurantId}`).ts,
+        retry: 1,
+    });
+    const adCoupons = paired ? manifest.coupons : queriedCoupons;
     // Re-evaluated with the 30s schedule tick (prices, deals, sold-out)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    const adNow = useMemo(() => new Date(), [scheduleTick, menuItems]);
+    const adNow = useMemo(() => new Date(), [scheduleTick, menuItems, adCoupons]);
 
     // Schedule-filtered, stably sorted content with failed media skipped
     // (AI ads whose hero dish is sold out or whose code expired are skipped too)
     const scheduledContent = useStableList(useMemo(
-        () => filterActiveContent(rawContent).filter(c => isAdPlayable(c, menuItems, adNow)),
-        [rawContent, scheduleTick, menuItems, adNow]
+        () => filterActiveContent(rawContent).filter(c => isAdPlayable(c, menuItems, adNow, adCoupons)),
+        [rawContent, scheduleTick, menuItems, adNow, adCoupons]
     ));
     const content = useStableList(useMemo(
         () => scheduledContent.filter((c) => !failedIds.has(c.id)),
@@ -453,7 +477,20 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
     }, [screen?.id, refetchScreen, isOnline, paired, preview]);
 
     // Pre-cache all media assets for offline resilience
-    useMediaPrecache(content, wallContent, isOnline);
+    // Offline cache: everything that isn't permanently over — not just what is
+    // on screen this minute — plus logos drawn on AI ads.
+    const precacheContent = useMemo(() => {
+        const now = new Date();
+        const items = (rawContent || []).filter(c => notExpired(c, now));
+        const logos = [...new Set(items.map(c => c.ad_overlay?.logo_url).filter(Boolean))]
+            .map(url => ({ media_url: url, media_type: 'image' }));
+        return [...items, ...logos];
+    }, [rawContent]);
+    const precacheWall = useMemo(
+        () => (wallEnabled ? (rawWallContent || []).filter(c => notExpired(c)) : EMPTY),
+        [rawWallContent, wallEnabled]
+    );
+    useMediaPrecache(precacheContent, precacheWall, isOnline);
 
     const safeIndex = content.length > 0 ? Math.min(currentIndex, content.length - 1) : 0;
 
@@ -683,7 +720,15 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                 className="h-screen w-screen bg-black overflow-hidden relative"
                 style={{ transform: `rotate(${wallConfig.rotation || 0}deg)` }}
             >
-                {currentWallContent.media_type === 'video' ? (
+                {currentWallContent.media_type?.startsWith('widget_') ? (
+                    // Full-wall widgets (time / weather / orders): each screen shows the widget
+                    <CustomContentWidget
+                        key={currentWallContent.id}
+                        restaurantId={restaurantId}
+                        widgetType={currentWallContent.media_type.replace('widget_', '')}
+                        config={currentWallContent.widget_config || {}}
+                    />
+                ) : currentWallContent.media_type === 'video' ? (
                     <video
                         key={currentWallContent.id}
                         src={currentWallContent.media_url}
@@ -704,35 +749,6 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                         onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
                     />
                 )}
-            </div>
-        );
-    }
-
-    if (isLayoutMode) {
-        return (
-            <MultiZoneDisplay
-                key={isPerItemLayout ? `item-layout-${currentItem.id}` : 'screen-layout'}
-                restaurantId={restaurantId}
-                screenName={screenName}
-                layout={activeLayout}
-            />
-        );
-    }
-
-    if (content.length === 0) {
-        return (
-            <div className="h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600 text-white">
-                <div className="text-center space-y-4">
-                    <h1 className="text-4xl font-bold">{restaurant?.name || 'Restaurant'}</h1>
-                    <p className="text-xl">
-                        {!isOnline
-                            ? '🌐 Waiting for connection…'
-                            : allMediaFailed
-                                ? '📺 Content temporarily unavailable'
-                                : '📺 No content configured for this screen'}
-                    </p>
-                    <p className="text-sm opacity-80">Screen: {screenName}</p>
-                </div>
             </div>
         );
     }
@@ -760,6 +776,40 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
         transform: `rotate(${orientationRotation}deg)`,
         transformOrigin: 'center center',
     } : undefined;
+
+    if (isLayoutMode) {
+        // Layouts follow the screen's mounting rotation like everything else
+        return (
+            <div className="h-screen w-screen bg-black relative overflow-hidden">
+                <div className="relative h-full w-full" style={rotationStyle}>
+                    <MultiZoneDisplay
+                        key={isPerItemLayout ? `item-layout-${currentItem.id}` : 'screen-layout'}
+                        restaurantId={restaurantId}
+                        screenName={screenName}
+                        layout={activeLayout}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (content.length === 0) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600 text-white">
+                <div className="text-center space-y-4">
+                    <h1 className="text-4xl font-bold">{restaurant?.name || 'Restaurant'}</h1>
+                    <p className="text-xl">
+                        {!isOnline
+                            ? '🌐 Waiting for connection…'
+                            : allMediaFailed
+                                ? '📺 Content temporarily unavailable'
+                                : '📺 No content configured for this screen'}
+                    </p>
+                    <p className="text-sm opacity-80">Screen: {screenName}</p>
+                </div>
+            </div>
+        );
+    }
 
     const getItemStyle = (index) => {
         const isActive = index === safeIndex;
