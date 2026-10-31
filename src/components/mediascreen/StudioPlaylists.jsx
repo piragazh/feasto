@@ -17,7 +17,8 @@ import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import ContentScheduler from './ContentScheduler';
 import InlinePhotoEditor from './InlinePhotoEditor';
-import { CommitNumberInput, MEDIA_ACCEPT, checkMediaFile, mediaTypeForFile } from './mediaInputs';
+import { CommitNumberInput, MEDIA_ACCEPT, checkMediaFile, mediaTypeForFile, nextDisplayOrder } from './mediaInputs';
+import ConfirmDelete from './ConfirmDelete';
 import { LAYOUT_TEMPLATES } from './layoutTemplates';
 import { TemplatePreview } from './StudioTemplateGallery';
 import ScreenPairingDialog from './ScreenPairingDialog';
@@ -147,6 +148,10 @@ export default function StudioPlaylists({ restaurantId }) {
         : [];
 
     const totalDuration = screenPlaylist.reduce((sum, c) => sum + (c.duration || 10), 0);
+    // New items go after the current last one. Counting items instead reused an
+    // order number after a delete, so new items could land mid-playlist.
+    const newItemOrder = nextDisplayOrder(screenPlaylist);
+    const [confirmItem, setConfirmItem] = useState(null); // playlist item waiting for remove confirmation
 
     const handleDragEnd = async (result) => {
         if (!result.destination || result.source.index === result.destination.index) return;
@@ -171,7 +176,7 @@ export default function StudioPlaylists({ restaurantId }) {
             widget_config_id: widgetConfig.id,
             duration: 30,
             transition: 'fade',
-            display_order: screenPlaylist.length,
+            display_order: newItemOrder,
             is_active: true
         });
         setShowWidgetPicker(false);
@@ -190,7 +195,7 @@ export default function StudioPlaylists({ restaurantId }) {
             duration: 10,
             video_loop_count: 1,
             transition: 'fade',
-            display_order: screenPlaylist.length,
+            display_order: newItemOrder,
             is_active: true
         });
     };
@@ -518,7 +523,7 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                             <Button size="sm" variant="ghost" onClick={() => setTemplatePickerItem(item)} className={`h-8 w-8 p-0 hover:text-orange-600 ${item.layout_template ? 'text-orange-500' : 'text-gray-400'}`} title="Set layout template">
                                                                                 <Layout className="h-3.5 w-3.5" />
                                                                             </Button>
-                                                                            <Button size="sm" variant="ghost" onClick={() => deleteContentMutation.mutate(item.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
+                                                                            <Button size="sm" variant="ghost" onClick={() => setConfirmItem(item)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600" title="Remove from playlist">
                                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                                             </Button>
                                                                         </div>
@@ -627,7 +632,7 @@ export default function StudioPlaylists({ restaurantId }) {
                     <AddMediaForm
                         restaurantId={restaurantId}
                         screenName={selectedScreen?.screen_name}
-                        displayOrder={screenPlaylist.length}
+                        displayOrder={newItemOrder}
                         onSuccess={() => {
                             queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] });
                             queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
@@ -709,6 +714,15 @@ export default function StudioPlaylists({ restaurantId }) {
                     )}
                 </DialogContent>
             </Dialog>
+
+            <ConfirmDelete
+                open={!!confirmItem}
+                onOpenChange={(o) => { if (!o) setConfirmItem(null); }}
+                title={`Remove "${confirmItem?.title || 'this item'}" from ${selectedScreen?.screen_name || 'this screen'}?`}
+                description={<p>It comes off the screen within a minute. The file stays in your media library, so you can add it back any time.</p>}
+                confirmLabel="Remove"
+                onConfirm={() => { if (confirmItem) deleteContentMutation.mutate(confirmItem.id); setConfirmItem(null); }}
+            />
 
             {/* Per-item Template Picker */}
             <Dialog open={!!templatePickerItem} onOpenChange={(open) => { if (!open) setTemplatePickerItem(null); }}>
