@@ -173,6 +173,23 @@ async function buildManifest(sr, screen, { includeWall = true } = {}) {
         }));
     }
 
+    // Coupons behind promo-code ads, so a screen can drop the ad the moment the
+    // code stops working. Slim copy: `used_up` instead of the live usage count,
+    // so ordinary redemptions don't force every screen to re-download.
+    const couponIds = [...new Set(content.map(c => c.ad_overlay?.coupon_id).filter(Boolean))];
+    let coupons;
+    if (couponIds.length) {
+        const rows = (await Promise.all(couponIds.map(id => sr.entities.Coupon.filter({ id }).catch(() => [])))).flat();
+        coupons = rows.map(c => ({
+            id: c.id,
+            is_active: c.is_active !== false,
+            valid_from: c.valid_from || null,
+            valid_until: c.valid_until || null,
+            expires_at: c.expires_at || null,
+            used_up: !!(c.usage_limit && (Number(c.usage_count) || 0) >= Number(c.usage_limit)),
+        }));
+    }
+
     const manifest = {
         restaurant: {
             id: r.id, name: r.name, logo_url: r.logo_url, description: r.description,
@@ -192,6 +209,7 @@ async function buildManifest(sr, screen, { includeWall = true } = {}) {
         playlists,
         wall_content: wallContent,
         ...(menuItems ? { menu_items: menuItems } : {}),
+        ...(coupons ? { coupons } : {}),
     };
     const version = (await sha256Hex(JSON.stringify(manifest))).slice(0, 16);
     return { ...manifest, version };
