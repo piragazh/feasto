@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Switch } from "@/components/ui/switch";
 import {
     Monitor, Plus, Trash2, GripVertical, Play, Image as ImageIcon,
-    Film, Clock, Copy, ExternalLink, Edit, RotateCw, X,
+    Film, Clock, Copy, ExternalLink, Edit, X,
     Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer, Layout, Link2, UtensilsCrossed, BellRing
 } from 'lucide-react';
 import { toast } from 'sonner';
