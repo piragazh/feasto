@@ -501,7 +501,7 @@ export default function StudioWidgets({ restaurantId }) {
                                     <div><Label>Title</Label>
                                         <Input value={form.settings.title || ''} onChange={e => updateSetting('title', e.target.value)} placeholder="e.g., Happy Hour Ends In" className="mt-1.5" /></div>
                                     <div><Label>Target Date & Time</Label>
-                                        <Input type="datetime-local" value={form.settings.target_date ? form.settings.target_date.slice(0, 16) : ''} onChange={e => updateSetting('target_date', e.target.value ? new Date(e.target.value).toISOString() : '')} className="mt-1.5" /></div>
+                                        <Input type="datetime-local" value={toLocalInputValue(form.settings.target_date)} onChange={e => updateSetting('target_date', fromLocalInputValue(e.target.value))} className="mt-1.5" /></div>
                                     <div><Label>Subtitle (optional)</Label>
                                         <Input value={form.settings.subtitle || ''} onChange={e => updateSetting('subtitle', e.target.value)} placeholder="e.g., 50% off all drinks" className="mt-1.5" /></div>
                                     <div><Label>Message After Countdown</Label>
