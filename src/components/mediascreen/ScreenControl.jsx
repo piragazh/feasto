@@ -13,6 +13,7 @@ import moment from 'moment';
 import { getScreenHealth, functionErrorMessage } from './screenHealth';
 import TakeoverControl from './TakeoverControl';
 import ScreenRemoteView from './ScreenRemoteView';
+import { screenDrawing, resolutionLabel } from './screenResolution';
 
 export default function ScreenControl({ restaurantId }) {
     const queryClient = useQueryClient();
@@ -406,8 +407,14 @@ export default function ScreenControl({ restaurantId }) {
                                                                 {screen.screen_info.browser && (
                                                                     <span>• {screen.screen_info.browser}</span>
                                                                 )}
-                                                                {screen.screen_info.resolution && (
-                                                                    <span>• {screen.screen_info.resolution}</span>
+                                                                {screenDrawing(screen) ? (
+                                                                    <span title={`Browser size ${screen.screen_info.resolution || '?'} × pixel ratio ${screen.screen_info.pixel_ratio || 1}`}>
+                                                                        • Drawing at {screenDrawing(screen).w}×{screenDrawing(screen).h} ({resolutionLabel(screenDrawing(screen))})
+                                                                    </span>
+                                                                ) : screen.screen_info.resolution && (
+                                                                    <span title="This screen hasn't reported its pixel ratio yet — it will after the next update">
+                                                                        • {screen.screen_info.resolution} (browser size)
+                                                                    </span>
                                                                 )}
                                                             </>
                                                         )}
