@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import moment from 'moment';
 import { toast } from 'sonner';
 import InlinePhotoEditor from './InlinePhotoEditor';
-import { MEDIA_ACCEPT, checkMediaFile } from './mediaInputs';
+import { MEDIA_ACCEPT, checkMediaFile, nextDisplayOrder } from './mediaInputs';
 import ConfirmDelete from './ConfirmDelete';
 
 export default function StudioMediaLibrary({ restaurantId }) {
@@ -53,18 +53,24 @@ export default function StudioMediaLibrary({ restaurantId }) {
         const existing = allContent.filter(c => c.screen_name === screen.screen_name);
         const mediaType = addToPlaylistFile.file_type?.startsWith('video/') ? 'video'
             : addToPlaylistFile.file_type === 'image/gif' ? 'gif' : 'image';
-        await base44.entities.PromotionalContent.create({
-            restaurant_id: restaurantId,
-            title: addToPlaylistFile.file_name?.replace(/\.[^/.]+$/, '') || 'Untitled',
-            screen_name: screen.screen_name,
-            media_url: addToPlaylistFile.file_url,
-            media_type: mediaType,
-            duration: 10,
-            video_loop_count: 1,
-            transition: 'fade',
-            display_order: existing.length,
-            is_active: true,
-        });
+        try {
+            await base44.entities.PromotionalContent.create({
+                restaurant_id: restaurantId,
+                title: addToPlaylistFile.file_name?.replace(/\.[^/.]+$/, '') || 'Untitled',
+                screen_name: screen.screen_name,
+                media_url: addToPlaylistFile.file_url,
+                media_type: mediaType,
+                duration: 10,
+                video_loop_count: 1,
+                transition: 'fade',
+                display_order: nextDisplayOrder(existing),
+                is_active: true,
+            });
+        } catch {
+            toast.error("Couldn't add it to the playlist. Please try again.");
+            setAddingToPlaylist(false);
+            return;
+        }
         queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] });
         toast.success(`Added to "${screen.screen_name}"`);
         setAddingToPlaylist(false);
