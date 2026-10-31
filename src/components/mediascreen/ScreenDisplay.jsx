@@ -787,6 +787,7 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                         restaurantId={restaurantId}
                         screenName={screenName}
                         layout={activeLayout}
+                        coupons={adCoupons}
                     />
                 </div>
             </div>
