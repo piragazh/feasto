@@ -1,9 +1,25 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+async function canManage(base44, user, restaurantId) {
+    if (!user || !restaurantId) return false;
+    if (user.role === 'admin') return true;
+    const managers = await base44.asServiceRole.entities.RestaurantManager.filter({ user_email: user.email });
+    return managers.some(m => m.is_active !== false && Array.isArray(m.restaurant_ids) && m.restaurant_ids.includes(restaurantId));
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const { restaurant_id, days = 7 } = await req.json();
+        const user = await base44.auth.me().catch(() => null);
+        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const body = await req.json().catch(() => ({}));
+        const restaurant_id = typeof body.restaurant_id === 'string' ? body.restaurant_id : '';
+        const days = Math.min(90, Math.max(1, Number(body.days) || 7));
+        if (!restaurant_id) return Response.json({ error: 'restaurant_id is required' }, { status: 400 });
+        if (!(await canManage(base44, user, restaurant_id))) {
+            return Response.json({ error: 'Not allowed' }, { status: 403 });
+        }
         
         // Get failed/timeout commands from the last N days
         const cutoffDate = new Date();
@@ -11,8 +27,8 @@ Deno.serve(async (req) => {
         
         const failedLogs = await base44.asServiceRole.entities.ScreenCommandLog.filter({
             restaurant_id,
-            status: ['failed', 'timeout']
-        }, '-created_date', 100);
+            status: { $in: ['failed', 'timeout'] }
+        }, '-created_date', 200);
         
         // Filter by date
         const recentFailures = failedLogs.filter(log => 
