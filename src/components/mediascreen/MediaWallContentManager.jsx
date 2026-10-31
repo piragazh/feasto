@@ -71,6 +71,8 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
     const handleFileUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        const problem = checkMediaFile(file);
+        if (problem) { toast.error(problem, { duration: 8000 }); e.target.value = ''; return; }
 
         try {
             toast.loading('Uploading...');
@@ -379,7 +381,7 @@ export default function MediaWallContentManager({ restaurantId, wallName }) {
                             <Input
                                 id="wall-file-upload-input"
                                 type="file"
-                                accept="image/*,video/*"
+                                accept={MEDIA_ACCEPT}
                                 onChange={handleFileUpload}
                                 className="hidden"
                             />
