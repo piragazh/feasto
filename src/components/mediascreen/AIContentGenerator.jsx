@@ -410,7 +410,7 @@ export default function AIContentGenerator({
                             liveCoupons.length === 0 ? (
                                 <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3 flex gap-2">
                                     <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                                    You have no active public coupons. Create one in Promotions first — a screen should never show a code that doesn't work.
+                                    No coupons can go on a screen right now. You need an active coupon that anyone can use more than once — one-off customer codes (CRM and win-back offers) are left out. Create one in Promotions first; a screen should never show a code that doesn't work.
                                 </p>
                             ) : (
                                 <select aria-label="Coupon" value={couponId} onChange={e => { setCouponId(e.target.value); resetResult(); }}
