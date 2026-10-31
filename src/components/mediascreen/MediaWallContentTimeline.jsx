@@ -643,16 +643,23 @@ export default function MediaWallContentTimeline({ restaurantId, wallName, wallC
                                     <input
                                         id="timeline-upload"
                                         type="file"
-                                        accept="image/*,video/*"
+                                        accept={MEDIA_ACCEPT}
                                         className="hidden"
                                         onChange={async e => {
                                             const file = e.target.files?.[0];
                                             if (!file) return;
-                                            toast.loading('Uploading…');
-                                            const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                                            toast.dismiss();
-                                            setSlotForm(p => ({ ...p, media_url: file_url }));
-                                            toast.success('Uploaded');
+                                            const problem = checkMediaFile(file);
+                                            if (problem) { toast.error(problem, { duration: 8000 }); e.target.value = ''; return; }
+                                            const id = toast.loading('Uploading…');
+                                            try {
+                                                const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                setSlotForm(p => ({ ...p, media_url: file_url }));
+                                                toast.success('Uploaded', { id });
+                                            } catch {
+                                                toast.error('Upload failed', { id });
+                                            } finally {
+                                                e.target.value = '';
+                                            }
                                         }}
                                     />
                                 </div>
