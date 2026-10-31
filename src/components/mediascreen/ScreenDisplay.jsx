@@ -10,6 +10,7 @@ import { filterActiveContent, filterActivePlaylists, clearScreenCache } from './
 import { useScreenManifest } from './ScreenManifestContext';
 import TakeoverScreen, { isTakeoverActive } from './TakeoverScreen';
 import AdSlide, { isAdPlayable, adNeedsMenu } from './AdSlide';
+import { measureDrawing } from './screenResolution';
 
 // --- localStorage cache helpers ---
 // The cache stores RAW records; schedules are applied at display time so an
@@ -350,6 +351,7 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
                     screen_info: {
                         browser: navigator.userAgent.split(' ').slice(-2).join(' '),
                         resolution: `${window.screen.width}x${window.screen.height}`,
+                        ...measureDrawing(),
                         os: navigator.platform
                     }
                 });
