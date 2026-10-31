@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { getScreenHealth } from '@/components/mediascreen/screenHealth';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
@@ -28,10 +30,40 @@ const NAV_ITEMS = [
     { id: 'control', label: 'Live Control', icon: Settings },
 ];
 
+/** Real screen status for the sidebar: how many of this site's screens are checking in. */
+function ScreenStatusFooter({ restaurantId, onOpen }) {
+    const { data: screens = [], isError } = useQuery({
+        queryKey: ['studio-footer-screens', restaurantId],
+        queryFn: () => base44.entities.Screen.filter({ restaurant_id: restaurantId }),
+        refetchInterval: 60000,
+    });
+    const [, setTick] = useState(0);
+    useEffect(() => { const t = setInterval(() => setTick(x => x + 1), 30000); return () => clearInterval(t); }, []);
+
+    const states = screens.filter(s => s.is_active !== false).map(s => getScreenHealth(s));
+    const online = states.filter(s => s === 'online').length;
+    const total = states.length;
+    let dot = 'bg-gray-500', label = 'No screens yet';
+    if (isError) { dot = 'bg-amber-400'; label = "Can't check screens"; }
+    else if (total) {
+        dot = online === total ? 'bg-green-400' : online === 0 ? 'bg-red-500' : 'bg-amber-400';
+        label = `${online} of ${total} screen${total === 1 ? '' : 's'} online`;
+    }
+    return (
+        <button onClick={onOpen} className="px-5 py-4 border-t border-gray-800 w-full text-left hover:bg-gray-800/50 transition-colors" title="Open Live Control">
+            <div className="flex items-center gap-2.5">
+                <div className={`w-2 h-2 rounded-full ${dot}`} />
+                <span className="text-xs text-gray-400">{label}</span>
+            </div>
+        </button>
+    );
+}
+
 export default function MediaScreenManagement() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
+    const [restaurants, setRestaurants] = useState([]); // every site this person can manage
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState('overview');
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -45,20 +77,42 @@ export default function MediaScreenManagement() {
             const urlParams = new URLSearchParams(window.location.search);
             const restaurantId = urlParams.get('restaurantId');
             if (userData.role === 'admin' && restaurantId) {
-                const restaurants = await base44.entities.Restaurant.filter({ id: restaurantId });
-                setRestaurant(restaurants[0]);
+                const rows = await base44.entities.Restaurant.filter({ id: restaurantId });
+                setRestaurant(rows[0]);
             } else {
+                // A manager can run several sites: offer all of them, not just the first.
                 const managers = await base44.entities.RestaurantManager.filter({ user_email: userData.email });
-                if (managers.length > 0) {
-                    const restaurants = await base44.entities.Restaurant.filter({ id: managers[0].restaurant_ids[0] });
-                    setRestaurant(restaurants[0]);
-                }
+                const ids = [...new Set(managers
+                    .filter(m => m.is_active !== false)
+                    .flatMap(m => Array.isArray(m.restaurant_ids) ? m.restaurant_ids : []))];
+                const rows = (await Promise.all(ids.map(id =>
+                    base44.entities.Restaurant.filter({ id }).then(r => r[0]).catch(() => null)))).filter(Boolean);
+                rows.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+                setRestaurants(rows);
+                let remembered = null;
+                try { remembered = localStorage.getItem('studio_restaurant_id'); } catch {}
+                const pick = rows.find(r => r.id === restaurantId)
+                    || rows.find(r => r.id === remembered && r.media_screen_enabled)
+                    || rows.find(r => r.media_screen_enabled)
+                    || rows[0];
+                setRestaurant(pick || null);
             }
         } catch (error) {
             console.error('Failed to load data:', error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const switchRestaurant = (id) => {
+        const next = restaurants.find(r => r.id === id);
+        if (!next) return;
+        setRestaurant(next);
+        setActiveSection('overview');
+        try { localStorage.setItem('studio_restaurant_id', id); } catch {}
+        const url = new URL(window.location.href);
+        url.searchParams.set('restaurantId', id);
+        window.history.replaceState(null, '', url);
     };
 
     if (loading) {
@@ -87,6 +141,16 @@ export default function MediaScreenManagement() {
                             ? 'No restaurant found for your account.'
                             : 'Please contact support to enable media screen access for your restaurant.'}
                     </p>
+                    {restaurants.length > 1 && (
+                        <select
+                            value={restaurant?.id || ''}
+                            onChange={(e) => switchRestaurant(e.target.value)}
+                            aria-label="Choose restaurant"
+                            className="mb-4 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-200 text-sm px-3 py-2"
+                        >
+                            {restaurants.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                        </select>
+                    )}
                     <Button onClick={() => navigate(createPageUrl('RestaurantDashboard'))} variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800">
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         Back to Dashboard
@@ -172,6 +236,18 @@ export default function MediaScreenManagement() {
                         <p className="text-gray-500 text-xs truncate">{restaurant.name}</p>
                     </div>
                 </div>
+                {restaurants.length > 1 && (
+                    <select
+                        value={restaurant.id}
+                        onChange={(e) => { switchRestaurant(e.target.value); onNavigate?.(); }}
+                        aria-label="Switch restaurant"
+                        className="mt-4 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-200 text-xs px-2.5 py-2"
+                    >
+                        {restaurants.map(r => (
+                            <option key={r.id} value={r.id}>{r.name}{r.media_screen_enabled ? '' : ' (screens not enabled)'}</option>
+                        ))}
+                    </select>
+                )}
             </div>
             <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
                 <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-3 mb-2">Studio</p>
@@ -194,12 +270,7 @@ export default function MediaScreenManagement() {
                     );
                 })}
             </nav>
-            <div className="px-5 py-4 border-t border-gray-800">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-400/50" />
-                    <span className="text-xs text-gray-500">Studio Online</span>
-                </div>
-            </div>
+            <ScreenStatusFooter restaurantId={restaurant.id} onOpen={() => { setActiveSection('control'); onNavigate?.(); }} />
         </>
     );
 
