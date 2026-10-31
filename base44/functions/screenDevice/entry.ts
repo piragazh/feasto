@@ -56,6 +56,10 @@ function cleanDeviceInfo(info) {
         resolution: pick(info.resolution, 30),
         platform: pick(info.platform, 60),
         app_version: pick(info.app_version, 60),
+        // Real pixels the browser draws at (CSS size x pixel ratio)
+        drawing: typeof info.drawing === 'string' && /^\d{2,5}x\d{2,5}$/.test(info.drawing) ? info.drawing : undefined,
+        pixel_ratio: Number.isFinite(Number(info.pixel_ratio)) && Number(info.pixel_ratio) > 0 && Number(info.pixel_ratio) <= 8
+            ? Math.round(Number(info.pixel_ratio) * 100) / 100 : undefined,
     };
 }
 
@@ -295,7 +299,7 @@ Deno.serve(async (req) => {
                 sr.entities.Screen.update(screen.id, {
                     last_heartbeat: nowIso,
                     health_status: 'online',
-                    screen_info: { browser: info.user_agent, resolution: info.resolution, os: info.platform, app_version: info.app_version, paired: true },
+                    screen_info: { browser: info.user_agent, resolution: info.resolution, drawing: info.drawing, pixel_ratio: info.pixel_ratio, os: info.platform, app_version: info.app_version, paired: true },
                     ...(body.now_showing ? { now_showing: { ...cleanNowShowing(body.now_showing), reported_at: nowIso } } : {}),
                 }),
                 sr.entities.ScreenDeviceSession.update(session.id, { last_seen: nowIso, device_info: info }),
