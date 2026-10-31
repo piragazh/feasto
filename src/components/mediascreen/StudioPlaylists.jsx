@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Switch } from "@/components/ui/switch";
 import {
     Monitor, Plus, Trash2, GripVertical, Play, Image as ImageIcon,
-    Film, Clock, Copy, ExternalLink, Edit, X,
+    Film, Clock, Copy, ExternalLink, Edit, X, Type,
     Zap, Cloud, ShoppingBag, TrendingUp, Users, Timer, Layout, Link2, UtensilsCrossed, BellRing
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import ContentScheduler from './ContentScheduler';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import { CommitNumberInput, MEDIA_ACCEPT, checkMediaFile, mediaTypeForFile, nextDisplayOrder } from './mediaInputs';
 import ConfirmDelete from './ConfirmDelete';
+import AdTextEditor from './AdTextEditor';
 import { LAYOUT_TEMPLATES } from './layoutTemplates';
 import { TemplatePreview } from './StudioTemplateGallery';
 import ScreenPairingDialog from './ScreenPairingDialog';
@@ -152,6 +153,7 @@ export default function StudioPlaylists({ restaurantId }) {
     // order number after a delete, so new items could land mid-playlist.
     const newItemOrder = nextDisplayOrder(screenPlaylist);
     const [confirmItem, setConfirmItem] = useState(null); // playlist item waiting for remove confirmation
+    const [editingAd, setEditingAd] = useState(null);     // AI ad whose words are being edited
 
     const handleDragEnd = async (result) => {
         if (!result.destination || result.source.index === result.destination.index) return;
@@ -512,6 +514,11 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                         </div>
                                                                         {/* Row 2: action buttons */}
                                                                         <div className="flex items-center gap-0.5">
+                                                                            {item.ad_overlay && (
+                                                                                <Button size="sm" variant="ghost" onClick={() => setEditingAd(item)} className="h-8 w-8 p-0 text-gray-400 hover:text-orange-600" title="Edit ad text">
+                                                                                    <Type className="h-3.5 w-3.5" />
+                                                                                </Button>
+                                                                            )}
                                                                             {item.media_type === 'image' && (
                                                                                 <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: item.id, media_url: item.media_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit photo">
                                                                                     <Edit className="h-3.5 w-3.5" />
@@ -714,6 +721,14 @@ export default function StudioPlaylists({ restaurantId }) {
                     )}
                 </DialogContent>
             </Dialog>
+
+            <AdTextEditor
+                item={editingAd}
+                restaurantId={restaurantId}
+                open={!!editingAd}
+                onClose={() => setEditingAd(null)}
+                onSaved={() => queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] })}
+            />
 
             <ConfirmDelete
                 open={!!confirmItem}
