@@ -186,10 +186,10 @@ export default function ContentScheduler({ open, onClose, content, onSave }) {
                                     <Label>Start Date & Time</Label>
                                     <Input
                                         type="datetime-local"
-                                        value={schedule.start_date ? new Date(schedule.start_date).toISOString().slice(0, 16) : ''}
+                                        value={toLocalInputValue(schedule.start_date)}
                                         onChange={(e) => setSchedule(prev => ({
                                             ...prev,
-                                            start_date: e.target.value ? new Date(e.target.value).toISOString() : ''
+                                            start_date: fromLocalInputValue(e.target.value)
                                         }))}
                                         className="mt-1"
                                     />
@@ -202,10 +202,10 @@ export default function ContentScheduler({ open, onClose, content, onSave }) {
                                     <Label>End Date & Time (Optional)</Label>
                                     <Input
                                         type="datetime-local"
-                                        value={schedule.end_date ? new Date(schedule.end_date).toISOString().slice(0, 16) : ''}
+                                        value={toLocalInputValue(schedule.end_date)}
                                         onChange={(e) => setSchedule(prev => ({
                                             ...prev,
-                                            end_date: e.target.value ? new Date(e.target.value).toISOString() : ''
+                                            end_date: fromLocalInputValue(e.target.value)
                                         }))}
                                         className="mt-1"
                                     />
