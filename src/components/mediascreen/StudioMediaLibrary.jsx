@@ -10,6 +10,7 @@ import moment from 'moment';
 import { toast } from 'sonner';
 import InlinePhotoEditor from './InlinePhotoEditor';
 import { MEDIA_ACCEPT, checkMediaFile } from './mediaInputs';
+import ConfirmDelete from './ConfirmDelete';
 
 export default function StudioMediaLibrary({ restaurantId }) {
     const queryClient = useQueryClient();
@@ -20,6 +21,7 @@ export default function StudioMediaLibrary({ restaurantId }) {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [editingPhoto, setEditingPhoto] = useState(null); // { id, file_url }
     const [previewFile, setPreviewFile] = useState(null);
+    const [confirmFile, setConfirmFile] = useState(null); // file waiting for delete confirmation
     const [addToPlaylistFile, setAddToPlaylistFile] = useState(null); // file to add to a playlist
     const [selectedScreenId, setSelectedScreenId] = useState('');
     const [addingToPlaylist, setAddingToPlaylist] = useState(false);
@@ -246,7 +248,7 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                             </button>
                                         )}
                                         <button
-                                            onClick={() => deleteFileMutation.mutate(file.id)}
+                                            onClick={() => setConfirmFile(file)}
                                             className="w-7 h-7 rounded-full bg-red-500/90 flex items-center justify-center hover:bg-red-600 transition-colors shadow"
                                             title="Delete"
                                         >
@@ -321,7 +323,7 @@ export default function StudioMediaLibrary({ restaurantId }) {
                                                            <Edit className="h-3.5 w-3.5" />
                                                        </Button>
                                                    )}
-                                                   <Button size="sm" variant="ghost" onClick={() => deleteFileMutation.mutate(file.id)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600">
+                                                   <Button size="sm" variant="ghost" onClick={() => setConfirmFile(file)} className="h-8 w-8 p-0 text-gray-400 hover:text-red-600" title="Delete">
                                                        <Trash2 className="h-3.5 w-3.5" />
                                                    </Button>
                                                </div>
@@ -424,6 +426,30 @@ export default function StudioMediaLibrary({ restaurantId }) {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete confirmation */}
+            {(() => {
+                const usedOn = confirmFile
+                    ? [...new Set(allContent.filter(c => c.media_url === confirmFile.file_url).map(c => c.screen_name).filter(Boolean))]
+                    : [];
+                return (
+                    <ConfirmDelete
+                        open={!!confirmFile}
+                        onOpenChange={(o) => { if (!o) setConfirmFile(null); }}
+                        title={`Delete "${confirmFile?.file_name || 'this file'}"?`}
+                        description={<>
+                            <p>This removes it from your media library. It can't be undone.</p>
+                            {usedOn.length > 0 && (
+                                <p className="text-amber-700">
+                                    It's still in the playlist for <strong>{usedOn.join(', ')}</strong> and will keep playing there.
+                                    Remove it from Screens &amp; Playlists to take it off the screen.
+                                </p>
+                            )}
+                        </>}
+                        onConfirm={() => { if (confirmFile) deleteFileMutation.mutate(confirmFile.id); setConfirmFile(null); }}
+                    />
+                );
+            })()}
 
             {/* Editors */}
             <InlinePhotoEditor
