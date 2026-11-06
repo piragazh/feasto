@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
     Monitor, ArrowLeft, BarChart3, Play, Image as ImageIcon,
-    Palette, Grid3x3, Zap, Wifi, ChevronRight, Settings, Radio, Menu
+    Palette, Grid3x3, Zap, Wifi, ChevronRight, Settings, Radio, Menu, Download
 } from 'lucide-react';
 import StudioOverview from '@/components/mediascreen/StudioOverview';
 import StudioPlaylists from '@/components/mediascreen/StudioPlaylists';
@@ -29,6 +29,39 @@ const NAV_ITEMS = [
     { id: 'ai', label: 'AI Generator', icon: Radio },
     { id: 'control', label: 'Live Control', icon: Settings },
 ];
+
+/**
+ * "Install app" for Screen Studio. Chrome/Edge/Android offer a one-tap install;
+ * the button only appears when the browser says the app can be installed and
+ * it isn't already running as the installed app.
+ */
+function useStudioInstall() {
+    const [prompt, setPrompt] = useState(() => (typeof window !== 'undefined' ? window.__pwaInstallPrompt : null));
+    const [installed, setInstalled] = useState(() => {
+        try { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch { return false; }
+    });
+    useEffect(() => {
+        const onReady = () => setPrompt(window.__pwaInstallPrompt);
+        const onPrompt = (e) => { e.preventDefault(); window.__pwaInstallPrompt = e; setPrompt(e); };
+        const onInstalled = () => { setInstalled(true); setPrompt(null); window.__pwaInstallPrompt = null; };
+        window.addEventListener('pwaInstallPromptReady', onReady);
+        window.addEventListener('beforeinstallprompt', onPrompt);
+        window.addEventListener('appinstalled', onInstalled);
+        return () => {
+            window.removeEventListener('pwaInstallPromptReady', onReady);
+            window.removeEventListener('beforeinstallprompt', onPrompt);
+            window.removeEventListener('appinstalled', onInstalled);
+        };
+    }, []);
+    const install = async () => {
+        if (!prompt) return;
+        prompt.prompt();
+        try { await prompt.userChoice; } catch {}
+        setPrompt(null);
+        window.__pwaInstallPrompt = null;
+    };
+    return { canInstall: !!prompt && !installed, installed, install };
+}
 
 /** Real screen status for the sidebar: how many of this site's screens are checking in. */
 function ScreenStatusFooter({ restaurantId, onOpen }) {
@@ -67,18 +100,36 @@ export default function MediaScreenManagement() {
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState('overview');
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const { canInstall, installed, install } = useStudioInstall();
 
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
         try {
-            const userData = await base44.auth.me();
+            let userData = null;
+            try { userData = await base44.auth.me(); } catch { userData = null; }
+            if (!userData) {
+                // Standalone Studio has no website header to sign in from: go to
+                // sign-in and come straight back here.
+                base44.auth.redirectToLogin(window.location.pathname + window.location.search);
+                return;
+            }
             setUser(userData);
             const urlParams = new URLSearchParams(window.location.search);
             const restaurantId = urlParams.get('restaurantId');
-            if (userData.role === 'admin' && restaurantId) {
-                const rows = await base44.entities.Restaurant.filter({ id: restaurantId });
-                setRestaurant(rows[0]);
+            let remembered = null;
+            try { remembered = localStorage.getItem('studio_restaurant_id'); } catch {}
+            if (userData.role === 'admin') {
+                // Admin: every restaurant with screens switched on, so plain /studio works too.
+                const rows = (await base44.entities.Restaurant.filter({ media_screen_enabled: true }).catch(() => []))
+                    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+                let pick = rows.find(r => r.id === restaurantId) || rows.find(r => r.id === remembered) || null;
+                if (!pick && restaurantId) {
+                    pick = (await base44.entities.Restaurant.filter({ id: restaurantId }))[0] || null;
+                    if (pick) rows.unshift(pick);
+                }
+                setRestaurants(rows);
+                setRestaurant(pick || rows[0] || null);
             } else {
                 // A manager can run several sites: offer all of them, not just the first.
                 const managers = await base44.entities.RestaurantManager.filter({ user_email: userData.email });
@@ -89,8 +140,6 @@ export default function MediaScreenManagement() {
                     base44.entities.Restaurant.filter({ id }).then(r => r[0]).catch(() => null)))).filter(Boolean);
                 rows.sort((a, b) => String(a.name).localeCompare(String(b.name)));
                 setRestaurants(rows);
-                let remembered = null;
-                try { remembered = localStorage.getItem('studio_restaurant_id'); } catch {}
                 const pick = rows.find(r => r.id === restaurantId)
                     || rows.find(r => r.id === remembered && r.media_screen_enabled)
                     || rows.find(r => r.media_screen_enabled)
@@ -270,6 +319,17 @@ export default function MediaScreenManagement() {
                     );
                 })}
             </nav>
+            {canInstall && (
+                <div className="px-3 pb-2">
+                    <button
+                        onClick={install}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 transition-colors"
+                    >
+                        <Download className="h-4 w-4 flex-shrink-0" />
+                        Install Screen Studio app
+                    </button>
+                </div>
+            )}
             <ScreenStatusFooter restaurantId={restaurant.id} onOpen={() => { setActiveSection('control'); onNavigate?.(); }} />
         </>
     );
