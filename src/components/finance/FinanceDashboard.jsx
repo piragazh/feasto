@@ -94,7 +94,7 @@ export default function FinanceDashboard() {
               {tab === 'costs' && <ExpensesTab company={company} onChanged={changed} />}
               {tab === 'reports' && <ReportsTab company={company} />}
               {tab === 'ledger' && <LedgerTab company={company} />}
-              {tab === 'marketplace' && <MarketplaceTab company={company} />}
+              {tab === 'marketplace' && <MarketplaceTab company={company} onCompanyChange={updateCompany} />}
               {tab === 'settings' && <SettingsTab company={company} onCompanyChange={(c) => { updateCompany(c); }} />}
             </div>
             {newInvoice && <InvoiceEditor company={company} onClose={() => setNewInvoice(false)} onSaved={() => { setNewInvoice(false); changed(); setTab('invoices'); }} />}
