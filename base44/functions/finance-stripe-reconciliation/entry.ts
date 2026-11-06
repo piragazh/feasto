@@ -17,23 +17,28 @@ Deno.serve(async (req: Request) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user?.id) return responseError("Unauthorized", 401);
+    if (user.role !== "admin") return responseError("Finance is restricted to MealDrop administrators", 403);
     const body = await req.json();
     const companyId = String(body?.company_id || "");
     const action = String(body?.action || "");
     if (!companyId) return responseError("company_id is required");
     if (companyId !== MEALDROP_COMPANY_ID) return responseError("Stripe reconciliation is currently restricted to the MealDrop finance company", 403);
 
-    // Caller-scoped lookup enforces FinanceCompany RLS before any service-role data access.
-    const company = await base44.entities.FinanceCompany.get(companyId);
-    if (!company || company.status !== "active") return responseError("MealDrop FinanceCompany not found or access denied", 404);
     const db = base44.asServiceRole;
+    const company = (await db.entities.FinanceCompany.filter({ id: companyId }, null, 1, 0))?.[0];
+    if (!company || company.status !== "active") return responseError("MealDrop FinanceCompany not found", 404);
 
     if (action === "sync_order_commissions") {
       const orders = await db.entities.Order.filter({
         payment_status: { $in: ["payment_confirmed", "paid_card"] },
         status: { $in: ["delivered", "collected", "refunded"] }
       }, "-created_date", 500, 0);
-      const existing = await base44.entities.FinanceOrderCommission.filter({ company_id: companyId }, "-created_date", 500, 0);
+      const existing: any[] = [];
+      for (let skip = 0; skip < 50000; skip += 500) {
+        const page = await db.entities.FinanceOrderCommission.filter({ company_id: companyId }, "-created_date", 500, skip);
+        existing.push(...(page || []));
+        if (!page || page.length < 500) break;
+      }
       const byOrderId = new Map((existing || []).map((r: any) => [r.order_id, r]));
       const restaurantCache = new Map<string, any>();
       let created = 0, skipped = 0;
@@ -64,7 +69,7 @@ Deno.serve(async (req: Request) => {
         const earnings = order.restaurant_earnings !== undefined && order.restaurant_earnings !== null && Number.isFinite(Number(order.restaurant_earnings))
           ? roundMoney(Math.max(0, Number(order.restaurant_earnings)))
           : roundMoney(gross - commission);
-        await base44.entities.FinanceOrderCommission.create({
+        await db.entities.FinanceOrderCommission.create({
           company_id: companyId, order_id: String(order.id), order_number: String(order.order_number || ""),
           restaurant_id: restaurantId, restaurant_name: String(order.restaurant_name || restaurant?.name || "Unknown restaurant"),
           ...(order.created_date ? { order_date: new Date(order.created_date).toISOString() } : {}),
@@ -72,7 +77,7 @@ Deno.serve(async (req: Request) => {
           commission_amount: commission, commission_vat: 0, restaurant_earnings: earnings,
           payment_method: String(order.payment_method || ""), payment_intent_id: String(order.payment_intent_id || ""),
           order_status: String(order.status || ""), payment_status: String(order.payment_status || ""),
-          reconciliation_status: "recorded", source_type: "order_sync",
+          reconciliation_status: order.status === "refunded" ? "query" : "recorded", source_type: "order_sync",
           notes: order.status === "refunded" ? "Refunded order included for review; reconcile refund and commission policy before payout." : "Imported read-only from existing order record; no POS order or payment was changed."
         });
         created++;
@@ -88,7 +93,7 @@ Deno.serve(async (req: Request) => {
       const createdFrom = Number(body.created_after || 0);
       if (!Number.isFinite(createdFrom) || createdFrom < 0) return responseError("created_after must be a Unix timestamp in seconds");
       const payouts = await stripe.payouts.list({ limit: 100, ...(createdFrom ? { created: { gte: createdFrom } } : {}) });
-      const existing = await base44.entities.FinanceStripeSettlement.filter({ company_id: companyId }, "-created_date", 500, 0);
+      const existing = await db.entities.FinanceStripeSettlement.filter({ company_id: companyId }, "-created_date", 2000, 0);
       const byStripeId = new Map((existing || []).map((r: any) => [r.stripe_payout_id, r]));
       let imported = 0, skipped = 0, skippedCurrency = 0;
       for (const payout of payouts.data || []) {
@@ -107,7 +112,7 @@ Deno.serve(async (req: Request) => {
         const net = roundMoney(txns.reduce((s: number, tx: any) => s + Number(tx.net || 0), 0) / 100);
         const amount = roundMoney(Number(payout.amount || 0) / 100);
         const matched = Math.abs(net - amount) <= 0.01;
-        await base44.entities.FinanceStripeSettlement.create({
+        await db.entities.FinanceStripeSettlement.create({
           company_id: companyId, stripe_payout_id: payout.id, payout_reference: payout.id,
           payout_date: new Date(Number(payout.created) * 1000).toISOString(),
           ...(payout.arrival_date ? { arrival_date: new Date(Number(payout.arrival_date) * 1000).toISOString() } : {}),
