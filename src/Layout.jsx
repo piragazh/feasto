@@ -629,12 +629,6 @@ export default function Layout({ children, currentPageName }) {
                                        {isRestaurantManager && (
                                            <>
                                            <DropdownMenuItem asChild>
-                                               <Link to={createPageUrl('Finance')} className="flex items-center gap-2">
-                                                   <Wallet className="h-4 w-4" />
-                                                   Finance
-                                               </Link>
-                                           </DropdownMenuItem>
-                                           <DropdownMenuItem asChild>
                                                <Link to={createPageUrl('RestaurantDashboard')} className="flex items-center gap-2">
                                                    <Home className="h-4 w-4" />
                                                    Restaurant Dashboard
@@ -644,6 +638,12 @@ export default function Layout({ children, currentPageName }) {
                                        )}
                                        {user?.role === 'admin' && (
                                        <>
+                                           <DropdownMenuItem asChild>
+                                               <Link to={createPageUrl('Finance')} className="flex items-center gap-2">
+                                                   <Wallet className="h-4 w-4" />
+                                                   Finance
+                                               </Link>
+                                           </DropdownMenuItem>
                                            <DropdownMenuItem asChild>
                                                <Link to={createPageUrl('SuperAdmin')} className="flex items-center gap-2">
                                                    <Home className="h-4 w-4" />
