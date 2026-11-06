@@ -13,12 +13,17 @@ import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 import { generatePayoutPDF } from '@/lib/payoutPDF';
 
+// Finance company whose books payouts are posted to.
+const MEALDROP_FINANCE_COMPANY_ID = '6adb27b5c246acfa7f3c9b9a';
+
 export default function PayoutManagement() {
     const [selectedRestaurant, setSelectedRestaurant] = useState('');
     const [generatingFor, setGeneratingFor] = useState('');
     const [payoutDialog, setPayoutDialog] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
     const [notes, setNotes] = useState('');
+    const [transactionRef, setTransactionRef] = useState('');
+    const [paidDate, setPaidDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [payoutFrequency, setPayoutFrequency] = useState('weekly');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -80,7 +85,7 @@ export default function PayoutManagement() {
 
             // ✅ DUPLICATE GUARD: check if a payout already exists for this restaurant + overlapping period
             const existingPayouts = await base44.entities.Payout.filter({ restaurant_id: restaurantId });
-            const duplicate = existingPayouts.find(p => {
+            const duplicate = existingPayouts.filter(p => !['voided', 'failed'].includes(p.status)).find(p => {
                 const existStart = new Date(p.period_start);
                 const existEnd = new Date(p.period_end);
                 // Overlap check: new period overlaps existing if not (new ends before existing starts OR new starts after existing ends)
@@ -127,7 +132,21 @@ export default function PayoutManagement() {
             // Payment statuses that confirm the platform actually received the card payment
             const confirmedPaymentStatuses = new Set(['payment_confirmed', 'paid_card']);
 
-            periodOrders.forEach(order => {
+            // Refunded orders placed IN this period: the refunded part was never paid out,
+            // so only the part the customer kept (if any) counts towards takings.
+            const inPeriodRefunded = allRestaurantOrders.filter(order => {
+                const orderDate = new Date(order.created_date);
+                return orderDate >= periodStart && orderDate <= periodEnd
+                    && order.status === 'refunded' && !excludedSources.has(order.order_source);
+            });
+            const payoutOrders = [
+                ...periodOrders,
+                ...inPeriodRefunded
+                    .map(o => ({ ...o, total: o.refund_paid_by === 'platform' ? (o.total || 0) : Math.max(0, (o.total || 0) - (o.refund_amount ?? o.total ?? 0)) }))
+                    .filter(o => o.total > 0),
+            ];
+
+            payoutOrders.forEach(order => {
                 const orderTotal = order.total || 0;
                 grossEarnings += orderTotal;
 
@@ -187,14 +206,22 @@ export default function PayoutManagement() {
             const cancelledOrders = inPeriodOnlineOrders.filter(o => o.status === 'cancelled');
             const cancelledOrdersValue = cancelledOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
-            // Refunds in this period — online completed orders only (same source filter as above)
+            // Refunds in this period
             const refundedOrders = inPeriodOnlineOrders.filter(o => o.status === 'refunded');
+            const refundDate = (o) => new Date(o.refund_approved_date || o.updated_date || o.created_date);
+            // Orders placed BEFORE this period (already paid out) but refunded during it:
+            // the restaurant has had the money, so a restaurant-borne refund is recovered now.
+            const earlierOrdersRefundedNow = allRestaurantOrders.filter(o =>
+                o.status === 'refunded' && !excludedSources.has(o.order_source)
+                && new Date(o.created_date) < periodStart
+                && refundDate(o) >= periodStart && refundDate(o) <= periodEnd);
 
-            const refundsPaidByRestaurant = refundedOrders
-                .filter(o => o.refund_paid_by === 'restaurant')
+            const refundsPaidByRestaurant = earlierOrdersRefundedNow
+                .filter(o => o.refund_paid_by !== 'platform')
                 .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
 
-            const refundsPaidByPlatform = refundedOrders
+            // MealDrop-absorbed refunds are MealDrop's cost — reported, never deducted.
+            const refundsPaidByPlatform = [...refundedOrders, ...earlierOrdersRefundedNow]
                 .filter(o => o.refund_paid_by === 'platform')
                 .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
 
@@ -210,8 +237,11 @@ export default function PayoutManagement() {
             // MINUS commission on ALL gross (card + cash)
             // MINUS refunds the restaurant is responsible for
             // MINUS refunds the PLATFORM covered (MealDrop paid these — must claw back from payout)
-            let netPayout = cardPaymentAmount - platformCommission - refundsPaidByRestaurant - refundsPaidByPlatform;
+            const pence = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+            platformCommission = pence(platformCommission);
+            let netPayout = pence(cardPaymentAmount - platformCommission - refundsPaidByRestaurant);
             const finalNetPayout = Math.max(0, netPayout);
+            const shortfall = netPayout < 0 ? pence(-netPayout) : 0;
 
             // Audit log in browser console for verification
             console.log(`[Payout Audit] ==========================================`);
@@ -231,11 +261,14 @@ export default function PayoutManagement() {
             console.log(`[Payout Audit] ==========================================`);
 
             const notes = [];
-            if (netPayout < 0) {
-                notes.push(`⚠️ Commission + refunds exceeded card payments by £${Math.abs(netPayout).toFixed(2)}. Payout floored to £0.`);
+            if (shortfall > 0) {
+                notes.push(`⚠️ Commission and refunds exceeded card takings by £${shortfall.toFixed(2)} — the restaurant owes MealDrop this amount. Carry it forward or invoice it.`);
             }
             if (cashCommissionDebt > 0) {
-                notes.push(`ℹ️ Cash commission debt: £${cashCommissionDebt.toFixed(2)} (commission on £${cashPaymentAmount.toFixed(2)} cash orders at ${commissionRate}%). Invoice restaurant separately.`);
+                notes.push(`ℹ️ Includes £${cashCommissionDebt.toFixed(2)} commission on £${cashPaymentAmount.toFixed(2)} of cash orders, already deducted from this payout.`);
+            }
+            if (refundsPaidByPlatform > 0) {
+                notes.push(`ℹ️ £${refundsPaidByPlatform.toFixed(2)} of refunds were covered by MealDrop and not deducted.`);
             }
             const finalNotes = notes.length > 0 ? notes.join(' | ') : undefined;
 
@@ -245,23 +278,24 @@ export default function PayoutManagement() {
                 period_start: periodStart.toISOString(),
                 period_end: periodEnd.toISOString(),
                 payout_frequency: payoutFrequency,
-                total_orders: periodOrders.length,
+                total_orders: payoutOrders.length,
                 cancelled_orders: cancelledOrders.length,
                 cancelled_orders_value: cancelledOrdersValue,
                 refunded_orders_count: refundedOrders.length,
                 delivery_orders: deliveryOrders,
                 collection_orders: collectionOrders,
                 dine_in_orders: dineInOrders,
-                gross_earnings: grossEarnings,
-                delivery_earnings: deliveryEarnings,
-                collection_earnings: collectionEarnings,
-                cash_payment_amount: cashPaymentAmount,
-                card_payment_amount: cardPaymentAmount,
+                gross_earnings: pence(grossEarnings),
+                delivery_earnings: pence(deliveryEarnings),
+                collection_earnings: pence(collectionEarnings),
+                cash_payment_amount: pence(cashPaymentAmount),
+                card_payment_amount: pence(cardPaymentAmount),
                 platform_commission: platformCommission,
                 commission_rate: commissionRate,
                 commission_type: restaurant.commission_type || 'percentage',
-                refunds_paid_by_platform: refundsPaidByPlatform,
-                refunds_paid_by_restaurant: refundsPaidByRestaurant,
+                refunds_paid_by_platform: pence(refundsPaidByPlatform),
+                refunds_paid_by_restaurant: pence(refundsPaidByRestaurant),
+                shortfall_amount: shortfall,
                 net_payout: finalNetPayout,
                 status: 'pending',
                 notes: finalNotes,
@@ -278,30 +312,38 @@ export default function PayoutManagement() {
         }
     });
 
+    const financeCall = async (action, payload) => {
+        const res = await base44.functions.invoke('finance-operations', { action, company_id: MEALDROP_FINANCE_COMPANY_ID, ...payload })
+            .catch((e) => { throw new Error(e?.response?.data?.error || e?.message || 'Request failed'); });
+        const data = res?.data ?? res;
+        if (!data?.success) throw new Error(data?.error || 'Request failed');
+        return data;
+    };
+
     const voidPayoutMutation = useMutation({
-        mutationFn: (payoutId) => base44.entities.Payout.delete(payoutId),
+        mutationFn: ({ payoutId, reason }) => financeCall('void_payout', { payout_id: payoutId, reason }),
         onSuccess: () => {
             queryClient.invalidateQueries(['payouts']);
-            toast.success('Payout voided and deleted');
+            toast.success('Payout voided (kept in history)');
         },
-        onError: () => toast.error('Failed to void payout'),
+        onError: (e) => toast.error(e.message || 'Failed to void payout'),
     });
 
     const markPaidMutation = useMutation({
-        mutationFn: ({ payoutId }) => 
-            base44.entities.Payout.update(payoutId, {
-                status: 'paid',
-                paid_date: new Date().toISOString(),
-                payment_method: paymentMethod,
-                notes: notes
-            }),
-        onSuccess: () => {
+        mutationFn: ({ payoutId }) => financeCall('mark_payout_paid', {
+            payout_id: payoutId, payment_method: paymentMethod, paid_date: paidDate,
+            transaction_reference: transactionRef, notes,
+        }),
+        onSuccess: (data) => {
             queryClient.invalidateQueries(['payouts']);
-            toast.success('Payout marked as paid');
+            if (data.posting_error) toast.warning(`Marked paid, but not posted to the books: ${data.posting_error}`);
+            else toast.success(data.posted ? 'Payout marked as paid and posted to the books' : 'Payout marked as paid');
             setPayoutDialog(null);
             setPaymentMethod('bank_transfer');
             setNotes('');
+            setTransactionRef('');
         },
+        onError: (e) => toast.error(e.message || 'Could not mark payout paid'),
     });
 
     const statusConfig = {
@@ -309,6 +351,7 @@ export default function PayoutManagement() {
         processing: { label: 'Processing', color: 'bg-blue-100 text-blue-800', icon: TrendingUp },
         paid: { label: 'Paid', color: 'bg-green-100 text-green-800', icon: CheckCircle },
         failed: { label: 'Failed', color: 'bg-red-100 text-red-800', icon: AlertCircle },
+        voided: { label: 'Voided', color: 'bg-gray-100 text-gray-500', icon: AlertCircle },
     };
 
     const totalPending = payouts
@@ -572,9 +615,8 @@ export default function PayoutManagement() {
                                                         variant="outline"
                                                         className="text-red-600 border-red-200 hover:bg-red-50"
                                                         onClick={() => {
-                                                            if (window.confirm(`Void and delete this payout for ${payout.restaurant_name}? This cannot be undone.`)) {
-                                                                voidPayoutMutation.mutate(payout.id);
-                                                            }
+                                                            const reason = window.prompt(`Void this payout for ${payout.restaurant_name}? It stays in history marked void. Reason:`);
+                                                            if (reason) voidPayoutMutation.mutate({ payoutId: payout.id, reason });
                                                         }}
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />
@@ -649,6 +691,17 @@ export default function PayoutManagement() {
                                     <SelectItem value="other">Other</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">Date paid</label>
+                                <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="w-full rounded-md border px-3 py-2 text-sm" />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">Bank reference</label>
+                                <input value={transactionRef} onChange={(e) => setTransactionRef(e.target.value)} placeholder="e.g. MD-TILB-OCT" className="w-full rounded-md border px-3 py-2 text-sm" />
+                            </div>
                         </div>
 
                         <div>
