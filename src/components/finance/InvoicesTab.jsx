@@ -203,7 +203,10 @@ export function InvoiceDetail({ company, invoiceId, onClose, onChanged }) {
         </ActionForm>
       )}
       {action === 'credit' && (
-        <ActionForm title="Raise a credit note" onClose={() => setAction('')} busy={busy} submitLabel="Issue credit note" onSubmit={() => run('create_credit_note', { invoice_id: inv.id, reason: f.reason, date: f.date, lines: [{ description: `Credit against ${inv.invoice_number}: ${f.reason}`, quantity: 1, unit_price: Number(f.amount), account_code: inv.lines?.[0]?.account_code || '4020' }] }, 'Credit note issued')}>
+        <ActionForm title="Raise a credit note" onClose={() => setAction('')} busy={busy} submitLabel="Issue credit note" onSubmit={() => {
+          const full = !(inv.credited_amount > 0) && roundMoney(Number(f.amount)) === roundMoney(inv.gross_total);
+          run('create_credit_note', { invoice_id: inv.id, reason: f.reason, date: f.date, ...(full ? {} : { lines: [{ description: `Credit against ${inv.invoice_number}: ${f.reason}`, quantity: 1, unit_price: Number(f.amount), account_code: inv.lines?.[0]?.account_code || '4020' }] }) }, 'Credit note issued');
+        }}>
           <Notice>Use a credit note to cancel or reduce an issued invoice. If the customer has already paid, the credit becomes a refund you owe them.</Notice>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Credit amount (£)" hint={`Max ${money(roundMoney(inv.gross_total - (inv.credited_amount || 0)))}`}><input type="number" step="0.01" min="0.01" required value={f.amount} onChange={setField('amount')} className={inputClass} /></Field>
