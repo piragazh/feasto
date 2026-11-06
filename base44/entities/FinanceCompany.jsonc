@@ -55,7 +55,6 @@
       "type": "boolean"
     },
     "company_number": {
-      "description": "Companies House number",
       "type": "string"
     },
     "credit_note_prefix": {
@@ -80,15 +79,18 @@
       "type": "string"
     },
     "legal_name": {
-      "description": "Registered legal entity name, e.g. MealDrop LTD",
       "type": "string"
     },
     "locked_until": {
-      "description": "No postings allowed on or before this date",
       "format": "date",
       "type": "string"
     },
     "logo_url": {
+      "type": "string"
+    },
+    "marketplace_from": {
+      "description": "Online orders, payouts and Stripe settlements on or after this date are posted to the ledger",
+      "format": "date",
       "type": "string"
     },
     "next_credit_note_number": {
@@ -129,7 +131,6 @@
       "type": "string"
     },
     "utr": {
-      "description": "Corporation Tax UTR",
       "type": "string"
     },
     "vat_number": {
@@ -165,6 +166,7 @@
   "required": [
     "legal_name"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -186,6 +188,5 @@
         "role": "finance_backend_only"
       }
     }
-  },
-  "type": "object"
+  }
 }
