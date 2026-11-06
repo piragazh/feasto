@@ -29,10 +29,19 @@ Deno.serve(async (req: Request) => {
     if (!company || company.status !== "active") return responseError("MealDrop FinanceCompany not found", 404);
 
     if (action === "sync_order_commissions") {
-      const orders = await db.entities.Order.filter({
-        payment_status: { $in: ["payment_confirmed", "paid_card"] },
-        status: { $in: ["delivered", "collected", "refunded"] }
-      }, "-created_date", 500, 0);
+      // Only ONLINE card orders: that money lands in MealDrop's Stripe account.
+      // POS, kiosk and third-party (Uber/Deliveroo/Just Eat) orders are paid elsewhere.
+      const CARD = new Set(["card", "apple_pay", "google_pay"]);
+      const EXCLUDED_SOURCES = new Set(["pos", "kiosk", "third_party"]);
+      const orders: any[] = [];
+      for (let skip = 0; skip < 20000; skip += 500) {
+        const page = await db.entities.Order.filter({
+          payment_status: { $in: ["payment_confirmed", "paid_card"] },
+          status: { $in: ["delivered", "collected", "refunded"] }
+        }, "-created_date", 500, skip);
+        orders.push(...(page || []));
+        if (!page || page.length < 500) break;
+      }
       const existing: any[] = [];
       for (let skip = 0; skip < 50000; skip += 500) {
         const page = await db.entities.FinanceOrderCommission.filter({ company_id: companyId }, "-created_date", 500, skip);
@@ -41,9 +50,25 @@ Deno.serve(async (req: Request) => {
       }
       const byOrderId = new Map((existing || []).map((r: any) => [r.order_id, r]));
       const restaurantCache = new Map<string, any>();
-      let created = 0, skipped = 0;
-      for (const order of orders || []) {
-        if (!order?.id || byOrderId.has(order.id)) { skipped++; continue; }
+      let created = 0, updated = 0, skipped = 0, excluded = 0;
+      for (const order of orders) {
+        if (!order?.id) continue;
+        const source = String(order.order_source || "online");
+        const eligible = !EXCLUDED_SOURCES.has(source) && CARD.has(String(order.payment_method || ""));
+        const refundFields = order.status === "refunded"
+          ? { refund_amount: roundMoney(Number(order.refund_amount ?? order.total ?? 0)), refund_paid_by: String(order.refund_paid_by || "restaurant"), ...((order.refund_approved_date || order.updated_date) ? { refunded_at: new Date(order.refund_approved_date || order.updated_date).toISOString() } : {}) }
+          : {};
+        const prior: any = byOrderId.get(order.id);
+        if (prior) {
+          // Bring older rows up to date (source, refunds) without touching anything already posted.
+          const patch: any = {};
+          if (!prior.order_source) patch.order_source = source;
+          if (!eligible && !prior.ledger_entry_id && prior.reconciliation_status !== "excluded") { patch.reconciliation_status = "excluded"; excluded++; }
+          if (order.status === "refunded" && prior.order_status !== "refunded" && !prior.refund_entry_id) Object.assign(patch, refundFields, { order_status: "refunded" });
+          if (Object.keys(patch).length) { await db.entities.FinanceOrderCommission.update(prior.id, patch); updated++; } else skipped++;
+          continue;
+        }
+        if (!eligible) { excluded++; continue; }
         const restaurantId = String(order.restaurant_id || "");
         let restaurant: any = null;
         if (restaurantId) {
@@ -55,34 +80,22 @@ Deno.serve(async (req: Request) => {
         }
         const gross = roundMoney(Math.max(0, Number(order.total || 0)));
         const configuredRate = Number(restaurant?.commission_rate ?? 15);
-        const commissionType = restaurant?.commission_type || "percentage";
         const rate = Number.isFinite(configuredRate) && configuredRate >= 0 && configuredRate <= 100 ? configuredRate : 15;
-        let commission: number;
-        if (order.platform_commission_amount !== undefined && order.platform_commission_amount !== null && Number.isFinite(Number(order.platform_commission_amount))) {
-          commission = roundMoney(Math.max(0, Number(order.platform_commission_amount)));
-        } else if (commissionType === "fixed") {
-          commission = roundMoney(Math.max(0, Number(restaurant?.fixed_commission_amount || 0)));
-        } else {
-          commission = roundMoney(gross * rate / 100);
-        }
-        commission = Math.min(commission, gross);
-        const earnings = order.restaurant_earnings !== undefined && order.restaurant_earnings !== null && Number.isFinite(Number(order.restaurant_earnings))
-          ? roundMoney(Math.max(0, Number(order.restaurant_earnings)))
-          : roundMoney(gross - commission);
+        const commission = Math.min(gross, restaurant?.commission_type === "fixed" ? roundMoney(Number(restaurant?.fixed_commission_amount || 0)) : roundMoney(gross * rate / 100));
         await db.entities.FinanceOrderCommission.create({
           company_id: companyId, order_id: String(order.id), order_number: String(order.order_number || ""),
           restaurant_id: restaurantId, restaurant_name: String(order.restaurant_name || restaurant?.name || "Unknown restaurant"),
           ...(order.created_date ? { order_date: new Date(order.created_date).toISOString() } : {}),
-          currency: "GBP", gross_order_value: gross, commission_rate: rate,
-          commission_amount: commission, commission_vat: 0, restaurant_earnings: earnings,
+          order_source: source, currency: "GBP", gross_order_value: gross, commission_rate: rate,
+          commission_amount: commission, commission_vat: 0, restaurant_earnings: roundMoney(gross - commission),
           payment_method: String(order.payment_method || ""), payment_intent_id: String(order.payment_intent_id || ""),
           order_status: String(order.status || ""), payment_status: String(order.payment_status || ""),
-          reconciliation_status: order.status === "refunded" ? "query" : "recorded", source_type: "order_sync",
-          notes: order.status === "refunded" ? "Refunded order included for review; reconcile refund and commission policy before payout." : "Imported read-only from existing order record; no POS order or payment was changed."
+          ...refundFields, reconciliation_status: "recorded", source_type: "order_sync",
+          notes: "Online card order paid into MealDrop's Stripe account. Commission shown is an estimate; the payout statement is what's posted."
         });
         created++;
       }
-      return Response.json({ success: true, action, fetched: (orders || []).length, created, skipped, message: "Read-only order commission sync completed. Up to 500 recent eligible orders were checked; run again for later additions." });
+      return Response.json({ success: true, action, fetched: orders.length, created, updated, skipped, excluded, message: `${created} new online card order(s) recorded, ${updated} updated, ${excluded} excluded (POS, kiosk, third-party or cash).` });
     }
 
     if (action === "sync_stripe_payouts") {
