@@ -1,56 +1,28 @@
 {
   "name": "FinanceLedgerEntry",
-  "type": "object",
   "properties": {
     "company_id": {
-      "type": "string",
-      "description": "FinanceCompany record ID"
-    },
-    "entry_number": {
       "type": "string"
     },
-    "entry_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "source_type": {
-      "type": "string",
+    "currency": {
+      "default": "GBP",
       "enum": [
-        "invoice",
-        "expense",
-        "payment",
-        "payout",
-        "journal",
-        "credit_note",
-        "opening_balance"
-      ]
-    },
-    "source_id": {
+        "GBP"
+      ],
       "type": "string"
     },
     "description": {
       "type": "string"
     },
-    "status": {
-      "type": "string",
-      "enum": [
-        "draft",
-        "posted",
-        "reversed"
-      ],
-      "default": "draft"
+    "entry_date": {
+      "format": "date",
+      "type": "string"
     },
-    "currency": {
-      "type": "string",
-      "enum": [
-        "GBP"
-      ],
-      "default": "GBP"
+    "entry_number": {
+      "type": "string"
     },
     "lines": {
-      "type": "array",
       "items": {
-        "type": "object",
         "properties": {
           "account_code": {
             "type": "string"
@@ -58,35 +30,73 @@
           "account_name": {
             "type": "string"
           },
-          "debit": {
-            "type": "number"
-          },
           "credit": {
             "type": "number"
           },
-          "tax_code": {
-            "type": "string"
+          "debit": {
+            "type": "number"
           },
           "memo": {
             "type": "string"
+          },
+          "tax_code": {
+            "type": "string"
           }
-        }
-      }
-    },
-    "total_debit": {
-      "type": "number",
-      "default": 0
-    },
-    "total_credit": {
-      "type": "number",
-      "default": 0
+        },
+        "type": "object"
+      },
+      "type": "array"
     },
     "posted_at": {
-      "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "type": "string"
+    },
+    "posted_by": {
+      "type": "string"
     },
     "reversed_entry_id": {
+      "description": "On a reversed entry: the reversal that cancels it",
       "type": "string"
+    },
+    "reverses_entry_id": {
+      "description": "On a reversal: the entry it cancels",
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "source_reference": {
+      "type": "string"
+    },
+    "source_type": {
+      "enum": [
+        "invoice",
+        "credit_note",
+        "payment",
+        "expense",
+        "expense_payment",
+        "payout",
+        "journal",
+        "opening_balance",
+        "reversal"
+      ],
+      "type": "string"
+    },
+    "status": {
+      "default": "posted",
+      "enum": [
+        "posted",
+        "reversed"
+      ],
+      "type": "string"
+    },
+    "total_credit": {
+      "default": 0,
+      "type": "number"
+    },
+    "total_debit": {
+      "default": 0,
+      "type": "number"
     }
   },
   "required": [
@@ -98,16 +108,25 @@
   ],
   "rls": {
     "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "read": {
-      "created_by_id": "{{user.id}}"
-    },
-    "update": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     },
     "delete": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     }
-  }
+  },
+  "type": "object"
 }
