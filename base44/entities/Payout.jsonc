@@ -1,124 +1,125 @@
 {
   "name": "Payout",
-  "type": "object",
   "properties": {
-    "restaurant_id": {
-      "type": "string",
-      "description": "Restaurant receiving payout"
+    "cancelled_orders": {
+      "default": 0,
+      "type": "number"
     },
-    "restaurant_name": {
+    "cancelled_orders_value": {
+      "default": 0,
+      "type": "number"
+    },
+    "card_payment_amount": {
+      "default": 0,
+      "type": "number"
+    },
+    "cash_payment_amount": {
+      "default": 0,
+      "type": "number"
+    },
+    "collection_earnings": {
+      "default": 0,
+      "type": "number"
+    },
+    "collection_orders": {
+      "default": 0,
+      "type": "number"
+    },
+    "commission_rate": {
+      "type": "number"
+    },
+    "commission_type": {
+      "default": "percentage",
+      "enum": [
+        "percentage",
+        "fixed"
+      ],
       "type": "string"
     },
-    "period_start": {
-      "type": "string",
-      "format": "date",
-      "description": "Payout period start date"
+    "delivery_earnings": {
+      "default": 0,
+      "type": "number"
     },
-    "period_end": {
-      "type": "string",
-      "format": "date",
-      "description": "Payout period end date"
+    "delivery_orders": {
+      "default": 0,
+      "type": "number"
+    },
+    "dine_in_orders": {
+      "default": 0,
+      "type": "number"
+    },
+    "finance_commission_entry_id": {
+      "type": "string"
+    },
+    "finance_payment_entry_id": {
+      "type": "string"
+    },
+    "gross_earnings": {
+      "type": "number"
+    },
+    "net_payout": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "paid_date": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "payment_method": {
+      "type": "string"
     },
     "payout_frequency": {
-      "type": "string",
       "enum": [
         "daily",
         "weekly",
         "monthly",
         "custom"
       ],
-      "description": "Payout frequency type"
+      "type": "string"
     },
-    "total_orders": {
-      "type": "number",
-      "description": "Number of completed orders included in payout"
+    "period_end": {
+      "description": "Payout period end date",
+      "format": "date",
+      "type": "string"
     },
-    "cancelled_orders": {
-      "type": "number",
-      "default": 0,
-      "description": "Number of cancelled orders in period (excluded from payout)"
-    },
-    "cancelled_orders_value": {
-      "type": "number",
-      "default": 0,
-      "description": "Total value of cancelled orders in period"
-    },
-    "refunded_orders_count": {
-      "type": "number",
-      "default": 0,
-      "description": "Number of refunded orders in period"
-    },
-    "delivery_orders": {
-      "type": "number",
-      "default": 0,
-      "description": "Number of delivery orders"
-    },
-    "collection_orders": {
-      "type": "number",
-      "default": 0,
-      "description": "Number of collection/takeaway orders"
-    },
-    "dine_in_orders": {
-      "type": "number",
-      "default": 0,
-      "description": "Number of dine-in orders"
-    },
-    "gross_earnings": {
-      "type": "number",
-      "description": "Total order value before commission"
-    },
-    "delivery_earnings": {
-      "type": "number",
-      "default": 0,
-      "description": "Gross earnings from delivery orders"
-    },
-    "collection_earnings": {
-      "type": "number",
-      "default": 0,
-      "description": "Gross earnings from collection orders"
-    },
-    "cash_payment_amount": {
-      "type": "number",
-      "default": 0,
-      "description": "Total cash payment orders"
-    },
-    "card_payment_amount": {
-      "type": "number",
-      "default": 0,
-      "description": "Total card payment orders"
+    "period_start": {
+      "description": "Payout period start date",
+      "format": "date",
+      "type": "string"
     },
     "platform_commission": {
-      "type": "number",
-      "description": "Total commission taken by platform"
+      "type": "number"
     },
-    "commission_rate": {
-      "type": "number",
-      "description": "Commission rate applied"
-    },
-    "commission_type": {
-      "type": "string",
-      "enum": [
-        "percentage",
-        "fixed"
-      ],
-      "default": "percentage"
+    "refunded_orders_count": {
+      "default": 0,
+      "type": "number"
     },
     "refunds_paid_by_platform": {
-      "type": "number",
       "default": 0,
-      "description": "Refunds covered by platform"
+      "description": "Refunds MealDrop absorbed (not deducted from restaurant)",
+      "type": "number"
     },
     "refunds_paid_by_restaurant": {
-      "type": "number",
       "default": 0,
-      "description": "Refunds deducted from restaurant"
+      "description": "Refunds deducted from restaurant (orders paid out in an earlier period)",
+      "type": "number"
     },
-    "net_payout": {
-      "type": "number",
-      "description": "Amount to be paid to restaurant"
+    "restaurant_id": {
+      "description": "Restaurant receiving payout",
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
+    "shortfall_amount": {
+      "default": 0,
+      "description": "Amount the restaurant owes MealDrop when deductions exceed card takings",
+      "type": "number"
     },
     "status": {
-      "type": "string",
+      "default": "pending",
       "enum": [
         "pending",
         "processing",
@@ -126,22 +127,19 @@
         "failed",
         "voided"
       ],
-      "default": "pending"
+      "type": "string"
     },
-    "paid_date": {
-      "type": "string",
-      "format": "date-time",
-      "description": "When payout was completed"
-    },
-    "payment_method": {
-      "type": "string",
-      "description": "Bank transfer, etc"
+    "total_orders": {
+      "type": "number"
     },
     "transaction_reference": {
-      "type": "string",
-      "description": "Bank transaction reference"
+      "type": "string"
     },
-    "notes": {
+    "void_reason": {
+      "type": "string"
+    },
+    "voided_at": {
+      "format": "date-time",
       "type": "string"
     }
   },
@@ -152,5 +150,23 @@
     "gross_earnings",
     "platform_commission",
     "net_payout"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    }
+  },
+  "type": "object"
 }
