@@ -27,6 +27,10 @@
       "default": 0,
       "type": "number"
     },
+    "ledger_entry_id": {
+      "description": "Receipt posting (money into Stripe balance)",
+      "type": "string"
+    },
     "notes": {
       "type": "string"
     },
@@ -38,6 +42,9 @@
       "type": "string"
     },
     "order_number": {
+      "type": "string"
+    },
+    "order_source": {
       "type": "string"
     },
     "order_status": {
@@ -60,6 +67,20 @@
         "query",
         "excluded"
       ],
+      "type": "string"
+    },
+    "refund_amount": {
+      "default": 0,
+      "type": "number"
+    },
+    "refund_entry_id": {
+      "type": "string"
+    },
+    "refund_paid_by": {
+      "type": "string"
+    },
+    "refunded_at": {
+      "format": "date-time",
       "type": "string"
     },
     "restaurant_earnings": {
@@ -87,6 +108,7 @@
     "commission_amount",
     "reconciliation_status"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -108,6 +130,5 @@
         "role": "finance_backend_only"
       }
     }
-  },
-  "type": "object"
+  }
 }
