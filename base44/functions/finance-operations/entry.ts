@@ -75,10 +75,12 @@ const DEFAULT_ACCOUNTS = [
   ["6110", "Tools & small equipment", "expense", "overhead"],
   ["6120", "Training & subscriptions", "expense", "overhead"],
   ["6900", "General expenses", "expense", "overhead"],
+  ["6910", "Customer refunds absorbed by MealDrop", "expense", "overhead"],
   ["8000", "Depreciation charge", "expense", "overhead"],
   ["9000", "Corporation tax charge", "expense", "tax"],
 ];
-const SYSTEM_CODES = new Set(["1100", "1200", "1210", "1230", "2100", "2200", "2400", "2500", "3100"]);
+const SYSTEM_CODES = new Set(["1100", "1200", "1210", "1230", "2100", "2200", "2400", "2500", "3100", "4030", "6020", "6910"]);
+const STRIPE = "1210", BANK = "1200", HELD = "2400", COMMISSION = "4030", STRIPE_FEES = "6020", REFUNDS_ABSORBED = "6910";
 const ITEM_TYPE_ACCOUNT: Record<string, string> = { equipment: "4000", labour: "4010", service: "4020", subscription: "4020", other: "4900" };
 const BANK_FOR_METHOD: Record<string, string> = { bank_transfer: "1200", card: "1200", direct_debit: "1200", stripe: "1210", cash: "1230", other: "1200" };
 const DEBTORS = "1100", CREDITORS = "2100", VAT = "2200";
@@ -126,9 +128,9 @@ async function audit(ctx: Ctx, companyId: string, entity: string, recordId: stri
 }
 
 // Post a balanced double-entry journal. Lines: {account_code, debit, credit, memo}
-async function postEntry(ctx: Ctx, company: any, e: { date: string; source_type: string; source_id?: string; source_reference?: string; description: string; lines: any[] }) {
+async function postEntry(ctx: Ctx, company: any, e: { date: string; source_type: string; source_id?: string; source_reference?: string; description: string; lines: any[]; restaurant_id?: string; restaurant_name?: string }, cachedAccounts?: Map<string, any>) {
   assertOpen(company, e.date);
-  const accounts = await accountMap(ctx, company.id);
+  const accounts = cachedAccounts || await accountMap(ctx, company.id);
   if (!accounts.size) fail("Set up the chart of accounts first (Settings → Chart of accounts)");
   const lines = e.lines
     .map((l) => ({ ...l, debit: r2(l.debit || 0), credit: r2(l.credit || 0) }))
@@ -150,6 +152,7 @@ async function postEntry(ctx: Ctx, company: any, e: { date: string; source_type:
   return await ctx.db.FinanceLedgerEntry.create({
     company_id: company.id, entry_number: `JE-${pad(num, 6)}`, entry_date: e.date, source_type: e.source_type,
     ...(e.source_id ? { source_id: e.source_id } : {}), ...(e.source_reference ? { source_reference: str(e.source_reference, 120) } : {}),
+    ...(e.restaurant_id ? { restaurant_id: e.restaurant_id, restaurant_name: str(e.restaurant_name, 200) } : {}),
     description: str(e.description, 500), status: "posted", currency: "GBP", lines, total_debit: td, total_credit: tc,
     posted_at: new Date().toISOString(), posted_by: ctx.user.email || ctx.user.id,
   });
@@ -160,6 +163,7 @@ async function reverseEntry(ctx: Ctx, company: any, entryId: string, date: strin
   if (date < entry.entry_date) date = entry.entry_date; // a reversal can never pre-date what it reverses
   const reversal = await postEntry(ctx, company, {
     date, source_type: "reversal", source_id: entry.id, source_reference: entry.entry_number,
+    ...(entry.restaurant_id ? { restaurant_id: entry.restaurant_id, restaurant_name: entry.restaurant_name } : {}),
     description: `Reversal of ${entry.entry_number}: ${reason}`.slice(0, 500),
     lines: entry.lines.map((l: any) => ({ account_code: l.account_code, debit: l.credit, credit: l.debit, memo: l.memo })),
   });
@@ -466,6 +470,7 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
       } else { patch.vat_scheme = "not_registered"; }
     }
     if ("vat_threshold" in f) patch.vat_threshold = r2(f.vat_threshold);
+    if ("marketplace_from" in f) patch.marketplace_from = f.marketplace_from ? needDate(f.marketplace_from, "Marketplace start date") : null;
     if (!body.company_id) {
       if (!patch.legal_name) fail("Legal name is required");
       const created = await ctx.db.FinanceCompany.create({ ...patch, status: "active", currency: "GBP", next_invoice_number: 1, next_credit_note_number: 1, next_journal_number: 1, vat_scheme: patch.vat_scheme || "not_registered" });
