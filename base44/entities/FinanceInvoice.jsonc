@@ -1,158 +1,233 @@
 {
   "name": "FinanceInvoice",
-  "type": "object",
   "properties": {
+    "amount_paid": {
+      "default": 0,
+      "type": "number"
+    },
+    "attachment_url": {
+      "type": "string"
+    },
+    "balance_due": {
+      "default": 0,
+      "type": "number"
+    },
     "company_id": {
-      "type": "string",
-      "description": "FinanceCompany record ID"
-    },
-    "invoice_number": {
       "type": "string"
     },
-    "document_type": {
-      "type": "string",
+    "company_snapshot": {
+      "description": "Seller details frozen at issue",
+      "type": "object"
+    },
+    "credit_of_invoice_id": {
+      "description": "For credit notes: the invoice being credited",
+      "type": "string"
+    },
+    "credit_of_invoice_number": {
+      "type": "string"
+    },
+    "credited_amount": {
+      "default": 0,
+      "type": "number"
+    },
+    "currency": {
+      "default": "GBP",
       "enum": [
-        "sales_invoice",
-        "purchase_invoice",
-        "credit_note"
+        "GBP"
       ],
-      "default": "sales_invoice"
-    },
-    "customer_name": {
-      "type": "string"
-    },
-    "customer_email": {
       "type": "string"
     },
     "customer_address": {
-      "type": "object",
       "properties": {
+        "city": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
         "line_1": {
           "type": "string"
         },
         "line_2": {
           "type": "string"
         },
-        "city": {
-          "type": "string"
-        },
         "postcode": {
           "type": "string"
-        },
-        "country": {
-          "type": "string"
         }
-      }
+      },
+      "type": "object"
     },
-    "issue_date": {
-      "type": "string",
-      "format": "date"
+    "customer_address_text": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "document_type": {
+      "default": "sales_invoice",
+      "enum": [
+        "sales_invoice",
+        "credit_note"
+      ],
+      "type": "string"
     },
     "due_date": {
-      "type": "string",
-      "format": "date"
+      "format": "date",
+      "type": "string"
     },
-    "currency": {
-      "type": "string",
-      "enum": [
-        "GBP"
-      ],
-      "default": "GBP"
+    "gross_total": {
+      "default": 0,
+      "type": "number"
     },
-    "status": {
-      "type": "string",
-      "enum": [
-        "draft",
-        "issued",
-        "part_paid",
-        "paid",
-        "overdue",
-        "void"
-      ],
-      "default": "draft"
+    "internal_notes": {
+      "type": "string"
+    },
+    "invoice_number": {
+      "description": "Assigned sequentially when issued; drafts have none",
+      "type": "string"
+    },
+    "issue_date": {
+      "format": "date",
+      "type": "string"
+    },
+    "issued_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "ledger_entry_id": {
+      "type": "string"
     },
     "lines": {
-      "type": "array",
       "items": {
-        "type": "object",
         "properties": {
+          "account_code": {
+            "type": "string"
+          },
           "description": {
             "type": "string"
           },
-          "quantity": {
-            "type": "number"
-          },
-          "unit_price": {
-            "type": "number"
-          },
-          "net_amount": {
-            "type": "number"
-          },
-          "vat_rate": {
-            "type": "number"
-          },
-          "vat_amount": {
+          "discount_percent": {
             "type": "number"
           },
           "gross_amount": {
             "type": "number"
           },
-          "account_code": {
+          "item_id": {
             "type": "string"
+          },
+          "net_amount": {
+            "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "vat_amount": {
+            "type": "number"
+          },
+          "vat_rate": {
+            "type": "number"
           }
-        }
-      }
+        },
+        "type": "object"
+      },
+      "type": "array"
     },
     "net_total": {
-      "type": "number",
-      "default": 0
-    },
-    "vat_total": {
-      "type": "number",
-      "default": 0
-    },
-    "gross_total": {
-      "type": "number",
-      "default": 0
-    },
-    "amount_paid": {
-      "type": "number",
-      "default": 0
-    },
-    "balance_due": {
-      "type": "number",
-      "default": 0
-    },
-    "source_order_id": {
-      "type": "string",
-      "description": "Optional external/POS order reference; no POS integration implied"
-    },
-    "attachment_url": {
-      "type": "string"
+      "default": 0,
+      "type": "number"
     },
     "notes": {
+      "description": "Shown on the invoice",
+      "type": "string"
+    },
+    "recurring_id": {
+      "type": "string"
+    },
+    "reference": {
+      "description": "Job / PO / site reference",
+      "type": "string"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "sent_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "sent_to": {
+      "type": "string"
+    },
+    "source_order_id": {
+      "type": "string"
+    },
+    "status": {
+      "default": "draft",
+      "enum": [
+        "draft",
+        "issued",
+        "part_paid",
+        "paid",
+        "void"
+      ],
+      "type": "string"
+    },
+    "supply_date": {
+      "format": "date",
+      "type": "string"
+    },
+    "vat_total": {
+      "default": 0,
+      "type": "number"
+    },
+    "void_ledger_entry_id": {
+      "type": "string"
+    },
+    "void_reason": {
+      "type": "string"
+    },
+    "voided_at": {
+      "format": "date-time",
       "type": "string"
     }
   },
   "required": [
     "company_id",
-    "invoice_number",
     "document_type",
-    "issue_date",
     "status"
   ],
   "rls": {
     "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "read": {
-      "created_by_id": "{{user.id}}"
-    },
-    "update": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     },
     "delete": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     }
-  }
+  },
+  "type": "object"
 }

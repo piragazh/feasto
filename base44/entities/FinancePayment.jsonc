@@ -1,0 +1,85 @@
+{
+  "name": "FinancePayment",
+  "properties": {
+    "amount": {
+      "type": "number"
+    },
+    "bank_account_code": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "invoice_id": {
+      "type": "string"
+    },
+    "invoice_number": {
+      "type": "string"
+    },
+    "ledger_entry_id": {
+      "type": "string"
+    },
+    "method": {
+      "default": "bank_transfer",
+      "enum": [
+        "bank_transfer",
+        "card",
+        "cash",
+        "stripe",
+        "direct_debit",
+        "other"
+      ],
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "payment_date": {
+      "format": "date",
+      "type": "string"
+    },
+    "reference": {
+      "type": "string"
+    },
+    "status": {
+      "default": "posted",
+      "enum": [
+        "posted",
+        "reversed"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "invoice_id",
+    "payment_date",
+    "amount"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    }
+  },
+  "type": "object"
+}

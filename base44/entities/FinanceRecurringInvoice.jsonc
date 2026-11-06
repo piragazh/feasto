@@ -1,0 +1,122 @@
+{
+  "name": "FinanceRecurringInvoice",
+  "properties": {
+    "auto_email": {
+      "default": false,
+      "type": "boolean"
+    },
+    "auto_issue": {
+      "default": true,
+      "type": "boolean"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "end_date": {
+      "format": "date",
+      "type": "string"
+    },
+    "frequency": {
+      "default": "monthly",
+      "enum": [
+        "weekly",
+        "monthly",
+        "quarterly",
+        "annually"
+      ],
+      "type": "string"
+    },
+    "invoices_generated": {
+      "default": 0,
+      "type": "integer"
+    },
+    "last_invoice_id": {
+      "type": "string"
+    },
+    "last_run_date": {
+      "format": "date",
+      "type": "string"
+    },
+    "lines": {
+      "items": {
+        "properties": {
+          "account_code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "name": {
+      "type": "string"
+    },
+    "next_run_date": {
+      "format": "date",
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "reference": {
+      "type": "string"
+    },
+    "status": {
+      "default": "active",
+      "enum": [
+        "active",
+        "paused",
+        "ended"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "customer_id",
+    "name",
+    "frequency",
+    "next_run_date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    }
+  },
+  "type": "object"
+}

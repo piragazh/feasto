@@ -1,0 +1,76 @@
+{
+  "name": "FinanceItem",
+  "properties": {
+    "account_code": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "cost_price": {
+      "description": "Optional purchase cost for margin tracking",
+      "type": "number"
+    },
+    "description": {
+      "type": "string"
+    },
+    "item_type": {
+      "default": "service",
+      "enum": [
+        "equipment",
+        "labour",
+        "service",
+        "subscription",
+        "other"
+      ],
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "status": {
+      "default": "active",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "type": "string"
+    },
+    "unit": {
+      "default": "each",
+      "type": "string"
+    },
+    "unit_price": {
+      "default": 0,
+      "type": "number"
+    }
+  },
+  "required": [
+    "company_id",
+    "name",
+    "unit_price"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    }
+  },
+  "type": "object"
+}

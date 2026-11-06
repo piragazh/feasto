@@ -1,0 +1,76 @@
+{
+  "name": "FinanceAccount",
+  "properties": {
+    "code": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "is_bank": {
+      "default": false,
+      "type": "boolean"
+    },
+    "is_system": {
+      "default": false,
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "status": {
+      "default": "active",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "type": "string"
+    },
+    "subtype": {
+      "description": "current_asset, fixed_asset, bank, current_liability, long_term_liability, equity, sales, other_income, cost_of_sales, overhead, tax",
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "asset",
+        "liability",
+        "equity",
+        "income",
+        "expense"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "code",
+    "name",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    }
+  },
+  "type": "object"
+}

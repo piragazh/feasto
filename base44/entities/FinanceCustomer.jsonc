@@ -1,0 +1,71 @@
+{
+  "name": "FinanceCustomer",
+  "properties": {
+    "billing_address": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "company_number": {
+      "type": "string"
+    },
+    "contact_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "payment_terms_days": {
+      "type": "integer"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "restaurant_id": {
+      "description": "Linked MealDrop Restaurant, if any",
+      "type": "string"
+    },
+    "status": {
+      "default": "active",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    }
+  },
+  "type": "object"
+}
