@@ -949,20 +949,20 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
     const paidDate = body.paid_date ? needDate(body.paid_date, "Paid date") : today();
     const method = str(body.payment_method || "bank_transfer", 40);
     const updated = await ctx.db.Payout.update(p.id, { status: "paid", paid_date: new Date(paidDate + "T12:00:00Z").toISOString(), payment_method: method, transaction_reference: str(body.transaction_reference, 120), net_payout: r2(p.net_payout), ...(body.notes ? { notes: [p.notes, str(body.notes, 1000)].filter(Boolean).join(" | ") } : {}) });
-    let posted = false;
+    let posted = false, posting_error = "";
     if (body.company_id) {
       const company = await getCompany(ctx, body.company_id);
       if (company.marketplace_from && company.chart_seeded) {
         const accounts = await accountMap(ctx, company.id);
-        const attempt = async (fn: () => Promise<any>) => fn();
+        const attempt = async (fn: () => Promise<any>) => { try { return await fn(); } catch (e) { posting_error = e instanceof Error ? e.message : String(e); return null; } };
         if (!updated.finance_commission_entry_id && String(updated.period_end).slice(0, 10) >= company.marketplace_from && Number(updated.platform_commission) > 0) {
           const e = await postPayoutCommission(ctx, company, updated, accounts, attempt); if (e) updated.finance_commission_entry_id = e.id;
         }
-        if (paidDate >= company.marketplace_from && Number(updated.net_payout) > 0) { await postPayoutPayment(ctx, company, updated, accounts, attempt); posted = true; }
+        if (paidDate >= company.marketplace_from && Number(updated.net_payout) > 0) posted = !!(await postPayoutPayment(ctx, company, updated, accounts, attempt));
       }
       await audit(ctx, company.id, "Payout", p.id, "payment", `Paid ${p.restaurant_name} £${r2(p.net_payout).toFixed(2)} (${method}${body.transaction_reference ? ` ref ${body.transaction_reference}` : ""})`);
     }
-    return { payout: { ...updated, status: "paid" }, posted };
+    return { payout: { ...updated, status: "paid" }, posted, posting_error };
   },
 
   async void_payout(ctx, body) {
