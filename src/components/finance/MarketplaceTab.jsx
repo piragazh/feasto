@@ -1,93 +1,157 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, ArrowDownToLine, Plus, RefreshCw } from 'lucide-react';
+import { RefreshCw, BookCheck, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { fin, useRecords, downloadCsv } from './financeApi';
-import { Btn, Card, Field, Modal, Table, Stat, Notice, Loading, Badge, inputClass, money, fmtDate, today } from './ui';
+import { createPageUrl } from '@/utils';
+import { fin, useRecords, useReport, listAll } from './financeApi';
+import { Btn, Card, Field, Table, Stat, Notice, Loading, Badge, inputClass, money, fmtDate } from './ui';
 
 export const MEALDROP_COMPANY_ID = '6adb27b5c246acfa7f3c9b9a';
-const TEMPLATE = ['payout_reference', 'payout_date', 'period_start', 'period_end', 'payment_provider', 'restaurant_name', 'gross_order_value', 'commission_rate', 'commission_amount', 'refunds_and_chargebacks', 'other_deductions', 'net_payout', 'status', 'external_reference', 'notes'];
 
-function parseCsv(text) {
-  const rows = []; let row = [], cell = '', q = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === '"' && q && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = !q;
-    else if (ch === ',' && !q) { row.push(cell); cell = ''; } else if ((ch === '\n' || ch === '\r') && !q) { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); if (row.some((v) => v.trim())) rows.push(row); row = []; cell = ''; } else cell += ch;
-  }
-  row.push(cell); if (row.some((v) => v.trim())) rows.push(row); return rows;
+function MoneyFlow() {
+  const steps = [
+    ['Customer pays online', 'Card money lands in your Stripe balance and is held for the restaurant'],
+    ['Payout statement', 'Your commission moves from “held” to your income'],
+    ['You pay the restaurant', 'Bank transfer from Super Admin → Payouts'],
+    ['Stripe pays you', 'Stripe sends the balance to your bank, minus its fees'],
+  ];
+  return <div className="grid gap-2 sm:grid-cols-4">{steps.map(([t, d], i) => <div key={t} className="rounded-lg bg-slate-50 p-3"><span className="text-xs font-semibold text-orange-700">{i + 1}</span><p className="text-sm font-medium text-slate-900">{t}</p><p className="mt-0.5 text-xs text-slate-500">{d}</p></div>)}</div>;
 }
-const num = (v) => { const n = Number(String(v || '0').replace(/[£,]/g, '')); if (!Number.isFinite(n)) throw new Error('Invalid number in CSV'); return n; };
 
-export default function MarketplaceTab({ company }) {
-  const [view, setView] = useState('commissions');
-  const payouts = useRecords('FinancePayout', company.id, '-payout_date');
+export default function MarketplaceTab({ company, onCompanyChange }) {
+  const [view, setView] = useState('balances');
+  const [refresh, setRefresh] = useState(0);
+  const balances = useReport(company.id, 'restaurant_balances', {}, [refresh]);
   const commissions = useRecords('FinanceOrderCommission', company.id, '-order_date');
   const stripe = useRecords('FinanceStripeSettlement', company.id, '-payout_date');
-  const [syncing, setSyncing] = useState('');
-  const [adding, setAdding] = useState(false);
-  const [p, setP] = useState({ payout_reference: '', payout_date: today(), restaurant_name: '', payment_provider: 'Bank transfer', gross_order_value: '', commission_rate: '15', commission_amount: '', refunds_and_chargebacks: '0', other_deductions: '0', status: 'paid', notes: '' });
-  const fileRef = useRef(null);
+  const [payouts, setPayouts] = useState(null);
+  const [busy, setBusy] = useState('');
+  const [fromDate, setFromDate] = useState(company.marketplace_from || '');
   const isMealDrop = company.id === MEALDROP_COMPANY_ID;
-  const commissionCalc = p.commission_amount !== '' ? Number(p.commission_amount) : Math.round(Number(p.gross_order_value || 0) * Number(p.commission_rate || 0)) / 100;
-  const net = Math.round((Number(p.gross_order_value || 0) - commissionCalc - Number(p.refunds_and_chargebacks || 0) - Number(p.other_deductions || 0)) * 100) / 100;
-  const ct = useMemo(() => ({ gross: commissions.rows.reduce((s, c) => s + Number(c.gross_order_value || 0), 0), commission: commissions.rows.reduce((s, c) => s + Number(c.commission_amount || 0), 0), owed: commissions.rows.reduce((s, c) => s + Number(c.restaurant_earnings || 0), 0) }), [commissions.rows]);
-  const paidOut = payouts.rows.reduce((s, x) => s + Number(x.net_payout || 0), 0);
+  useEffect(() => { listAll('Payout', {}, '-period_end').then(setPayouts).catch(() => setPayouts([])); }, [refresh]);
 
+  const unposted = useMemo(() => {
+    if (!company.marketplace_from) return null;
+    const from = company.marketplace_from;
+    const d = (x) => String(x || '').slice(0, 10);
+    return {
+      orders: commissions.rows.filter((o) => !o.ledger_entry_id && o.reconciliation_status !== 'excluded' && d(o.order_date) >= from).length,
+      payouts: (payouts || []).filter((p) => !['voided', 'failed'].includes(p.status) && ((!p.finance_commission_entry_id && d(p.period_end) >= from) || (p.status === 'paid' && !p.finance_payment_entry_id && d(p.paid_date) >= from))).length,
+      settlements: stripe.rows.filter((s) => !s.ledger_entry_id && d(s.arrival_date || s.payout_date) >= from).length,
+    };
+  }, [company.marketplace_from, commissions.rows, payouts, stripe.rows]);
+
+  const saveFrom = async () => {
+    setBusy('from');
+    try { const { company: c } = await fin('save_company', { company_id: company.id, fields: { marketplace_from: fromDate } }); onCompanyChange(c); toast.success('Start date saved'); }
+    catch (e) { toast.error(e.message); } finally { setBusy(''); }
+  };
   const sync = async (action) => {
-    setSyncing(action);
+    setBusy(action);
     try {
       const res = await base44.functions.invoke('finance-stripe-reconciliation', { action, company_id: company.id });
       const data = res?.data ?? res; if (!data?.success) throw new Error(data?.error || 'Sync failed');
-      toast.success(action === 'sync_order_commissions' ? `${data.created} new order(s) recorded` : `${data.imported} Stripe payout(s) imported`);
+      toast.success(data.message || 'Synced');
       commissions.reload(); stripe.reload();
-    } catch (e) { toast.error(e?.response?.data?.error || e.message); } finally { setSyncing(''); }
+    } catch (e) { toast.error(e?.response?.data?.error || e.message); } finally { setBusy(''); }
   };
-  const savePayout = async () => {
-    try { await fin('save_payouts', { company_id: company.id, records: [{ ...p, commission_amount: commissionCalc, net_payout: net, source_type: 'manual' }] }); toast.success('Payout saved'); setAdding(false); payouts.reload(); }
-    catch (e) { toast.error(e.message); }
-  };
-  const importCsv = async (e) => {
-    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
+  const post = async () => {
+    setBusy('post');
     try {
-      const rows = parseCsv(await file.text());
-      const h = rows[0].map((x) => x.trim().toLowerCase().replace(/\s+/g, '_'));
-      const get = (r, k) => (h.indexOf(k) >= 0 ? String(r[h.indexOf(k)] ?? '').trim() : '');
-      const records = rows.slice(1).map((r) => { const gross = num(get(r, 'gross_order_value')); const rate = num(get(r, 'commission_rate')); return { ...Object.fromEntries(TEMPLATE.map((k) => [k, get(r, k)])), gross_order_value: gross, commission_rate: rate, commission_amount: get(r, 'commission_amount') ? num(get(r, 'commission_amount')) : Math.round(gross * rate) / 100, refunds_and_chargebacks: num(get(r, 'refunds_and_chargebacks')), other_deductions: num(get(r, 'other_deductions')), net_payout: num(get(r, 'net_payout')), source_type: 'csv_import' }; });
-      const r = await fin('save_payouts', { company_id: company.id, records }); toast.success(`${r.saved} payout(s) imported`); payouts.reload();
-    } catch (err) { toast.error(err.message); }
+      const tot = { receipts: 0, refunds: 0, commissions: 0, payouts_paid: 0, settlements: 0, skipped_locked: 0, errors: [] };
+      for (let i = 0; i < 25; i++) {
+        const r = await fin('post_marketplace', { company_id: company.id, limit: 200 });
+        for (const k of Object.keys(tot)) tot[k] = k === 'errors' ? [...tot.errors, ...r.errors] : tot[k] + r[k];
+        if (!r.has_more) break;
+      }
+      toast.success(`Posted ${tot.receipts} orders, ${tot.refunds} refunds, ${tot.commissions} commission statements, ${tot.payouts_paid} payouts, ${tot.settlements} Stripe payouts`);
+      if (tot.skipped_locked) toast.warning(`${tot.skipped_locked} item(s) fall in a locked period and were skipped`);
+      [...new Set(tot.errors)].slice(0, 3).forEach((e) => toast.error(e));
+      commissions.reload(); stripe.reload(); setRefresh((x) => x + 1);
+    } catch (e) { toast.error(e.message); } finally { setBusy(''); }
   };
+
+  const b = balances.data;
+  const pendingTotal = (payouts || []).filter((p) => ['pending', 'processing'].includes(p.status)).reduce((s, p) => s + Number(p.net_payout || 0), 0);
+  const totalUnposted = unposted ? unposted.orders + unposted.payouts + unposted.settlements : 0;
 
   return (
     <div className="space-y-4">
-      <Notice>These registers track online-ordering money handled for restaurants (order value, MealDrop commission, payouts). They aren't posted to your ledger automatically yet — how they post depends on whether customer payments land in MealDrop's Stripe account or go straight to each restaurant.</Notice>
-      <div className="flex gap-1 overflow-x-auto">{[['commissions', 'Order commissions'], ['payouts', 'Restaurant payouts'], ['stripe', 'Stripe settlements']].map(([v, l]) => <button key={v} type="button" onClick={() => setView(v)} className={'shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ' + (view === v ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600')}>{l}</button>)}</div>
-      {view === 'commissions' && <Card title="Order commissions" actions={<Btn variant="primary" busy={syncing === 'sync_order_commissions'} disabled={!isMealDrop} onClick={() => sync('sync_order_commissions')}><RefreshCw className="h-4 w-4" />Sync orders</Btn>}>
-        <div className="mb-4 grid gap-3 sm:grid-cols-3"><Stat label="Order value" value={money(ct.gross)} note={`${commissions.rows.length} orders`} /><Stat label="MealDrop commission" value={money(ct.commission)} /><Stat label="Restaurant earnings" value={money(ct.owed)} note={`Paid out: ${money(paidOut)}`} /></div>
-        {commissions.loading ? <Loading /> : <Table rows={commissions.rows} empty="No orders synced yet." columns={[{ key: 'order_number', label: 'Order', render: (c) => c.order_number || c.order_id }, { key: 'order_date', label: 'Date', render: (c) => fmtDate(c.order_date) }, { key: 'restaurant_name', label: 'Restaurant' }, { key: 'gross_order_value', label: 'Value', right: true, render: (c) => money(c.gross_order_value) }, { key: 'commission_amount', label: 'Commission', right: true, render: (c) => money(c.commission_amount) }, { key: 'reconciliation_status', label: '', render: (c) => <Badge status={c.reconciliation_status} /> }]} />}
-      </Card>}
-      {view === 'payouts' && <Card title="Restaurant payouts" actions={<><Btn onClick={() => downloadCsv('payout-template.csv', [TEMPLATE])}><ArrowDownToLine className="h-4 w-4" />Template</Btn><Btn onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" />Import CSV</Btn><input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={importCsv} /><Btn variant="primary" onClick={() => setAdding(true)}><Plus className="h-4 w-4" />Add payout</Btn></>}>
-        {payouts.loading ? <Loading /> : <Table rows={payouts.rows} empty="No payouts recorded." columns={[{ key: 'payout_reference', label: 'Ref' }, { key: 'payout_date', label: 'Date', render: (x) => fmtDate(x.payout_date) }, { key: 'restaurant_name', label: 'Restaurant' }, { key: 'gross_order_value', label: 'Sales', right: true, render: (x) => money(x.gross_order_value) }, { key: 'commission_amount', label: 'Commission', right: true, render: (x) => money(x.commission_amount) }, { key: 'net_payout', label: 'Paid', right: true, render: (x) => <strong>{money(x.net_payout)}</strong> }, { key: 'status', label: '', render: (x) => <Badge status={x.status} /> }]} />}
-      </Card>}
-      {view === 'stripe' && <Card title="Stripe settlements" subtitle="Money Stripe paid from MealDrop's Stripe balance into the bank." actions={<Btn variant="primary" busy={syncing === 'sync_stripe_payouts'} disabled={!isMealDrop} onClick={() => sync('sync_stripe_payouts')}><RefreshCw className="h-4 w-4" />Import from Stripe</Btn>}>
-        {stripe.loading ? <Loading /> : <Table rows={stripe.rows} empty="Nothing imported yet." columns={[{ key: 'stripe_payout_id', label: 'Payout', render: (s) => <span className="font-mono text-xs">{s.stripe_payout_id}</span> }, { key: 'arrival_date', label: 'Arrived', render: (s) => fmtDate(s.arrival_date) }, { key: 'amount', label: 'Amount', right: true, render: (s) => money(s.amount) }, { key: 'stripe_fees', label: 'Fees', right: true, render: (s) => money(s.stripe_fees) }, { key: 'reconciliation_status', label: '', render: (s) => <Badge status={s.reconciliation_status} /> }]} />}
-      </Card>}
-      {adding && <Modal title="Add restaurant payout" onClose={() => setAdding(false)}>
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Reference"><input value={p.payout_reference} onChange={(e) => setP({ ...p, payout_reference: e.target.value })} className={inputClass} /></Field>
-            <Field label="Date"><input type="date" value={p.payout_date} onChange={(e) => setP({ ...p, payout_date: e.target.value })} className={inputClass} /></Field>
-            <Field label="Restaurant"><input value={p.restaurant_name} onChange={(e) => setP({ ...p, restaurant_name: e.target.value })} className={inputClass} /></Field>
-            <Field label="Status"><select value={p.status} onChange={(e) => setP({ ...p, status: e.target.value })} className={inputClass}>{['expected', 'processing', 'paid', 'reconciled', 'query'].map((s) => <option key={s}>{s}</option>)}</select></Field>
-            <Field label="Order value (£)"><input type="number" step="0.01" value={p.gross_order_value} onChange={(e) => setP({ ...p, gross_order_value: e.target.value, commission_amount: '' })} className={inputClass} /></Field>
-            <Field label="Commission %"><input type="number" step="0.01" value={p.commission_rate} onChange={(e) => setP({ ...p, commission_rate: e.target.value, commission_amount: '' })} className={inputClass} /></Field>
-            <Field label="Refunds (£)"><input type="number" step="0.01" value={p.refunds_and_chargebacks} onChange={(e) => setP({ ...p, refunds_and_chargebacks: e.target.value })} className={inputClass} /></Field>
-            <Field label="Other deductions (£)"><input type="number" step="0.01" value={p.other_deductions} onChange={(e) => setP({ ...p, other_deductions: e.target.value })} className={inputClass} /></Field>
+      <Card title="Online ordering money" subtitle="Customers pay into your Stripe account; you keep your commission and pay restaurants from Super Admin → Payouts.">
+        <MoneyFlow />
+        <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Field label="Post to the books from" hint="Usually your books start date. Anything earlier belongs in opening balances."><input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className={inputClass} /></Field>
+            <Btn busy={busy === 'from'} disabled={!fromDate || fromDate === company.marketplace_from} onClick={saveFrom}>Save</Btn>
           </div>
-          <p className="rounded-lg bg-slate-50 p-3 text-sm">Commission {money(commissionCalc)} · Net payout <strong>{money(net)}</strong></p>
-          <div className="flex justify-end gap-2"><Btn onClick={() => setAdding(false)}>Cancel</Btn><Btn variant="primary" disabled={net < 0 || !p.payout_reference || !p.restaurant_name} onClick={savePayout}>Save</Btn></div>
+          <div className="flex flex-wrap gap-2">
+            <Btn busy={busy === 'sync_order_commissions'} disabled={!isMealDrop} onClick={() => sync('sync_order_commissions')}><RefreshCw className="h-4 w-4" />Sync orders</Btn>
+            <Btn busy={busy === 'sync_stripe_payouts'} disabled={!isMealDrop} onClick={() => sync('sync_stripe_payouts')}><RefreshCw className="h-4 w-4" />Import Stripe payouts</Btn>
+            <Btn variant="primary" busy={busy === 'post'} disabled={!company.marketplace_from || !company.chart_seeded} onClick={post}><BookCheck className="h-4 w-4" />Post to books{totalUnposted ? ` (${totalUnposted})` : ''}</Btn>
+          </div>
         </div>
-      </Modal>}
+        {!company.marketplace_from && <div className="mt-3"><Notice tone="warn">Choose the date to start posting from, then Sync orders → Import Stripe payouts → Post to books.</Notice></div>}
+        {unposted && totalUnposted > 0 && <p className="mt-2 text-xs text-slate-500">Waiting to post: {unposted.orders} order(s), {unposted.payouts} payout item(s), {unposted.settlements} Stripe payout(s).</p>}
+      </Card>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="Held for restaurants" value={b ? money(b.total_held) : '—'} note="Per your books" />
+        <Stat label="Pending payouts" value={money(pendingTotal)} note="Generated, not yet paid" tone={pendingTotal > 0 ? 'warn' : 'default'} />
+        <Stat label="Stripe balance (books)" value={b ? money(b.stripe_balance_per_books) : '—'} note="Compare with your Stripe dashboard" />
+        <Stat label="Commission synced" value={money(commissions.rows.filter((c) => c.reconciliation_status !== 'excluded').reduce((s, c) => s + Number(c.commission_amount || 0), 0))} note="Estimate from orders" />
+      </div>
+
+      <div className="flex gap-1 overflow-x-auto">{[['balances', 'Restaurant balances'], ['payouts', 'Payouts'], ['orders', 'Orders'], ['stripe', 'Stripe payouts']].map(([v, l]) => <button key={v} type="button" onClick={() => setView(v)} className={'shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ' + (view === v ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600')}>{l}</button>)}</div>
+
+      {view === 'balances' && <Card title="What you hold for each restaurant" subtitle="Card takings, minus refunds, minus your commission, minus what you've paid them. Should match their pending payouts.">
+        {balances.loading ? <Loading /> : balances.error ? <Notice tone="bad">{balances.error}</Notice> : <>
+          <Table rows={b.rows.map((r) => ({ ...r, id: r.restaurant_id }))} empty="Nothing posted yet." minWidth={760} columns={[
+            { key: 'restaurant_name', label: 'Restaurant' },
+            { key: 'takings', label: 'Card takings', right: true, render: (r) => money(r.takings) },
+            { key: 'refunds', label: 'Refunds', right: true, render: (r) => money(r.refunds) },
+            { key: 'commission', label: 'Commission', right: true, render: (r) => money(r.commission) },
+            { key: 'paid_out', label: 'Paid out', right: true, render: (r) => money(r.paid_out) },
+            { key: 'balance', label: 'Held', right: true, render: (r) => <strong className={r.balance < 0 ? 'text-red-700' : ''}>{money(r.balance)}</strong> },
+            { key: 'pending_payouts', label: 'Pending payouts', right: true, render: (r) => money(r.pending_payouts) },
+            { key: 'diff', label: '', render: (r) => { const d = Math.round((r.balance - (r.pending_payouts || 0)) * 100) / 100; return Math.abs(d) < 0.01 ? <span className="text-xs text-emerald-700">✓ matches</span> : <span className="text-xs text-amber-700">{d > 0 ? `${money(d)} not yet in a payout` : `${money(-d)} over`}</span>; } },
+          ]} />
+          <p className="mt-3 text-xs text-slate-500">A negative balance means the restaurant owes you (commission or refunds bigger than their card takings). “Not yet in a payout” is normal for days after the last payout period.</p>
+        </>}
+      </Card>}
+
+      {view === 'payouts' && <Card title="Restaurant payouts" subtitle="Generated and paid in Super Admin. Marking one paid there posts it here automatically." actions={<Link to={createPageUrl('SuperAdmin')} className="inline-flex items-center gap-1 text-sm font-medium text-orange-700 hover:underline">Open Super Admin<ExternalLink className="h-4 w-4" /></Link>}>
+        {payouts === null ? <Loading /> : <Table rows={payouts} empty="No payouts generated yet." minWidth={760} columns={[
+          { key: 'restaurant_name', label: 'Restaurant' },
+          { key: 'period', label: 'Period', render: (p) => `${fmtDate(String(p.period_start).slice(0, 10))} – ${fmtDate(String(p.period_end).slice(0, 10))}` },
+          { key: 'card_payment_amount', label: 'Card takings', right: true, render: (p) => money(p.card_payment_amount) },
+          { key: 'platform_commission', label: 'Commission', right: true, render: (p) => money(p.platform_commission) },
+          { key: 'net_payout', label: 'Payout', right: true, render: (p) => <strong>{money(p.net_payout)}</strong> },
+          { key: 'status', label: 'Status', render: (p) => <Badge status={p.status} /> },
+          { key: 'books', label: 'Books', render: (p) => <span className="text-xs text-slate-500">{p.finance_payment_entry_id ? 'Paid ✓' : p.finance_commission_entry_id ? 'Commission ✓' : '—'}</span> },
+        ]} />}
+      </Card>}
+
+      {view === 'orders' && <Card title="Online card orders" subtitle="Only online card payments — POS, kiosk, cash and Uber/Deliveroo/Just Eat orders are excluded.">
+        {commissions.loading ? <Loading /> : <Table rows={commissions.rows} empty="No orders synced yet." columns={[
+          { key: 'order_number', label: 'Order', render: (c) => c.order_number || c.order_id },
+          { key: 'order_date', label: 'Date', render: (c) => fmtDate(c.order_date) },
+          { key: 'restaurant_name', label: 'Restaurant' },
+          { key: 'gross_order_value', label: 'Value', right: true, render: (c) => money(c.gross_order_value) },
+          { key: 'refund_amount', label: 'Refund', right: true, render: (c) => (c.refund_amount ? `-${money(c.refund_amount)}` : '') },
+          { key: 'state', label: '', render: (c) => (c.reconciliation_status === 'excluded' ? <Badge status="excluded" /> : c.ledger_entry_id ? <span className="text-xs text-emerald-700">Posted</span> : <span className="text-xs text-slate-400">Not posted</span>) },
+        ]} />}
+      </Card>}
+
+      {view === 'stripe' && <Card title="Stripe payouts to your bank">
+        {stripe.loading ? <Loading /> : <Table rows={stripe.rows} empty="Nothing imported yet." columns={[
+          { key: 'stripe_payout_id', label: 'Payout', render: (s) => <span className="font-mono text-xs">{s.stripe_payout_id}</span> },
+          { key: 'arrival_date', label: 'Arrived', render: (s) => fmtDate(s.arrival_date) },
+          { key: 'amount', label: 'To bank', right: true, render: (s) => money(s.amount) },
+          { key: 'stripe_fees', label: 'Stripe fees', right: true, render: (s) => money(s.stripe_fees) },
+          { key: 'state', label: '', render: (s) => (s.ledger_entry_id ? <span className="text-xs text-emerald-700">Posted</span> : <Badge status={s.reconciliation_status} />) },
+        ]} />}
+      </Card>}
     </div>
   );
 }
