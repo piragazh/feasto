@@ -698,7 +698,12 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
     const totals = calcLines(body.lines, false, new Map(items.map((i: any) => [i.id, i])));
     const freq = ["weekly", "monthly", "quarterly", "annually"].includes(body.frequency) ? body.frequency : "monthly";
     const data: any = { company_id: company.id, customer_id: customer.id, name: str(body.name, 120) || `${customer.name} — ${freq} service`, reference: str(body.reference, 120), lines: totals.lines.map((l: any) => ({ item_id: l.item_id, description: l.description, quantity: l.quantity, unit: l.unit, unit_price: l.unit_price, account_code: l.account_code })), frequency: freq, next_run_date: needDate(body.next_run_date, "Next invoice date"), anchor_day: Number(String(body.next_run_date).slice(8, 10)), auto_issue: body.auto_issue !== false, auto_email: !!body.auto_email, status: ["active", "paused", "ended"].includes(body.status) ? body.status : "active", notes: str(body.notes, 1000), ...(body.end_date && isDate(body.end_date) ? { end_date: body.end_date } : {}) };
-    if (body.id) { const r = await getOne(ctx.db.FinanceRecurringInvoice, body.id, "Recurring invoice"); return { recurring: await ctx.db.FinanceRecurringInvoice.update(r.id, data) }; }
+    if (body.id) {
+      const r = await getOne(ctx.db.FinanceRecurringInvoice, body.id, "Recurring invoice");
+      if (r.company_id !== company.id) fail("Recurring invoice belongs to another company");
+      if (r.next_run_date === data.next_run_date && r.anchor_day) data.anchor_day = r.anchor_day;
+      return { recurring: await ctx.db.FinanceRecurringInvoice.update(r.id, data) };
+    }
     const recurring = await ctx.db.FinanceRecurringInvoice.create({ ...data, invoices_generated: 0 });
     await audit(ctx, company.id, "FinanceRecurringInvoice", recurring.id, "create", `Recurring ${freq} invoice for ${customer.name}`);
     return { recurring };
