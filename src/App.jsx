@@ -42,6 +42,7 @@ const RouteLoadingFallback = () => (
 );
 
 const { Pages = {}, Layout } = pagesConfig || {};
+const StudioPage = Pages.MediaScreenManagement || (() => <Navigate to="/MediaScreenManagement" replace />);
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -354,6 +355,14 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
           <Route path="/POSDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><POSDashboard /></Suspense>} />
           <Route path="/WaiterApp" element={<Suspense fallback={<RouteLoadingFallback />}><WaiterApp /></Suspense>} />
           <Route path="/TabletDashboard" element={<Suspense fallback={<RouteLoadingFallback />}><TabletDashboard /></Suspense>} />
+          {/* Short address for Screen Studio (also its installed-app start page). Paths are case-insensitive. */}
+          <Route path="/studio" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="MediaScreenManagement">
+                <StudioPage />
+              </LayoutWrapper>
+            </Suspense>
+          } />
           <Route path="/home" element={<Navigate to="/Home" replace />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="*" element={<PageNotFound />} />
