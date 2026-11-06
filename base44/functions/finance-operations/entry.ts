@@ -448,6 +448,51 @@ async function report(ctx: Ctx, company: any, body: any) {
   fail("Unknown report type");
 }
 
+// ───────────────────────── marketplace helpers ─────────────────────────
+async function postPayoutCommission(ctx: Ctx, company: any, p: any, accounts: Map<string, any>, attempt: (fn: () => Promise<any>) => Promise<any>) {
+  const date = String(p.period_end).slice(0, 10);
+  const amt = r2(p.platform_commission);
+  const entry = await attempt(() => postEntry(ctx, company, { date, source_type: "commission", source_id: p.id, source_reference: `Payout ${date}`, restaurant_id: p.restaurant_id, restaurant_name: p.restaurant_name, description: `Commission ${String(p.period_start).slice(0, 10)} to ${date} — ${p.restaurant_name}${p.commission_rate ? ` (${p.commission_rate}%)` : ""}`, lines: [{ account_code: HELD, debit: amt, credit: 0 }, { account_code: COMMISSION, debit: 0, credit: amt, memo: p.restaurant_name }] }, accounts));
+  if (entry) await ctx.db.Payout.update(p.id, { finance_commission_entry_id: entry.id });
+  return entry;
+}
+async function postPayoutPayment(ctx: Ctx, company: any, p: any, accounts: Map<string, any>, attempt: (fn: () => Promise<any>) => Promise<any>) {
+  const date = String(p.paid_date).slice(0, 10);
+  const amt = r2(p.net_payout);
+  const from = p.payment_method === "stripe" ? STRIPE : BANK;
+  const entry = await attempt(() => postEntry(ctx, company, { date, source_type: "payout", source_id: p.id, source_reference: p.transaction_reference || `Payout ${String(p.period_end).slice(0, 10)}`, restaurant_id: p.restaurant_id, restaurant_name: p.restaurant_name, description: `Payout to ${p.restaurant_name} for ${String(p.period_start).slice(0, 10)} to ${String(p.period_end).slice(0, 10)}`, lines: [{ account_code: HELD, debit: amt, credit: 0, memo: p.restaurant_name }, { account_code: from, debit: 0, credit: amt, memo: p.transaction_reference || "" }] }, accounts));
+  if (entry) await ctx.db.Payout.update(p.id, { finance_payment_entry_id: entry.id });
+  return entry;
+}
+async function restaurantBalances(ctx: Ctx, company: any, body: any) {
+  const asOf = body.as_of ? needDate(body.as_of, "As-of date") : today();
+  const entries = await all(ctx.db.FinanceLedgerEntry, { company_id: company.id });
+  const by = new Map<string, any>();
+  let stripe = 0, held = 0;
+  for (const e of entries) {
+    if (e.entry_date > asOf) continue;
+    for (const l of e.lines || []) {
+      if (l.account_code === STRIPE) stripe += Number(l.debit || 0) - Number(l.credit || 0);
+      if (l.account_code !== HELD) continue;
+      const delta = Number(l.credit || 0) - Number(l.debit || 0);
+      held += delta;
+      const k = e.restaurant_id || "unassigned";
+      const row = by.get(k) || { restaurant_id: k, restaurant_name: e.restaurant_name || "Opening balance / unassigned", takings: 0, refunds: 0, commission: 0, paid_out: 0, other: 0, balance: 0 };
+      if (e.source_type === "order_receipt") row.takings += delta; else if (e.source_type === "order_refund") row.refunds += delta; else if (e.source_type === "commission") row.commission += delta; else if (e.source_type === "payout") row.paid_out += delta; else row.other += delta;
+      row.balance += delta;
+      by.set(k, row);
+    }
+  }
+  const payouts = await all(ctx.db.Payout, { status: { $in: ["pending", "processing"] } });
+  for (const p of payouts) {
+    const row = by.get(p.restaurant_id) || { restaurant_id: p.restaurant_id, restaurant_name: p.restaurant_name, takings: 0, refunds: 0, commission: 0, paid_out: 0, other: 0, balance: 0 };
+    row.pending_payouts = r2((row.pending_payouts || 0) + Number(p.net_payout || 0));
+    by.set(p.restaurant_id, row);
+  }
+  const rows = [...by.values()].map((r) => ({ ...r, takings: r2(r.takings), refunds: r2(r.refunds), commission: r2(r.commission), paid_out: r2(r.paid_out), other: r2(r.other), balance: r2(r.balance), pending_payouts: r2(r.pending_payouts || 0) })).sort((a, b) => b.balance - a.balance);
+  return { as_of: asOf, from: company.marketplace_from || null, rows, total_held: r2(held), stripe_balance_per_books: r2(stripe) };
+}
+
 // ───────────────────────── action handlers ─────────────────────────
 const COMPANY_FIELDS = ["legal_name", "trading_name", "company_number", "registered_in", "utr", "email", "phone", "website", "logo_url", "bank_account_name", "bank_sort_code", "bank_account_number", "invoice_prefix", "credit_note_prefix", "invoice_footer", "notes"];
 
@@ -815,7 +860,122 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
 
   async report(ctx, body) {
     const company = await getCompany(ctx, body.company_id);
+    if (body.type === "restaurant_balances") return { report: await restaurantBalances(ctx, company, body) };
     return { report: await report(ctx, company, body) };
+  },
+
+  // Online orders are paid into MealDrop's Stripe account; MealDrop keeps its
+  // commission and pays the rest to each restaurant from the bank.
+  //   card order paid      Dr 1210 Stripe balance       Cr 2400 Held for restaurants
+  //   refund (restaurant)  Dr 2400                      Cr 1210
+  //   refund (MealDrop)    Dr 6910 Refunds absorbed     Cr 1210
+  //   payout statement     Dr 2400                      Cr 4030 Commission income
+  //   payout paid          Dr 2400                      Cr 1200 Bank
+  //   Stripe settlement    Dr 1200 + Dr 6020 fees       Cr 1210
+  async post_marketplace(ctx, body) {
+    const company = await getCompany(ctx, body.company_id);
+    const from = company.marketplace_from;
+    if (!from) fail("Choose the date to start posting marketplace money from first");
+    const accounts = await accountMap(ctx, company.id);
+    for (const code of [STRIPE, BANK, HELD, COMMISSION, STRIPE_FEES, REFUNDS_ABSORBED]) if (!accounts.has(code)) fail(`Account ${code} is missing — use “Add missing standard accounts” in Settings`);
+    const out: any = { receipts: 0, refunds: 0, commissions: 0, payouts_paid: 0, settlements: 0, skipped_locked: 0, errors: [] as string[], has_more: false };
+    let budget = Math.min(Math.max(Number(body.limit) || 200, 1), 400);
+    const day = (d: unknown) => String(d || "").slice(0, 10);
+    const attempt = async (fn: () => Promise<any>) => {
+      if (budget <= 0) { out.has_more = true; return null; }
+      try { const r = await fn(); budget--; return r; }
+      catch (e) { if (e instanceof FinError && e.status === 409) out.skipped_locked++; else out.errors.push(e instanceof Error ? e.message : String(e)); return null; }
+    };
+
+    // 1. Card orders paid into Stripe — one entry per restaurant per day
+    const orders = await all(ctx.db.FinanceOrderCommission, { company_id: company.id });
+    const groups = new Map<string, any[]>();
+    for (const o of orders) {
+      if (o.ledger_entry_id || o.reconciliation_status === "excluded" || !(o.gross_order_value > 0) || day(o.order_date) < from) continue;
+      const k = `${o.restaurant_id}|${day(o.order_date)}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k)!.push(o);
+    }
+    for (const [k, rows] of groups) {
+      const [rid, date] = k.split("|");
+      const total = r2(rows.reduce((s, o) => s + Number(o.gross_order_value || 0), 0));
+      const name = rows[0].restaurant_name || "Restaurant";
+      const entry = await attempt(() => postEntry(ctx, company, { date, source_type: "order_receipt", source_reference: `${rows.length} order(s)`, restaurant_id: rid, restaurant_name: name, description: `Online card orders ${date} — ${name} (${rows.length})`, lines: [{ account_code: STRIPE, debit: total, credit: 0 }, { account_code: HELD, debit: 0, credit: total, memo: name }] }, accounts));
+      if (entry) { for (const o of rows) await ctx.db.FinanceOrderCommission.update(o.id, { ledger_entry_id: entry.id }); out.receipts += rows.length; }
+    }
+
+    // 2. Refunds paid back to customers out of Stripe
+    for (const o of orders) {
+      if (o.refund_entry_id || !(Number(o.refund_amount) > 0)) continue;
+      const date = [day(o.refunded_at), day(o.order_date)].sort().pop() as string;
+      if (!date || date < from) continue;
+      const amt = r2(Math.min(Number(o.refund_amount), Number(o.gross_order_value || o.refund_amount)));
+      const byPlatform = o.refund_paid_by === "platform";
+      const entry = await attempt(() => postEntry(ctx, company, { date, source_type: "order_refund", source_id: o.id, source_reference: o.order_number, restaurant_id: o.restaurant_id, restaurant_name: o.restaurant_name, description: `Refund ${o.order_number || o.order_id} — ${o.restaurant_name}${byPlatform ? " (MealDrop absorbed)" : ""}`, lines: [{ account_code: byPlatform ? REFUNDS_ABSORBED : HELD, debit: amt, credit: 0 }, { account_code: STRIPE, debit: 0, credit: amt }] }, accounts));
+      if (entry) { await ctx.db.FinanceOrderCommission.update(o.id, { refund_entry_id: entry.id }); out.refunds++; }
+    }
+
+    // 3. Restaurant payout statements (commission earned) and payments
+    const payouts = await all(ctx.db.Payout, {});
+    for (const p of payouts) {
+      if (["voided", "failed"].includes(p.status)) continue;
+      if (!p.finance_commission_entry_id && day(p.period_end) >= from && Number(p.platform_commission) > 0) {
+        const e = await postPayoutCommission(ctx, company, p, accounts, attempt);
+        if (e) { p.finance_commission_entry_id = e.id; out.commissions++; }
+      }
+      if (p.status === "paid" && !p.finance_payment_entry_id && p.paid_date && day(p.paid_date) >= from && Number(p.net_payout) > 0) {
+        const e = await postPayoutPayment(ctx, company, p, accounts, attempt);
+        if (e) out.payouts_paid++;
+      }
+    }
+
+    // 4. Stripe → bank settlements, and Stripe's fees
+    const settlements = await all(ctx.db.FinanceStripeSettlement, { company_id: company.id });
+    for (const s of settlements) {
+      const date = day(s.arrival_date || s.payout_date);
+      if (s.ledger_entry_id || !date || date < from || ["failed", "canceled"].includes(s.status) || !(Number(s.amount) > 0)) continue;
+      const fees = r2(Math.max(0, Number(s.stripe_fees || 0)));
+      const amount = r2(s.amount);
+      const entry = await attempt(() => postEntry(ctx, company, { date, source_type: "stripe_settlement", source_id: s.id, source_reference: s.stripe_payout_id, description: `Stripe payout to bank ${s.stripe_payout_id}`, lines: [{ account_code: BANK, debit: amount, credit: 0 }, ...(fees > 0 ? [{ account_code: STRIPE_FEES, debit: fees, credit: 0, memo: "Stripe fees" }] : []), { account_code: STRIPE, debit: 0, credit: r2(amount + fees) }] }, accounts));
+      if (entry) { await ctx.db.FinanceStripeSettlement.update(s.id, { ledger_entry_id: entry.id }); out.settlements++; }
+    }
+    await audit(ctx, company.id, "FinanceLedgerEntry", company.id, "post", `Marketplace posting: ${out.receipts} orders, ${out.refunds} refunds, ${out.commissions} commissions, ${out.payouts_paid} payouts, ${out.settlements} Stripe settlements`);
+    return out;
+  },
+
+  async mark_payout_paid(ctx, body) {
+    const p = await getOne(ctx.db.Payout, body.payout_id, "Payout");
+    if (!["pending", "processing"].includes(p.status)) fail("Only a pending payout can be marked paid");
+    const paidDate = body.paid_date ? needDate(body.paid_date, "Paid date") : today();
+    const method = str(body.payment_method || "bank_transfer", 40);
+    const updated = await ctx.db.Payout.update(p.id, { status: "paid", paid_date: new Date(paidDate + "T12:00:00Z").toISOString(), payment_method: method, transaction_reference: str(body.transaction_reference, 120), net_payout: r2(p.net_payout), ...(body.notes ? { notes: [p.notes, str(body.notes, 1000)].filter(Boolean).join(" | ") } : {}) });
+    let posted = false;
+    if (body.company_id) {
+      const company = await getCompany(ctx, body.company_id);
+      if (company.marketplace_from && company.chart_seeded) {
+        const accounts = await accountMap(ctx, company.id);
+        const attempt = async (fn: () => Promise<any>) => fn();
+        if (!updated.finance_commission_entry_id && String(updated.period_end).slice(0, 10) >= company.marketplace_from && Number(updated.platform_commission) > 0) {
+          const e = await postPayoutCommission(ctx, company, updated, accounts, attempt); if (e) updated.finance_commission_entry_id = e.id;
+        }
+        if (paidDate >= company.marketplace_from && Number(updated.net_payout) > 0) { await postPayoutPayment(ctx, company, updated, accounts, attempt); posted = true; }
+      }
+      await audit(ctx, company.id, "Payout", p.id, "payment", `Paid ${p.restaurant_name} £${r2(p.net_payout).toFixed(2)} (${method}${body.transaction_reference ? ` ref ${body.transaction_reference}` : ""})`);
+    }
+    return { payout: { ...updated, status: "paid" }, posted };
+  },
+
+  async void_payout(ctx, body) {
+    const p = await getOne(ctx.db.Payout, body.payout_id, "Payout");
+    if (!["pending", "processing"].includes(p.status)) fail("Only a pending payout can be voided — a paid one has already left the bank");
+    const reason = str(body.reason, 300) || "Voided";
+    if (p.finance_commission_entry_id) {
+      const company = await getCompany(ctx, body.company_id);
+      await reverseEntry(ctx, company, p.finance_commission_entry_id, today(), `Payout voided: ${reason}`);
+    }
+    const payout = await ctx.db.Payout.update(p.id, { status: "voided", voided_at: new Date().toISOString(), void_reason: reason });
+    if (body.company_id) await audit(ctx, body.company_id, "Payout", p.id, "void", `${p.restaurant_name} payout voided: ${reason}`, p);
+    return { payout };
   },
 
   async save_payouts(ctx, body) {
