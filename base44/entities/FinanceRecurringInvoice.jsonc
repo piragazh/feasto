@@ -1,6 +1,10 @@
 {
   "name": "FinanceRecurringInvoice",
   "properties": {
+    "anchor_day": {
+      "description": "Day of month invoices fall on (keeps the 31st after a short month)",
+      "type": "integer"
+    },
     "auto_email": {
       "default": false,
       "type": "boolean"
@@ -96,6 +100,7 @@
     "frequency",
     "next_run_date"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -117,6 +122,5 @@
         "role": "finance_backend_only"
       }
     }
-  },
-  "type": "object"
+  }
 }
