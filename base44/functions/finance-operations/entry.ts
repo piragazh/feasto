@@ -22,9 +22,9 @@ const pad = (n: number, w = 4) => String(n).padStart(w, "0");
 function addDays(date: string, days: number) {
   const d = new Date(date + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10);
 }
-function addPeriod(date: string, freq: string) {
+function addPeriod(date: string, freq: string, anchorDay?: number) {
   const d = new Date(date + "T00:00:00Z");
-  const day = d.getUTCDate();
+  const day = anchorDay && freq !== "weekly" ? anchorDay : d.getUTCDate();
   if (freq === "weekly") { d.setUTCDate(day + 7); return d.toISOString().slice(0, 10); }
   const months = freq === "quarterly" ? 3 : freq === "annually" ? 12 : 1;
   d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + months);
@@ -157,6 +157,7 @@ async function postEntry(ctx: Ctx, company: any, e: { date: string; source_type:
 async function reverseEntry(ctx: Ctx, company: any, entryId: string, date: string, reason: string) {
   const entry = await getOne(ctx.db.FinanceLedgerEntry, entryId, "Ledger entry");
   if (entry.status === "reversed") fail(`${entry.entry_number} is already reversed`);
+  if (date < entry.entry_date) date = entry.entry_date; // a reversal can never pre-date what it reverses
   const reversal = await postEntry(ctx, company, {
     date, source_type: "reversal", source_id: entry.id, source_reference: entry.entry_number,
     description: `Reversal of ${entry.entry_number}: ${reason}`.slice(0, 500),
@@ -696,7 +697,7 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
     const items = await all(ctx.db.FinanceItem, { company_id: company.id });
     const totals = calcLines(body.lines, false, new Map(items.map((i: any) => [i.id, i])));
     const freq = ["weekly", "monthly", "quarterly", "annually"].includes(body.frequency) ? body.frequency : "monthly";
-    const data: any = { company_id: company.id, customer_id: customer.id, name: str(body.name, 120) || `${customer.name} — ${freq} service`, reference: str(body.reference, 120), lines: totals.lines.map((l: any) => ({ item_id: l.item_id, description: l.description, quantity: l.quantity, unit: l.unit, unit_price: l.unit_price, account_code: l.account_code })), frequency: freq, next_run_date: needDate(body.next_run_date, "Next invoice date"), auto_issue: body.auto_issue !== false, auto_email: !!body.auto_email, status: ["active", "paused", "ended"].includes(body.status) ? body.status : "active", notes: str(body.notes, 1000), ...(body.end_date && isDate(body.end_date) ? { end_date: body.end_date } : {}) };
+    const data: any = { company_id: company.id, customer_id: customer.id, name: str(body.name, 120) || `${customer.name} — ${freq} service`, reference: str(body.reference, 120), lines: totals.lines.map((l: any) => ({ item_id: l.item_id, description: l.description, quantity: l.quantity, unit: l.unit, unit_price: l.unit_price, account_code: l.account_code })), frequency: freq, next_run_date: needDate(body.next_run_date, "Next invoice date"), anchor_day: Number(String(body.next_run_date).slice(8, 10)), auto_issue: body.auto_issue !== false, auto_email: !!body.auto_email, status: ["active", "paused", "ended"].includes(body.status) ? body.status : "active", notes: str(body.notes, 1000), ...(body.end_date && isDate(body.end_date) ? { end_date: body.end_date } : {}) };
     if (body.id) { const r = await getOne(ctx.db.FinanceRecurringInvoice, body.id, "Recurring invoice"); return { recurring: await ctx.db.FinanceRecurringInvoice.update(r.id, data) }; }
     const recurring = await ctx.db.FinanceRecurringInvoice.create({ ...data, invoices_generated: 0 });
     await audit(ctx, company.id, "FinanceRecurringInvoice", recurring.id, "create", `Recurring ${freq} invoice for ${customer.name}`);
@@ -718,7 +719,7 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
           if (t.auto_issue) inv = await issueInvoiceRecord(ctx, company, inv);
           if (t.auto_issue && t.auto_email && inv.customer_email) inv = await emailInvoice(ctx, inv, inv.customer_email, "");
           created.push({ id: inv.id, invoice_number: inv.invoice_number || "(draft)", customer_name: inv.customer_name, gross_total: inv.gross_total });
-          count++; lastId = inv.id; lastRun = next; next = addPeriod(next, t.frequency);
+          count++; lastId = inv.id; lastRun = next; next = addPeriod(next, t.frequency, Number(t.anchor_day) || undefined);
         } catch (e) { errors.push({ template: t.name, error: e instanceof Error ? e.message : String(e) }); break; }
       }
       const ended = !!(t.end_date && next > t.end_date);
