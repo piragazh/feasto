@@ -168,7 +168,10 @@ export default function Layout({ children, currentPageName }) {
         // For restaurant dashboard / POS, use restaurant-specific dashboard manifest
         // IMPORTANT: Use getApiUrl() to ensure the request hits the backend function,
         // not the SPA frontend rewrite which returns HTML instead of JSON.
-        if (currentPageName === 'RestaurantDashboard' || currentPageName === 'POSDashboard' || currentPageName === 'TabletDashboard') {
+        if (currentPageName === 'MediaScreenManagement') {
+            // Screen Studio installs as its own app ("Screen Studio" on the home screen)
+            manifestLink.href = getApiUrl('/getManifest?mode=studio');
+        } else if (currentPageName === 'RestaurantDashboard' || currentPageName === 'POSDashboard' || currentPageName === 'TabletDashboard') {
             const urlParams = new URLSearchParams(window.location.search);
             const dashboardRestaurantId = urlParams.get('restaurant_id') || customDomainRestaurantId;
             const posMode = currentPageName === 'POSDashboard' ? 'pos' : currentPageName === 'TabletDashboard' ? 'tablet' : 'dashboard';
@@ -190,7 +193,9 @@ export default function Layout({ children, currentPageName }) {
             themeColor.name = 'theme-color';
             document.head.appendChild(themeColor);
         }
-        themeColor.content = customDomainRestaurant?.theme_primary_color || '#f97316';
+        themeColor.content = currentPageName === 'MediaScreenManagement'
+            ? '#111827'
+            : (customDomainRestaurant?.theme_primary_color || '#f97316');
 
         // Add apple-mobile-web-app-capable for iOS
         let appleCapable = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
@@ -401,10 +406,10 @@ export default function Layout({ children, currentPageName }) {
 
 
 
-    const hideHeader = ['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'RestaurantDashboard'].includes(currentPageName);
-    const isFullScreenPage = ['MediaScreen', 'POSDashboard', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'KitchenDisplay', 'WaiterApp'].includes(currentPageName);
-    const showBottomNav = !['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'Sitemap', 'CustomerDisplay', 'KioskDashboard', 'Finance'].includes(currentPageName);
-    const hideFooter = ['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'Finance'].includes(currentPageName);
+    const hideHeader = ['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'MediaScreenManagement', 'Sitemap', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'RestaurantDashboard'].includes(currentPageName);
+    const isFullScreenPage = ['MediaScreen', 'MediaScreenManagement', 'POSDashboard', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'KitchenDisplay', 'WaiterApp'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'MediaScreenManagement', 'Sitemap', 'CustomerDisplay', 'KioskDashboard', 'Finance'].includes(currentPageName);
+    const hideFooter = ['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'MediaScreenManagement', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'Finance'].includes(currentPageName);
     
     // Custom domain home link
     const isRootRestaurantContext = location.pathname === '/' && !!customDomainRestaurantId;
@@ -721,7 +726,7 @@ export default function Layout({ children, currentPageName }) {
             </main>
 
                 {/* AI Chatbot Widget */}
-                {!['AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'RestaurantDashboard', 'POSDashboard', 'MediaScreen', 'KioskDashboard'].includes(currentPageName) && <ChatbotWidget />}
+                {!['AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'RestaurantDashboard', 'POSDashboard', 'MediaScreen', 'MediaScreenManagement', 'KioskDashboard'].includes(currentPageName) && <ChatbotWidget />}
 
                 {/* Footer */}
                 {!hideFooter && (
