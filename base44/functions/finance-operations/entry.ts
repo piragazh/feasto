@@ -175,7 +175,7 @@ function calcLines(input: any, vatRegistered: boolean, itemsById: Map<string, an
     const item = l.item_id ? itemsById.get(String(l.item_id)) : null;
     const description = str(l.description || item?.name, 1000);
     const quantity = Number(l.quantity);
-    const unitPrice = Number(l.unit_price);
+    const unitPrice = Number(l.unit_price === undefined || l.unit_price === null || l.unit_price === "" ? item?.unit_price : l.unit_price);
     const discount = Number(l.discount_percent || 0);
     const vatRate = vatRegistered ? Number(l.vat_rate ?? 20) : 0;
     if (!description) fail(`Line ${i + 1}: description is required`);
