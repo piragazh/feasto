@@ -54,12 +54,16 @@
     "posted_by": {
       "type": "string"
     },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
     "reversed_entry_id": {
-      "description": "On a reversed entry: the reversal that cancels it",
       "type": "string"
     },
     "reverses_entry_id": {
-      "description": "On a reversal: the entry it cancels",
       "type": "string"
     },
     "source_id": {
@@ -78,7 +82,11 @@
         "payout",
         "journal",
         "opening_balance",
-        "reversal"
+        "reversal",
+        "order_receipt",
+        "order_refund",
+        "commission",
+        "stripe_settlement"
       ],
       "type": "string"
     },
@@ -106,6 +114,7 @@
     "description",
     "status"
   ],
+  "type": "object",
   "rls": {
     "create": {
       "user_condition": {
@@ -127,6 +136,5 @@
         "role": "finance_backend_only"
       }
     }
-  },
-  "type": "object"
+  }
 }
