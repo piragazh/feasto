@@ -1,8 +1,37 @@
 {
   "name": "FinanceOrderCommission",
-  "type": "object",
   "properties": {
+    "commission_amount": {
+      "default": 0,
+      "type": "number"
+    },
+    "commission_rate": {
+      "default": 0,
+      "type": "number"
+    },
+    "commission_vat": {
+      "default": 0,
+      "type": "number"
+    },
     "company_id": {
+      "type": "string"
+    },
+    "currency": {
+      "default": "GBP",
+      "enum": [
+        "GBP"
+      ],
+      "type": "string"
+    },
+    "gross_order_value": {
+      "default": 0,
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "order_date": {
+      "format": "date-time",
       "type": "string"
     },
     "order_id": {
@@ -11,73 +40,43 @@
     "order_number": {
       "type": "string"
     },
-    "restaurant_id": {
-      "type": "string"
-    },
-    "restaurant_name": {
-      "type": "string"
-    },
-    "order_date": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "currency": {
-      "type": "string",
-      "enum": [
-        "GBP"
-      ],
-      "default": "GBP"
-    },
-    "gross_order_value": {
-      "type": "number",
-      "default": 0
-    },
-    "commission_rate": {
-      "type": "number",
-      "default": 0
-    },
-    "commission_amount": {
-      "type": "number",
-      "default": 0
-    },
-    "commission_vat": {
-      "type": "number",
-      "default": 0
-    },
-    "restaurant_earnings": {
-      "type": "number",
-      "default": 0
-    },
-    "payment_method": {
+    "order_status": {
       "type": "string"
     },
     "payment_intent_id": {
       "type": "string"
     },
-    "order_status": {
+    "payment_method": {
       "type": "string"
     },
     "payment_status": {
       "type": "string"
     },
     "reconciliation_status": {
-      "type": "string",
+      "default": "recorded",
       "enum": [
         "recorded",
         "matched",
         "query",
         "excluded"
       ],
-      "default": "recorded"
+      "type": "string"
+    },
+    "restaurant_earnings": {
+      "default": 0,
+      "type": "number"
+    },
+    "restaurant_id": {
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
     },
     "source_type": {
-      "type": "string",
+      "default": "order_sync",
       "enum": [
         "order_sync"
       ],
-      "default": "order_sync"
-    },
-    "notes": {
       "type": "string"
     }
   },
@@ -90,16 +89,25 @@
   ],
   "rls": {
     "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "read": {
-      "created_by_id": "{{user.id}}"
-    },
-    "update": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     },
     "delete": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     }
-  }
+  },
+  "type": "object"
 }
