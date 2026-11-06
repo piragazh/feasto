@@ -37,6 +37,29 @@ Deno.serve(async (req) => {
             ]
         };
 
+        // Screen Studio: its own installable app. One app for every restaurant —
+        // the Studio picks the manager's restaurant(s) after sign-in.
+        if (mode === 'studio') {
+            manifest = {
+                ...manifest,
+                id: "/studio",
+                name: "MealDrop Screen Studio",
+                short_name: "Screen Studio",
+                description: "Manage your MealDrop digital screens: playlists, ads, widgets and live control",
+                start_url: "/studio",
+                scope: "/",
+                display: "standalone",
+                orientation: "any",
+                background_color: "#030712",
+                theme_color: "#111827",
+                categories: ["business", "productivity"],
+            };
+            return new Response(JSON.stringify(manifest), {
+                status: 200,
+                headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'public, max-age=3600' },
+            });
+        }
+
         // Handle mode without restaurant_id
         if (!restaurantId && mode === 'tablet') {
             manifest.name = "MealDrop Tablet";
