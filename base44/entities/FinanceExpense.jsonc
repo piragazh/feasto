@@ -1,72 +1,94 @@
 {
   "name": "FinanceExpense",
-  "type": "object",
   "properties": {
-    "company_id": {
-      "type": "string",
-      "description": "FinanceCompany record ID"
-    },
-    "supplier_name": {
+    "account_code": {
+      "description": "Expense or asset account",
       "type": "string"
     },
-    "supplier_invoice_number": {
+    "amount_paid": {
+      "default": 0,
+      "type": "number"
+    },
+    "category": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "currency": {
+      "default": "GBP",
+      "enum": [
+        "GBP"
+      ],
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "due_date": {
+      "format": "date",
       "type": "string"
     },
     "expense_date": {
-      "type": "string",
-      "format": "date"
+      "format": "date",
+      "type": "string"
     },
-    "due_date": {
-      "type": "string",
-      "format": "date"
+    "gross_amount": {
+      "type": "number"
     },
-    "category": {
-      "type": "string",
-      "description": "Bookkeeping category"
+    "ledger_entry_id": {
+      "type": "string"
     },
-    "description": {
+    "linked_invoice_id": {
+      "description": "Customer invoice this cost was recharged on",
       "type": "string"
     },
     "net_amount": {
       "type": "number"
     },
-    "vat_rate": {
-      "type": "number"
+    "notes": {
+      "type": "string"
     },
-    "vat_amount": {
-      "type": "number"
+    "paid_from_account": {
+      "description": "Bank / cash / director loan account code",
+      "type": "string"
     },
-    "gross_amount": {
-      "type": "number"
+    "payment_date": {
+      "format": "date",
+      "type": "string"
     },
-    "currency": {
-      "type": "string",
-      "enum": [
-        "GBP"
-      ],
-      "default": "GBP"
+    "payment_ledger_entry_id": {
+      "type": "string"
     },
     "payment_status": {
-      "type": "string",
+      "default": "unpaid",
       "enum": [
         "unpaid",
-        "part_paid",
         "paid",
         "void"
       ],
-      "default": "unpaid"
-    },
-    "amount_paid": {
-      "type": "number",
-      "default": 0
+      "type": "string"
     },
     "receipt_url": {
       "type": "string"
     },
-    "linked_invoice_id": {
+    "supplier_invoice_number": {
       "type": "string"
     },
-    "notes": {
+    "supplier_name": {
+      "type": "string"
+    },
+    "vat_amount": {
+      "type": "number"
+    },
+    "vat_rate": {
+      "type": "number"
+    },
+    "vat_reclaimable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "void_ledger_entry_id": {
       "type": "string"
     }
   },
@@ -79,16 +101,25 @@
   ],
   "rls": {
     "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "read": {
-      "created_by_id": "{{user.id}}"
-    },
-    "update": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     },
     "delete": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     }
-  }
+  },
+  "type": "object"
 }
