@@ -1,64 +1,150 @@
 {
   "name": "FinanceCompany",
-  "type": "object",
   "properties": {
-    "legal_name": {
-      "type": "string",
-      "description": "Registered legal entity name"
+    "accounting_basis": {
+      "default": "accrual",
+      "enum": [
+        "accrual",
+        "cash"
+      ],
+      "type": "string"
     },
-    "trading_name": {
-      "type": "string",
-      "description": "Trading name, if different"
+    "accounting_year_start_day": {
+      "default": 1,
+      "maximum": 31,
+      "minimum": 1,
+      "type": "integer"
     },
-    "company_number": {
-      "type": "string",
-      "description": "UK Companies House number, if applicable"
-    },
-    "vat_number": {
-      "type": "string",
-      "description": "VAT registration number, if registered"
+    "accounting_year_start_month": {
+      "default": 4,
+      "maximum": 12,
+      "minimum": 1,
+      "type": "integer"
     },
     "address": {
-      "type": "object",
       "properties": {
+        "city": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
         "line_1": {
           "type": "string"
         },
         "line_2": {
           "type": "string"
         },
-        "city": {
-          "type": "string"
-        },
         "postcode": {
           "type": "string"
-        },
-        "country": {
-          "type": "string"
         }
-      }
+      },
+      "type": "object"
+    },
+    "bank_account_name": {
+      "type": "string"
+    },
+    "bank_account_number": {
+      "type": "string"
+    },
+    "bank_sort_code": {
+      "type": "string"
+    },
+    "chart_seeded": {
+      "default": false,
+      "type": "boolean"
+    },
+    "company_number": {
+      "description": "Companies House number",
+      "type": "string"
+    },
+    "credit_note_prefix": {
+      "default": "CN-",
+      "type": "string"
     },
     "currency": {
-      "type": "string",
+      "default": "GBP",
       "enum": [
         "GBP"
       ],
-      "default": "GBP"
+      "type": "string"
     },
-    "accounting_year_start_month": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 12,
-      "default": 4
+    "email": {
+      "type": "string"
     },
-    "accounting_year_start_day": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 31,
-      "default": 6
+    "invoice_footer": {
+      "type": "string"
+    },
+    "invoice_prefix": {
+      "default": "INV-",
+      "type": "string"
+    },
+    "legal_name": {
+      "description": "Registered legal entity name, e.g. MealDrop LTD",
+      "type": "string"
+    },
+    "locked_until": {
+      "description": "No postings allowed on or before this date",
+      "format": "date",
+      "type": "string"
+    },
+    "logo_url": {
+      "type": "string"
+    },
+    "next_credit_note_number": {
+      "default": 1,
+      "type": "integer"
+    },
+    "next_invoice_number": {
+      "default": 1,
+      "type": "integer"
+    },
+    "next_journal_number": {
+      "default": 1,
+      "type": "integer"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "payment_terms_days": {
+      "default": 14,
+      "type": "integer"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "registered_in": {
+      "default": "England and Wales",
+      "type": "string"
+    },
+    "status": {
+      "default": "active",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "type": "string"
+    },
+    "trading_name": {
+      "type": "string"
+    },
+    "utr": {
+      "description": "Corporation Tax UTR",
+      "type": "string"
+    },
+    "vat_number": {
+      "type": "string"
+    },
+    "vat_registered": {
+      "default": false,
+      "type": "boolean"
+    },
+    "vat_registration_date": {
+      "format": "date",
+      "type": "string"
     },
     "vat_scheme": {
-      "type": "string",
+      "default": "not_registered",
       "enum": [
         "standard",
         "cash_accounting",
@@ -66,29 +152,13 @@
         "annual_accounting",
         "not_registered"
       ],
-      "default": "standard"
+      "type": "string"
     },
-    "accounting_basis": {
-      "type": "string",
-      "enum": [
-        "accrual",
-        "cash"
-      ],
-      "default": "accrual"
+    "vat_threshold": {
+      "default": 90000,
+      "type": "number"
     },
-    "vat_registered": {
-      "type": "boolean",
-      "default": false
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "active",
-        "archived"
-      ],
-      "default": "active"
-    },
-    "notes": {
+    "website": {
       "type": "string"
     }
   },
@@ -97,16 +167,25 @@
   ],
   "rls": {
     "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "read": {
-      "created_by_id": "{{user.id}}"
-    },
-    "update": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     },
     "delete": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     }
-  }
+  },
+  "type": "object"
 }
