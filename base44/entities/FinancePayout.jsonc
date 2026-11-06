@@ -1,70 +1,85 @@
 {
   "name": "FinancePayout",
-  "type": "object",
   "properties": {
+    "commission_amount": {
+      "default": 0,
+      "type": "number"
+    },
+    "commission_rate": {
+      "default": 0,
+      "type": "number"
+    },
+    "commission_vat": {
+      "default": 0,
+      "type": "number"
+    },
     "company_id": {
-      "type": "string",
-      "description": "FinanceCompany record ID"
+      "type": "string"
+    },
+    "currency": {
+      "default": "GBP",
+      "enum": [
+        "GBP"
+      ],
+      "type": "string"
+    },
+    "external_reference": {
+      "type": "string"
+    },
+    "gross_order_value": {
+      "default": 0,
+      "type": "number"
+    },
+    "net_payout": {
+      "default": 0,
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "other_deductions": {
+      "default": 0,
+      "type": "number"
+    },
+    "payment_provider": {
+      "type": "string"
+    },
+    "payout_date": {
+      "format": "date",
+      "type": "string"
     },
     "payout_reference": {
       "type": "string"
     },
-    "payout_date": {
-      "type": "string",
-      "format": "date"
+    "period_end": {
+      "format": "date",
+      "type": "string"
     },
     "period_start": {
-      "type": "string",
-      "format": "date"
+      "format": "date",
+      "type": "string"
     },
-    "period_end": {
-      "type": "string",
-      "format": "date"
+    "refunds_and_chargebacks": {
+      "default": 0,
+      "type": "number"
     },
-    "payment_provider": {
-      "type": "string",
-      "description": "Stripe, bank, or other provider"
+    "restaurant_id": {
+      "type": "string"
     },
     "restaurant_name": {
       "type": "string"
     },
-    "currency": {
-      "type": "string",
+    "source_type": {
+      "default": "manual",
       "enum": [
-        "GBP"
+        "manual",
+        "csv_import",
+        "provider_import"
       ],
-      "default": "GBP"
-    },
-    "gross_order_value": {
-      "type": "number",
-      "default": 0
-    },
-    "commission_rate": {
-      "type": "number",
-      "default": 0
-    },
-    "commission_amount": {
-      "type": "number",
-      "default": 0
-    },
-    "commission_vat": {
-      "type": "number",
-      "default": 0
-    },
-    "refunds_and_chargebacks": {
-      "type": "number",
-      "default": 0
-    },
-    "other_deductions": {
-      "type": "number",
-      "default": 0
-    },
-    "net_payout": {
-      "type": "number",
-      "default": 0
+      "type": "string"
     },
     "status": {
-      "type": "string",
+      "default": "expected",
       "enum": [
         "expected",
         "processing",
@@ -72,21 +87,6 @@
         "reconciled",
         "query"
       ],
-      "default": "expected"
-    },
-    "source_type": {
-      "type": "string",
-      "enum": [
-        "manual",
-        "csv_import",
-        "provider_import"
-      ],
-      "default": "manual"
-    },
-    "external_reference": {
-      "type": "string"
-    },
-    "notes": {
       "type": "string"
     }
   },
@@ -100,16 +100,25 @@
   ],
   "rls": {
     "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "read": {
-      "created_by_id": "{{user.id}}"
-    },
-    "update": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     },
     "delete": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     }
-  }
+  },
+  "type": "object"
 }
