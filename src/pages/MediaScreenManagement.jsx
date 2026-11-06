@@ -105,12 +105,14 @@ export default function MediaScreenManagement() {
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
+        let redirecting = false;
         try {
             let userData = null;
             try { userData = await base44.auth.me(); } catch { userData = null; }
             if (!userData) {
                 // Standalone Studio has no website header to sign in from: go to
                 // sign-in and come straight back here.
+                redirecting = true;
                 base44.auth.redirectToLogin(window.location.pathname + window.location.search);
                 return;
             }
@@ -149,7 +151,7 @@ export default function MediaScreenManagement() {
         } catch (error) {
             console.error('Failed to load data:', error);
         } finally {
-            setLoading(false);
+            if (!redirecting) setLoading(false); // keep the spinner while going to sign-in
         }
     };
 
@@ -269,13 +271,16 @@ export default function MediaScreenManagement() {
     const SidebarContent = ({ onNavigate }) => (
         <>
             <div className="px-5 py-5 border-b border-gray-800">
-                <button
-                    onClick={() => navigate(createPageUrl('RestaurantDashboard'))}
-                    className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-5 text-sm"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Dashboard
-                </button>
+                {/* The installed Studio app stays in the Studio; in a browser, offer the way back. */}
+                {!installed && (
+                    <button
+                        onClick={() => navigate(createPageUrl(user?.role === 'admin' ? 'AdminDashboard' : 'RestaurantDashboard'))}
+                        className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-5 text-sm"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Dashboard
+                    </button>
+                )}
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-900/30">
                         <Monitor className="h-5 w-5 text-white" />
