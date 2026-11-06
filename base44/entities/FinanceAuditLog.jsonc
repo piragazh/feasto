@@ -1,10 +1,27 @@
 {
   "name": "FinanceAuditLog",
-  "type": "object",
   "properties": {
+    "action": {
+      "type": "string"
+    },
+    "after_snapshot": {
+      "type": "object"
+    },
+    "before_snapshot": {
+      "type": "object"
+    },
+    "changed_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "changed_by_email": {
+      "type": "string"
+    },
+    "changed_by_user_id": {
+      "type": "string"
+    },
     "company_id": {
-      "type": "string",
-      "description": "FinanceCompany record ID"
+      "type": "string"
     },
     "entity_name": {
       "type": "string"
@@ -12,40 +29,11 @@
     "record_id": {
       "type": "string"
     },
-    "action": {
-      "type": "string",
-      "enum": [
-        "create",
-        "update",
-        "issue",
-        "void",
-        "post",
-        "reverse",
-        "payment",
-        "export",
-        "period_lock",
-        "period_unlock"
-      ]
-    },
-    "changed_by_user_id": {
+    "source": {
       "type": "string"
-    },
-    "changed_at": {
-      "type": "string",
-      "format": "date-time"
     },
     "summary": {
       "type": "string"
-    },
-    "before_snapshot": {
-      "type": "object"
-    },
-    "after_snapshot": {
-      "type": "object"
-    },
-    "source": {
-      "type": "string",
-      "description": "UI, backend function, import or integration"
     }
   },
   "required": [
@@ -57,20 +45,25 @@
   ],
   "rls": {
     "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "read": {
-      "created_by_id": "{{user.id}}"
-    },
-    "update": {
       "user_condition": {
-        "role": "admin"
+        "role": "finance_backend_only"
       }
     },
     "delete": {
       "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
         "role": "admin"
       }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
     }
-  }
+  },
+  "type": "object"
 }
