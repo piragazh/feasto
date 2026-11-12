@@ -18,6 +18,8 @@
  *   updateLocation   { lat, lng }       -> { success }   also copied onto the driver's live orders
  *   acceptOrder      { orderId }        -> { order, driver }
  *   completeDelivery { orderId, proofUrl? } -> { order, driver, remaining }
+ *   messageRestaurant { orderId, message }  -> { message }   driver -> restaurant chat
+ *   messageCustomer   { orderId, message }  -> { message }   driver -> customer chat
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
@@ -244,6 +246,49 @@ Deno.serve(async (req) => {
 
             console.log(`[DRIVER] ✓ ${user.email} delivered order ${orderId} (${remaining.length} left)`);
             return Response.json({ success: true, order: updatedOrder, driver: updatedDriver, remaining: remaining.length });
+        }
+
+        // ── messageRestaurant / messageCustomer ───────────────────────────────
+        if (action === 'messageRestaurant' || action === 'messageCustomer') {
+            const orderId = String(body.orderId || '');
+            const text = typeof body.message === 'string' ? body.message.trim().slice(0, 1000) : '';
+            if (!orderId) return fail(400, 'orderId is required');
+            if (!text) return fail(400, 'Type a message first');
+
+            const order = await loadOrder(base44, orderId);
+            if (!order) return fail(404, 'Order not found');
+            if (order.driver_id !== driver.id) {
+                console.error(`[DRIVER] ${user.email} tried to message on order ${orderId} assigned to ${order.driver_id}`);
+                return fail(403, 'This order is not assigned to you');
+            }
+            if (!['out_for_delivery', 'delivered'].includes(order.status)) {
+                return fail(409, 'Messages are closed for this order');
+            }
+
+            if (action === 'messageRestaurant') {
+                const created = await base44.asServiceRole.entities.DriverMessage.create({
+                    order_id: orderId,
+                    driver_id: driver.id,
+                    restaurant_id: order.restaurant_id,
+                    sender_type: 'driver',
+                    message: text,
+                    is_read: false,
+                });
+                return Response.json({ success: true, message: created });
+            }
+
+            // The customer chat only knows two sides (customer / restaurant), so the
+            // driver's message appears on the restaurant side. sent_by_driver_id
+            // records that it was really the driver, and which one.
+            const created = await base44.asServiceRole.entities.Message.create({
+                order_id: orderId,
+                restaurant_id: order.restaurant_id,
+                sender_type: 'restaurant',
+                sent_by_driver_id: driver.id,
+                message: text,
+                is_read: false,
+            });
+            return Response.json({ success: true, message: created });
         }
 
         return fail(400, `Unknown action: ${action || '(none)'}`);
