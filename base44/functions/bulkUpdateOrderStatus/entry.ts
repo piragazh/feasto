@@ -28,6 +28,32 @@ const VALID_STATUS_TRANSITIONS = {
   'refunded': [],
 };
 
+// When an order leaves a driver's hands, free the driver - but only once nothing
+// else is in the bag. (Same helper as updateOrderStatus.)
+async function releaseDriverForOrder(base44, order, newStatus) {
+  if (!order?.driver_id) return;
+  try {
+    const Driver = base44.asServiceRole.entities.Driver;
+    const live = await base44.asServiceRole.entities.Order.filter({
+      driver_id: order.driver_id,
+      status: 'out_for_delivery',
+    });
+    const others = (live || []).filter((o) => o.id !== order.id);
+    const driver = (await Driver.filter({ id: order.driver_id }))?.[0];
+    if (!driver) return;
+    await Driver.update(driver.id, {
+      ...(others.length === 0
+        ? { current_order_id: null, is_available: true }
+        : { current_order_id: others[0].id, is_available: false }),
+      ...(newStatus === 'delivered' && order.status === 'out_for_delivery'
+        ? { total_deliveries: (driver.total_deliveries || 0) + 1 }
+        : {}),
+    });
+  } catch (e) {
+    console.error('[bulkUpdateOrderStatus] Driver release failed for order', order?.id, e?.message || e);
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -167,6 +193,14 @@ Deno.serve(async (req) => {
         return base44.asServiceRole.entities.Order.update(order.id, updateData);
       })
     );
+
+    // Free the drivers of delivered/collected orders. One at a time and after every
+    // order is updated, so a driver with several orders in the batch ends up free.
+    if (['delivered', 'collected'].includes(new_status)) {
+      for (const order of orders) {
+        await releaseDriverForOrder(base44, order, new_status);
+      }
+    }
 
     return Response.json({
       success: true,
