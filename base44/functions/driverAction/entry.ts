@@ -20,6 +20,8 @@
  *   completeDelivery { orderId, proofUrl? } -> { order, driver, remaining }
  *   messageRestaurant { orderId, message }  -> { message }   driver -> restaurant chat
  *   messageCustomer   { orderId, message }  -> { message }   driver -> customer chat
+ *   restaurantMessages { orderId }          -> { messages }  the driver <-> restaurant chat for one of their orders
+ *   myRatings                               -> { ratings }   ratings left for this driver
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
@@ -289,6 +291,23 @@ Deno.serve(async (req) => {
                 is_read: false,
             });
             return Response.json({ success: true, message: created });
+        }
+
+        // ── restaurantMessages ────────────────────────────────────────────────
+        if (action === 'restaurantMessages') {
+            const orderId = String(body.orderId || '');
+            if (!orderId) return fail(400, 'orderId is required');
+            const rows = await base44.asServiceRole.entities.DriverMessage.filter({
+                order_id: orderId,
+                driver_id: driver.id,
+            }, 'created_date');
+            return Response.json({ success: true, messages: rows || [] });
+        }
+
+        // ── myRatings ─────────────────────────────────────────────────────────
+        if (action === 'myRatings') {
+            const rows = await base44.asServiceRole.entities.DriverRating.filter({ driver_id: driver.id });
+            return Response.json({ success: true, ratings: rows || [] });
         }
 
         return fail(400, `Unknown action: ${action || '(none)'}`);
