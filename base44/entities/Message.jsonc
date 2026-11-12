@@ -19,6 +19,10 @@
     "message": {
       "type": "string"
     },
+    "sent_by_driver_id": {
+      "type": "string",
+      "description": "Set server-side (driverAction) when the message was written by the delivery driver, not restaurant staff."
+    },
     "is_read": {
       "type": "boolean",
       "default": false

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Star } from 'lucide-react';
 import { toast } from 'sonner';
+import { functionErrorMessage } from '@/lib/function-errors';
 
 export default function RateDriverDialog({ open, onClose, order, ratedBy = 'customer' }) {
     const [rating, setRating] = useState(0);
@@ -21,19 +22,17 @@ export default function RateDriverDialog({ open, onClose, order, ratedBy = 'cust
 
     const rateDriverMutation = useMutation({
         mutationFn: async () => {
-            // Create rating
-            await base44.entities.DriverRating.create({
-                driver_id: order.driver_id,
-                order_id: order.id,
+            // SECURITY: the server checks the order was delivered and not already
+            // rated, saves the rating and recalculates the driver's average.
+            const response = await base44.functions.invoke('submitDriverRating', {
+                orderId: order.id,
                 rating,
                 feedback,
-                rated_by: ratedBy
             });
-
-            // Update driver's average rating
-            const allRatings = await base44.entities.DriverRating.filter({ driver_id: order.driver_id });
-            const avgRating = allRatings.reduce((sum, r) => sum + r.rating, 0) / allRatings.length;
-            await base44.entities.Driver.update(order.driver_id, { rating: parseFloat(avgRating.toFixed(1)) });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(functionErrorMessage(error, 'Could not save your rating. Please try again.'));
         },
         onSuccess: () => {
             queryClient.invalidateQueries();

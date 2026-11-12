@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 
 export default function DriverCommunication({ driverId }) {
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -32,7 +33,18 @@ export default function DriverCommunication({ driverId }) {
     });
 
     const sendMessageMutation = useMutation({
-        mutationFn: (data) => base44.entities.Message.create(data),
+        mutationFn: async (data) => {
+            // SECURITY: the server checks the order is this driver's before posting
+            const response = await base44.functions.invoke('driverAction', {
+                action: 'messageCustomer',
+                orderId: data.order_id,
+                message: data.message,
+            });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Message not sent. Please try again.'));
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['driver-messages']);
             setMessageText('');
@@ -117,14 +129,14 @@ export default function DriverCommunication({ driverId }) {
                     </div>
                 ) : (
                     messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.sender_type === 'driver' ? 'justify-end' : 'justify-start'}`}>
+                        <div key={msg.id} className={`flex ${(msg.sender_type === 'driver' || msg.sent_by_driver_id === driverId) ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[78%] rounded-2xl px-3 py-2 shadow-sm text-sm ${
-                                msg.sender_type === 'driver'
+                                (msg.sender_type === 'driver' || msg.sent_by_driver_id === driverId)
                                     ? 'bg-blue-500 text-white rounded-br-sm'
                                     : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                             }`}>
                                 <p className="leading-relaxed">{msg.message}</p>
-                                <p className={`text-xs mt-1 ${msg.sender_type === 'driver' ? 'text-blue-100' : 'text-gray-400'}`}>
+                                <p className={`text-xs mt-1 ${(msg.sender_type === 'driver' || msg.sent_by_driver_id === driverId) ? 'text-blue-100' : 'text-gray-400'}`}>
                                     {format(new Date(msg.created_date), 'h:mm a')}
                                 </p>
                             </div>

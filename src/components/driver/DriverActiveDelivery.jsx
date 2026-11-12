@@ -70,7 +70,18 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
     });
 
     const sendMessageMutation = useMutation({
-        mutationFn: (data) => base44.entities.DriverMessage.create(data),
+        mutationFn: async (data) => {
+            // SECURITY: the server checks the order is this driver's before posting
+            const response = await base44.functions.invoke('driverAction', {
+                action: 'messageRestaurant',
+                orderId: data.order_id,
+                message: data.message,
+            });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Message not sent. Please try again.'));
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['driver-messages']);
             setMessageText('');

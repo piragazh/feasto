@@ -211,14 +211,17 @@ export default function DriverApp() {
     });
 
     const sendMessageMutation = useMutation({
-        mutationFn: async ({ orderId, restaurantId, message }) => {
-            return await base44.entities.Message.create({
-                order_id: orderId,
-                restaurant_id: restaurantId,
-                sender_type: 'restaurant',
-                message: message,
-                is_read: false
+        mutationFn: async ({ orderId, message }) => {
+            // SECURITY: the server checks the order is this driver's before posting
+            const response = await base44.functions.invoke('driverAction', {
+                action: 'messageCustomer',
+                orderId,
+                message,
             });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Message not sent. Please try again.'));
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['order-messages']);
