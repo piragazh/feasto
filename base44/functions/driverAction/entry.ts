@@ -75,7 +75,21 @@ Deno.serve(async (req) => {
         try { body = await req.json(); } catch { body = {}; }
         const action = String(body?.action || '');
 
-        const driver = await findDriver(base44, user.email);
+        let driver = await findDriver(base44, user.email);
+
+        // Self-heal: current_order_id can be left behind by an order that was cancelled
+        // or voided elsewhere, which would leave the driver looking busy for ever.
+        // If nothing is actually out for delivery with them, clear it.
+        if (driver?.current_order_id && (action === 'me' || action === 'setAvailability')) {
+            try {
+                const live = await liveOrdersOf(base44, driver.id);
+                if (live.length === 0) {
+                    driver = await base44.asServiceRole.entities.Driver.update(driver.id, { current_order_id: null });
+                }
+            } catch (e) {
+                console.warn('[DRIVER] stale current_order_id check failed:', e);
+            }
+        }
 
         // ── me ────────────────────────────────────────────────────────────────
         if (action === 'me') {
