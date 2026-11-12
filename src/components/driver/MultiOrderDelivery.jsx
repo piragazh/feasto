@@ -44,10 +44,8 @@ export default function MultiOrderDelivery({ orders, driver, onComplete }) {
                         };
                         setCurrentLocation(newLocation);
                         
-                        // Update driver location in database
-                        base44.functions.invoke('driverAction', {
-                            action: 'updateLocation', lat: newLocation.lat, lng: newLocation.lng
-                        }).catch(() => {});
+                        // The driver app already sends the position to the server every 10
+                        // seconds while an order is being carried; no second call from here.
 
                         // Check for deviation
                         if (optimizedOrders[currentOrderIndex]) {
