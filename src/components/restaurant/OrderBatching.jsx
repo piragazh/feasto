@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, MapPin, Users, CheckCircle, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 
 export default function OrderBatching({ restaurantId }) {
     const [selectedOrders, setSelectedOrders] = useState([]);
@@ -25,40 +26,24 @@ export default function OrderBatching({ restaurantId }) {
     });
 
     const { data: availableDrivers = [] } = useQuery({
-        queryKey: ['available-drivers'],
-        queryFn: () => base44.entities.Driver.filter({ is_available: true }),
+        queryKey: ['available-drivers', restaurantId],
+        queryFn: async () => {
+            // Only this restaurant's drivers who are free to take a run
+            const free = await base44.entities.Driver.filter({ is_available: true });
+            return free.filter(d => d.restaurant_ids?.includes(restaurantId) && !d.current_order_id);
+        },
         refetchInterval: 5000,
     });
 
     const assignBatchMutation = useMutation({
         mutationFn: async ({ orderIds, driverId }) => {
-            const driver = availableDrivers.find(d => d.id === driverId);
-            
-            // Update all orders with driver and status
-            const promises = orderIds.map(orderId => 
-                base44.entities.Order.update(orderId, {
-                    driver_id: driverId,
-                    status: 'out_for_delivery',
-                    status_history: [
-                        ...(preparingOrders.find(o => o.id === orderId)?.status_history || []),
-                        {
-                            status: 'out_for_delivery',
-                            timestamp: new Date().toISOString(),
-                            note: `Batch assigned to driver ${driver.full_name}`
-                        }
-                    ],
-                    estimated_delivery: new Date(Date.now() + 30 * 60000).toISOString()
-                })
-            );
-            
-            await Promise.all(promises);
-            
-            // Update driver status
-            await base44.entities.Driver.update(driverId, {
-                is_available: false,
-                current_order_id: orderIds[0] // Primary order
+            // SECURITY: Route through hardened backend function with role checks
+            await base44.functions.invoke('assignOrderDriver', {
+                orderIds,
+                driverId,
+                restaurantId,
             });
-            
+
             return { orderIds, driverId };
         },
         onSuccess: ({ orderIds }) => {
@@ -68,8 +53,8 @@ export default function OrderBatching({ restaurantId }) {
             setSelectedOrders([]);
             setSelectedDriver('');
         },
-        onError: () => {
-            toast.error('Failed to assign batch');
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Failed to assign batch'));
         }
     });
 
