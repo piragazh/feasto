@@ -93,17 +93,6 @@ export default function TrackOrder() {
         return () => unsubscribe();
     }, [orderId]);
 
-    const { data: driver } = useQuery({
-        queryKey: ['driver-info', order?.driver_id],
-        queryFn: async () => {
-            const drivers = await base44.entities.Driver.filter({ id: order.driver_id });
-            return drivers[0];
-        },
-        enabled: !!order?.driver_id && order?.status === 'out_for_delivery',
-        staleTime: 10000, // 10s cache
-        refetchInterval: 15000, // Refetch every 15s instead of 5s
-    });
-
     const { data: restaurant } = useQuery({
         queryKey: ['restaurant-for-tracking', order?.restaurant_id],
         queryFn: async () => {

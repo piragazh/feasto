@@ -16,8 +16,10 @@ export default function LiveDriverTracking({ order }) {
         queryKey: ['driver-tracking', order.driver_id],
         queryFn: async () => {
             if (!order.driver_id) return null;
-            const drivers = await base44.entities.Driver.filter({ id: order.driver_id });
-            return drivers[0] || null;
+            // The server returns only what a customer may see (first name, rating,
+            // phone, position) - never the full driver record.
+            const response = await base44.functions.invoke('getOrderDriver', { orderId: order.id });
+            return (response?.data || response)?.driver || null;
         },
         enabled: !!order.driver_id && order.status === 'out_for_delivery',
         staleTime: 8000, // 8s cache
