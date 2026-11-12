@@ -83,6 +83,23 @@ Deno.serve(async (req) => {
 
     console.log(`[REJECT] Order ${order_id} rejected by ${user.email}. Reason: ${rejection_reason}`);
 
+    // A cancelled order must not leave its driver marked busy. Free them unless
+    // they are still carrying another live order.
+    if (order.driver_id) {
+      try {
+        const live = await base44.asServiceRole.entities.Order.filter({
+          driver_id: order.driver_id,
+          status: 'out_for_delivery',
+        });
+        const others = (live || []).filter((o) => o.id !== order_id);
+        await base44.asServiceRole.entities.Driver.update(order.driver_id, others.length === 0
+          ? { current_order_id: null, is_available: true }
+          : { current_order_id: others[0].id, is_available: false });
+      } catch (e) {
+        console.error('[REJECT] Driver release failed for order', order_id, e?.message || e);
+      }
+    }
+
     // Notify the customer of the cancellation (SMS/WhatsApp per restaurant settings) — fire and forget.
     // Sent regardless of refund outcome so the customer is always informed.
     base44.asServiceRole.functions
