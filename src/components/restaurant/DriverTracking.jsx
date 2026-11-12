@@ -11,6 +11,7 @@ import { MapPin, Navigation, Phone, Bike, Car, Zap, MessageSquare, User, AlertCi
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 import 'leaflet/dist/leaflet.css';
 
 export default function DriverTracking({ restaurantId }) {
@@ -39,8 +40,12 @@ export default function DriverTracking({ restaurantId }) {
     });
 
     const { data: drivers = [] } = useQuery({
-        queryKey: ['drivers-status'],
-        queryFn: () => base44.entities.Driver.list(),
+        queryKey: ['drivers-status', restaurantId],
+        queryFn: async () => {
+            // Only this restaurant's drivers
+            const allDrivers = await base44.entities.Driver.list();
+            return allDrivers.filter(d => d.restaurant_ids?.includes(restaurantId));
+        },
         refetchInterval: 5000,
     });
 
@@ -57,23 +62,16 @@ export default function DriverTracking({ restaurantId }) {
 
     const assignDriverMutation = useMutation({
         mutationFn: async ({ orderId, driverId }) => {
-            const driver = drivers.find(d => d.id === driverId);
-            await base44.entities.Driver.update(driverId, {
-                current_order_id: orderId,
-                is_available: false
+            // SECURITY: Route through hardened backend function with role checks
+            const response = await base44.functions.invoke('assignOrderDriver', {
+                orderId,
+                driverId,
+                restaurantId,
             });
-            return base44.entities.Order.update(orderId, {
-                driver_id: driverId,
-                status: 'out_for_delivery',
-                status_history: [
-                    ...(assigningOrder?.status_history || []),
-                    { 
-                        status: 'out_for_delivery', 
-                        timestamp: new Date().toISOString(),
-                        note: `Assigned to ${driver?.full_name || 'driver'}`
-                    }
-                ]
-            });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Failed to assign driver'));
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['preparing-orders']);
