@@ -109,7 +109,15 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
 
     const { data: availableDrivers = [] } = useQuery({
         queryKey: ['available-drivers'],
-        queryFn: () => base44.entities.Driver.filter({ is_available: true }),
+        queryFn: async () => {
+            // This restaurant's available drivers only, via the server
+            try {
+                const response = await base44.functions.invoke('manageDrivers', { action: 'list', restaurantId });
+                return ((response?.data || response)?.drivers || []).filter(d => d.is_available);
+            } catch {
+                return [];
+            }
+        },
         refetchInterval: 30000,
     });
 
@@ -447,12 +455,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         // When delivered/collected, record actual delivery time and free up driver
         if (newStatus === 'delivered' || newStatus === 'collected') {
             const order = allOrders.find(o => o.id === orderId);
-            if (order?.driver_id) {
-                base44.entities.Driver.update(order.driver_id, {
-                    current_order_id: null,
-                    is_available: true
-                }).catch(e => console.error('Failed to reset driver:', e));
-            }
+            // The driver is freed by the server (updateOrderStatus) once nothing else is in their bag.
             // SECURITY: Use backend function (extraFields no longer supported, only status + rejection_reason)
             updateOrderMutation.mutate({ orderId, status: newStatus });
             const statusLabels = { delivered: 'Order delivered', collected: 'Order collected' };
@@ -463,31 +466,21 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
         if (newStatus === 'out_for_delivery') {
             // Auto-assign first available driver if present, and calculate ETA
             try {
-                const drivers = await base44.entities.Driver.filter({ 
-                    is_available: true,
-                    current_order_id: null 
-                });
-                
-                if (drivers.length > 0) {
-                    const driver = drivers[0];
-                    const etaPrompt = `Calculate estimated delivery time for a food delivery order.
-Distance: Assume 3-5 km average urban delivery.
-Traffic: Consider it's ${new Date().getHours()}:00, adjust for peak hours (12-14, 18-21).
-Vehicle: ${driver.vehicle_type}
-Provide only the time range (e.g., "25-30 min").`;
-                    
-                    const etaResponse = await base44.integrations.Core.InvokeLLM({ prompt: etaPrompt }).catch(() => null);
-                    
-                    await Promise.all([
-                        base44.entities.Order.update(orderId, { 
-                            driver_id: driver.id,
-                            estimated_delivery: etaResponse || '',
-                        }),
-                        base44.entities.Driver.update(driver.id, {
-                            current_order_id: orderId,
-                            is_available: false,
-                        }),
-                    ]);
+                // Auto-assign one of THIS restaurant's free drivers, through the hardened
+                // server function (role check, audit, ETA, customer SMS). It also moves
+                // the order to out-for-delivery, so there is nothing more to do here.
+                const free = (availableDrivers || []).filter(d => !d.current_order_id);
+                if (free.length > 0) {
+                    await base44.functions.invoke('assignOrderDriver', {
+                        orderId,
+                        driverId: free[0].id,
+                        restaurantId,
+                    });
+                    queryClient.invalidateQueries(['live-orders']);
+                    queryClient.invalidateQueries(['available-drivers']);
+                    toast.success(`Order dispatched with ${free[0].full_name}`);
+                    if (onOrderUpdate) onOrderUpdate();
+                    return;
                 }
             } catch (e) {
                 console.error('Driver auto-assign / ETA failed:', e);

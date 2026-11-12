@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Bike, Car, Truck, Phone, Mail, Star, Package, Clock, Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 
 export default function DriverManagement({ restaurantId }) {
     const [editingDriver, setEditingDriver] = useState(null);
@@ -30,68 +31,45 @@ export default function DriverManagement({ restaurantId }) {
     const { data: drivers = [], isLoading } = useQuery({
         queryKey: ['drivers', restaurantId],
         queryFn: async () => {
-            const allDrivers = await base44.entities.Driver.list();
-            // Filter to show only drivers associated with this restaurant
-            return allDrivers.filter(d => d.restaurant_ids?.includes(restaurantId));
+            // This restaurant's drivers only, via the server
+            const response = await base44.functions.invoke('manageDrivers', { action: 'list', restaurantId });
+            return (response?.data || response)?.drivers || [];
         },
     });
 
     const createDriverMutation = useMutation({
         mutationFn: async (driverData) => {
-            // Check if driver with this email already exists
-            const allDrivers = await base44.entities.Driver.list();
-            const existingDriver = allDrivers.find(d => d.email?.toLowerCase() === driverData.email.toLowerCase());
-            
-            if (existingDriver) {
-                // Driver exists - add this restaurant to their list
-                if (existingDriver.restaurant_ids?.includes(restaurantId)) {
-                    throw new Error('Driver is already associated with this restaurant');
-                }
-                
-                const updatedRestaurantIds = [...(existingDriver.restaurant_ids || []), restaurantId];
-                const updatedPaymentConfig = {
-                    ...(existingDriver.payment_config || {}),
-                    [restaurantId]: {
-                        hourly_rate: driverData.hourly_rate || 0,
-                        per_mile_rate: driverData.per_mile_rate || 0,
-                        per_delivery_fee: driverData.per_delivery_fee || 0,
-                    }
-                };
-                
-                await base44.entities.Driver.update(existingDriver.id, {
-                    restaurant_ids: updatedRestaurantIds,
-                    payment_config: updatedPaymentConfig
-                });
-                return { ...existingDriver, restaurant_ids: updatedRestaurantIds, payment_config: updatedPaymentConfig };
-            } else {
-                // New driver - create with this restaurant
-                if (driverData.email) {
-                    try {
-                        await base44.users.inviteUser(driverData.email, "user");
-                        toast.success('Invitation sent to driver email');
-                    } catch (error) {
-                        console.log('Invitation error (user may already exist):', error.message);
-                    }
-                }
-                
-                const paymentConfig = {
-                    [restaurantId]: {
-                        hourly_rate: driverData.hourly_rate || 0,
-                        per_mile_rate: driverData.per_mile_rate || 0,
-                        per_delivery_fee: driverData.per_delivery_fee || 0,
-                    }
-                };
-                
-                return base44.entities.Driver.create({
+            // The server links an existing driver (same email) or creates a new one,
+            // and only ever touches this restaurant's pay rates.
+            const response = await base44.functions.invoke('manageDrivers', {
+                action: 'addDriver',
+                restaurantId,
+                data: {
                     full_name: driverData.full_name,
                     phone: driverData.phone,
                     email: driverData.email,
                     vehicle_type: driverData.vehicle_type,
                     is_available: driverData.is_available,
-                    restaurant_ids: [restaurantId],
-                    payment_config: paymentConfig
-                });
+                    hourly_rate: driverData.hourly_rate,
+                    per_mile_rate: driverData.per_mile_rate,
+                    per_delivery_fee: driverData.per_delivery_fee,
+                },
+            });
+            const result = response?.data || response;
+
+            // Brand-new driver: invite them so they can sign in to the driver app
+            if (result?.created && driverData.email) {
+                try {
+                    await base44.users.inviteUser(driverData.email, "user");
+                    toast.success('Invitation sent to driver email');
+                } catch (error) {
+                    console.log('Invitation error (user may already exist):', error.message);
+                }
             }
+            return result?.driver;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Failed to add driver'));
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['drivers']);
@@ -102,23 +80,25 @@ export default function DriverManagement({ restaurantId }) {
     });
 
     const updateDriverMutation = useMutation({
-        mutationFn: ({ id, data }) => {
-            const updatedPaymentConfig = {
-                ...(data.payment_config || {}),
-                [restaurantId]: {
+        mutationFn: async ({ id, data }) => {
+            const response = await base44.functions.invoke('manageDrivers', {
+                action: 'updateDriver',
+                restaurantId,
+                driverId: id,
+                data: {
+                    full_name: data.full_name,
+                    phone: data.phone,
+                    vehicle_type: data.vehicle_type,
+                    is_available: data.is_available,
                     hourly_rate: data.hourly_rate || 0,
                     per_mile_rate: data.per_mile_rate || 0,
                     per_delivery_fee: data.per_delivery_fee || 0,
-                }
-            };
-            
-            return base44.entities.Driver.update(id, {
-                full_name: data.full_name,
-                phone: data.phone,
-                vehicle_type: data.vehicle_type,
-                is_available: data.is_available,
-                payment_config: updatedPaymentConfig
+                },
             });
+            return (response?.data || response)?.driver;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Failed to update driver'));
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['drivers']);
@@ -130,19 +110,17 @@ export default function DriverManagement({ restaurantId }) {
 
     const deleteDriverMutation = useMutation({
         mutationFn: async (id) => {
-            const driver = drivers.find(d => d.id === id);
-            if (!driver) return;
-            
-            // Remove this restaurant from driver's list
-            const updatedRestaurantIds = (driver.restaurant_ids || []).filter(rid => rid !== restaurantId);
-            
-            if (updatedRestaurantIds.length === 0) {
-                // No more restaurants - delete the driver
-                return base44.entities.Driver.delete(id);
-            } else {
-                // Still has other restaurants - just remove this one
-                return base44.entities.Driver.update(id, { restaurant_ids: updatedRestaurantIds });
-            }
+            // The server unlinks the driver from this restaurant, and deletes the
+            // profile only if this was their last restaurant.
+            const response = await base44.functions.invoke('manageDrivers', {
+                action: 'removeDriver',
+                restaurantId,
+                driverId: id,
+            });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Failed to remove driver'));
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['drivers']);

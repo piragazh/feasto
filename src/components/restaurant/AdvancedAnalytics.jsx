@@ -53,12 +53,20 @@ export default function AdvancedAnalytics({ restaurantId }) {
 
     const { data: drivers = [] } = useQuery({
         queryKey: ['drivers-analytics'],
-        queryFn: () => base44.entities.Driver.list(),
+        queryFn: async () => {
+            // This restaurant's drivers only, via the server
+            const response = await base44.functions.invoke('manageDrivers', { action: 'list', restaurantId });
+            return (response?.data || response)?.drivers || [];
+        },
     });
 
     const { data: driverRatings = [] } = useQuery({
         queryKey: ['driver-ratings'],
-        queryFn: () => base44.entities.DriverRating.list(),
+        queryFn: async () => {
+            // This restaurant's drivers only, via the server
+            const response = await base44.functions.invoke('manageDrivers', { action: 'ratings', restaurantId });
+            return (response?.data || response)?.ratings || [];
+        },
     });
 
     const analytics = useMemo(() => {

@@ -17,7 +17,10 @@ export default function DriverStats({ driverId }) {
 
     const { data: ratings = [] } = useQuery({
         queryKey: ['driver-ratings', driverId],
-        queryFn: () => base44.entities.DriverRating.filter({ driver_id: driverId }),
+        queryFn: async () => {
+            const response = await base44.functions.invoke('driverAction', { action: 'myRatings' });
+            return (response?.data || response)?.ratings || [];
+        },
         enabled: !!driverId,
     });
 

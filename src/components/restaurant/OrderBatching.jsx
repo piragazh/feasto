@@ -29,8 +29,9 @@ export default function OrderBatching({ restaurantId }) {
         queryKey: ['available-drivers', restaurantId],
         queryFn: async () => {
             // Only this restaurant's drivers who are free to take a run
-            const free = await base44.entities.Driver.filter({ is_available: true });
-            return free.filter(d => d.restaurant_ids?.includes(restaurantId) && !d.current_order_id);
+            const response = await base44.functions.invoke('manageDrivers', { action: 'list', restaurantId });
+            const mine = (response?.data || response)?.drivers || [];
+            return mine.filter(d => d.is_available && !d.current_order_id);
         },
         refetchInterval: 5000,
     });

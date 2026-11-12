@@ -108,7 +108,8 @@ export default function TrackOrder() {
         queryKey: ['driver-ratings', order?.driver_id, order?.id],
         queryFn: async () => {
             // One customer rating per order (enforced by submitDriverRating)
-            return base44.entities.DriverRating.filter({ order_id: order.id, rated_by: 'customer' });
+            const response = await base44.functions.invoke('getOrderDriver', { orderId: order.id });
+            return (response?.data || response)?.rated ? [{ rated: true }] : [];
         },
         enabled: !!order?.driver_id && order?.status === 'delivered',
     });

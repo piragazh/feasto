@@ -9,7 +9,11 @@ import { format, differenceInMinutes } from 'date-fns';
 export default function DriverPerformance({ restaurantId }) {
     const { data: drivers = [], isLoading: driversLoading } = useQuery({
         queryKey: ['drivers-performance', restaurantId],
-        queryFn: () => base44.entities.Driver.list(),
+        queryFn: async () => {
+            // This restaurant's drivers only, via the server
+            const response = await base44.functions.invoke('manageDrivers', { action: 'list', restaurantId });
+            return (response?.data || response)?.drivers || [];
+        },
     });
 
     const { data: completedOrders = [], isLoading: ordersLoading } = useQuery({
@@ -22,7 +26,11 @@ export default function DriverPerformance({ restaurantId }) {
 
     const { data: ratings = [], isLoading: ratingsLoading } = useQuery({
         queryKey: ['driver-ratings', restaurantId],
-        queryFn: () => base44.entities.DriverRating.list(),
+        queryFn: async () => {
+            // This restaurant's drivers only, via the server
+            const response = await base44.functions.invoke('manageDrivers', { action: 'ratings', restaurantId });
+            return (response?.data || response)?.ratings || [];
+        },
     });
 
     const calculateDriverMetrics = (driverId) => {

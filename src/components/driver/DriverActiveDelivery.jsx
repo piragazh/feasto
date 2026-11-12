@@ -37,10 +37,13 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
 
     const { data: messages = [] } = useQuery({
         queryKey: ['driver-messages', order?.id],
-        queryFn: () => base44.entities.DriverMessage.filter({
-            order_id: order.id,
-            driver_id: driver.id
-        }),
+        queryFn: async () => {
+            const response = await base44.functions.invoke('driverAction', {
+                action: 'restaurantMessages',
+                orderId: order.id,
+            });
+            return (response?.data || response)?.messages || [];
+        },
         enabled: !!driver?.id && !!order?.id,
         refetchInterval: 3000,
     });

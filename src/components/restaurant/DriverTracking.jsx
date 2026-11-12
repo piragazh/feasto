@@ -43,19 +43,23 @@ export default function DriverTracking({ restaurantId }) {
         queryKey: ['drivers-status', restaurantId],
         queryFn: async () => {
             // Only this restaurant's drivers
-            const allDrivers = await base44.entities.Driver.list();
-            return allDrivers.filter(d => d.restaurant_ids?.includes(restaurantId));
+            const response = await base44.functions.invoke('manageDrivers', { action: 'list', restaurantId });
+            return (response?.data || response)?.drivers || [];
         },
         refetchInterval: 5000,
     });
 
     const { data: driverMessages = [] } = useQuery({
         queryKey: ['driver-messages', restaurantId, messagingDriver?.id],
-        queryFn: () => base44.entities.DriverMessage.filter({
-            restaurant_id: restaurantId,
-            driver_id: messagingDriver?.id,
-            order_id: messagingDriver?.orderId
-        }),
+        queryFn: async () => {
+            const response = await base44.functions.invoke('manageDrivers', {
+                action: 'messages',
+                restaurantId,
+                driverId: messagingDriver?.id,
+                orderId: messagingDriver?.orderId,
+            });
+            return (response?.data || response)?.messages || [];
+        },
         enabled: !!messagingDriver,
         refetchInterval: 3000,
     });
@@ -84,7 +88,19 @@ export default function DriverTracking({ restaurantId }) {
     });
 
     const sendMessageMutation = useMutation({
-        mutationFn: (data) => base44.entities.DriverMessage.create(data),
+        mutationFn: async (data) => {
+            const response = await base44.functions.invoke('manageDrivers', {
+                action: 'sendMessage',
+                restaurantId,
+                driverId: data.driver_id,
+                orderId: data.order_id,
+                message: data.message,
+            });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Message not sent. Please try again.'));
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['driver-messages']);
             setMessageText('');

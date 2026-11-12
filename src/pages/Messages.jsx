@@ -90,44 +90,8 @@ export default function Messages() {
                     }
                 }
 
-                // 3. Get driver messages for active deliveries
-                const activeOrders = validOrders.filter(o => o.driver_id && o.status === 'out_for_delivery');
-                const allDriverMessages = await base44.entities.DriverMessage.list('-created_date', 1000);
-                const driverMessagesMap = {};
-                
-                if (Array.isArray(allDriverMessages)) {
-                    allDriverMessages.forEach(msg => {
-                        if (!driverMessagesMap[msg.order_id]) {
-                            driverMessagesMap[msg.order_id] = [];
-                        }
-                        driverMessagesMap[msg.order_id].push(msg);
-                    });
-                }
-                
-                for (const order of activeOrders) {
-                    const driverMessages = driverMessagesMap[order.id] || [];
-                    if (driverMessages.length > 0) {
-                        const lastMsg = driverMessages[driverMessages.length - 1];
-                        const drivers = await base44.entities.Driver.filter({ id: order.driver_id });
-                        const driver = Array.isArray(drivers) ? drivers[0] : null;
-                        
-                        allMessages.push({
-                            id: `driver-${order.id}`,
-                            type: 'driver',
-                            order_id: order.id,
-                            driver_id: order.driver_id,
-                            restaurant_id: order.restaurant_id,
-                            displayName: driver?.full_name || 'Driver',
-                            icon: 'driver',
-                            last_message: lastMsg?.message,
-                            last_message_time: lastMsg?.created_date,
-                            messages: driverMessages,
-                            unread_count: driverMessages.filter(m => 
-                                m.sender_type === 'driver' && !m.is_read
-                            ).length
-                        });
-                    }
-                }
+                // (The restaurant <-> driver chat is internal and is no longer loaded here.
+                // Messages a driver sends to the customer arrive in the order conversation above.)
             } catch (error) {
                 console.error('Error fetching messages:', error);
                 toast.error('Failed to load messages');

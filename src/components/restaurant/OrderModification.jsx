@@ -58,19 +58,20 @@ export default function OrderModification({ restaurantId }) {
 
             // Notify driver if assigned
             if (order.driver_id) {
-                await base44.entities.DriverMessage.create({
-                    order_id: orderId,
-                    driver_id: order.driver_id,
-                    restaurant_id: restaurantId,
-                    sender_type: 'restaurant',
-                    message: `Order #${orderId.slice(-6)} has been cancelled by the restaurant.`
-                });
+                await base44.functions.invoke('manageDrivers', {
+                    action: 'sendMessage',
+                    restaurantId,
+                    driverId: order.driver_id,
+                    orderId,
+                    message: `Order #${orderId.slice(-6)} has been cancelled by the restaurant.`,
+                }).catch(e => console.error('Driver cancel notice failed:', e));
 
-                // Free up driver
-                await base44.entities.Driver.update(order.driver_id, {
-                    is_available: true,
-                    current_order_id: null
-                });
+                // Free up driver (unless they are still carrying another order)
+                await base44.functions.invoke('manageDrivers', {
+                    action: 'releaseDriver',
+                    restaurantId,
+                    orderId,
+                }).catch(e => console.error('Driver release failed:', e));
             }
         },
         onSuccess: () => {
