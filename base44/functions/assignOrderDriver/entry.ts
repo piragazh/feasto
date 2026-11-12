@@ -1,17 +1,24 @@
 /**
  * assignOrderDriver — Hardened driver assignment with role checks, restaurant scope, and audit
  *
+ * This is the ONLY path a manager screen may use to put a driver on an order
+ * (Live Orders, Driver Tracking and Order Batching all call it).
+ *
+ * Accepts one order ({ orderId }) or a batch for one driver ({ orderIds: [...] }).
+ *
  * SECURITY CONTRACT:
  *   1. Authenticate requester and verify they are a manager/admin
  *   2. Enforce restaurant scope:
- *      - Order must belong to the user's restaurant
+ *      - Every order must belong to the user's restaurant
  *      - Driver must belong to the same restaurant
- *   3. Validate order state: only 'preparing' orders can receive a driver
+ *   3. Validate order state: only 'preparing' orders with no driver can receive one
  *   4. Validate driver state: must be active and available
  *   5. Calculate ETA via LLM (server-side, not frontend)
- *   6. Update Order and Driver atomically
- *   7. Audit the change with actor, timestamp, old/new driver
- *   8. Send customer notification
+ *   6. Re-read driver and orders immediately before writing, so a driver or order
+ *      taken in the meantime is refused instead of overwritten
+ *   7. Update Orders and Driver, rolling the orders back if a later write fails
+ *   8. Audit the change with actor, timestamp, old/new driver
+ *   9. Send customer notification
  *
  * All financial and operational fields are server-controlled.
  * Frontend cannot inject or modify critical data.
@@ -24,6 +31,9 @@ const AUTHORIZED_ROLES = ['admin', 'manager'];
 
 // Valid order statuses for driver assignment
 const ASSIGNABLE_ORDER_STATUSES = ['preparing'];
+
+// Most orders one driver can be given in a single batch
+const MAX_BATCH_SIZE = 10;
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -48,10 +58,25 @@ Deno.serve(async (req) => {
             }, { status: 403 });
         }
 
-        const { restaurantId, orderId, driverId } = await req.json();
+        const { restaurantId, orderId, orderIds: rawOrderIds, driverId } = await req.json();
 
-        if (!restaurantId || !orderId || !driverId) {
+        // One order (orderId) or a batch (orderIds). De-duplicated, order preserved.
+        const requestedIds = Array.isArray(rawOrderIds) && rawOrderIds.length > 0
+            ? rawOrderIds
+            : (orderId ? [orderId] : []);
+        const orderIds: string[] = [...new Set(
+            requestedIds.filter((id: unknown) => typeof id === 'string' && id)
+        )] as string[];
+
+        if (!restaurantId || orderIds.length === 0 || !driverId) {
             return Response.json({ error: 'restaurantId, orderId, and driverId are required', success: false }, { status: 400 });
+        }
+
+        if (orderIds.length > MAX_BATCH_SIZE) {
+            return Response.json({
+                error: `A driver can be given at most ${MAX_BATCH_SIZE} orders at once`,
+                success: false
+            }, { status: 400 });
         }
 
         // ── Restaurant scope enforcement ──────────────────────────────────────
@@ -78,68 +103,96 @@ Deno.serve(async (req) => {
             }
         }
 
-        // ── Fetch and validate Order ──────────────────────────────────────────
-        const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
-        if (!orders?.length) {
-            console.error(`[ASSIGN-DRIVER] Order not found: ${orderId}`);
-            return Response.json({ error: 'Order not found', success: false }, { status: 404 });
-        }
+        // ── Fetch and validate Orders ─────────────────────────────────────────
+        // Returns an error Response if the order cannot take a driver, else the order.
+        const loadAssignableOrder = async (id: string) => {
+            const found = await base44.asServiceRole.entities.Order.filter({ id });
+            if (!found?.length) {
+                console.error(`[ASSIGN-DRIVER] Order not found: ${id}`);
+                return { error: Response.json({ error: 'Order not found', success: false }, { status: 404 }) };
+            }
+            const o = found[0];
 
-        const order = orders[0];
+            // Verify order belongs to the correct restaurant
+            if (o.restaurant_id !== restaurantId) {
+                console.error(`[ASSIGN-DRIVER] Order ${id} belongs to restaurant ${o.restaurant_id}, not ${restaurantId}`);
+                return { error: Response.json({
+                    error: 'Order does not belong to this restaurant',
+                    success: false
+                }, { status: 403 }) };
+            }
 
-        // Verify order belongs to the correct restaurant
-        if (order.restaurant_id !== restaurantId) {
-            console.error(`[ASSIGN-DRIVER] Order ${orderId} belongs to restaurant ${order.restaurant_id}, not ${restaurantId}`);
-            return Response.json({
-                error: 'Order does not belong to this restaurant',
-                success: false
-            }, { status: 403 });
-        }
+            // Verify order is in an assignable state
+            if (!ASSIGNABLE_ORDER_STATUSES.includes(o.status)) {
+                console.error(`[ASSIGN-DRIVER] Cannot assign driver to order in status=${o.status}`);
+                return { error: Response.json({
+                    error: `Driver can only be assigned to orders in 'preparing' state. Current state: '${o.status}'`,
+                    success: false
+                }, { status: 400 }) };
+            }
 
-        // Verify order is in an assignable state
-        if (!ASSIGNABLE_ORDER_STATUSES.includes(order.status)) {
-            console.error(`[ASSIGN-DRIVER] Cannot assign driver to order in status=${order.status}`);
-            return Response.json({
-                error: `Driver can only be assigned to orders in 'preparing' state. Current state: '${order.status}'`,
-                success: false
-            }, { status: 400 });
+            // Verify nobody else has taken the order
+            if (o.driver_id && o.driver_id !== driverId) {
+                console.error(`[ASSIGN-DRIVER] Order ${id} already has driver ${o.driver_id}`);
+                return { error: Response.json({
+                    error: 'This order has already been given to another driver',
+                    success: false
+                }, { status: 409 }) };
+            }
+
+            return { order: o };
+        };
+
+        const orders: any[] = [];
+        for (const id of orderIds) {
+            const result = await loadAssignableOrder(id);
+            if (result.error) return result.error;
+            orders.push(result.order);
         }
 
         // ── Fetch and validate Driver ─────────────────────────────────────────
-        const drivers = await base44.asServiceRole.entities.Driver.filter({ id: driverId });
-        if (!drivers?.length) {
-            console.error(`[ASSIGN-DRIVER] Driver not found: ${driverId}`);
-            return Response.json({ error: 'Driver not found', success: false }, { status: 404 });
-        }
+        // Returns an error Response if the driver cannot take the work, else the driver.
+        const loadAssignableDriver = async () => {
+            const found = await base44.asServiceRole.entities.Driver.filter({ id: driverId });
+            if (!found?.length) {
+                console.error(`[ASSIGN-DRIVER] Driver not found: ${driverId}`);
+                return { error: Response.json({ error: 'Driver not found', success: false }, { status: 404 }) };
+            }
+            const d = found[0];
 
-        const driver = drivers[0];
+            // Verify driver belongs to the restaurant
+            if (!d.restaurant_ids?.includes(restaurantId)) {
+                console.error(`[ASSIGN-DRIVER] Driver ${driverId} not assigned to restaurant ${restaurantId}`);
+                return { error: Response.json({
+                    error: 'Driver does not belong to this restaurant',
+                    success: false
+                }, { status: 403 }) };
+            }
 
-        // Verify driver belongs to the restaurant
-        if (!driver.restaurant_ids?.includes(restaurantId)) {
-            console.error(`[ASSIGN-DRIVER] Driver ${driverId} not assigned to restaurant ${restaurantId}`);
-            return Response.json({
-                error: 'Driver does not belong to this restaurant',
-                success: false
-            }, { status: 403 });
-        }
+            // Verify driver is active and available
+            if (d.is_available !== true) {
+                console.error(`[ASSIGN-DRIVER] Driver ${driverId} is not available (is_available=${d.is_available})`);
+                return { error: Response.json({
+                    error: 'Driver is not available for assignment',
+                    success: false
+                }, { status: 400 }) };
+            }
 
-        // Verify driver is active and available
-        if (driver.is_available !== true) {
-            console.error(`[ASSIGN-DRIVER] Driver ${driverId} is not available (is_available=${driver.is_available})`);
-            return Response.json({
-                error: 'Driver is not available for assignment',
-                success: false
-            }, { status: 400 });
-        }
+            // Verify driver doesn't have an active order
+            if (d.current_order_id) {
+                console.error(`[ASSIGN-DRIVER] Driver ${driverId} already assigned to order ${d.current_order_id}`);
+                return { error: Response.json({
+                    error: 'Driver is already assigned to another order',
+                    success: false
+                }, { status: 400 }) };
+            }
 
-        // Verify driver doesn't have an active order
-        if (driver.current_order_id) {
-            console.error(`[ASSIGN-DRIVER] Driver ${driverId} already assigned to order ${driver.current_order_id}`);
-            return Response.json({
-                error: 'Driver is already assigned to another order',
-                success: false
-            }, { status: 400 });
-        }
+            return { driver: d };
+        };
+
+        const driverResult = await loadAssignableDriver();
+        if (driverResult.error) return driverResult.error;
+        const driver = driverResult.driver;
 
         // ── Calculate ETA (server-side) ───────────────────────────────────────
         const etaPrompt = `Calculate estimated delivery time for a food delivery order.
@@ -160,77 +213,124 @@ Provide only the time range (e.g., "25-30 min").`;
             console.warn(`[ASSIGN-DRIVER] ETA calculation failed, using fallback: ${etaErr.message}`);
         }
 
-        // ── Update Order (atomic) ─────────────────────────────────────────────
-        const oldDriverId = order.driver_id || null;
-        const updatedOrder = await base44.asServiceRole.entities.Order.update(orderId, {
-            driver_id: driverId,
-            estimated_delivery: eta,
-            status: 'out_for_delivery',
-        });
+        // ── Re-check just before writing ──────────────────────────────────────
+        // The ETA call above takes a few seconds. Read the driver and the orders
+        // again so that anything taken in the meantime is refused, not overwritten.
+        const freshDriverResult = await loadAssignableDriver();
+        if (freshDriverResult.error) return freshDriverResult.error;
 
-        if (!updatedOrder?.id) {
-            console.error(`[ASSIGN-DRIVER] Order update failed for ${orderId}`);
-            return Response.json({ error: 'Failed to update order', success: false }, { status: 500 });
+        const freshOrders: any[] = [];
+        for (const id of orderIds) {
+            const result = await loadAssignableOrder(id);
+            if (result.error) return result.error;
+            freshOrders.push(result.order);
         }
 
-        // ── Update Driver (atomic) ────────────────────────────────────────────
-        const updatedDriver = await base44.asServiceRole.entities.Driver.update(driverId, {
-            current_order_id: orderId,
-            is_available: false,
-        });
+        // ── Update Orders ─────────────────────────────────────────────────────
+        const nowIso = new Date().toISOString();
+        const batchNote = orderIds.length > 1
+            ? `Batch assigned to ${driver.full_name}`
+            : `Assigned to ${driver.full_name}`;
+
+        const rollbackOrders = async (done: any[]) => {
+            for (const original of done) {
+                await base44.asServiceRole.entities.Order.update(original.id, {
+                    driver_id: original.driver_id || null,
+                    status: original.status,
+                    status_history: original.status_history || [],
+                }).catch((e: unknown) => console.error('[ASSIGN-DRIVER] Rollback failed:', e));
+            }
+        };
+
+        const updatedOrders: any[] = [];
+        const writtenOriginals: any[] = [];
+        for (const original of freshOrders) {
+            let updated = null;
+            try {
+                updated = await base44.asServiceRole.entities.Order.update(original.id, {
+                    driver_id: driverId,
+                    estimated_delivery: eta,
+                    status: 'out_for_delivery',
+                    status_history: [
+                        ...(original.status_history || []),
+                        { status: 'out_for_delivery', timestamp: nowIso, note: batchNote },
+                    ],
+                });
+            } catch (updateErr) {
+                console.error(`[ASSIGN-DRIVER] Order update threw for ${original.id}:`, updateErr);
+            }
+
+            if (!updated?.id) {
+                await rollbackOrders(writtenOriginals);
+                console.error(`[ASSIGN-DRIVER] Order update failed for ${original.id}`);
+                return Response.json({ error: 'Failed to update order', success: false }, { status: 500 });
+            }
+            updatedOrders.push(updated);
+            writtenOriginals.push(original);
+        }
+
+        // ── Update Driver ─────────────────────────────────────────────────────
+        let updatedDriver = null;
+        try {
+            updatedDriver = await base44.asServiceRole.entities.Driver.update(driverId, {
+                current_order_id: orderIds[0], // primary order of the run
+                is_available: false,
+            });
+        } catch (driverErr) {
+            console.error(`[ASSIGN-DRIVER] Driver update threw for ${driverId}:`, driverErr);
+        }
 
         if (!updatedDriver?.id) {
-            // Rollback order update on driver failure
-            await base44.asServiceRole.entities.Order.update(orderId, {
-                driver_id: oldDriverId,
-                status: order.status,
-            }).catch(e => console.error('[ASSIGN-DRIVER] Rollback failed:', e));
-
+            // Rollback order updates on driver failure
+            await rollbackOrders(writtenOriginals);
             console.error(`[ASSIGN-DRIVER] Driver update failed for ${driverId}`);
             return Response.json({ error: 'Failed to update driver assignment', success: false }, { status: 500 });
         }
 
-        // ── Audit Log ─────────────────────────────────────────────────────────
-        try {
-            await base44.asServiceRole.functions.invoke('auditLog', {
-                action: 'assign_driver',
-                actor_email: user.email,
-                actor_role: user.role,
-                restaurant_id: restaurantId,
-                order_id: orderId,
-                old_driver_id: oldDriverId,
-                new_driver_id: driverId,
-                driver_name: driver.full_name,
-                estimated_delivery: eta,
-                timestamp: new Date().toISOString(),
-                notes: `Driver assigned to order ${orderId}. ETA: ${eta}`,
-            });
-        } catch (auditErr) {
-            console.warn('[ASSIGN-DRIVER] Audit log failed:', auditErr.message);
-            // Non-fatal — order assignment succeeded
+        // ── Audit Log + customer notification (per order, non-fatal) ──────────
+        for (const original of freshOrders) {
+            try {
+                await base44.asServiceRole.functions.invoke('auditLog', {
+                    action: 'assign_driver',
+                    actor_email: user.email,
+                    actor_role: user.role,
+                    restaurant_id: restaurantId,
+                    order_id: original.id,
+                    old_driver_id: original.driver_id || null,
+                    new_driver_id: driverId,
+                    driver_name: driver.full_name,
+                    estimated_delivery: eta,
+                    timestamp: nowIso,
+                    notes: `Driver assigned to order ${original.id}. ETA: ${eta}`,
+                });
+            } catch (auditErr) {
+                console.warn('[ASSIGN-DRIVER] Audit log failed:', auditErr.message);
+                // Non-fatal — order assignment succeeded
+            }
+
+            try {
+                await base44.asServiceRole.functions.invoke('sendSMS', {
+                    to: original.phone,
+                    message: `Your order is on its way! Driver ${driver.full_name} will arrive in ${eta}. 🚗`,
+                    orderId: original.id,
+                    restaurantId,
+                    restaurantName: restaurant.name,
+                    smsType: 'driver_assignment',
+                });
+            } catch (notifyErr) {
+                console.warn('[ASSIGN-DRIVER] Customer notification failed:', notifyErr.message);
+                // Non-fatal
+            }
         }
 
-        // ── Send customer notification ────────────────────────────────────────
-        try {
-            await base44.asServiceRole.functions.invoke('sendSMS', {
-                to: order.phone,
-                message: `Your order is on its way! Driver ${driver.full_name} will arrive in ${eta}. 🚗`,
-                orderId,
-                restaurantId,
-                restaurantName: restaurant.name,
-                smsType: 'driver_assignment',
-            });
-        } catch (notifyErr) {
-            console.warn('[ASSIGN-DRIVER] Customer notification failed:', notifyErr.message);
-            // Non-fatal
-        }
-
-        console.log(`[ASSIGN-DRIVER] ✓ Assigned driver=${driverId} (${driver.full_name}) to order=${orderId} restaurant=${restaurantId} actor=${user.email} eta="${eta}"`);
+        console.log(`[ASSIGN-DRIVER] ✓ Assigned driver=${driverId} (${driver.full_name}) to orders=${orderIds.join(',')} restaurant=${restaurantId} actor=${user.email} eta="${eta}"`);
 
         return Response.json({
             success: true,
-            order: updatedOrder,
+            order: updatedOrders[0],
+            orders: updatedOrders,
             driver: updatedDriver,
+            driver_name: driver.full_name,
             eta,
         }, { status: 200 });
 
