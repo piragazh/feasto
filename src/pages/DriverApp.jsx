@@ -20,6 +20,7 @@ import DriverCommunication from '@/components/driver/DriverCommunication';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 
 export default function DriverApp() {
     const [user, setUser] = useState(null);
@@ -28,6 +29,7 @@ export default function DriverApp() {
     const [customerMessage, setCustomerMessage] = useState('');
     const [gpsActive, setGpsActive] = useState(false);
     const locationWatchRef = React.useRef(null);
+    const lastLocationSentRef = React.useRef(0);
     const queryClient = useQueryClient();
 
     useEffect(() => {
@@ -37,47 +39,19 @@ export default function DriverApp() {
         };
     }, []);
 
-    // Start continuous GPS tracking as soon as driver is loaded and online
-    useEffect(() => {
-        if (!driver || driver === 'not_found' || !driver.id || !driver.is_available) {
-            if (locationWatchRef.current) {
-                navigator.geolocation.clearWatch(locationWatchRef.current);
-                locationWatchRef.current = null;
-                setGpsActive(false);
-            }
-            return;
-        }
-
-        if (locationWatchRef.current) return; // already watching
-
-        if (!navigator.geolocation) return;
-
-        locationWatchRef.current = navigator.geolocation.watchPosition(
-            (position) => {
-                const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
-                setGpsActive(true);
-                setDriver(prev => prev && prev !== 'not_found' ? { ...prev, current_location: loc } : prev);
-                base44.entities.Driver.update(driver.id, { current_location: loc }).catch(() => {});
-            },
-            (err) => { console.error('GPS error:', err); setGpsActive(false); },
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-        );
-    }, [driver?.id, driver?.is_available]);
 
     const loadDriverData = async () => {
         try {
             const userData = await base44.auth.me();
             setUser(userData);
             
-            // Find driver by email (case-insensitive)
-            const allDrivers = await base44.entities.Driver.list();
-            const driver = allDrivers.find(d => d.email?.toLowerCase() === userData.email.toLowerCase());
+            // The server works out which driver this account is
+            const response = await base44.functions.invoke('driverAction', { action: 'me' });
+            const driver = (response?.data || response)?.driver || null;
             
             if (driver) {
-                console.log('Driver loaded:', driver);
                 setDriver(driver);
             } else {
-                console.log('No driver found for email:', userData.email);
                 // No driver profile found - show error state
                 setDriver('not_found');
             }
@@ -124,6 +98,42 @@ export default function DriverApp() {
         }),
         enabled: !!driver && driver !== 'not_found' && !!driver.id,
     });
+
+    // Track GPS while the driver is online OR carrying an order. (Assignment marks the
+    // driver unavailable, so tracking must not depend on is_available alone - it used to
+    // stop mid-delivery after a page reload.)
+    const hasActiveOrders = activeOrders.length > 0;
+    useEffect(() => {
+        if (!driver || driver === 'not_found' || !driver.id || (!driver.is_available && !hasActiveOrders)) {
+            if (locationWatchRef.current) {
+                navigator.geolocation.clearWatch(locationWatchRef.current);
+                locationWatchRef.current = null;
+                setGpsActive(false);
+            }
+            return;
+        }
+
+        if (locationWatchRef.current) return; // already watching
+
+        if (!navigator.geolocation) return;
+
+        locationWatchRef.current = navigator.geolocation.watchPosition(
+            (position) => {
+                const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+                setGpsActive(true);
+                setDriver(prev => prev && prev !== 'not_found' ? { ...prev, current_location: loc } : prev);
+                // Send to the server at most every 10 seconds; it also copies the
+                // position onto the orders this driver is carrying.
+                const now = Date.now();
+                if (now - lastLocationSentRef.current >= 10000) {
+                    lastLocationSentRef.current = now;
+                    base44.functions.invoke('driverAction', { action: 'updateLocation', lat: loc.lat, lng: loc.lng }).catch(() => {});
+                }
+            },
+            (err) => { console.error('GPS error:', err); setGpsActive(false); },
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+    }, [driver?.id, driver?.is_available, hasActiveOrders]);
 
     // Calculate earnings for all three methods
     const calculateAllEarnings = (orders) => {
@@ -174,7 +184,7 @@ export default function DriverApp() {
             if (!driver?.id) {
                 throw new Error('Driver ID not found');
             }
-            await base44.entities.Driver.update(driver.id, { is_available: isAvailable });
+            await base44.functions.invoke('driverAction', { action: 'setAvailability', isAvailable });
             return isAvailable;
         },
         onSuccess: (isAvailable) => {
@@ -184,7 +194,7 @@ export default function DriverApp() {
             toast.success(isAvailable ? 'You are now online' : 'You are now offline');
         },
         onError: (error) => {
-            toast.error('Failed to update availability');
+            toast.error(staffErrorMessage(error, 'Failed to update availability'));
             console.error('Toggle availability error:', error);
         },
     });
@@ -309,7 +319,6 @@ export default function DriverApp() {
                                 <Switch
                                     checked={driver.is_available}
                                     onCheckedChange={(checked) => {
-                                        console.log('Toggle clicked, driver:', driver);
                                         if (driver?.id) {
                                             toggleAvailabilityMutation.mutate(checked);
                                         } else {

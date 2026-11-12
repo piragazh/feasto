@@ -132,6 +132,10 @@
       "type": "string",
       "description": "Assigned driver ID"
     },
+    "proof_of_delivery": {
+      "type": "string",
+      "description": "URL of the proof-of-delivery photo. Set server-side by driverAction."
+    },
     "driver_location": {
       "type": "object",
       "properties": {

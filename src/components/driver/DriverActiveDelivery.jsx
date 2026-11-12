@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 import { useRealtimeETA } from '@/components/tracking/ETACalculator';
 import 'leaflet/dist/leaflet.css';
 
@@ -32,11 +33,7 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
         order?.id
     );
 
-    // Push driver location into the order record so restaurant/customer can see it
-    useEffect(() => {
-        if (!currentLocation || !order?.id) return;
-        base44.entities.Order.update(order.id, { driver_location: currentLocation }).catch(() => {});
-    }, [currentLocation?.lat, currentLocation?.lng, order?.id]);
+    // The driver's position is copied onto the order by the server (driverAction updateLocation).
 
     const { data: messages = [] } = useQuery({
         queryKey: ['driver-messages', order?.id],
@@ -49,47 +46,18 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
     });
 
     const updateStatusMutation = useMutation({
-        mutationFn: async ({ status: newStatus, proofUrl }) => {
-            const statusNote = newStatus === 'delivered' 
-                ? 'Order delivered successfully' 
-                : `Status updated to ${newStatus}`;
-            
-            const updates = {
-                status: newStatus,
-                status_history: [
-                    ...(order.status_history || []),
-                    { 
-                        status: newStatus, 
-                        timestamp: new Date().toISOString(),
-                        note: statusNote
-                    }
-                ]
-            };
-
-            if (newStatus === 'delivered') {
-                updates.actual_delivery_time = new Date().toISOString();
-                if (proofUrl) {
-                    updates.proof_of_delivery = proofUrl;
-                }
-                
-                // Free up driver
-                await base44.entities.Driver.update(driver.id, {
-                    current_order_id: null,
-                    is_available: true,
-                    total_deliveries: (driver.total_deliveries || 0) + 1
-                });
-
-                // Notify customer
-                await base44.functions.invoke('sendNotification', {
-                    userId: order.created_by,
-                    title: 'Order Delivered!',
-                    message: `Your order from ${order.restaurant_name} has been delivered.`,
-                    type: 'delivered',
-                    orderId: order.id
-                });
-            }
-
-            return base44.entities.Order.update(order.id, updates);
+        mutationFn: async ({ proofUrl }) => {
+            // SECURITY: the server checks the order is this driver's, marks it
+            // delivered and frees the driver.
+            const response = await base44.functions.invoke('driverAction', {
+                action: 'completeDelivery',
+                orderId: order.id,
+                proofUrl,
+            });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Could not mark the order delivered. Please try again.'));
         },
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries(['driver-active-order']);

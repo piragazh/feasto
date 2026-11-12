@@ -8,6 +8,7 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet'
 import { Navigation, MapPin, Phone, CheckCircle, AlertTriangle, Route, Clock } from 'lucide-react';
 import { optimizeRoute, calculateDistance, calculateETA, checkDeviation, generateDirections } from './RouteOptimizer';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 import 'leaflet/dist/leaflet.css';
 
 export default function MultiOrderDelivery({ orders, driver, onComplete }) {
@@ -44,9 +45,9 @@ export default function MultiOrderDelivery({ orders, driver, onComplete }) {
                         setCurrentLocation(newLocation);
                         
                         // Update driver location in database
-                        base44.entities.Driver.update(driver.id, {
-                            current_location: newLocation
-                        });
+                        base44.functions.invoke('driverAction', {
+                            action: 'updateLocation', lat: newLocation.lat, lng: newLocation.lng
+                        }).catch(() => {});
 
                         // Check for deviation
                         if (optimizedOrders[currentOrderIndex]) {
@@ -79,23 +80,16 @@ export default function MultiOrderDelivery({ orders, driver, onComplete }) {
 
     const completeOrderMutation = useMutation({
         mutationFn: async (orderId) => {
-            await base44.entities.Order.update(orderId, {
-                status: 'delivered',
-                actual_delivery_time: new Date().toISOString(),
-                status_history: [
-                    ...(orders.find(o => o.id === orderId)?.status_history || []),
-                    { 
-                        status: 'delivered', 
-                        timestamp: new Date().toISOString(),
-                        note: 'Order delivered successfully'
-                    }
-                ]
+            // SECURITY: the server checks the order is this driver's, marks it
+            // delivered, and frees the driver once the last order is done.
+            const response = await base44.functions.invoke('driverAction', {
+                action: 'completeDelivery',
+                orderId,
             });
-
-            // Update driver stats
-            await base44.entities.Driver.update(driver.id, {
-                total_deliveries: (driver.total_deliveries || 0) + 1
-            });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Could not mark the order delivered. Please try again.'));
         },
         onSuccess: () => {
             toast.success('Order completed');
@@ -110,10 +104,6 @@ export default function MultiOrderDelivery({ orders, driver, onComplete }) {
                 }
             } else {
                 // All orders completed
-                base44.entities.Driver.update(driver.id, {
-                    current_order_id: null,
-                    is_available: true
-                });
                 toast.success('All deliveries completed! 🎉');
                 onComplete();
             }

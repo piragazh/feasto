@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, DollarSign, Clock, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { staffErrorMessage } from '@/lib/function-errors';
 import { motion } from 'framer-motion';
 
 export default function DriverOrderList({ orders, driverId }) {
@@ -14,46 +15,21 @@ export default function DriverOrderList({ orders, driverId }) {
 
     const acceptOrderMutation = useMutation({
         mutationFn: async (orderId) => {
-            const order = orders.find(o => o.id === orderId);
-            
-            // Ensure delivery coordinates exist, geocode if needed
-            let deliveryCoords = order.delivery_coordinates;
-            if (!deliveryCoords || !deliveryCoords.lat) {
-                // Set default coordinates (can be enhanced with geocoding API)
-                deliveryCoords = { lat: 51.5074, lng: -0.1278 }; // Default to London
-            }
-            
-            await base44.entities.Order.update(orderId, {
-                driver_id: driverId,
-                status: 'out_for_delivery',
-                estimated_delivery: new Date(Date.now() + 30 * 60000).toISOString(),
-                delivery_coordinates: deliveryCoords,
-                status_history: [
-                    ...(order?.status_history || []),
-                    {
-                        status: 'out_for_delivery',
-                        timestamp: new Date().toISOString(),
-                        note: 'Driver accepted and picked up order'
-                    }
-                ]
+            // SECURITY: the server checks the order is still free and belongs to
+            // one of this driver's restaurants before giving it to them.
+            const response = await base44.functions.invoke('driverAction', {
+                action: 'acceptOrder',
+                orderId,
             });
-            
-            await base44.entities.Driver.update(driverId, {
-                current_order_id: orderId,
-                is_available: false
-            });
-
-            // Notify customer
-            await base44.entities.Message.create({
-                order_id: orderId,
-                restaurant_id: order.restaurant_id,
-                sender_type: 'restaurant',
-                message: 'Your order is now out for delivery! The driver is on the way.'
-            });
+            return response?.data || response;
+        },
+        onError: (error) => {
+            toast.error(staffErrorMessage(error, 'Could not accept the order. Please try again.'));
+            queryClient.invalidateQueries(['available-orders']);
         },
         onSuccess: () => {
             toast.success('Order accepted! Start delivery');
-            queryClient.invalidateQueries(['driver-active-order']);
+            queryClient.invalidateQueries(['driver-active-orders']);
             queryClient.invalidateQueries(['available-orders']);
         },
     });
