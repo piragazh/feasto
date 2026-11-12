@@ -7,7 +7,8 @@
  * Accepts one order ({ orderId }) or a batch for one driver ({ orderIds: [...] }).
  *
  * SECURITY CONTRACT:
- *   1. Authenticate requester and verify they are a manager/admin
+ *   1. Authenticate requester and verify they are an admin, or an active
+ *      RestaurantManager for this restaurant (the same rule updateOrderStatus uses)
  *   2. Enforce restaurant scope:
  *      - Every order must belong to the user's restaurant
  *      - Driver must belong to the same restaurant
@@ -25,9 +26,6 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
-
-// Authorized roles that can assign drivers
-const AUTHORIZED_ROLES = ['admin', 'manager'];
 
 // Valid order statuses for driver assignment
 const ASSIGNABLE_ORDER_STATUSES = ['preparing'];
@@ -49,14 +47,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // ── Role check ────────────────────────────────────────────────────────
-        if (!AUTHORIZED_ROLES.includes(user.role)) {
-            console.error(`[ASSIGN-DRIVER] Unauthorized role: ${user.role} email=${user.email}`);
-            return Response.json({
-                error: `Your role (${user.role}) cannot assign drivers. Only managers and admins can.`,
-                success: false
-            }, { status: 403 });
-        }
+        // NOTE: there is no platform role called 'manager' in this app - every
+        // restaurant login has the role 'user', and what makes someone a manager is
+        // an active RestaurantManager record. This function used to demand
+        // role 'manager', which no account has, so only the platform admin could
+        // ever assign a driver. Authorisation is the restaurant check below.
 
         const { restaurantId, orderId, orderIds: rawOrderIds, driverId } = await req.json();
 
@@ -89,12 +84,13 @@ Deno.serve(async (req) => {
         const restaurant = restaurants[0];
 
         // For non-admin users, verify they manage this restaurant
-        if (user.role === 'manager') {
+        if (user.role !== 'admin') {
             const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
                 user_email: user.email,
-                restaurant_ids: { $elemMatch: { $eq: restaurantId } }
+                is_active: true,
             });
-            if (!managers?.length) {
+            const hasAccess = (managers || []).some((m: any) => m.restaurant_ids?.includes(restaurantId));
+            if (!hasAccess) {
                 console.error(`[ASSIGN-DRIVER] Manager ${user.email} not authorized for restaurant ${restaurantId}`);
                 return Response.json({
                     error: 'You are not authorized to manage this restaurant',
@@ -178,13 +174,21 @@ Deno.serve(async (req) => {
                 }, { status: 400 }) };
             }
 
-            // Verify driver doesn't have an active order
+            // Verify driver doesn't have an active order. current_order_id can be left
+            // behind by an order that was cancelled or voided elsewhere, so trust the
+            // orders themselves: the driver is busy only if one is still out for delivery.
             if (d.current_order_id) {
-                console.error(`[ASSIGN-DRIVER] Driver ${driverId} already assigned to order ${d.current_order_id}`);
-                return { error: Response.json({
-                    error: 'Driver is already assigned to another order',
-                    success: false
-                }, { status: 400 }) };
+                const live = await base44.asServiceRole.entities.Order.filter({
+                    driver_id: driverId,
+                    status: 'out_for_delivery',
+                });
+                if (live?.length) {
+                    console.error(`[ASSIGN-DRIVER] Driver ${driverId} already assigned to order ${d.current_order_id}`);
+                    return { error: Response.json({
+                        error: 'Driver is already assigned to another order',
+                        success: false
+                    }, { status: 400 }) };
+                }
             }
 
             return { driver: d };
