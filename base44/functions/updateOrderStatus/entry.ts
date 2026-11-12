@@ -26,6 +26,33 @@ const VALID_STATUS_TRANSITIONS = {
   'refunded': [],
 };
 
+// When an order leaves a driver's hands, free the driver - but only once nothing
+// else is in the bag. Used to be done from the browser, which freed a driver
+// carrying several orders as soon as the first was delivered.
+async function releaseDriverForOrder(base44, order, newStatus) {
+  if (!order?.driver_id) return;
+  try {
+    const Driver = base44.asServiceRole.entities.Driver;
+    const live = await base44.asServiceRole.entities.Order.filter({
+      driver_id: order.driver_id,
+      status: 'out_for_delivery',
+    });
+    const others = (live || []).filter((o) => o.id !== order.id);
+    const driver = (await Driver.filter({ id: order.driver_id }))?.[0];
+    if (!driver) return;
+    await Driver.update(driver.id, {
+      ...(others.length === 0
+        ? { current_order_id: null, is_available: true }
+        : { current_order_id: others[0].id, is_available: false }),
+      ...(newStatus === 'delivered' && order.status === 'out_for_delivery'
+        ? { total_deliveries: (driver.total_deliveries || 0) + 1 }
+        : {}),
+    });
+  } catch (e) {
+    console.error('[updateOrderStatus] Driver release failed for order', order?.id, e?.message || e);
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -125,7 +152,17 @@ Deno.serve(async (req) => {
     }
 
     // Perform update
+    // Record when a driver delivery actually arrived (driver performance reads this).
+    if (new_status === 'delivered' && order.driver_id && !order.actual_delivery_time) {
+      updateData.actual_delivery_time = new Date().toISOString();
+    }
+
     const result = await base44.asServiceRole.entities.Order.update(order_id, updateData);
+
+    // Free the driver (server-side; the browser no longer writes to the Driver table).
+    if (['delivered', 'collected'].includes(new_status)) {
+      await releaseDriverForOrder(base44, order, new_status);
+    }
 
     // Dispatch customer-facing status notifications (SMS/WhatsApp) — fire and forget.
     // Non-blocking: a notification failure never rolls back the status update.
