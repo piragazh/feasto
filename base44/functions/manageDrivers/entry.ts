@@ -60,7 +60,9 @@ async function driversOf(base44: any, restaurantId: string) {
     try {
         rows = await Driver.filter({ restaurant_ids: { $elemMatch: { $eq: restaurantId } } });
     } catch { rows = null; }
-    if (!Array.isArray(rows)) rows = await Driver.list();
+    // An unsupported filter can come back empty instead of failing, so an empty
+    // result is double-checked with a plain scan.
+    if (!Array.isArray(rows) || rows.length === 0) rows = await Driver.list();
     return (rows || []).filter((d: any) => d.restaurant_ids?.includes(restaurantId));
 }
 
