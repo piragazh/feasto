@@ -1,0 +1,65 @@
+{
+  "name": "AiGenerationLog",
+  "type": "object",
+  "description": "One row per AI picture request in the Ad Creator. Used to enforce each store's weekly AI allowance (Restaurant.ai_pictures_per_week) and to show the admin how much each store uses. Written only by the aiGenerate function.",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "week_start": {
+      "type": "string",
+      "description": "Start of the allowance week this row belongs to: Monday 00:00 UK time, as an ISO timestamp"
+    },
+    "count": {
+      "type": "number",
+      "description": "Pictures actually created (failed pictures are not charged)"
+    },
+    "counted": {
+      "type": "boolean",
+      "default": true,
+      "description": "False for pictures made by a MealDrop admin: logged, but not taken from the store's allowance"
+    },
+    "kind": {
+      "type": "string",
+      "description": "menu_ad or product_picture"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "reserved",
+        "done"
+      ],
+      "default": "done"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "week_start",
+    "count"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
