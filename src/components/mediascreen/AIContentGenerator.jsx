@@ -515,6 +515,7 @@ export default function AIContentGenerator({
                         )}
                         <Textarea value={extra} onChange={e => setExtra(e.target.value)} rows={2} maxLength={300}
                             placeholder="Extra direction (optional), e.g. served on a wooden board, autumn feel" />
+                        <AiAllowanceBadge restaurantId={restaurantId} />
                         <div className="flex flex-wrap gap-2">
                             <Button type="button" onClick={() => generate(1)} disabled={imgBusy || !ready || aiUsedUp}
                                 className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold">
