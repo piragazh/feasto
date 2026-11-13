@@ -18,6 +18,7 @@ import ScreenControl from '@/components/mediascreen/ScreenControl';
 import MediaWallManager from '@/components/mediascreen/MediaWallManager';
 import StudioWidgets from '@/components/mediascreen/StudioWidgets';
 import AIContentGenerator from '@/components/mediascreen/AIContentGenerator';
+import ShopOfferCreator from '@/components/mediascreen/ShopOfferCreator';
 
 const NAV_ITEMS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -26,7 +27,7 @@ const NAV_ITEMS = [
     { id: 'templates', label: 'Templates', icon: Palette },
     { id: 'widgets', label: 'Live Widgets', icon: Zap },
     { id: 'walls', label: 'Media Walls', icon: Grid3x3 },
-    { id: 'ai', label: 'AI Generator', icon: Radio },
+    { id: 'ai', label: 'Ad Creator', icon: Radio },
     { id: 'control', label: 'Live Control', icon: Settings },
 ];
 
@@ -100,6 +101,24 @@ export default function MediaScreenManagement() {
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState('overview');
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    // Ad creator mode: 'shop' (typed products and prices) or 'menu' (dishes from the MealDrop menu).
+    // Remembered per business; a business with no menu items (a shop) starts on 'shop'.
+    const [adMode, setAdMode] = useState('menu');
+    useEffect(() => {
+        if (!restaurant?.id) return;
+        let saved = null;
+        try { saved = localStorage.getItem(`studio_ad_mode_${restaurant.id}`); } catch {}
+        if (saved === 'shop' || saved === 'menu') { setAdMode(saved); return; }
+        let cancelled = false;
+        base44.entities.MenuItem.filter({ restaurant_id: restaurant.id }, undefined, 1)
+            .then(rows => { if (!cancelled) setAdMode(rows.length ? 'menu' : 'shop'); })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [restaurant?.id]);
+    const chooseAdMode = (mode) => {
+        setAdMode(mode);
+        try { localStorage.setItem(`studio_ad_mode_${restaurant.id}`, mode); } catch {}
+    };
     const { canInstall, installed, install } = useStudioInstall();
 
     useEffect(() => { loadData(); }, []);
@@ -227,9 +246,31 @@ export default function MediaScreenManagement() {
                 return (
                     <div className="p-6">
                         <div className="mb-6">
-                            <h1 className="text-2xl font-bold text-gray-900">AI Ad Creator</h1>
-                            <p className="text-gray-500 text-sm mt-1">Turn your real dishes and offers into screen ads — prices stay in sync with the till</p>
+                            <h1 className="text-2xl font-bold text-gray-900">Ad Creator</h1>
+                            <p className="text-gray-500 text-sm mt-1">
+                                {adMode === 'shop'
+                                    ? 'Type your products, prices and deals — get a ready-made offer ad for wide or tall screens'
+                                    : 'Turn your real dishes and offers into screen ads — prices stay in sync with the till'}
+                            </p>
+                            <div className="mt-4 inline-flex rounded-xl border border-gray-200 bg-white p-1" role="group" aria-label="What kind of ad">
+                                {[['shop', 'Shop price offers', 'Supermarkets & stores'], ['menu', 'Menu ads', 'Restaurants & takeaways']].map(([mode, label, sub]) => (
+                                    <button key={mode} type="button" aria-pressed={adMode === mode} onClick={() => chooseAdMode(mode)}
+                                        className={`rounded-lg px-4 py-2 text-left transition-colors ${adMode === mode ? 'bg-orange-500 text-white' : 'text-gray-700 hover:bg-gray-50'}`}>
+                                        <span className="block text-sm font-semibold">{label}</span>
+                                        <span className={`block text-[11px] ${adMode === mode ? 'text-orange-100' : 'text-gray-400'}`}>{sub}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+                        {adMode === 'shop' ? (
+                            <ShopOfferCreator
+                                onNavigate={setActiveSection}
+                                restaurantName={restaurant.name}
+                                restaurantId={restaurant.id}
+                                restaurantColor={restaurant.theme_primary_color || '#f97316'}
+                                logoUrl={restaurant.logo_url || ''}
+                            />
+                        ) : (
                         <AIContentGenerator
                             onClose={() => setActiveSection('library')}
                             onNavigate={setActiveSection}
@@ -239,6 +280,7 @@ export default function MediaScreenManagement() {
                             websiteUrl={restaurant.custom_domain || ''}
                             logoUrl={restaurant.logo_url || ''}
                         />
+                        )}
                     </div>
                 );
             case 'walls':

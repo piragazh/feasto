@@ -525,7 +525,7 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                                     <Type className="h-3.5 w-3.5" />
                                                                                 </Button>
                                                                             )}
-                                                                            {item.media_type === 'image' && (
+                                                                            {item.media_type === 'image' && !isPriceOffer(item) && (
                                                                                 <Button size="sm" variant="ghost" onClick={() => setEditingPhoto({ id: item.id, media_url: item.media_url })} className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600" title="Edit photo">
                                                                                     <Edit className="h-3.5 w-3.5" />
                                                                                 </Button>
