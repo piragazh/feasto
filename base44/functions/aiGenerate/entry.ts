@@ -127,6 +127,28 @@ Deno.serve(async (req) => {
                 kind, user_email: user.email, status: 'reserved',
             });
 
+            // Two requests sent at the same moment can both pass the check above.
+            // Settle it: reservations are served oldest first, and this one only
+            // keeps what is left after the ones before it.
+            if (!exempt) {
+                const rows = (await sr.entities.AiGenerationLog.filter({ restaurant_id: restaurantId, week_start: weekStart }))
+                    .filter(r => r.counted !== false);
+                if (!rows.some(r => r.id === log.id)) rows.push(log);
+                rows.sort((a, b) => String(a.created_date || '').localeCompare(String(b.created_date || '')) || String(a.id).localeCompare(String(b.id)));
+                const usedBefore = rows.slice(0, rows.findIndex(r => r.id === log.id))
+                    .reduce((sum, r) => sum + (Number(r.count) || 0), 0);
+                const fair = Math.max(0, Math.min(allowed, limit - usedBefore));
+                if (fair === 0) {
+                    await sr.entities.AiGenerationLog.delete(log.id).catch(() => {});
+                    return json({ error: `You've used all ${limit} AI pictures for this week. More are added on Monday. You can still upload your own photos.`, code: 'allowance_used', status: await status() }, 429);
+                }
+                if (fair < allowed) {
+                    allowed = fair;
+                    note = `Only ${allowed} AI picture${allowed === 1 ? '' : 's'} left this week, so ${allowed} ${allowed === 1 ? 'was' : 'were'} made.`;
+                    await sr.entities.AiGenerationLog.update(log.id, { count: allowed }).catch(() => {});
+                }
+            }
+
             const results = await Promise.allSettled(prompts.slice(0, allowed).map(prompt =>
                 sr.integrations.Core.GenerateImage({ prompt, ...(refs.length ? { existing_image_urls: refs } : {}) })));
             const urls = results.filter(r => r.status === 'fulfilled' && r.value?.url).map(r => r.value.url);
