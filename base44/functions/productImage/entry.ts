@@ -71,11 +71,17 @@ async function searchAll(query) {
         ...toCandidates(household?.products, 'Open Products Facts'),
         ...toCandidates(beauty?.products, 'Open Beauty Facts'),
     ];
-    // UK packs first (the shop's customers know that packaging), no duplicates.
+    // Best name match first, then UK packs (the packaging local customers know). No duplicates.
+    const words = query.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 1);
+    const score = (c) => {
+        const hay = `${c.brand} ${c.name} ${c.size}`.toLowerCase();
+        return words.filter(w => hay.includes(w)).length + (c.uk ? 0.5 : 0);
+    };
     const seen = new Set();
     return all
         .filter(c => !seen.has(c.url) && seen.add(c.url))
-        .sort((a, b) => Number(b.uk) - Number(a.uk))
+        .map(c => ({ ...c, match: score(c) }))
+        .sort((a, b) => b.match - a.match)
         .slice(0, 18);
 }
 
