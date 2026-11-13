@@ -12,6 +12,7 @@ import { useScreenManifest } from './ScreenManifestContext';
 import TakeoverScreen, { isTakeoverActive } from './TakeoverScreen';
 import AdSlide, { isAdPlayable, adNeedsMenu, adCouponId } from './AdSlide';
 import { measureDrawing } from './screenResolution';
+import { offerImageUrls } from './offerLogic';
 
 // --- localStorage cache helpers ---
 // The cache stores RAW records; schedules are applied at display time so an
@@ -482,7 +483,8 @@ export default function ScreenDisplay({ restaurantId, screenName, embedded = fal
     const precacheContent = useMemo(() => {
         const now = new Date();
         const items = (rawContent || []).filter(c => notExpired(c, now));
-        const logos = [...new Set(items.map(c => c.ad_overlay?.logo_url).filter(Boolean))]
+        // Logos on AI ads and product pictures on shop price offers are drawn live, so cache them too.
+        const logos = [...new Set(items.flatMap(c => [c.ad_overlay?.logo_url, ...offerImageUrls(c)]).filter(Boolean))]
             .map(url => ({ media_url: url, media_type: 'image' }));
         return [...items, ...logos];
     }, [rawContent]);

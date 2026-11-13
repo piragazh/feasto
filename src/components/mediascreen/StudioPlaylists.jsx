@@ -20,6 +20,9 @@ import InlinePhotoEditor from './InlinePhotoEditor';
 import { CommitNumberInput, MEDIA_ACCEPT, checkMediaFile, mediaTypeForFile, nextDisplayOrder } from './mediaInputs';
 import ConfirmDelete from './ConfirmDelete';
 import AdTextEditor from './AdTextEditor';
+import OfferSlide from './OfferSlide';
+import ShopOfferCreator from './ShopOfferCreator';
+import { isPriceOffer } from './offerLogic';
 import { LAYOUT_TEMPLATES } from './layoutTemplates';
 import { TemplatePreview } from './StudioTemplateGallery';
 import ScreenPairingDialog from './ScreenPairingDialog';
@@ -154,6 +157,7 @@ export default function StudioPlaylists({ restaurantId }) {
     const newItemOrder = nextDisplayOrder(screenPlaylist);
     const [confirmItem, setConfirmItem] = useState(null); // playlist item waiting for remove confirmation
     const [editingAd, setEditingAd] = useState(null);     // AI ad whose words are being edited
+    const [editingOffer, setEditingOffer] = useState(null); // shop price offer being edited
 
     const handleDragEnd = async (result) => {
         if (!result.destination || result.source.index === result.destination.index) return;
@@ -409,6 +413,8 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                                     </div>
                                                                                 );
                                                                             })()
+                                                                        ) : isPriceOffer(item) ? (
+                                                                            <OfferSlide item={item} />
                                                                         ) : item.media_type === 'video' ? (
                                                                             <video src={item.media_url} className="w-full h-full object-cover" muted />
                                                                         ) : (
@@ -515,7 +521,7 @@ export default function StudioPlaylists({ restaurantId }) {
                                                                         {/* Row 2: action buttons */}
                                                                         <div className="flex items-center gap-0.5">
                                                                             {item.ad_overlay && (
-                                                                                <Button size="sm" variant="ghost" onClick={() => setEditingAd(item)} className="h-8 w-8 p-0 text-gray-400 hover:text-orange-600" title="Edit ad text">
+                                                                                <Button size="sm" variant="ghost" onClick={() => (isPriceOffer(item) ? setEditingOffer(item) : setEditingAd(item))} className="h-8 w-8 p-0 text-gray-400 hover:text-orange-600" title={isPriceOffer(item) ? 'Edit prices and offer' : 'Edit ad text'}>
                                                                                     <Type className="h-3.5 w-3.5" />
                                                                                 </Button>
                                                                             )}
@@ -729,6 +735,24 @@ export default function StudioPlaylists({ restaurantId }) {
                 onClose={() => setEditingAd(null)}
                 onSaved={() => queryClient.invalidateQueries({ queryKey: ['promotional-content', restaurantId] })}
             />
+
+            <Dialog open={!!editingOffer} onOpenChange={(o) => { if (!o) setEditingOffer(null); }}>
+                <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto bg-gray-50">
+                    <DialogHeader>
+                        <DialogTitle>Edit offer</DialogTitle>
+                        <DialogDescription>Change prices, products, pictures or the look. Every screen showing this offer is updated.</DialogDescription>
+                    </DialogHeader>
+                    {editingOffer && (
+                        <ShopOfferCreator
+                            key={editingOffer.id}
+                            restaurantId={restaurantId}
+                            editItem={editingOffer}
+                            onSaved={() => setEditingOffer(null)}
+                            onCancel={() => setEditingOffer(null)}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
 
             <ConfirmDelete
                 open={!!confirmItem}

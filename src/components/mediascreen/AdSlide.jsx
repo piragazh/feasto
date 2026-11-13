@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { scheduledPrice } from '@/lib/pos-schedule-logic';
 import { whyNotSellable, sellsAt } from '@/lib/item-availability';
 import { couponValidFromInstant, couponValidUntilInstant } from '@/lib/order-logic';
+import OfferSlide from './OfferSlide';
+import { isPriceOffer } from './offerLogic';
 
 /**
  * AI ad slide: an AI-generated picture with the words drawn live on top.
@@ -95,7 +97,12 @@ function ensureKeyframes() {
     document.head.appendChild(style);
 }
 
-export default function AdSlide({ item, menuItems, now = new Date(), onError, active = true }) {
+/** Shop price offers have their own drawing; everything else is a menu ad. */
+export default function AdSlide(props) {
+    return isPriceOffer(props.item) ? <OfferSlide item={props.item} /> : <MenuAdSlide {...props} />;
+}
+
+function MenuAdSlide({ item, menuItems, now = new Date(), onError, active = true }) {
     const ov = item.ad_overlay || {};
     const boxRef = useRef(null);
     const { w, h } = useBoxSize(boxRef);

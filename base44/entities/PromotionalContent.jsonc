@@ -222,6 +222,38 @@
         },
         "ad_type": {
           "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "description": "'price_offer' = shop price-offer ad drawn by OfferSlide from the products list (supermarkets, convenience stores). Empty = menu ad."
+        },
+        "offer_id": {
+          "type": "string",
+          "description": "Same on every screen's copy of one price offer, so an edit updates them all"
+        },
+        "template": {
+          "type": "string",
+          "description": "Price-offer colour theme: deal, sunny, fresh, night, clean"
+        },
+        "age_badge": {
+          "type": "boolean",
+          "description": "Show an 18+ mark (alcohol, vapes, nicotine)"
+        },
+        "products": {
+          "type": "array",
+          "description": "Price-offer products, exactly as typed by the owner (max 6)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "detail": { "type": "string" },
+              "price": { "type": "string" },
+              "unit": { "type": "string" },
+              "offer": { "type": "string" },
+              "was": { "type": "string" },
+              "image_url": { "type": "string" }
+            }
+          }
         }
       }
     }

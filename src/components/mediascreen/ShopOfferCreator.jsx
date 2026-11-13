@@ -424,7 +424,7 @@ export default function ShopOfferCreator({
                                                 <Button type="button" size="sm" variant="outline" className="h-7 text-xs justify-start" disabled={!!busyPic[i]} onClick={() => makeAiPicture(i)}><Sparkles className="h-3 w-3 mr-1" />Make with AI</Button>
                                                 {p.image_url && <Button type="button" size="sm" variant="ghost" className="h-7 text-xs justify-start text-gray-500" onClick={() => setRow(i, { image_url: '' })}>No picture</Button>}
                                             </div>
-                                            <input ref={(el) => { fileRefs.current[i] = el; }} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={(e) => uploadPhoto(i, e)} />
+                                            <input ref={(el) => { fileRefs.current[i] = el; }} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => uploadPhoto(i, e)} />
                                         </div>
                                         <div className="flex-1 grid grid-cols-2 gap-2 min-w-0">
                                             <label className="col-span-2 text-xs text-gray-500">Product
