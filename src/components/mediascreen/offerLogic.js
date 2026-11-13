@@ -26,6 +26,35 @@ export const OFFER_TEMPLATES = [
     { value: 'clean', label: 'Clean', desc: 'Light, in your brand colour',
         bg: '#f3f4f6', bg2: '#e5e7eb', card: '#ffffff', text: '#111827', muted: '#6b7280', title: '#111827',
         price: 'ON_ACCENT', priceBg: 'ACCENT', offerBg: '#111827', offerText: '#ffffff', footer: '#374151' },
+    { value: 'value', label: 'Value Blue', desc: 'Blue & yellow discount store',
+        bg: '#1d4ed8', bg2: '#1e3a8a', card: '#ffffff', text: '#0f172a', muted: '#475569', title: '#ffffff',
+        price: '#0f172a', priceBg: '#facc15', offerBg: '#1d4ed8', offerText: '#ffffff', footer: '#dbeafe' },
+    { value: 'purple', label: 'Purple Haze', desc: 'Purple & pink, great for vapes',
+        bg: '#6d28d9', bg2: '#db2777', card: '#ffffff', text: '#2e1065', muted: '#6b21a8', title: '#ffffff',
+        price: '#ffffff', priceBg: '#7c3aed', offerBg: '#db2777', offerText: '#ffffff', footer: '#fce7f3' },
+    { value: 'neon', label: 'Neon', desc: 'Black with glowing green',
+        bg: '#030712', bg2: '#111827', card: '#0b1220', text: '#f9fafb', muted: '#9ca3af', title: '#a3ff12',
+        price: '#030712', priceBg: '#a3ff12', offerBg: '#ff2bd6', offerText: '#ffffff', footer: '#a3ff12', glow: '#a3ff12' },
+    { value: 'summer', label: 'Summer', desc: 'Warm orange & teal',
+        bg: '#fb923c', bg2: '#f43f5e', card: '#ffffff', text: '#1f2937', muted: '#4b5563', title: '#ffffff',
+        price: '#ffffff', priceBg: '#0d9488', offerBg: '#f43f5e', offerText: '#ffffff', footer: '#ffffff' },
+    { value: 'blackfriday', label: 'Black Friday', desc: 'Black, white & bold yellow',
+        bg: '#000000', bg2: '#1c1917', card: '#ffffff', text: '#000000', muted: '#44403c', title: '#facc15',
+        price: '#000000', priceBg: '#facc15', offerBg: '#000000', offerText: '#facc15', footer: '#facc15' },
+    { value: 'christmas', label: 'Christmas', desc: 'Festive green, red & gold',
+        bg: '#14532d', bg2: '#052e16', card: '#fffbeb', text: '#7f1d1d', muted: '#166534', title: '#fde68a',
+        price: '#ffffff', priceBg: '#b91c1c', offerBg: '#ca8a04', offerText: '#ffffff', footer: '#fde68a' },
+    { value: 'eid', label: 'Eid & Ramadan', desc: 'Deep navy & gold',
+        bg: '#0c1a3d', bg2: '#1e1b4b', card: '#fffdf5', text: '#0c1a3d', muted: '#7c6a2e', title: '#f5d27a',
+        price: '#0c1a3d', priceBg: '#f5c451', offerBg: '#0c1a3d', offerText: '#f5d27a', footer: '#f5d27a' },
+];
+
+/** How the products are arranged. All of them fit wide and tall screens. */
+export const OFFER_STYLES = [
+    { value: 'cards', label: 'Cards', desc: 'A card for each product' },
+    { value: 'tags', label: 'Price tags', desc: 'Like shelf labels' },
+    { value: 'hero', label: 'Star product', desc: 'First product big, the rest beside it' },
+    { value: 'list', label: 'Price list', desc: 'Rows, like a menu board' },
 ];
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -191,13 +220,14 @@ export function offerTitle(products = [], title = '') {
 export const newOfferId = () => `of_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
 /** The live layer saved on the playlist item and drawn by OfferSlide. */
-export function buildOfferOverlay({ offerId, template, accent, title, footer, products, logoUrl, endsAt, ageBadge }) {
+export function buildOfferOverlay({ offerId, template, style, accent, title, footer, products, logoUrl, endsAt, ageBadge }) {
     const ends = endsAt ? new Date(endsAt) : null;
     return {
         kind: 'price_offer',
         ad_type: 'price_offer',
         offer_id: offerId || newOfferId(),
         template: (OFFER_TEMPLATES.find(t => t.value === template) || OFFER_TEMPLATES[0]).value,
+        style: (OFFER_STYLES.find(t => t.value === style) || OFFER_STYLES[0]).value,
         accent: HEX.test(String(accent)) ? accent : '#f97316',
         headline: clip(title, 40),
         cta: clip(footer, 60),

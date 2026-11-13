@@ -233,7 +233,11 @@
         },
         "template": {
           "type": "string",
-          "description": "Price-offer colour theme: deal, sunny, fresh, night, clean"
+          "description": "Price-offer colour theme: deal, sunny, fresh, night, clean, value, purple, neon, summer, blackfriday, christmas, eid"
+        },
+        "style": {
+          "type": "string",
+          "description": "Price-offer layout: cards, tags (shelf labels), hero (star product), list (price board)"
         },
         "age_badge": {
           "type": "boolean",

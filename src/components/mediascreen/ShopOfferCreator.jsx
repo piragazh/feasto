@@ -19,7 +19,7 @@ import { checkMediaFile } from './mediaInputs';
 import { functionErrorMessage } from './screenHealth';
 import { buildContentRecord } from './aiAdLogic';
 import {
-    MAX_PRODUCTS, OFFER_TEMPLATES, parseOffers, cleanProducts, newProduct, looksAgeRestricted, aiProductPrompt,
+    MAX_PRODUCTS, OFFER_TEMPLATES, OFFER_STYLES, parseOffers, cleanProducts, newProduct, looksAgeRestricted, aiProductPrompt,
     offerTitle, buildOfferOverlay, endOfDayUK, themeFor,
 } from './offerLogic';
 import { AiAllowanceBadge, useAiAllowance, useRefreshAllowance, allowanceUsedUp, generateAiPictures } from './aiAllowance';
@@ -171,6 +171,7 @@ export default function ShopOfferCreator({
     const [title, setTitle] = useState(editing ? (ev.headline || '') : TITLES[0]);
     const [footer, setFooter] = useState(editing ? (ev.cta || '') : '');
     const [template, setTemplate] = useState(ev.template || 'deal');
+    const [style, setStyle] = useState(ev.style || 'cards');
     const [accent, setAccent] = useState(ev.accent || restaurantColor || '#f97316');
     const [showLogo, setShowLogo] = useState(editing ? !!ev.logo_url : !!logoUrl);
     const [endDate, setEndDate] = useState(londonDate(ev.promo_expires_at));
@@ -208,9 +209,9 @@ export default function ShopOfferCreator({
     const endsAt = endDate ? endOfDayUK(endDate) : null;
     const expired = !!endsAt && endsAt.getTime() <= Date.now();
     const overlay = useMemo(() => buildOfferOverlay({
-        offerId: ev.offer_id, template, accent, title, footer, products: clean,
+        offerId: ev.offer_id, template, style, accent, title, footer, products: clean,
         logoUrl: showLogo ? (logoUrl || ev.logo_url || '') : '', endsAt, ageBadge,
-    }), [template, accent, title, footer, clean, showLogo, logoUrl, endDate, ageBadge]); // eslint-disable-line react-hooks/exhaustive-deps
+    }), [template, style, accent, title, footer, clean, showLogo, logoUrl, endDate, ageBadge]); // eslint-disable-line react-hooks/exhaustive-deps
     const previewItem = { id: 'preview', ad_overlay: overlay };
     const size = SHAPES[shape];
     const usesAccent = template === 'night' || template === 'clean';
@@ -480,7 +481,31 @@ export default function ShopOfferCreator({
                     </Step>
 
                     <Step n="2" title="Choose a look">
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        <Label className="text-xs text-gray-500">Layout</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {OFFER_STYLES.map(st => {
+                                const on = style === st.value;
+                                const th = themeFor(template, accent);
+                                const bar = (w, h, extra = {}) => <span style={{ display: 'block', width: w, height: h, background: th.card, borderRadius: 3, ...extra }} />;
+                                const tag = <span style={{ display: 'block', width: 10, height: 4, background: th.priceBg, borderRadius: 1 }} />;
+                                const sketch = {
+                                    cards: <div className="flex gap-1 h-full">{[0, 1, 2].map(i => <span key={i} style={{ flex: 1, background: th.card, borderRadius: 3, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 4 }}>{tag}</span>)}</div>,
+                                    tags: <div className="flex gap-1 h-full">{[0, 1, 2].map(i => <span key={i} style={{ flex: 1, background: th.card, borderRadius: 3, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}><span style={{ height: '42%', background: th.priceBg }} /></span>)}</div>,
+                                    hero: <div className="flex gap-1 h-full">{bar('58%', '100%', { display: 'flex', alignItems: 'center', justifyContent: 'center' })}<div className="flex flex-col gap-1" style={{ flex: 1 }}>{[0, 1, 2].map(i => <span key={i} style={{ flex: 1, background: th.card, borderRadius: 3 }} />)}</div></div>,
+                                    list: <div className="flex flex-col gap-1 h-full">{[0, 1, 2].map(i => <span key={i} style={{ flex: 1, background: th.card, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 4 }}>{tag}</span>)}</div>,
+                                }[st.value];
+                                return (
+                                    <button key={st.value} type="button" aria-pressed={on} onClick={() => setStyle(st.value)}
+                                        className={`rounded-xl border-2 p-1.5 text-left transition-all ${on ? 'border-orange-500 shadow' : 'border-gray-200 hover:border-gray-300'}`}>
+                                        <div className="h-14 rounded-lg p-1.5" style={{ background: `linear-gradient(155deg, ${th.bg}, ${th.bg2})` }}>{sketch}</div>
+                                        <p className="text-xs font-semibold text-gray-900 mt-1">{st.label}</p>
+                                        <p className="text-[10px] text-gray-500 leading-tight">{st.desc}</p>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <Label className="text-xs text-gray-500 pt-1 block">Colours</Label>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                             {OFFER_TEMPLATES.map(tpl => {
                                 const th = themeFor(tpl.value, accent);
                                 const on = template === tpl.value;
