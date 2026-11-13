@@ -22,6 +22,8 @@
  *   messageCustomer   { orderId, message }  -> { message }   driver -> customer chat
  *   restaurantMessages { orderId }          -> { messages }  the driver <-> restaurant chat for one of their orders
  *   myRatings                               -> { ratings }   ratings left for this driver
+ *   status                                  -> { online, active, availableIds }
+ *                                              one cheap call for the Android app's background service
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
@@ -102,6 +104,29 @@ Deno.serve(async (req) => {
 
         const Driver = base44.asServiceRole.entities.Driver;
         const Order = base44.asServiceRole.entities.Order;
+
+        // ── status ────────────────────────────────────────────────────────────
+        // Polled by the Android app: is the driver online, how many orders are they
+        // carrying, and which orders are waiting for a driver at their restaurants.
+        if (action === 'status') {
+            const online = driver.is_available === true;
+            const live = await liveOrdersOf(base44, driver.id);
+
+            let availableIds: string[] = [];
+            if (online && live.length === 0 && driver.restaurant_ids?.length) {
+                const lists = await Promise.all(driver.restaurant_ids.map((rid: string) =>
+                    Order.filter({ restaurant_id: rid, status: 'preparing' }).catch(() => [])));
+                availableIds = lists.flat().filter((o: any) => !o.driver_id).map((o: any) => o.id);
+            }
+
+            return Response.json({
+                success: true,
+                online,
+                active: live.length,
+                availableIds,
+                driverName: driver.full_name || '',
+            });
+        }
 
         // ── setAvailability ───────────────────────────────────────────────────
         if (action === 'setAvailability') {
