@@ -31,6 +31,59 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
+/**
+ * Weekly AI picture allowance for one store (Ad Creator in Screen Studio).
+ * Saves when you leave the box. Empty = platform default, 0 = AI pictures off.
+ */
+function AiAllowanceSetting({ restaurant, onSaved }) {
+    const saved = restaurant.ai_pictures_per_week;
+    const asText = (v) => (v === null || v === undefined ? '' : String(v));
+    const [text, setText] = React.useState(asText(saved));
+    const [usage, setUsage] = React.useState(null);
+    React.useEffect(() => { setText(asText(saved)); }, [saved]);
+    const loadUsage = React.useCallback(() => {
+        base44.functions.invoke('aiGenerate', { action: 'status', restaurant_id: restaurant.id })
+            .then(res => setUsage(res.data)).catch(() => setUsage(null));
+    }, [restaurant.id]);
+    React.useEffect(() => { loadUsage(); }, [loadUsage]);
+
+    const commit = async () => {
+        const trimmed = text.trim();
+        const next = trimmed === '' ? null : Math.min(500, Math.max(0, parseInt(trimmed, 10)));
+        if (trimmed !== '' && !Number.isFinite(next)) { setText(asText(saved)); return; }
+        if (next === (saved ?? null)) return;
+        try {
+            await base44.entities.Restaurant.update(restaurant.id, { ai_pictures_per_week: next });
+            toast.success(next === null ? 'AI allowance back to the default (5 a week)' : next === 0 ? 'AI pictures switched off for this store' : `AI allowance set to ${next} a week`);
+            onSaved?.();
+            loadUsage();
+        } catch {
+            toast.error("Couldn't save the AI allowance");
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+            <Monitor className="h-5 w-5 text-orange-600" />
+            <div className="flex-1">
+                <Label className="text-sm font-medium">AI pictures per week</Label>
+                <p className="text-xs text-gray-500">
+                    Ad Creator allowance, Monday to Sunday. Empty = default (5). 0 = switched off.
+                    {usage && Number.isFinite(usage.used) ? ` Used this week: ${usage.used} of ${usage.limit}.` : ''}
+                </p>
+            </div>
+            <Input
+                type="number" min="0" max="500" placeholder="5" value={text}
+                onChange={(e) => setText(e.target.value)}
+                onBlur={commit}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                aria-label={`AI pictures per week for ${restaurant.name}`}
+                className="w-20"
+            />
+        </div>
+    );
+}
+
 export default function RestaurantManagement() {
     const [searchQuery, setSearchQuery] = useState('');
     const [onboardingDialog, setOnboardingDialog] = useState(null);
