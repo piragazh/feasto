@@ -288,7 +288,7 @@ export default function ShopOfferCreator({
             return file_url ? { url: file_url, size: blob.size } : null;
         } catch (e) {
             console.warn('offer snapshot failed', e);
-            return '';
+            return null;
         }
     };
 
