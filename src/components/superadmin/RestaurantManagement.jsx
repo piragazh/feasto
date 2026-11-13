@@ -169,6 +169,10 @@ export default function RestaurantManagement() {
                                     </div>
                                 )}
 
+                                {restaurant.media_screen_enabled && (
+                                    <AiAllowanceSetting restaurant={restaurant} onSaved={() => queryClient.invalidateQueries(['all-restaurants'])} />
+                                )}
+
                                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                                     <Monitor className="h-5 w-5 text-gray-600" />
                                     <div className="flex-1">
