@@ -497,6 +497,10 @@
       "type": "number",
       "default": 1
     },
+    "ai_pictures_per_week": {
+      "type": "number",
+      "description": "How many AI pictures this store may create in the Ad Creator each week (Monday to Sunday, UK time). Empty = platform default (5). 0 = AI pictures switched off. Admin-only; enforced by the aiGenerate function."
+    },
     "pos_enabled": {
       "type": "boolean",
       "default": false

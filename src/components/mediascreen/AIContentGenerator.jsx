@@ -18,6 +18,7 @@ import {
     AD_TYPES, STYLES, buildImagePrompt, referencePhotos, buildCopyPrompt, COPY_SCHEMA, cleanCopy,
     advertisableCoupons, isPlatformCoupon, couponExpiry, describeCoupon, adEligibleItems, pickCategoryItems, buildContentRecord,
 } from './aiAdLogic';
+import { AiAllowanceBadge, useAiAllowance, useRefreshAllowance, allowanceUsedUp, generateAiPictures } from './aiAllowance';
 
 /**
  * AI ad generator for Screen Studio.
@@ -57,6 +58,9 @@ export default function AIContentGenerator({
     onNavigate, onClose,
 }) {
     const queryClient = useQueryClient();
+    const { data: allowance } = useAiAllowance(restaurantId);
+    const refreshAllowance = useRefreshAllowance(restaurantId);
+    const aiUsedUp = allowanceUsedUp(allowance);
 
     // ── 1. what ───────────────────────────────────────────────────────────
     const [adType, setAdType] = useState('single_item');
@@ -213,11 +217,21 @@ export default function AIContentGenerator({
         let refs = useRealPhotos ? realPhotos : [];
         let prompt = buildImagePrompt({ adType, restaurantName, items, styleValue: style, accent, extra, useRealPhotos: refs.length > 0, message });
         const angles = ['', ' Alternative: a closer, more dramatic angle.', ' Alternative: a wider shot with more background atmosphere.'];
-        const run = () => Promise.allSettled(Array.from({ length: count }, (_, i) =>
-            base44.integrations.Core.GenerateImage({
-                prompt: prompt + angles[i % angles.length],
-                ...(refs.length ? { existing_image_urls: refs } : {}),
-            })));
+        // Through the server, which checks this store's weekly AI allowance.
+        // Shaped like Promise.allSettled so the rest of this function reads the same.
+        const run = async () => {
+            const res = await generateAiPictures({
+                restaurantId, kind: 'menu_ad', existingImageUrls: refs,
+                prompts: Array.from({ length: count }, (_, i) => prompt + angles[i % angles.length]),
+            });
+            refreshAllowance(res.status);
+            if (res.note) toast.warning(res.note, { duration: 7000 });
+            const asked = res.note ? res.urls.length : count;        // fewer made on purpose is not a failure
+            return [
+                ...res.urls.map(url => ({ status: 'fulfilled', value: { url } })),
+                ...Array.from({ length: Math.max(0, asked - res.urls.length) }, () => ({ status: 'rejected', reason: new Error(res.error || 'Image generation failed') })),
+            ];
+        };
         try {
             let results = await run();
             // A dish photo the image service can't read (HEIC, private link, deleted
@@ -241,7 +255,7 @@ export default function AIContentGenerator({
             const next = [...urls.map(url => ({ url, at: Date.now(), title: copy.headline || items[0]?.name || restaurantName })), ...history].slice(0, HISTORY_MAX);
             setHistory(next);
             try { localStorage.setItem(historyKey(restaurantId), JSON.stringify(next)); } catch {}
-            if (results.some(r => r.status === 'rejected')) toast.warning(`${urls.length} of ${count} images were created`);
+            if (results.some(r => r.status === 'rejected')) toast.warning(`${urls.length} of ${results.length} images were created`);
             if (!copy.headline && !copyBusy) writeCopy();          // fill the words if still empty
         } catch (e) {
             const msg = errText(e, 'Image generation failed');
@@ -502,12 +516,12 @@ export default function AIContentGenerator({
                         <Textarea value={extra} onChange={e => setExtra(e.target.value)} rows={2} maxLength={300}
                             placeholder="Extra direction (optional), e.g. served on a wooden board, autumn feel" />
                         <div className="flex flex-wrap gap-2">
-                            <Button type="button" onClick={() => generate(1)} disabled={imgBusy || !ready}
+                            <Button type="button" onClick={() => generate(1)} disabled={imgBusy || !ready || aiUsedUp}
                                 className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold">
                                 {imgBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
                                 {imageUrl ? 'New picture' : 'Create picture'}
                             </Button>
-                            <Button type="button" variant="outline" onClick={() => generate(3)} disabled={imgBusy || !ready}>3 options</Button>
+                            <Button type="button" variant="outline" onClick={() => generate(3)} disabled={imgBusy || !ready || aiUsedUp}>3 options</Button>
                             {imageUrl && (
                                 <>
                                     <Button type="button" variant="outline" onClick={() => setShowCanvas(true)}><PenLine className="h-4 w-4 mr-2" />Design manually</Button>

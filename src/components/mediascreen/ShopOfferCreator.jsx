@@ -22,6 +22,7 @@ import {
     MAX_PRODUCTS, OFFER_TEMPLATES, parseOffers, cleanProducts, newProduct, looksAgeRestricted, aiProductPrompt,
     offerTitle, buildOfferOverlay, endOfDayUK, themeFor,
 } from './offerLogic';
+import { AiAllowanceBadge, useAiAllowance, useRefreshAllowance, allowanceUsedUp, generateAiPictures } from './aiAllowance';
 
 /**
  * Shop price-offer creator (supermarkets, convenience stores, off-licences).
@@ -159,6 +160,9 @@ export default function ShopOfferCreator({
     onNavigate, editItem = null, onSaved, onCancel,
 }) {
     const queryClient = useQueryClient();
+    const { data: allowance } = useAiAllowance(restaurantId);
+    const refreshAllowance = useRefreshAllowance(restaurantId);
+    const aiUsedUp = allowanceUsedUp(allowance);
     const editing = !!editItem;
     const ev = editItem?.ad_overlay || {};
 
@@ -251,13 +255,15 @@ export default function ShopOfferCreator({
         if (!p?.name) { toast.error('Type the product name first'); return; }
         setBusyPic(b => ({ ...b, [i]: 'ai' }));
         try {
-            const res = await base44.integrations.Core.GenerateImage({ prompt: aiProductPrompt(p) });
-            if (!res?.url) throw new Error('No picture came back');
-            setRow(i, { image_url: res.url });
+            const res = await generateAiPictures({ restaurantId, kind: 'product_picture', prompts: [aiProductPrompt(p)] });
+            refreshAllowance(res.status);
+            if (!res.urls[0]) throw new Error(res.error || 'No picture came back');
+            setRow(i, { image_url: res.urls[0] });
             toast.success('AI picture added. It is an illustration — for branded products a real photo is more accurate.', { duration: 7000 });
         } catch (e) {
-            const msg = functionErrorMessage(e, 'The AI picture failed');
-            toast.error(/policy|refus|safety/i.test(msg) ? "The AI service won't draw this product. Use Find or Upload instead." : msg);
+            if (e?.status) refreshAllowance(e.status);
+            const msg = e?.code ? e.message : functionErrorMessage(e, 'The AI picture failed');
+            toast.error(e?.code ? msg : /policy|refus|safety/i.test(msg) ? "The AI service won't draw this product. Use Find or Upload instead." : msg);
         } finally {
             setBusyPic(b => ({ ...b, [i]: '' }));
         }
@@ -421,7 +427,7 @@ export default function ShopOfferCreator({
                                             <div className="grid grid-cols-2 sm:grid-cols-1 gap-1 w-full">
                                                 <Button type="button" size="sm" variant="outline" className="h-7 text-xs justify-start" disabled={!!busyPic[i]} onClick={() => setPickerRow(i)}><Search className="h-3 w-3 mr-1" />Find picture</Button>
                                                 <Button type="button" size="sm" variant="outline" className="h-7 text-xs justify-start" disabled={!!busyPic[i]} onClick={() => fileRefs.current[i]?.click()}><Upload className="h-3 w-3 mr-1" />My photo</Button>
-                                                <Button type="button" size="sm" variant="outline" className="h-7 text-xs justify-start" disabled={!!busyPic[i]} onClick={() => makeAiPicture(i)}><Sparkles className="h-3 w-3 mr-1" />Make with AI</Button>
+                                                <Button type="button" size="sm" variant="outline" className="h-7 text-xs justify-start" disabled={!!busyPic[i] || aiUsedUp} title={aiUsedUp ? 'No AI pictures left this week' : undefined} onClick={() => makeAiPicture(i)}><Sparkles className="h-3 w-3 mr-1" />Make with AI</Button>
                                                 {p.image_url && <Button type="button" size="sm" variant="ghost" className="h-7 text-xs justify-start text-gray-500" onClick={() => setRow(i, { image_url: '' })}>No picture</Button>}
                                             </div>
                                             <input ref={(el) => { fileRefs.current[i] = el; }} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => uploadPhoto(i, e)} />
@@ -462,6 +468,7 @@ export default function ShopOfferCreator({
                                 {products.length < MAX_PRODUCTS && (
                                     <Button type="button" variant="outline" size="sm" onClick={addRow}><Plus className="h-4 w-4 mr-1" />Add another product</Button>
                                 )}
+                                <AiAllowanceBadge restaurantId={restaurantId} />
                                 <p className="text-[11px] text-gray-400">Pictures: "Find picture" searches real pack photos (best for groceries). "My photo" uses your phone camera or a file. "Make with AI" draws an illustration — it can't copy a brand's real packaging.</p>
                             </div>
                         )}
