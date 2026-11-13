@@ -20,19 +20,53 @@ const loadImage = (src) => new Promise((resolve, reject) => {
     img.src = src;
 });
 
-export async function slideToPngBlob(node, width, height) {
+/**
+ * Read a picture as a data: URL so it can travel inside the SVG.
+ *
+ * Always a fresh download: our file links redirect, and the redirect only
+ * carries the "may be read" header when the browser asks for it. The preview
+ * has usually already loaded the picture the ordinary way, so the copy the
+ * browser has saved would be refused. A second attempt with a one-off
+ * address gets round any cache in between.
+ */
+async function readAsDataUrl(src) {
+    if (!src || src.startsWith('data:')) return src;
+    const attempts = [
+        () => fetch(src, { mode: 'cors', cache: 'no-store', credentials: 'omit' }),
+        () => fetch(`${src}${src.includes('?') ? '&' : '?'}snap=${Date.now()}`, { mode: 'cors', cache: 'no-store', credentials: 'omit' }),
+    ];
+    let lastError;
+    for (const attempt of attempts) {
+        try {
+            const res = await attempt();
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const blob = await res.blob();
+            if (!blob.size || !/^image\//.test(blob.type || 'image/')) throw new Error('not a picture');
+            return await blobToDataUrl(blob);
+        } catch (e) {
+            lastError = e;
+        }
+    }
+    throw lastError || new Error('picture could not be read');
+}
+
+/**
+ * Draw the slide to a PNG. Resolves to { blob, missing } — `missing` is how
+ * many pictures could not be included, so the caller can say so instead of
+ * quietly saving a picture without them.
+ */
+export async function slideToPngResult(node, width, height) {
     if (!node) throw new Error('Nothing to draw');
     const clone = node.cloneNode(true);
 
-    // Pictures must travel inside the SVG. One that can't be read is left out
-    // rather than failing the whole picture.
+    let missing = 0;
     await Promise.all([...clone.querySelectorAll('img')].map(async (img) => {
         try {
-            const res = await fetch(img.getAttribute('src'), { mode: 'cors', cache: 'force-cache' });
-            if (!res.ok) throw new Error(String(res.status));
-            img.setAttribute('src', await blobToDataUrl(await res.blob()));
+            img.setAttribute('src', await readAsDataUrl(img.getAttribute('src')));
             img.removeAttribute('crossorigin');
-        } catch {
+        } catch (e) {
+            console.warn('[offer picture] left out:', img.getAttribute('src'), e);
+            missing += 1;
             img.remove();
         }
     }));
@@ -49,7 +83,11 @@ export async function slideToPngBlob(node, width, height) {
     canvas.getContext('2d').drawImage(img, 0, 0, width, height);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('This browser could not save the picture');
-    return blob;
+    return { blob, missing };
+}
+
+export async function slideToPngBlob(node, width, height) {
+    return (await slideToPngResult(node, width, height)).blob;
 }
 
 export function downloadBlob(blob, fileName) {

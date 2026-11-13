@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import OfferSlide from './OfferSlide';
-import { slideToPngBlob, downloadBlob } from './offerSnapshot';
+import { slideToPngResult, downloadBlob } from './offerSnapshot';
 import { checkMediaFile } from './mediaInputs';
 import { functionErrorMessage } from './screenHealth';
 import { buildContentRecord } from './aiAdLogic';
@@ -270,9 +270,14 @@ export default function ShopOfferCreator({
     };
 
     // ── picture of the whole ad ───────────────────────────────────────────
+    /** The ad as a PNG. Warns (once per save) if any product photo couldn't be included. */
     const drawPng = async () => {
         const node = stageRef.current?.querySelector('[data-offer-slide]');
-        return slideToPngBlob(node, size.w, size.h);
+        const { blob, missing } = await slideToPngResult(node, size.w, size.h);
+        if (missing) {
+            toast.warning(`${missing} product photo${missing === 1 ? '' : 's'} couldn't be added to the saved picture. Try "Find picture" again for ${missing === 1 ? 'it' : 'them'}. (Screens still show the photos.)`, { duration: 9000 });
+        }
+        return blob;
     };
     const fileName = () => `${offerTitle(clean, title).replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'offer'}-${shape}.png`;
 
@@ -280,7 +285,7 @@ export default function ShopOfferCreator({
         try {
             const blob = await drawPng();
             const { file_url } = await base44.integrations.Core.UploadFile({ file: new File([blob], fileName(), { type: 'image/png' }) });
-            return file_url || '';
+            return file_url ? { url: file_url, size: blob.size } : null;
         } catch (e) {
             console.warn('offer snapshot failed', e);
             return '';
@@ -297,10 +302,10 @@ export default function ShopOfferCreator({
     const saveToLibrary = async () => {
         setWorking('library');
         try {
-            const url = await uploadSnapshot();
-            if (!url) throw new Error('no picture');
+            const snap = await uploadSnapshot();
+            if (!snap) throw new Error('no picture');
             await base44.entities.MediaFile.create({
-                restaurant_id: restaurantId, file_url: url, file_name: fileName(), file_type: 'image/png', file_size: 0, folder: 'Offers', tags: ['offer'],
+                restaurant_id: restaurantId, file_url: snap.url, file_name: fileName(), file_type: 'image/png', file_size: snap.size, folder: 'Offers', tags: ['offer'],
             });
             queryClient.invalidateQueries({ queryKey: ['media-files', restaurantId] });
             toast.success('Saved to Media Library as a picture');
@@ -332,7 +337,7 @@ export default function ShopOfferCreator({
         if (problem) { toast.error(problem); return; }
         if (!targetScreens.length) { toast.error('Choose at least one screen'); return; }
         setWorking('publish');
-        const picture = (await uploadSnapshot()) || clean.find(p => p.image_url)?.image_url || '';
+        const picture = (await uploadSnapshot())?.url || clean.find(p => p.image_url)?.image_url || '';
         const done = [], failed = [];
         for (const screenName of targetScreens) {
             try {
@@ -358,7 +363,7 @@ export default function ShopOfferCreator({
         if (problem) { toast.error(problem); return; }
         setWorking('save');
         try {
-            const picture = (await uploadSnapshot()) || editItem.media_url || '';
+            const picture = (await uploadSnapshot())?.url || editItem.media_url || '';
             const all = await base44.entities.PromotionalContent.filter({ restaurant_id: restaurantId });
             const copies = all.filter(c => c.id === editItem.id || (ev.offer_id && c.ad_overlay?.offer_id === ev.offer_id));
             await Promise.all(copies.map(c => {
