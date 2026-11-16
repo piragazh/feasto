@@ -128,6 +128,21 @@
       "format": "date-time",
       "description": "Web chat: start of the hour web_turns counts"
     },
+    "chat_history": {
+      "type": "array",
+      "description": "Web chat: the last few turns, kept here so the AI is never shown a history supplied by the browser",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "call_duration_ms": {
       "type": "number",
       "description": "Phone: call length, from the voice platform's call_ended event"
