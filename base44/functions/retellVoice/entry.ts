@@ -103,6 +103,10 @@ function question(q) {
  * read-back -> payment -> place. (A voice model drifts; the tools keep it on the path.)
  */
 const ITEMS_DONE = 'When they say that is everything, ';
+/** How to ask for payment: cash is only offered when the core allows it for this basket (cash limit, restaurant setting). */
+const payAsk = (q) => (q?.cash_allowed === false
+    ? 'tell them payment for this order is by card, with a secure link we text them, and call place_order with payment "card". Do not offer cash.'
+    : 'ask: "Would you like to pay cash, or by card with a link we text you?" and call place_order.');
 function nextFrom(q, customer) {
     if (!q || !q.subtotal) return 'Ask what they would like to order.';
     if (!q.order_type) return `Ask if they would like anything else. ${ITEMS_DONE}ASK the caller "Is that for delivery or collection?" and wait for their answer - never choose for them. Then call set_order_type with what they said.`;
@@ -110,7 +114,7 @@ function nextFrom(q, customer) {
     if (q.below_minimum) return `They are ${money(q.short_by)} under the delivery minimum: tell them, and offer to add something or switch to collection.`;
     if (q.order_type === 'delivery' && customer && !customer.address) return 'Ask for the house number and street, and save it with set_customer (address).';
     if (customer && !customer.name) return 'Ask for a name for the order and save it with set_customer (name).';
-    if (customer) return 'Call get_order, read the whole order and total back, then ask: "Would you like to pay cash, or by card with a link we text you?" and call place_order.';
+    if (customer) return `Call get_order, read the whole order and total back, then ${payAsk(q)}`;
     return `Ask if they would like anything else. ${ITEMS_DONE}carry on: name, read the order back, then ask cash or card.`;
 }
 
@@ -124,11 +128,13 @@ function refusal(r) {
 
 /** An item name that didn't match exactly: offer the near misses back instead of a dead end. */
 function notFound(r) {
-    if (r.code !== 'ITEM_NOT_FOUND' || !r.did_you_mean?.length) return refusal(r);
+    if (!['ITEM_NOT_FOUND', 'CONFIRM_ITEM'].includes(r.code) || !r.did_you_mean?.length) return refusal(r);
     return {
         ok: false, problem: 'WHICH_ITEM',
         did_you_mean: r.did_you_mean.map((i) => ({ item_name: i.name, price: money(i.price) })),
-        next: 'Ask the caller which of these they meant, then call add_item again with that exact item_name.',
+        next: r.did_you_mean.length === 1
+            ? 'Nothing has been added yet. Ask the caller if they meant this item; if yes, call add_item again with that exact item_name.'
+            : 'Ask the caller which of these they meant, then call add_item again with that exact item_name.',
     };
 }
 
@@ -209,7 +215,7 @@ const TOOLS = {
             ...(r.quote?.below_minimum ? { below_minimum: `Delivery minimum is ${money(r.quote.minimum_order)}; ${money(r.quote.short_by)} short.` } : {}),
             next: !(r.basket || []).length ? 'The order is empty. Ask what they would like.'
                 : !r.quote?.order_type ? 'Read the order back. Then ASK "Is that for delivery or collection?" and wait for their answer before calling set_order_type.'
-                : 'Read the order and total back. If they have given a name (and address for delivery), ask: "Cash, or card with a link we text you?" and call place_order.',
+                : `Read the order and total back. If they have given a name (and address for delivery), ${payAsk(r.quote)}`,
         };
     },
 
@@ -254,7 +260,7 @@ const TOOLS = {
             const r = await core(ctx.base44, 'place_cash_order', { session_id: ctx.sid, notes: a.notes ? clip(a.notes, 200) : undefined });
             if (!r.ok) {
                 const out = refusal(r);
-                if (r.code === 'NO_CASH') out.next = 'Offer to text a card payment link instead (place_order with payment card).';
+                if (['NO_CASH', 'CASH_LIMIT', 'CASH_ORDER_OPEN'].includes(r.code)) out.next = 'Cash is not possible for this order. Offer to text a card payment link instead (place_order with payment card).';
                 return out;
             }
             return { ok: true, placed: true, order_number: r.order_number || undefined, total: money(r.total), ready_in: r.eta,
