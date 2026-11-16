@@ -57,6 +57,10 @@ const APP_URL = (Deno.env.get('BASE44_APP_URL') || 'https://app.mealdrop.co.uk')
 const CHECKOUT_TTL_MS = 2 * 60 * 60 * 1000;
 const MAX_QTY = 50;
 const EVENT_LOG_MAX = 50;
+// Cash rules (owner decision, Nov 2026): the same for every customer.
+const CASH_LIMIT = 50;                              // £ - above this an AI order is card (pay link) only
+const OPEN_CASH_WINDOW_MS = 6 * 60 * 60 * 1000;     // an unfinished cash order older than this no longer blocks
+const OPEN_STATUSES = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'];
 
 // ── Small helpers ───────────────────────────────────────────────────────────
 const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
@@ -615,7 +619,29 @@ function quote(session, restaurant) {
         short_by: type === 'delivery' && subtotal < minimumOrder ? round2(minimumOrder - subtotal) : 0,
         delivery_checked: type !== 'delivery' || !!dq,
         delivery_available: type !== 'delivery' ? null : (dq ? dq.available !== false : null),
+        // Not part of the Checkout mirror: whether an AI agent may offer cash for this basket
+        cash_allowed: restaurant?.accepts_cash_on_delivery !== false && total <= CASH_LIMIT,
     };
+}
+
+/**
+ * A cash order this number already has in progress (any restaurant, website or AI), or null.
+ * One open cash order per number: a prank caller can waste one order, not a kitchen's evening.
+ * If the lookup itself fails the order is allowed - a database hiccup must not turn customers away.
+ */
+async function openCashOrder(db, phoneE164) {
+    const since = Date.now() - OPEN_CASH_WINDOW_MS;
+    try {
+        for (const p of [localPhone(phoneE164), `+${phoneE164}`, phoneE164]) {
+            const rows = await db.Order.filter({ phone: p, payment_method: 'cash' }, '-created_date', 10);
+            const hit = (rows || []).find((o) => OPEN_STATUSES.includes(o.status) && (o.order_source || 'online') === 'online'
+                && new Date(o.created_date).getTime() > since);
+            if (hit) return hit;
+        }
+    } catch (e) {
+        console.warn(`${LOG} open cash order lookup failed - allowing: ${e?.message}`);
+    }
+    return null;
 }
 
 const feeSay = (n) => (Number(n) > 0 ? money(n) : 'free');
@@ -995,6 +1021,14 @@ Deno.serve(async (req) => {
                 const found = resolveItem(menu, body);
                 const item = found.item;
                 if (!item) { refuse('ITEM_NOT_FOUND', "Sorry, that item isn't available right now.", found.candidates?.length ? { did_you_mean: found.candidates } : {}); break; }
+                // The name wasn't on the menu word for word and this is the best guess: the customer
+                // is asked BEFORE it goes in the basket, not told afterwards.
+                if (found.guessed) {
+                    refuse('CONFIRM_ITEM', `"${clip(body.item_name, 60)}" is not an exact menu name.`, {
+                        did_you_mean: [itemSummary(item)], say: `Did you mean the ${String(item.name || '').trim()}?`,
+                    });
+                    break;
+                }
                 if (s.pending_item?.queue?.length) {
                     const cur = menu.byId.get(s.pending_item.menu_item_id);
                     if (cur) { refuse('OPTIONS_PENDING', `Let's finish the ${cur.name} first.`, { question: nextQuestion(cur, s.pending_item) }); break; }
@@ -1229,6 +1263,20 @@ Deno.serve(async (req) => {
                 if (!s.customer_phone) { refuse('PHONE_NEEDED', "What's the best phone number for the order?"); break; }
                 if (s.order_type === 'delivery' && !s.delivery_address) { refuse('ADDRESS_NEEDED', "What's the delivery address?"); break; }
 
+                // Cash rules: up to CASH_LIMIT, and one cash order in progress per number. Card is always offered instead.
+                if (r.q.total > CASH_LIMIT) {
+                    refuse('CASH_LIMIT', `Cash orders are limited to ${money(CASH_LIMIT)}; this one is ${money(r.q.total)}.`, {
+                        cash_limit: CASH_LIMIT, say: `For orders over ${CASH_LIMIT} pounds we take payment by card. I can text you a secure link to pay.`,
+                    });
+                    break;
+                }
+                if (await openCashOrder(db, s.customer_phone)) {
+                    refuse('CASH_ORDER_OPEN', 'This number already has a cash order in progress.', {
+                        say: "There's already a cash order in progress on this number, so this one needs to be paid by card. I can text you a secure link to pay.",
+                    });
+                    break;
+                }
+
                 const q = r.q;
                 const address = s.order_type === 'delivery'
                     ? clip(`${s.delivery_address}${s.delivery_postcode && !String(s.delivery_address).toUpperCase().includes(s.delivery_postcode.replace(' ', '')) && !String(s.delivery_address).toUpperCase().includes(s.delivery_postcode) ? `, ${s.delivery_postcode}` : ''}`, 500)
@@ -1350,9 +1398,23 @@ Deno.serve(async (req) => {
             response = Response.json(r, { status: r.code === 'UNKNOWN_ACTION' ? 400 : 200 });
         }
 
-        const conflict = await saveSession(db, before, s, action, resultOk, note, attempt < 2 && !sideEffect)
-            .catch((e) => { console.error(`${LOG} save failed: ${e?.message}`); return false; });
+        const save = () => saveSession(db, before, s, action, resultOk, note, attempt < 2 && !sideEffect);
+        let conflict = false;
+        let saved = true;
+        try { conflict = await save(); } catch (e) {
+            console.error(`${LOG} save failed, trying once more: ${e?.message}`);
+            try { conflict = await save(); } catch (e2) {
+                saved = false;
+                console.error(`${LOG} SAVE_FAILED ${action} session=${before.id}${s.order_id && !before.order_id ? ` - ORDER ${s.order_id} WAS PLACED BUT THE SESSION WAS NOT UPDATED` : ''}: ${e2?.message}`);
+            }
+        }
         if (conflict) { console.warn(`${LOG} ${action} session=${before.id} changed underneath - re-running on the fresh session`); continue; }
+        // A basket change that never reached the database must not be answered with "Added".
+        // (After a text was sent or an order placed the answer stands: that part is real.)
+        const changed = OWNED.some((f) => JSON.stringify(s[f] ?? null) !== JSON.stringify(before[f] ?? null));
+        if (!saved && changed && !sideEffect) {
+            return fail('SAVE_FAILED', 'The change could not be saved.', { say: 'Sorry, something went wrong on our side. Could you say that again?' });
+        }
         return response;
         }
     } catch (e) {
@@ -1476,6 +1538,7 @@ async function contextOf(db, session, restaurant, opts = {}) {
             collection_enabled: !!restaurant.collection_enabled,
             collection_open: !!restaurant.collection_enabled && !closed && !hoursClosedReason(restaurant, 'collection'),
             accepts_cash: restaurant.accepts_cash_on_delivery !== false,
+            cash_limit: CASH_LIMIT,
             delivery_fee: round2(restaurant.delivery_fee ?? 0),
             minimum_order: round2(restaurant.minimum_order ?? 0),
             delivery_time: restaurant.delivery_time || '30-45 mins',
