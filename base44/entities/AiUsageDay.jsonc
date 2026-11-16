@@ -1,0 +1,59 @@
+{
+  "description": "AI ordering usage per restaurant, per channel, per UK day. Written by the channel functions (webChatAgent). Used for the daily caps that stop the public website chat being used to burn AI credits, and later for usage reports and billing. Counters are best-effort (no atomic increment), which is fine for a cap.",
+  "name": "AiUsageDay",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "day": {
+      "type": "string",
+      "description": "UK calendar day, YYYY-MM-DD"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "phone",
+        "whatsapp",
+        "web_chat"
+      ]
+    },
+    "sessions": {
+      "type": "number",
+      "default": 0,
+      "description": "New conversations started"
+    },
+    "ai_turns": {
+      "type": "number",
+      "default": 0,
+      "description": "AI model replies generated"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "day",
+    "channel"
+  ],
+  "type": "object",
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
