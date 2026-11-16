@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2, Phone, AlertCircle } from 'lucide-react';
+import { saveAiCheckoutToken } from '@/lib/ai-checkout-token';
 
 const unwrap = (res) => (res && typeof res === 'object' && 'data' in res ? res.data : res);
 
@@ -14,7 +15,8 @@ const unwrap = (res) => (res && typeof res === 'object' && 'data' in res ? res.d
  * Loads the basket built in the conversation (via a one-time token), puts it where
  * the normal website checkout reads it (localStorage), and hands over to Checkout.
  * Everything after that - price checks, Stripe, POS, printing - is the existing web
- * ordering flow, unchanged. aiOrderLink then links the paid order to the session.
+ * ordering flow, unchanged. The link's token travels with the order, so
+ * verifyAndCreateOrder ties the paid order to this exact conversation.
  * Same pattern as WhatsAppCheckout.
  */
 export default function AiCheckout() {
@@ -46,6 +48,8 @@ export default function AiCheckout() {
                     }));
                     localStorage.removeItem('groupOrderId');
                     localStorage.removeItem('appliedPromotions');
+                    // Sent with the order, so the paid order is tied to THIS conversation exactly
+                    saveAiCheckoutToken(token, data.restaurant_id);
                 } catch {
                     throw new Error('Your browser blocked storage. Please open this link in Chrome or Safari.');
                 }
