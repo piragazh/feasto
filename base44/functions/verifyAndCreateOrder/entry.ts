@@ -960,6 +960,29 @@ Deno.serve(async (req) => {
         const customerEmail = user?.email || guest_email || null;
         const customerPhone = phone || null;
 
+        // ── AI pay link ────────────────────────────────────────────────────────
+        // An order that arrived through an AI agent's pay link (/AiCheckout) carries
+        // that link's one-time token. The token names the exact AiOrderSession, so the
+        // order is tagged here, at creation - never guessed afterwards from a phone
+        // number or a matching basket. A bad, expired or used token just means no tag;
+        // it can never refuse or delay a paid order.
+        let aiLink = {};
+        try {
+            const aiToken = orderData.ai_checkout_token;
+            if (typeof aiToken === 'string' && /^[A-Za-z0-9_-]{20,64}$/.test(aiToken)) {
+                const aiSession = (await base44.asServiceRole.entities.AiOrderSession.filter({ checkout_token: aiToken }))?.[0];
+                const expires = aiSession?.checkout_token_expires_at ? new Date(aiSession.checkout_token_expires_at).getTime() : 0;
+                // 30 minutes' grace: the page was opened in time, the card took a while
+                if (aiSession && !aiSession.order_id && aiSession.restaurant_id === restaurant_id && expires > Date.now() - 30 * 60 * 1000) {
+                    aiLink = { ai_channel: aiSession.channel === 'test' ? 'web_chat' : aiSession.channel, ai_session_id: aiSession.id };
+                } else {
+                    console.warn(`${LOG} ai_checkout_token not usable (missing, used, expired or another restaurant) - order left unlinked`);
+                }
+            }
+        } catch (aiErr) {
+            console.warn(`${LOG} AI pay link lookup failed - order left unlinked: ${aiErr?.message}`);
+        }
+
         const newOrder = await base44.asServiceRole.entities.Order.create({
             restaurant_id,
             restaurant_name,
@@ -993,6 +1016,7 @@ Deno.serve(async (req) => {
             customer_email: customerEmail,
             customer_phone: customerPhone,
             marketing_opt_in: marketingOptIn,
+            ...aiLink,
         });
 
         // ── Update/create PaymentTransaction record ────────────────────────────
