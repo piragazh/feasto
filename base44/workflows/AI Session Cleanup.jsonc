@@ -1,0 +1,41 @@
+{
+  "name": "AI Session Cleanup",
+  "description": "Every night: deletes phone-call recordings, transcripts and summaries older than 30 days (here and at Retell), and closes AI ordering sessions that were abandoned or whose pay link expired unpaid. Idempotent.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "23 3 * * *",
+      "one_time_date": null,
+      "timezone": "Europe/London",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "ai_session_cleanup",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "aiSessionCleanup",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}
