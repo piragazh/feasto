@@ -228,6 +228,9 @@ const TOOLS = {
             const out = refusal(r);
             if (r.code === 'OUT_OF_AREA' && r.collection_enabled) out.next = 'Offer collection instead.';
             if (r.code === 'BAD_POSTCODE' || r.code === 'UNKNOWN_POSTCODE') out.next = 'Ask them to say the postcode again slowly, then read it back letter by letter.';
+            if (r.code === 'DELIVERY_CHECK_UNAVAILABLE') {
+                out.next = `Apologise - this is a problem on our side, NOT that we don't deliver there. ${r.collection_enabled ? 'Offer collection instead, or offer' : 'Offer'} to put them through to the team to finish a delivery order.`;
+            }
             return out;
         }
         return { ok: true, postcode: r.delivery.postcode, say: r.say, totals: quoteText(r.quote),
@@ -315,7 +318,8 @@ async function inbound(base44, db, ev) {
         transfer_number: transfer || '',
         menu: s.voice_menu || 'Menu not loaded - use search_menu for every item.',
         returning_customer: back
-            ? `Yes. Name on last order: ${back.name || 'unknown'}. Last time: ${back.last_order_type || 'order'}${back.last_delivery_address ? ` to ${back.last_delivery_address}` : ''}, ${back.last_items.slice(0, 4).join(', ')}.`
+            // Caller ID can be faked: no address or past order is ever given to the agent
+            ? `Yes, this number has ordered before${back.name ? ` (first name on that order: ${back.name})` : ''}. Still ask for the name and the full delivery address - never assume or read out details from a past order.`
             : 'no',
     };
     const response = { call_inbound: { dynamic_variables: vars, metadata: { session_id: s.session_id, restaurant_id: link.restaurant_id } } };
