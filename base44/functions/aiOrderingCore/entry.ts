@@ -1125,8 +1125,9 @@ Deno.serve(async (req) => {
                     const id = raw.menu_item_id || raw.id;
                     if (DEAL_FLAGS.some((f) => raw[f]) || !allIds.has(id)) {
                         // A deal (or something the website built that isn't a menu item): kept as-is
-                        if (typeof raw.price !== 'number' || !raw.name) continue;
-                        cart.push({ ...raw, quantity, external: true });
+                        // The browser built this line: a price below zero or a name used as a message is refused
+                        if (typeof raw.price !== 'number' || !(raw.price >= 0) || !raw.name) continue;
+                        cart.push({ ...raw, name: clip(raw.name, 120), quantity, external: true });
                         continue;
                     }
                     const item = menu.byId.get(id);
