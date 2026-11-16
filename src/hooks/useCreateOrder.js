@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils/index.ts';
 import { checkoutTrace } from '@/lib/checkoutTrace';
+import { readAiCheckoutToken, clearAiCheckoutToken } from '@/lib/ai-checkout-token';
 import { pendingPayment } from '@/lib/pendingPayment';
 import { functionErrorMessage } from '@/lib/function-errors';
 
@@ -163,6 +164,11 @@ export function useCreateOrder({
                 orderData.guest_email = formData.guest_email;
             }
 
+            // Arrived through an AI pay link (phone / WhatsApp agent)? Send its token so the
+            // server ties this order to that exact conversation.
+            const aiCheckoutToken = readAiCheckoutToken(restaurantId);
+            if (aiCheckoutToken) orderData.ai_checkout_token = aiCheckoutToken;
+
             // CRIT-2 FIX: Always use the locked session key for card payments.
             // Falling back to a fresh key risks idempotency mismatch → duplicate orders.
             if (paymentIntentId && !_lockedSessionKey) {
@@ -221,6 +227,7 @@ export function useCreateOrder({
             localStorage.removeItem('appliedPromotions');
             localStorage.removeItem('userAddress');
             localStorage.removeItem('userCoordinates');
+            clearAiCheckoutToken();
             pendingPayment.clear();
 
             window.navigator?.vibrate?.([50, 30, 50]);
