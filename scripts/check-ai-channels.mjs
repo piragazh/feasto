@@ -68,7 +68,7 @@ globalThis.fetch = async (url, opts = {}) => {
     if (String(url).includes('api.retellai.com') && opts.method === 'DELETE') {
         if (!retellUp) throw new Error('timeout');
         retellDeleted.push(String(url).split('/').pop());
-        return new Response('', { status: 204 });
+        return new Response(null, { status: 204 });
     }
     throw new Error(`unexpected fetch ${url}`);
 };
