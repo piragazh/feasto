@@ -552,17 +552,24 @@ function matchZone(zones, customerLocation, customerAddress) {
     return null;
 }
 
+/**
+ * { valid: true, lat, lng } | { valid: false } (no such postcode) | { valid: null } (couldn't
+ * look - the service is down or slow). Two short tries: a caller is waiting on the line.
+ */
 async function geocodePostcode(postcode) {
-    try {
-        const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode.replace(/\s+/g, ''))}`);
-        if (!res.ok) return { valid: res.status === 404 ? false : null };
-        const j = await res.json();
-        const r = j?.result;
-        return r ? { valid: true, lat: r.latitude, lng: r.longitude, postcode: r.postcode } : { valid: false };
-    } catch (e) {
-        console.warn(`${LOG} postcode lookup failed: ${e?.message}`);
-        return { valid: null }; // unknown - postcode-district zones still work
+    const url = `https://api.postcodes.io/postcodes/${encodeURIComponent(postcode.replace(/\s+/g, ''))}`;
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(2500) });
+            if (res.status === 404) return { valid: false };
+            if (!res.ok) continue;
+            const r = (await res.json())?.result;
+            return r ? { valid: true, lat: r.latitude, lng: r.longitude, postcode: r.postcode } : { valid: false };
+        } catch (e) {
+            console.warn(`${LOG} postcode lookup failed (try ${attempt + 1}): ${e?.message}`);
+        }
     }
+    return { valid: null }; // unknown - postcode-district zones still work
 }
 
 // ── Quote: MIRROR of the price block in src/pages/Checkout.jsx ───────────────
@@ -1138,6 +1145,20 @@ Deno.serve(async (req) => {
                     dq = { postcode: pc, zones_configured: false, available: true, fee: restaurant.delivery_fee ?? 0, minimum_order: restaurant.minimum_order ?? 0, eta: restaurant.delivery_time || null };
                 } else {
                     const zone = matchZone(zones, geo.valid ? { lat: geo.lat, lng: geo.lng } : null, address);
+                    // The postcode lookup is down and this restaurant has zones drawn on the map
+                    // (radius or area): "no zone matched" only means "couldn't look". Never turn
+                    // our own outage into "we don't deliver to you".
+                    const mapZones = zones.some((z) => (z.zone_type || (z.postcodes?.length > 0 ? 'postcode' : 'map')) !== 'postcode');
+                    if (!zone && geo.valid === null && mapZones) {
+                        s.delivery_postcode = pc;
+                        s.delivery_quote = null;
+                        if (body.address) s.delivery_address = clip(body.address, 300);
+                        note = `${pc} -> lookup unavailable`;
+                        refuse('DELIVERY_CHECK_UNAVAILABLE', `Could not check ${pc}: the postcode lookup is unavailable.`, {
+                            say: "Sorry, I can't check that postcode just at the moment.", collection_enabled: !!restaurant.collection_enabled,
+                        });
+                        break;
+                    }
                     dq = zone
                         ? { postcode: pc, zones_configured: true, available: true, fee: zone.delivery_fee, minimum_order: zone.min_order_value || 0, zone_name: zone.name, eta: zone.estimated_delivery_time || null }
                         : { postcode: pc, zones_configured: true, available: false };
@@ -1432,11 +1453,12 @@ async function contextOf(db, session, restaurant, opts = {}) {
             const rows = await db.Order.filter({ restaurant_id: restaurant.id, phone: p }, '-created_date', 1).catch(() => []);
             if (rows?.[0]) {
                 const o = rows[0];
+                // A caller's number can be faked, so an agent is never handed anything private
+                // from a past order (address, what was ordered): only that this number has
+                // ordered before, and a first name to greet with.
                 returning = {
-                    name: o.guest_name || null,
+                    name: String(o.guest_name || '').trim().split(/\s+/)[0] || null,
                     last_order_type: o.order_type || null,
-                    last_delivery_address: o.order_type === 'delivery' ? o.delivery_address || null : null,
-                    last_items: (o.items || []).slice(0, 8).map((i) => `${i.quantity || 1}x ${i.name}`),
                     last_order_date: o.created_date || null,
                 };
                 break;
