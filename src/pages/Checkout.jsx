@@ -39,6 +39,7 @@ import { useSEO } from '@/lib/useSEO.js';
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { usePaymentInit } from '@/hooks/usePaymentInit';
 import { useCreateOrder } from '@/hooks/useCreateOrder';
+import { readAiCheckoutToken } from '@/lib/ai-checkout-token';
 import { pendingPayment } from '@/lib/pendingPayment';
 import { handleRecoveryResult } from '@/lib/checkoutRecovery';
 import { useBrandAccent } from '@/lib/useBrandAccent';
@@ -1042,6 +1043,8 @@ export default function Checkout() {
                 guest_name: formData.guest_name,
                 guest_email: formData.guest_email,
                 order_source: 'online',
+                // AI pay link: kept in the recovery copy too, so a replayed order is still linked
+                ...(readAiCheckoutToken(restaurantId) ? { ai_checkout_token: readAiCheckoutToken(restaurantId) } : {}),
             },
         }, user);
 
