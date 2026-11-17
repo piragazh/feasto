@@ -550,7 +550,7 @@ function calcItemServerPrice(dbItem, orderItem, isPOS = false) {
 }
 
 /** Re-price every basket line from the CURRENT menu; drops lines no longer sellable. */
-function repriceCart(session, menu) {
+function repriceCart(session, menu, promos = []) {
     const dropped = [];
     const cart = [];
     for (const l of session.cart || []) {
@@ -559,7 +559,13 @@ function repriceCart(session, menu) {
         const item = menu.byId.get(l.menu_item_id);
         if (!item) { dropped.push(l.name); continue; }
         const { serverPrice } = calcItemServerPrice(item, l);
-        cart.push({ ...l, name: String(item.name || '').trim(), price: round2(serverPrice) });
+        // Tagged exactly as the restaurant page tags a buy-one-get-one line, so the website
+        // checkout (pay link) gives the same free item this quote did
+        const { promotion_id: _i, promotion_type: _t, promotion_name: _n, ...plain } = l;
+        const next = { ...plain, name: String(item.name || '').trim(), price: round2(serverPrice) };
+        const offer = itemOfferFor(promos, next);
+        if (offer) Object.assign(next, { promotion_id: offer.id, promotion_type: offer.promotion_type, ...(offer.name ? { promotion_name: offer.name } : {}) });
+        cart.push(next);
     }
     session.cart = cart;
     return dropped;
@@ -667,13 +673,18 @@ function quote(session, restaurant) {
     // Checkout.jsx adds this whenever it is set (MED-8). Mirrored as-is for parity.
     const smallOrderSurcharge = restaurant?.small_order_surcharge ?? 0;
     const subtotalPence = Math.round(subtotal * 100);
-    const total = Math.max(0, subtotalPence + Math.round(deliveryFee * 100) + Math.round(smallOrderSurcharge * 100)) / 100;
+    // Offers the website applies on its own (restaurant.__promos is loaded once per request)
+    const offers = offersFor(cart, restaurant?.__promos, subtotal);
+    const total = Math.max(0, subtotalPence + Math.round(deliveryFee * 100) + Math.round(smallOrderSurcharge * 100) - Math.round(offers.discount * 100)) / 100;
     return {
         order_type: type,
         subtotal: round2(subtotal),
         delivery_fee: round2(deliveryFee),
         small_order_surcharge: round2(smallOrderSurcharge),
-        discount: 0,
+        discount: round2(offers.discount),
+        promotions: offers.applied.map((a) => ({ name: a.name, discount: round2(a.discount) })),
+        promotion_codes: [...new Set(offers.applied.map((a) => String(a.code || '').trim()).filter(Boolean))],
+        promo_hints: offers.hints,
         total: round2(total),
         minimum_order: round2(minimumOrder),
         below_minimum: type === 'delivery' && subtotal < minimumOrder,
@@ -716,6 +727,77 @@ async function cashBlocked(db, phoneE164) {
 }
 
 const feeSay = (n) => (Number(n) > 0 ? money(n) : 'free');
+
+// ── Offers: MIRROR of what the website gives on its own ──────────────────────────────
+// Owner decision (Nov 2026): an AI customer gets the same automatic offers as a website one.
+//  1. SPEND OFFERS - src/components/checkout/AvailablePromotions.jsx. Every active, in-date
+//     promotion with condition_type 'minimum_order' applies once the items reach its minimum,
+//     and they stack: percentage of the items, a fixed amount, or 'free delivery', which the
+//     website takes as a flat £2.99 (mirrored as-is so a pay link charges what was quoted).
+//  2. ITEM OFFERS - buy one get one free / buy two get one free (src/pages/Restaurant.jsx tags
+//     the basket line, src/pages/Checkout.jsx prices it): one free per 2 (or 3) of a line with
+//     no options, for items in the promotion's applicable_items.
+// verifyAndCreateOrder accepts a promotion discount when the order names a real, active promotion
+// (promotion_codes: its code, else its name) and caps promotions at half the items - so does this.
+const SPEND_OFFER_TYPES = ['percentage_off', 'fixed_amount_off', 'free_delivery'];
+const ITEM_OFFER_TYPES = ['buy_one_get_one', 'buy_two_get_one'];
+const FREE_DELIVERY_VALUE = 2.99;
+
+// COPY of ukInstant in verifyAndCreateOrder (check-ai-core-parity.mjs compares): promotion dates
+// are stored without a time zone and mean UK time.
+// __UK_INSTANT__
+
+/** This restaurant's promotions that are live right now. A failed lookup means no offers, never a refused order. */
+async function loadPromotions(db, restaurantId) {
+    try {
+        const now = new Date();
+        return ((await db.Promotion.filter({ restaurant_id: restaurantId, is_active: true })) || []).filter((p) => {
+            if (!p.start_date || !p.end_date) return false;
+            if (ukInstant(p.start_date) > now || ukInstant(p.end_date) < now) return false;
+            if (p.usage_limit && Number(p.usage_count || 0) >= Number(p.usage_limit)) return false;
+            return true;
+        });
+    } catch (e) {
+        console.warn(`${LOG} promotions lookup failed - quoting without offers: ${e?.message}`);
+        return [];
+    }
+}
+
+/** The buy-N-get-one-free promotion a basket line qualifies for, if any (plain lines only, as on the website). */
+function itemOfferFor(promos, line) {
+    if (line.external || Object.keys(line.customizations || {}).length) return null;
+    return (promos || []).find((p) => ITEM_OFFER_TYPES.includes(p.promotion_type)
+        && Array.isArray(p.applicable_items) && p.applicable_items.includes(line.menu_item_id)) || null;
+}
+
+/** { discount, applied: [{ id, name, code, discount, counts_usage }], hints: [text] } for a basket. */
+function offersFor(cart, promos, subtotal) {
+    const applied = [];
+    const hints = [];
+    for (const p of promos || []) {
+        if (p.condition_type !== 'minimum_order' || !(Number(p.minimum_order) > 0) || !SPEND_OFFER_TYPES.includes(p.promotion_type)) continue;
+        const value = Number(p.discount_value) || 0;
+        const label = p.promotion_type === 'percentage_off' ? `${value}% off` : p.promotion_type === 'fixed_amount_off' ? `${money(value)} off` : 'free delivery';
+        if (subtotal >= p.minimum_order) {
+            const discount = p.promotion_type === 'percentage_off' ? (subtotal * value) / 100 : p.promotion_type === 'fixed_amount_off' ? value : FREE_DELIVERY_VALUE;
+            applied.push({ id: p.id, name: String(p.name || label).trim(), code: p.promotion_code || p.name, discount, counts_usage: true });
+        } else if (subtotal > 0) {
+            hints.push({ gap: p.minimum_order - subtotal, text: `Spend ${money(p.minimum_order - subtotal)} more for ${label}` });
+        }
+    }
+    for (const l of cart || []) {
+        const p = itemOfferFor(promos, l);
+        if (!p) continue;
+        const n = p.promotion_type === 'buy_one_get_one' ? 2 : 3;
+        const words = n === 2 ? 'buy one get one free' : 'buy two get one free';
+        const free = Math.floor(l.quantity / n);
+        if (free > 0) applied.push({ id: `${l.menu_item_id}_${n === 2 ? 'bogo' : 'b2g1'}`, name: String(p.name || words).trim(), code: p.promotion_code || p.name, discount: l.price * free, counts_usage: false });
+        if (l.quantity % n === n - 1) hints.push({ gap: 0, text: `${l.name} is ${words} - one more would be free` });
+    }
+    const wantPence = applied.reduce((sum, a) => sum + Math.round(a.discount * 100), 0);
+    const capPence = Math.floor(subtotal * 0.5 * 100 + 1e-9);
+    return { discount: Math.min(wantPence, capPence) / 100, applied, hints: hints.sort((a, b) => a.gap - b.gap).slice(0, 2).map((h) => h.text) };
+}
 
 /** "25 - 30" / "30-45 mins" -> "about 25 to 30 minutes" for reading out. */
 function etaSay(raw) {
@@ -773,8 +855,9 @@ function basketSay(session, q) {
     if (!cart.length) return 'Your basket is empty.';
     const lines = cart.map((l) => `${l.quantity} ${l.name}${l.options_summary ? ` (${l.options_summary})` : ''}${l.note ? ` - ${l.note}` : ''}`).join(', ');
     const fee = q.order_type === 'delivery' && q.delivery_fee ? `, plus ${money(q.delivery_fee)} delivery` : '';
-    if (!fee && !q.small_order_surcharge) return `You've got ${lines}. That's ${money(q.total)} in total.`;
-    return `You've got ${lines}. That's ${money(q.subtotal)}${fee}${q.small_order_surcharge ? ` and a ${money(q.small_order_surcharge)} service charge` : ''}, ${money(q.total)} in total.`;
+    const off = q.discount ? `, less ${money(q.discount)} with ${(q.promotions || []).map((p) => p.name).join(' and ') || 'your offer'}` : '';
+    if (!fee && !q.small_order_surcharge && !off) return `You've got ${lines}. That's ${money(q.total)} in total.`;
+    return `You've got ${lines}. That's ${money(q.subtotal)}${fee}${q.small_order_surcharge ? ` and a ${money(q.small_order_surcharge)} service charge` : ''}${off}, ${money(q.total)} in total.`;
 }
 
 /**
@@ -791,7 +874,7 @@ function readiness(session, restaurant, menu, opts = {}) {
         if (item) return { code: 'OPTIONS_PENDING', error: `We still need to finish the ${item.name} first.`, question: nextQuestion(item, session.pending_item) };
         session.pending_item = null;
     }
-    const dropped = repriceCart(session, menu);
+    const dropped = repriceCart(session, menu, restaurant?.__promos);
     if (dropped.length) return { code: 'ITEM_UNAVAILABLE', error: `Sorry, ${dropped.join(', ')} ${dropped.length > 1 ? 'are' : 'is'} no longer available, so I've taken ${dropped.length > 1 ? 'them' : 'it'} off.` };
     if (!(session.cart || []).length) return { code: 'EMPTY_BASKET', error: 'The basket is empty.' };
     if (!session.order_type) return { code: 'ORDER_TYPE_NEEDED', error: 'Is this for delivery or collection?' };
@@ -977,6 +1060,7 @@ Deno.serve(async (req) => {
             // A malformed id makes the database throw rather than return nothing
             const restaurant = (await db.Restaurant.filter({ id: String(restaurantId) }).catch(() => []))[0];
             if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
+            restaurant.__promos = await loadPromotions(db, restaurant.id);
 
             // Same call id twice (a platform retry) returns the same session
             if (body.external_id) {
@@ -1013,6 +1097,7 @@ Deno.serve(async (req) => {
         }
         const restaurant = (await db.Restaurant.filter({ id: before.restaurant_id }))[0];
         if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
+        restaurant.__promos = await loadPromotions(db, restaurant.id); // read by quote()
 
         const s = JSON.parse(JSON.stringify(before)); // handlers mutate the copy; saveSession diffs it
         const needsMenu = action === 'apply' || !['get_context', 'set_customer', 'handoff', 'end_session', 'check_delivery', 'set_order_type'].includes(action);
@@ -1283,7 +1368,7 @@ Deno.serve(async (req) => {
             }
 
             case 'get_basket': {
-                const dropped = repriceCart(s, menu);
+                const dropped = repriceCart(s, menu, restaurant.__promos);
                 const q = quote(s, restaurant);
                 done({ basket: basketView(s), quote: q, removed_unavailable: dropped, pending: pendingQuestion(s, menu),
                     ...(body.full === true ? { cart_lines: webLines(s) } : {}), say: (dropped.length ? `${dropped.join(', ')} is no longer available, so I took it off. ` : '') + basketSay(s, q) });
@@ -1443,9 +1528,9 @@ Deno.serve(async (req) => {
                     subtotal: q.subtotal,
                     delivery_fee: q.delivery_fee,
                     small_order_surcharge: q.small_order_surcharge,
-                    discount: 0,
+                    discount: q.discount,
                     coupon_codes: [],
-                    promotion_codes: [],
+                    promotion_codes: q.promotion_codes,
                     total: q.total,
                     payment_method: 'cash',
                     order_type: s.order_type,
@@ -1489,6 +1574,11 @@ Deno.serve(async (req) => {
                 }
                 await db.Order.update(out.order_id, { ai_channel: s.channel === 'test' ? 'web_chat' : s.channel, ai_session_id: s.id })
                     .catch((e) => console.warn(`${LOG} could not tag order ${out.order_id}: ${e?.message}`));
+                // Count the spend offers used, as the website does after an order (limits like "first 50 orders")
+                for (const a of offersFor(s.cart, restaurant.__promos, q.subtotal).applied.filter((x) => x.counts_usage)) {
+                    await base44.asServiceRole.functions.invoke('incrementPromotionUsage', { promoId: a.id, orderId: out.order_id, orderTotal: q.total, promoDiscount: round2(a.discount) })
+                        .catch((e) => console.warn(`${LOG} promotion usage not counted for ${a.id}: ${e?.message}`));
+                }
                 s.order_id = out.order_id;
                 s.state = 'ordered';
                 s.checkout_token = null;
