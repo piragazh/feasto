@@ -46,6 +46,9 @@
  * (zones, tiered delivery, small order surcharge) - so a basket total here is the
  * total the website checkout and the validator arrive at.
  *
+ * OFFERS: the quote includes the offers the website applies on its own (spend offers and
+ * buy-one-get-one-free) - see "Offers" below. Coupon codes are not taken by AI agents.
+ *
  * Option groups are addressed by POSITION as well as name: many menus leave group names
  * blank (a meal upgrade and the drink inside it can both be ""). See isTop / findGroup.
  *
