@@ -85,7 +85,8 @@ Deno.serve(async (req) => {
             state: 'closed', ended_at: s.ended_at || at, ...extra,
             event_log: [...(s.event_log || []), { at, action: 'cleanup', ok: true, note }].slice(-50),
         });
-        const lastSeen = (s) => ms(s.last_activity_at) || ms(s.updated_date) || ms(s.created_date);
+        // The latest of the three: reading the basket no longer writes last_activity_at, but chat turns still update the row
+        const lastSeen = (s) => Math.max(ms(s.last_activity_at), ms(s.updated_date), ms(s.created_date));
 
         for (const s of await listAll(db.AiOrderSession, { state: 'active' })) {
             if (result.closed_active >= MAX_CLOSES) break;
