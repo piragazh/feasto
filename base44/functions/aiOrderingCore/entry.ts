@@ -644,6 +644,16 @@ async function openCashOrder(db, phoneE164) {
     return null;
 }
 
+/** Is this number on the block list (Super Admin > AI Ordering > Blocked numbers)? Any active entry means no cash. */
+async function cashBlocked(db, phoneE164) {
+    try {
+        return (await db.AiBlockedNumber.filter({ number: phoneE164 })).some((b) => b.is_active !== false);
+    } catch (e) {
+        console.warn(`${LOG} block list lookup failed - allowing: ${e?.message}`);
+        return false;
+    }
+}
+
 const feeSay = (n) => (Number(n) > 0 ? money(n) : 'free');
 
 /** "25 - 30" / "30-45 mins" -> "about 25 to 30 minutes" for reading out. */
@@ -1245,6 +1255,8 @@ Deno.serve(async (req) => {
                         const res = await base44.asServiceRole.functions.invoke('sendSMS', {
                             to: localPhone(s.customer_phone), message: text, restaurantId: restaurant.id,
                             restaurantName: restaurant.name, smsType: 'ai_payment_link',
+                            // every link is its own text (never dropped as a repeat), and sendSMS knows who is asking
+                            dedupeKey: `ai_${s.id}_${s.checkout_token.slice(0, 8)}`, aiCoreKey: Deno.env.get('AI_CORE_API_KEY'),
                         });
                         smsSent = res?.data?.success === true;
                     } catch (e) { console.warn(`${LOG} pay link SMS failed: ${e?.message}`); }
@@ -1268,6 +1280,13 @@ Deno.serve(async (req) => {
                 if (r.q.total > CASH_LIMIT) {
                     refuse('CASH_LIMIT', `Cash orders are limited to ${money(CASH_LIMIT)}; this one is ${money(r.q.total)}.`, {
                         cash_limit: CASH_LIMIT, say: `For orders over ${CASH_LIMIT} pounds we take payment by card. I can text you a secure link to pay.`,
+                    });
+                    break;
+                }
+                // A blocked number is not told it is blocked: it is simply offered card, like anyone over the limit
+                if (await cashBlocked(db, s.customer_phone)) {
+                    refuse('CASH_BLOCKED', 'This number is on the block list: card only.', {
+                        say: 'This order needs to be paid by card. I can text you a secure link to pay.',
                     });
                     break;
                 }
