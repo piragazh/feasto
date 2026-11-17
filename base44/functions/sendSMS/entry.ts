@@ -42,8 +42,14 @@ function normalizeUkMobile(rawPhone) {
 }
 
 // ── Idempotency key ─────────────────────────────────────────────────────
-function buildIdempotencyKey({ orderId, smsType, to }) {
+function buildIdempotencyKey({ orderId, smsType, to, dedupeKey }) {
     const type = smsType || 'customer_notification';
+    // A text that is not about an order but must still go out each time it is asked for
+    // (a new AI pay link, an AI transfer alert): without this, every such text to the same
+    // number shares ONE key and a provider may drop the second as a repeat of the first.
+    if (!orderId && dedupeKey) {
+        return `sms_${String(dedupeKey).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60)}_${type}_${to}`;
+    }
     if (orderId) {
         return `sms_${orderId}_${type}_${to}`;
     }
@@ -214,7 +220,7 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
-        const { to, message, orderId, restaurantId, restaurantName, smsType } = await req.json();
+        const { to, message, orderId, restaurantId, restaurantName, smsType, dedupeKey, aiCoreKey } = await req.json();
 
         // SECURITY: Either authenticated user OR valid recent order (for guest checkout)
         // — preserved exactly from original implementation —
@@ -250,6 +256,17 @@ Deno.serve(async (req) => {
             }
         }
 
+        // Server-to-server from the AI ordering functions (pay link text, transfer alert): there is
+        // no signed-in user on a phone call and no order yet, so they present the shared AI core key.
+        if (!isAuthorized) {
+            const expected = Deno.env.get('AI_CORE_API_KEY');
+            if (expected && typeof aiCoreKey === 'string' && aiCoreKey.length === expected.length) {
+                let diff = 0;
+                for (let i = 0; i < expected.length; i++) diff |= aiCoreKey.charCodeAt(i) ^ expected.charCodeAt(i);
+                if (diff === 0) isAuthorized = true;
+            }
+        }
+
         if (!isAuthorized) {
             return Response.json({ error: 'Unauthorized - authentication or recent order required' }, { status: 401 });
         }
@@ -268,7 +285,7 @@ Deno.serve(async (req) => {
         }
 
         // ── Idempotency key ──
-        const idempotencyKey = buildIdempotencyKey({ orderId, smsType, to: formattedPhone });
+        const idempotencyKey = buildIdempotencyKey({ orderId, smsType, to: formattedPhone, dedupeKey });
 
         const logParams = {
             restaurantId,
