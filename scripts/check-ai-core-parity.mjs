@@ -33,6 +33,11 @@ ck('aiOrderingCore has calcItemServerPrice', !!core);
 ck('aiOrderingCore prices items exactly like checkout validation', validator && core && validator === core,
     validator && core && validator !== core ? 'DIFFERS - copy the validator version into aiOrderingCore' : '');
 
+const vUk = fnBody(read('base44/functions/verifyAndCreateOrder/entry.ts'), 'ukInstant');
+const cUk = fnBody(read('base44/functions/aiOrderingCore/entry.ts'), 'ukInstant');
+ck('aiOrderingCore reads promotion dates exactly like checkout validation', vUk && cUk && vUk === cUk,
+    vUk && cUk && vUk !== cUk ? 'DIFFERS - copy ukInstant from the validator into aiOrderingCore' : '');
+
 const ok = checks.filter(Boolean).length;
 console.log(`\n  ${ok}/${checks.length} correct`);
 process.exit(ok === checks.length ? 0 : 1);

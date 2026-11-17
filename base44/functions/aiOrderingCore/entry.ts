@@ -745,7 +745,26 @@ const FREE_DELIVERY_VALUE = 2.99;
 
 // COPY of ukInstant in verifyAndCreateOrder (check-ai-core-parity.mjs compares): promotion dates
 // are stored without a time zone and mean UK time.
-// __UK_INSTANT__
+function ukInstant(value) {
+    const s = String(value || '').trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+    if (!m) return new Date(s);
+    const [, y, mo, d, h, mi, sec] = m.map(Number);
+    const asUtc = Date.UTC(y, mo - 1, d, h, mi, sec || 0);
+    // London's offset from UTC at (approximately) that moment, in minutes.
+    const offsetAt = (t) => {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Europe/London', hourCycle: 'h23',
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+        }).formatToParts(new Date(t));
+        const g = (k) => Number(parts.find(p => p.type === k).value);
+        return (Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - t) / 60000;
+    };
+    // Two passes so a time right at a clock change resolves correctly.
+    let t = asUtc - offsetAt(asUtc) * 60000;
+    t = asUtc - offsetAt(t) * 60000;
+    return new Date(t);
+}
 
 /** This restaurant's promotions that are live right now. A failed lookup means no offers, never a refused order. */
 async function loadPromotions(db, restaurantId) {
