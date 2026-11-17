@@ -16,7 +16,7 @@
  * mealdrop-retell (TK07f7278098658b5ec50b27c90fbaa9ec), origination sip:sip.retellai.com,
  * termination by IP ACL 18.98.16.120/30; in Retell its inbound webhook is retellVoice.
  *
- * 17 Nov 2026: prompt and tools changed (item requests, optional extras, multi-choice answers;
+ * 17 Nov 2026: prompt and tools changed (item requests, optional extras, multi-choice answers, offers;
  * tools add_extras and item_note added). RE-RUN this script with LLM_ID and AGENT_ID above to
  * update the live agent - until then it works as before but cannot take requests or extras.
  */
@@ -79,6 +79,7 @@ const PROMPT = `You answer the phone for {{restaurant_name}}, a UK takeaway, and
 - Every tool answer has a "next" field: follow it. It tells you which question comes next (delivery or collection, postcode, address, name, read-back, payment).
 - Never end the call while the caller still wants to order. Only end it after the order is placed or the payment link is sent, or if they say they don't want to order.
 - When the caller says "that's it" or "that's all", the ordering is NOT finished: move on to delivery or collection, then name, read-back and payment.
+- Offers are applied automatically: the totals the tools give already include them, so say the offer by name when you read the total back ("that includes ten percent off"). If a tool answer has a "tip", mention it once in a few words ("you're two pounds off ten percent off", "that one's buy one get one free - want the second?"). Never promise a discount the tools didn't show, and we can't take voucher codes on the phone.
 - Allergies: call get_item_details and repeat only the allergens listed. Never say anything is allergen-free. For a serious allergy, offer to put them through to the team.
 - Questions you can't answer from the tools (complaints, refunds, an existing order, opening times you don't have, anything off-menu): offer to transfer. Before transferring, call note_transfer with a few words of reason, then call transfer_to_restaurant. If a person can't take over ({{transfer_available}} is no), apologise and suggest they call back later.
 - If the caller asks for a person, transfer straight away (note_transfer first).
