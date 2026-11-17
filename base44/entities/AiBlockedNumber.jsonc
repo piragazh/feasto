@@ -1,0 +1,51 @@
+{
+  "description": "A phone number the AI ordering agents treat with caution, for every restaurant. Managed in Super Admin > AI Ordering > Blocked numbers. 'card_only': the number can still order but never pay cash (aiOrderingCore place_cash_order). 'reject_calls': calls from it to an AI line are not answered at all (retellVoice).",
+  "name": "AiBlockedNumber",
+  "properties": {
+    "number": {
+      "type": "string",
+      "description": "E.164 digits with no + (e.g. 447700900123)"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "card_only",
+        "reject_calls"
+      ],
+      "default": "card_only"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "number"
+  ],
+  "type": "object",
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
