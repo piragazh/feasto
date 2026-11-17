@@ -101,7 +101,7 @@ function NumbersTab({ restaurants, byId }) {
                     <code className="text-xs bg-gray-50 border rounded px-2 py-1 truncate flex-1">{endpoint}</code>
                     <Button size="sm" variant="ghost" aria-label="Copy endpoint" onClick={() => navigator.clipboard?.writeText(endpoint).then(() => toast.success('Copied'))}><Copy className="h-4 w-4" /></Button>
                 </div>
-                <p className="text-xs text-gray-500">Requests are checked with the <code>RETELL_API_KEY</code> secret. A call to a number that isn't linked (or is switched off) is rejected. Transfers go to the transfer number, or the restaurant's alert phone if that's empty.</p>
+                <p className="text-xs text-gray-500">Requests are checked with the <code>RETELL_API_KEY</code> secret. A call to a number that isn't linked (or is switched off) is rejected. If the ordering system can't start for a linked number, the caller is put straight through to the restaurant instead. Transfers go to the transfer number, or the restaurant's alert phone if that's empty.</p>
             </div>
 
             <div className="bg-white border rounded-xl p-4">
@@ -391,6 +391,93 @@ function TestConsole({ restaurants }) {
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────
+// ── Blocked numbers ──────────────────────────────────────────────────────────
+const BLOCK_MODE = {
+    card_only: { label: 'Card only', hint: 'Can still order, but never pay cash', cls: 'bg-amber-100 text-amber-800' },
+    reject_calls: { label: 'Calls rejected', hint: 'Calls to any AI line are not answered; also card only on chat', cls: 'bg-red-100 text-red-800' },
+};
+
+function BlockedTab() {
+    const [rows, setRows] = useState(null);
+    const [form, setForm] = useState({ number: '', mode: 'card_only', reason: '' });
+    const [saving, setSaving] = useState(false);
+    const load = async () => setRows(await base44.entities.AiBlockedNumber.list('-created_date', 500).catch(() => []));
+    useEffect(() => { load(); }, []);
+
+    const add = async () => {
+        const number = phoneDigits(form.number);
+        if (!number) return toast.error("That doesn't look like a phone number");
+        if ((rows || []).some((r) => r.number === number)) return toast.error(`${showPhone(number)} is already on the list`);
+        setSaving(true);
+        try {
+            await base44.entities.AiBlockedNumber.create({ number, mode: form.mode, reason: form.reason.trim() || undefined, is_active: true });
+            toast.success('Number blocked');
+            setForm({ number: '', mode: form.mode, reason: '' });
+            load();
+        } catch (e) { toast.error(e?.message || 'Could not save'); } finally { setSaving(false); }
+    };
+    const toggle = async (r) => { await base44.entities.AiBlockedNumber.update(r.id, { is_active: r.is_active === false }); load(); };
+    const remove = async (r) => {
+        if (!window.confirm(`Take ${showPhone(r.number)} off the block list?`)) return;
+        await base44.entities.AiBlockedNumber.delete(r.id);
+        load();
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="bg-white border rounded-xl p-4 text-sm text-gray-700 space-y-1">
+                <p className="font-semibold text-gray-900">Numbers the AI agents are careful with</p>
+                <p>Applies to every restaurant. <b>Card only</b>: the number can still order by phone or chat, but is never offered cash - it gets the pay link. <b>Calls rejected</b>: calls from it to any AI phone line are not answered.</p>
+                <p className="text-xs text-gray-500">A blocked caller is never told they are blocked. Withheld numbers can't be blocked; every caller is already limited to one cash order in progress, up to £50.</p>
+            </div>
+
+            <div className="bg-white border rounded-xl p-4">
+                <p className="font-semibold text-gray-900 mb-3">Block a number</p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                    <Input placeholder="Number, e.g. 07700 900123" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
+                    <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{Object.entries(BLOCK_MODE).map(([k, m]) => <SelectItem key={k} value={k}>{m.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Input placeholder="Reason (optional)" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+                    <Button onClick={add} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}Block number</Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">{BLOCK_MODE[form.mode].hint}.</p>
+                {form.number && !phoneDigits(form.number) && <p className="text-xs text-red-600 mt-1">Enter a full number, e.g. 07700 900123 or +44 7700 900123.</p>}
+            </div>
+
+            <div className="bg-white border rounded-xl overflow-hidden">
+                {rows === null ? (
+                    <div className="p-6 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400" /></div>
+                ) : rows.length === 0 ? (
+                    <p className="p-6 text-sm text-gray-500 text-center">No numbers blocked.</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+                                <th className="text-left p-3">Number</th><th className="text-left p-3">Rule</th><th className="text-left p-3">Reason</th>
+                                <th className="text-left p-3">Added</th><th className="text-left p-3">Active</th><th className="p-3" />
+                            </tr></thead>
+                            <tbody className="divide-y">
+                                {rows.map((r) => (
+                                    <tr key={r.id}>
+                                        <td className="p-3 font-medium whitespace-nowrap">{showPhone(r.number)}</td>
+                                        <td className="p-3"><Badge className={(BLOCK_MODE[r.mode] || BLOCK_MODE.card_only).cls}>{(BLOCK_MODE[r.mode] || BLOCK_MODE.card_only).label}</Badge></td>
+                                        <td className="p-3 text-gray-600">{r.reason || '—'}</td>
+                                        <td className="p-3 text-gray-600 whitespace-nowrap">{when(r.created_date)}</td>
+                                        <td className="p-3"><Switch checked={r.is_active !== false} onCheckedChange={() => toggle(r)} /></td>
+                                        <td className="p-3 text-right"><Button size="icon" variant="ghost" aria-label="Unblock number" onClick={() => remove(r)}><Trash2 className="h-4 w-4 text-red-500" /></Button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function AiOrderingAdmin() {
     const [restaurants, setRestaurants] = useState([]);
     useEffect(() => { base44.entities.Restaurant.list('name', 500).then(setRestaurants).catch(() => setRestaurants([])); }, []);
@@ -406,10 +493,12 @@ export default function AiOrderingAdmin() {
                 <TabsList>
                     <TabsTrigger value="sessions">Conversations</TabsTrigger>
                     <TabsTrigger value="numbers">Phone numbers</TabsTrigger>
+                    <TabsTrigger value="blocked">Blocked numbers</TabsTrigger>
                     <TabsTrigger value="test">Test console</TabsTrigger>
                 </TabsList>
                 <TabsContent value="sessions" className="mt-4"><SessionsTab restaurants={restaurants} byId={byId} /></TabsContent>
                 <TabsContent value="numbers" className="mt-4"><NumbersTab restaurants={restaurants} byId={byId} /></TabsContent>
+                <TabsContent value="blocked" className="mt-4"><BlockedTab /></TabsContent>
                 <TabsContent value="test" className="mt-4"><TestConsole restaurants={restaurants} /></TabsContent>
             </Tabs>
         </div>
