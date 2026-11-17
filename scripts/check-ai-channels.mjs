@@ -77,6 +77,9 @@ globalThis.Deno = { env: { get: (k) => ({ AI_CORE_API_KEY: 'k', RETELL_API_KEY: 
 handlers.aiOrderingCore = await load('aiOrderingCore');
 const webChat = await load('webChatAgent');
 const cleanup = await load('aiSessionCleanup');
+const retell = await load('retellVoice');
+const texts = [];
+handlers.sendSMS = async (req) => { texts.push(await req.json()); return Response.json({ success: true }); };
 
 tables.Restaurant = [{ id: 'r1', name: 'T', collection_enabled: true }];
 tables.MenuItem = [{ id: 'm1', restaurant_id: 'r1', name: 'Chicken Burger', price: 9, category: 'Burgers', is_available: true }];
@@ -119,6 +122,56 @@ ck('an existing chat carries on at the new-chat cap', r.ok === true, r);
 const sessionsBefore = tables.AiOrderSession.length;
 r = await chat({ restaurant_id: 'nope', message: 'hello' });
 ck('unknown restaurant: 404, nothing created or counted', r.status === 404 && tables.AiOrderSession.length === sessionsBefore && tables.AiUsageDay.length === 1, r);
+
+// ── Phone (retellVoice) ──
+const { createHmac } = await import('node:crypto');
+const phone = async (body, sign = true) => {
+    const raw = JSON.stringify(body);
+    const ts = String(Date.now());
+    const sig = sign ? `v=${ts},d=${createHmac('sha256', 'rk').update(raw + ts).digest('hex')}` : 'v=1,d=00';
+    const res = await retell(new Request('http://x', { method: 'POST', headers: { 'x-retell-signature': sig }, body: raw }));
+    return { status: res.status, ...(await res.json()) };
+};
+const inboundCall = (id, from, to = '+441473943323') => phone({ event: 'call_inbound', call_inbound: { call_id: id, from_number: from, to_number: to } });
+tables.Restaurant[0].alert_phone = '07700900555';
+tables.AiChannelNumber = [{ id: 'n1', restaurant_id: 'r1', channel: 'phone', number: '441473943323', is_active: true }];
+
+r = await phone({ event: 'call_inbound', call_inbound: {} }, false);
+ck('unsigned request refused', r.status === 401, r);
+r = await inboundCall('c1', '+447700900111');
+const sid = r.call_inbound?.dynamic_variables?.session_id;
+ck('linked number: session started, restaurant facts returned', !!sid && r.call_inbound.dynamic_variables.restaurant_name === 'T' && r.call_inbound.dynamic_variables.transfer_number === '+447700900555', r);
+r = await inboundCall('c2', '+447700900111', '+441111111111');
+ck('unlinked number rejected', r.call_inbound?.reject === true, r);
+
+const realCore = handlers.aiOrderingCore;
+handlers.aiOrderingCore = async () => { throw new Error('core down'); };
+r = await inboundCall('c3', '+447700900111');
+ck('core down: caller is put through to the restaurant, not rejected', !r.call_inbound?.reject && r.call_inbound?.dynamic_variables?.transfer_number === '+447700900555'
+    && /put you straight through/.test(r.call_inbound.agent_override?.retell_llm?.begin_message || '') && /transfer_to_restaurant/.test(r.call_inbound.dynamic_variables.closed_reason), r);
+tables.Restaurant[0].alert_phone = '';
+r = await inboundCall('c4', '+447700900111');
+ck('core down and nowhere to transfer: rejected', r.call_inbound?.reject === true, r);
+tables.Restaurant[0].alert_phone = '07700900555';
+handlers.aiOrderingCore = realCore;
+
+tables.AiBlockedNumber = [{ id: 'b1', number: '447700900222', mode: 'reject_calls', is_active: true }, { id: 'b2', number: '447700900333', mode: 'card_only', is_active: true }];
+r = await inboundCall('c5', '+447700900222');
+ck('blocked (calls rejected) number is not answered', r.call_inbound?.reject === true, r);
+r = await inboundCall('c6', '+447700900333');
+ck('card-only number is still answered', !!r.call_inbound?.dynamic_variables?.session_id, r);
+
+const callObj = { call_id: 'c1', metadata: { session_id: sid } };
+r = await phone({ name: 'add_item', args: { item_name: 'Chicken Burger', quantity: 1 }, call: callObj });
+ck('phone tool call adds to the basket', r.ok && /Chicken Burger/.test(r.added || ''), r);
+r = await phone({ name: 'note_transfer', args: { reason: 'wants to change an earlier order' }, call: callObj });
+r = await phone({ event: 'call_ended', call: { ...callObj, disconnection_reason: 'call_transfer', duration_ms: 60000 } });
+const t = texts.at(-1);
+ck('transfer: restaurant texted the caller\'s number and the reason', texts.length === 1 && t.to === '07700900555' && /07700 900111/.test(t.message) && /wants to change an earlier order/.test(t.message) && /1x Chicken Burger/.test(t.message) && t.dedupeKey && t.aiCoreKey === 'k', t);
+const ended = tables.AiOrderSession.find((x) => x.id === sid);
+ck('transferred call recorded as handed to staff, reason kept', ended.state === 'handoff' && ended.handoff_reason === 'wants to change an earlier order' && !!ended.ended_at, ended);
+r = await phone({ event: 'call_ended', call: { call_id: 'c6', disconnection_reason: 'user_hangup' } });
+ck('ordinary hang-up sends no text', texts.length === 1, texts);
 
 // ── Cleanup ──
 const daysAgo = (d) => new Date(Date.now() - d * 864e5).toISOString();
