@@ -16,9 +16,12 @@
  *   apply              { session_id, steps: [{ action, ...args }] }   several basket actions in one call (chat messages)
  *   search_menu        { session_id, query, limit? }
  *   get_item           { session_id, menu_item_id }         description, allergens, option groups
- *   add_item           { session_id, menu_item_id, quantity?, options? }   options: { "Group": "Label" | ["Label"] }
- *   choose_option      { session_id, option | option_index } answers the question add_item asked
+ *   add_item           { session_id, menu_item_id, quantity?, options?, note? }   options: { "Group": "Label" | ["Label"] }
+ *   choose_option      { session_id, option | options | option_index } answers the question add_item asked
+ *                      (a 'multiple' group takes several, up to its max_quantity)
  *   cancel_pending     { session_id }
+ *   set_item_note      { session_id, line?, note }          a request for the kitchen on one line ("no mayo"); empty note clears it
+ *   add_options        { session_id, line?, options }       optional extras for a line already in the basket (default: the last line)
  *   remove_item        { session_id, line? | menu_item_id?, quantity? }
  *   set_quantity       { session_id, line, quantity }
  *   clear_basket       { session_id }
@@ -71,6 +74,8 @@ const clip = (s, n) => {
     return t.length > n ? t.slice(0, n - 1) + '…' : t;
 };
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+/** A customer's request in their own words ("no mayo"): one line, no markup, short enough for a ticket. */
+const cleanNote = (s, n = 80) => clip(String(s ?? '').replace(/[<>]/g, '').replace(/\s+/g, ' '), n);
 const ok = (data = {}) => Response.json({ ok: true, ...data });
 const fail = (code, error, extra = {}, status = 200) => Response.json({ ok: false, code, error, say: extra.say || error, ...extra }, { status });
 
@@ -271,6 +276,57 @@ function groupLabel(group, nested) {
     return nested ? 'meal choice' : 'option';
 }
 
+/** How many options one answer may pick: 1, or for a 'multiple' group its max_quantity (the till and kiosk use the same cap). */
+const maxChoices = (g) => (g?.type !== 'multiple' ? 1
+    : Number(g.max_quantity) > 0 ? Math.floor(Number(g.max_quantity)) : Math.min(10, (g.options || []).length || 1));
+
+/**
+ * The option(s) an answer names. A 'multiple' group takes several at once - as a list, or said
+ * together ("garlic mayo and chilli") - up to its cap. { options: [] } = not a choice.
+ */
+function pickOptions(group, body) {
+    if (Number.isInteger(body.option_index)) {
+        const o = (group.options || [])[body.option_index];
+        return { options: o ? [o] : [] };
+    }
+    const raws = Array.isArray(body.options) ? body.options : [body.option];
+    let found = [];
+    for (const raw of raws) {
+        const one = matchOption(group, raw);
+        if (one) { found.push(one); continue; }
+        if (group.type !== 'multiple') return { options: [] };
+        const parts = String(raw ?? '').split(/,|&|\+|\band\b/i).map((x) => x.trim()).filter(Boolean);
+        const hits = parts.map((x) => matchOption(group, x));
+        if (parts.length < 2 || hits.some((h) => !h)) return { options: [] };
+        found.push(...hits);
+    }
+    found = [...new Set(found)];
+    if (group.type !== 'multiple') return { options: found.slice(0, 1) };
+    return found.length > maxChoices(group) ? { options: found, error: 'TOO_MANY' } : { options: found };
+}
+
+/**
+ * Optional extras this item has that the line doesn't use yet (cheese, sauces...), for an agent
+ * to offer ONCE. Never a blocking question: only required choices and meal upgrades are asked.
+ */
+function extrasHint(item, session) {
+    const line = [...(session.cart || [])].reverse().find((l) => l.menu_item_id === item.id);
+    const chosen = line?.customizations || {};
+    const groups = (item.customization_options || [])
+        .filter((g) => !g.required && g.type !== 'meal_upgrade' && g.name && (g.options || []).length && !(g.name in chosen))
+        .slice(0, 3).map((g) => ({
+            group: groupLabel(g), ...(g.type === 'multiple' ? { max_choices: maxChoices(g) } : {}),
+            options: (g.options || []).slice(0, 8).map((o) => ({ label: String(o.label).trim(), extra_price: round2(o.price || 0) })),
+        }));
+    return groups.length ? { extras_available: groups } : {};
+}
+
+/** What the kitchen must read: each line's request, then the note for the whole order. */
+function kitchenNotes(session) {
+    const items = (session.cart || []).filter((l) => l.note).map((l) => `${l.name}: ${l.note}`);
+    return [...items, session.order_notes].filter(Boolean).join('. ');
+}
+
 /** Match a spoken/typed label to one option: exact first, then a single unambiguous partial match. */
 function matchOption(group, raw) {
     const want = norm(String(raw ?? '').replace(/\(\s*\+?\s*£?\s*[\d.]+\s*\)/g, ''));
@@ -337,7 +393,7 @@ function startPending(item, quantity, chosen = {}) {
     const take = (g, index, key) => {
         const labels = Array.isArray(given[key]) ? given[key] : [given[key]];
         delete given[key];
-        for (const raw of labels.slice(0, g.type === 'multiple' ? 10 : 1)) {
+        for (const raw of labels.slice(0, maxChoices(g))) {
             const option = matchOption(g, raw);
             if (!option) { ignored.push(`${g.name || groupLabel(g)}: ${raw}`); continue; }
             recordChoice(pending, item, { group_name: g.name, parent: null, index }, option);
@@ -384,19 +440,23 @@ function nextQuestion(item, pending) {
         item_name: name,
         group: label,
         options: opts,
+        ...(group.type === 'multiple' ? { multiple: true, max_choices: maxChoices(group) } : {}),
         say: group.type === 'meal_upgrade' && !String(group.name || '').trim()
             ? `Would you like the ${name} on its own, or as a meal? ${list}.`
             : opts.length <= 3 && group.type !== 'multiple'
                 ? `Would you like the ${name} ${opts.map((o) => o.label + (o.extra_price ? ` (plus ${money(o.extra_price)})` : '')).join(', ').replace(/, ([^,]*)$/, ' or $1')}?`
-                : `Which ${label} would you like for the ${name}? ${list}.`,
+                : `Which ${label} would you like for the ${name}? ${list}.`
+                    + (group.type !== 'multiple' ? '' : Number(group.max_quantity) > 0
+                        ? (maxChoices(group) > 1 ? ` You can choose up to ${maxChoices(group)}.` : '') : ' You can have more than one.'),
     };
 }
 
 function addLine(session, line) {
     const cart = [...(session.cart || [])];
-    const key = JSON.stringify({ c: line.customizations || {}, q: line.itemQuantities || {} });
+    // A line with a request ("no mayo") is its own line: it must not merge into a plain one
+    const key = JSON.stringify({ c: line.customizations || {}, q: line.itemQuantities || {}, n: line.note || '' });
     const existing = cart.find((l) => l.menu_item_id === line.menu_item_id
-        && JSON.stringify({ c: l.customizations || {}, q: l.itemQuantities || {} }) === key);
+        && JSON.stringify({ c: l.customizations || {}, q: l.itemQuantities || {}, n: l.note || '' }) === key);
     if (existing) existing.quantity = Math.min(MAX_QTY, existing.quantity + line.quantity);
     else cart.push(line);
     session.cart = cart;
@@ -414,9 +474,10 @@ function finishPending(session, item) {
         customizations: p.customizations || {},
         itemQuantities: p.itemQuantities || {},
         options_summary: (p.summary || []).join(', '),
+        ...(p.note ? { note: p.note } : {}),
     });
     session.pending_item = null;
-    return { quantity: p.quantity, name: String(item.name || '').trim(), unit_price: round2(serverPrice), options: (p.summary || []).join(', ') };
+    return { quantity: p.quantity, name: String(item.name || '').trim(), unit_price: round2(serverPrice), options: (p.summary || []).join(', '), ...(p.note ? { note: p.note } : {}) };
 }
 
 // ── Pricing: COPY of calcItemServerPrice in verifyAndCreateOrder (online prices) ──
@@ -702,6 +763,7 @@ function basketView(session) {
     return (session.cart || []).map((l, i) => ({
         line: i + 1, menu_item_id: l.menu_item_id, name: l.name, quantity: l.quantity,
         unit_price: l.price, line_total: round2(l.price * l.quantity), options: l.options_summary || '',
+        ...(l.note ? { note: l.note } : {}),
         ...(l.external ? { deal: true } : {}),
     }));
 }
@@ -709,7 +771,7 @@ function basketView(session) {
 function basketSay(session, q) {
     const cart = session.cart || [];
     if (!cart.length) return 'Your basket is empty.';
-    const lines = cart.map((l) => `${l.quantity} ${l.name}${l.options_summary ? ` (${l.options_summary})` : ''}`).join(', ');
+    const lines = cart.map((l) => `${l.quantity} ${l.name}${l.options_summary ? ` (${l.options_summary})` : ''}${l.note ? ` - ${l.note}` : ''}`).join(', ');
     const fee = q.order_type === 'delivery' && q.delivery_fee ? `, plus ${money(q.delivery_fee)} delivery` : '';
     if (!fee && !q.small_order_surcharge) return `You've got ${lines}. That's ${money(q.total)} in total.`;
     return `You've got ${lines}. That's ${money(q.subtotal)}${fee}${q.small_order_surcharge ? ` and a ${money(q.small_order_surcharge)} service charge` : ''}, ${money(q.total)} in total.`;
@@ -755,7 +817,7 @@ function readiness(session, restaurant, menu, opts = {}) {
 // ── Session persistence ─────────────────────────────────────────────────────
 const OWNED = ['cart', 'pending_item', 'order_type', 'delivery_address', 'delivery_postcode', 'delivery_quote',
     'customer_name', 'customer_phone', 'state', 'checkout_token', 'checkout_token_expires_at', 'order_id',
-    'handoff_reason', 'ended_at'];
+    'handoff_reason', 'ended_at', 'order_notes'];
 
 /**
  * Writes only the fields this call changed. `rev` counts basket/state changes: if
@@ -945,7 +1007,7 @@ Deno.serve(async (req) => {
         if (!before) return fail('SESSION_NOT_FOUND', 'Session not found.');
         if (['closed'].includes(before.state) && action !== 'get_context') return fail('SESSION_CLOSED', 'This session has ended.');
         // Once an order exists (cash, or a paid link linked by aiOrderLink) the basket is frozen
-        const CHANGES_ORDER = ['add_item', 'choose_option', 'cancel_pending', 'remove_item', 'set_quantity', 'clear_basket', 'import_basket', 'set_order_type', 'check_delivery', 'send_payment_link'];
+        const CHANGES_ORDER = ['add_item', 'choose_option', 'cancel_pending', 'remove_item', 'set_quantity', 'clear_basket', 'import_basket', 'set_order_type', 'check_delivery', 'send_payment_link', 'set_item_note', 'add_options'];
         if (before.order_id && CHANGES_ORDER.includes(action)) {
             return fail('ALREADY_ORDERED', 'This order has already been placed.', { order_id: before.order_id, say: 'Your order is already placed. For any changes, let me put you through to the team.' });
         }
@@ -1053,6 +1115,7 @@ Deno.serve(async (req) => {
                     break;
                 }
                 const { pending, ignored } = startPending(item, body.quantity, body.options);
+                if (body.note) pending.note = cleanNote(body.note);
                 s.pending_item = pending;
                 note = `${pending.quantity}x ${item.name}`;
                 if (pending.queue.length) {
@@ -1061,7 +1124,7 @@ Deno.serve(async (req) => {
                 } else {
                     const added = finishPending(s, item);
                     const q = quote(s, restaurant);
-                    done({ added: true, line: added, ignored_options: ignored, basket: basketView(s), quote: q, say: `Added ${added.quantity} ${added.name}${added.options ? ` (${added.options})` : ''}. Anything else?` });
+                    done({ added: true, line: added, ignored_options: ignored, ...extrasHint(item, s), basket: basketView(s), quote: q, say: `Added ${added.quantity} ${added.name}${added.options ? ` (${added.options})` : ''}. Anything else?` });
                 }
                 break;
             }
@@ -1074,14 +1137,20 @@ Deno.serve(async (req) => {
                 const group = findGroup(item, step);
                 if (!group) { p.queue.shift(); }
                 else {
-                    const option = Number.isInteger(body.option_index) ? (group.options || [])[body.option_index] : matchOption(group, body.option);
-                    if (!option) {
-                        refuse('OPTION_NOT_FOUND', `"${clip(body.option, 40)}" isn't one of the choices.`, { question: nextQuestion(item, p) });
+                    const picked = pickOptions(group, body);
+                    if (picked.error === 'TOO_MANY') {
+                        refuse('TOO_MANY_OPTIONS', `Up to ${maxChoices(group)} can be chosen here.`, {
+                            question: nextQuestion(item, p), say: `You can choose up to ${maxChoices(group)} for that. Which would you like?`,
+                        });
+                        break;
+                    }
+                    if (!picked.options.length) {
+                        refuse('OPTION_NOT_FOUND', `"${clip(body.option ?? (Array.isArray(body.options) ? body.options.join(', ') : ''), 40)}" isn't one of the choices.`, { question: nextQuestion(item, p) });
                         break;
                     }
                     p.queue.shift();
-                    recordChoice(p, item, step, option);
-                    note = `${group.name}=${option.label}`;
+                    for (const option of picked.options) recordChoice(p, item, step, option);
+                    note = `${group.name}=${picked.options.map((o) => o.label).join(' + ')}`;
                 }
                 if (p.queue.length) {
                     const question = nextQuestion(item, p);
@@ -1089,7 +1158,7 @@ Deno.serve(async (req) => {
                 } else {
                     const added = finishPending(s, item);
                     const q = quote(s, restaurant);
-                    done({ added: true, line: added, basket: basketView(s), quote: q, say: `Added ${added.quantity} ${added.name}${added.options ? ` (${added.options})` : ''}. Anything else?` });
+                    done({ added: true, line: added, ...extrasHint(item, s), basket: basketView(s), quote: q, say: `Added ${added.quantity} ${added.name}${added.options ? ` (${added.options})` : ''}. Anything else?` });
                 }
                 break;
             }
@@ -1114,6 +1183,62 @@ Deno.serve(async (req) => {
                 s.cart = cart;
                 const q = quote(s, restaurant);
                 done({ basket: basketView(s), quote: q, say: basketSay(s, q) });
+                break;
+            }
+
+            case 'set_item_note': {
+                // "No mayo", "well done": words for the kitchen on one line. Never changes a price.
+                const cart = [...(s.cart || [])];
+                const idx = body.line ? Number(body.line) - 1 : cart.length - 1;
+                if (!(idx >= 0 && cart[idx]) || cart[idx].external) { refuse('LINE_NOT_FOUND', "I couldn't find that in the basket.", { basket: basketView(s) }); break; }
+                const text = cleanNote(body.note);
+                const { note: _old, ...rest } = cart[idx];
+                cart[idx] = text ? { ...rest, note: text } : rest;
+                s.cart = cart;
+                note = `line ${idx + 1}: ${text || '(cleared)'}`;
+                done({ basket: basketView(s), quote: quote(s, restaurant), say: text ? `Noted for the ${cart[idx].name}: ${text}.` : 'I have taken that note off.' });
+                break;
+            }
+
+            case 'add_options': {
+                // Extras for a line already in the basket (cheese on the burger). Priced by the same
+                // function as everything else, from the menu.
+                const cart = [...(s.cart || [])];
+                const idx = body.line ? Number(body.line) - 1 : cart.length - 1;
+                const line = idx >= 0 ? cart[idx] : null;
+                const item = line && !line.external ? menu.byId.get(line.menu_item_id) : null;
+                if (!item) { refuse('LINE_NOT_FOUND', "I couldn't find that in the basket.", { basket: basketView(s) }); break; }
+                const groups = (item.customization_options || []).filter((g) => g.type !== 'meal_upgrade' && g.name && (g.options || []).length);
+                const customizations = { ...(line.customizations || {}) };
+                const applied = [];
+                const ignored = [];
+                const given = body.options && typeof body.options === 'object' ? body.options : {};
+                for (const [key, val] of Object.entries(given)) {
+                    for (const raw of (Array.isArray(val) ? val : [val]).slice(0, 10)) {
+                        const named = groups.find((x) => norm(x.name) === norm(key) || norm(groupLabel(x)) === norm(key));
+                        const hits = groups.filter((x) => matchOption(x, raw));
+                        const g = named && matchOption(named, raw) ? named : hits.length === 1 ? hits[0] : null;
+                        if (!g) { ignored.push(`${key}: ${raw}`); continue; }
+                        const o = matchOption(g, raw);
+                        if (g.type === 'multiple') {
+                            const cur = Array.isArray(customizations[g.name]) ? customizations[g.name] : customizations[g.name] ? [customizations[g.name]] : [];
+                            if (cur.includes(o.label)) continue;
+                            if (cur.length >= maxChoices(g)) { ignored.push(`${String(o.label).trim()} (only ${maxChoices(g)} ${groupLabel(g)} allowed)`); continue; }
+                            customizations[g.name] = [...cur, o.label];
+                        } else customizations[g.name] = o.label;
+                        applied.push(String(o.label).trim());
+                    }
+                }
+                if (!applied.length) {
+                    refuse('OPTION_NOT_FOUND', "That isn't one of the extras for this item.", { ignored_options: ignored, ...extrasHint(item, s) });
+                    break;
+                }
+                const { serverPrice } = calcItemServerPrice(item, { customizations, itemQuantities: line.itemQuantities || {} });
+                cart[idx] = { ...line, customizations, price: round2(serverPrice), options_summary: summarizeCustomizations(customizations) };
+                s.cart = cart;
+                note = `line ${idx + 1}: +${applied.join(', ')}`;
+                const q = quote(s, restaurant);
+                done({ applied, ignored_options: ignored, line: basketView(s)[idx], basket: basketView(s), quote: q, say: `Added ${applied.join(', ')} to the ${line.name}.` });
                 break;
             }
 
@@ -1208,6 +1333,8 @@ Deno.serve(async (req) => {
                         ? { postcode: pc, zones_configured: true, available: true, fee: zone.delivery_fee, minimum_order: zone.min_order_value || 0, zone_name: zone.name, eta: zone.estimated_delivery_time || null }
                         : { postcode: pc, zones_configured: true, available: false };
                 }
+                // Kept so a cash order carries a map position (the postcode's centre) for the driver
+                if (geo.valid && dq.available) { dq.lat = geo.lat; dq.lng = geo.lng; }
                 s.delivery_postcode = pc;
                 s.delivery_quote = dq;
                 if (body.address) s.delivery_address = clip(body.address, 300);
@@ -1236,6 +1363,7 @@ Deno.serve(async (req) => {
 
             case 'send_payment_link': {
                 const atCheckout = body.details_at_checkout === true;
+                if (body.notes) s.order_notes = cleanNote(body.notes, 300);
                 const r = readiness(s, restaurant, menu, { detailsAtCheckout: atCheckout });
                 if (!r.q) {
                     const { code, error, ...rest } = r;
@@ -1297,6 +1425,7 @@ Deno.serve(async (req) => {
                     break;
                 }
 
+                if (body.notes) s.order_notes = cleanNote(body.notes, 300);
                 const q = r.q;
                 const address = s.order_type === 'delivery'
                     ? clip(`${s.delivery_address}${s.delivery_postcode && !String(s.delivery_address).toUpperCase().includes(s.delivery_postcode.replace(' ', '')) && !String(s.delivery_address).toUpperCase().includes(s.delivery_postcode) ? `, ${s.delivery_postcode}` : ''}`, 500)
@@ -1322,10 +1451,12 @@ Deno.serve(async (req) => {
                     order_type: s.order_type,
                     status: 'pending',
                     delivery_address: address,
-                    delivery_coordinates: null,
+                    delivery_coordinates: s.order_type === 'delivery' && Number.isFinite(s.delivery_quote?.lat) && Number.isFinite(s.delivery_quote?.lng)
+                        ? { lat: s.delivery_quote.lat, lng: s.delivery_quote.lng } : null,
                     phone: localPhone(s.customer_phone),
-                    notes: clip(`AI ${channelWord} order.${body.notes ? ` ${String(body.notes).replace(/[<>]/g, '')}` : ''}`, 500),
-                    estimated_delivery: s.order_type === 'collection' ? '15-20 minutes' : '30-45 minutes',
+                    notes: clip(`AI ${channelWord} order. ${kitchenNotes(s)}`.trim(), 500),
+                    // the same time the customer was told, not a fixed guess
+                    estimated_delivery: s.order_type === 'collection' ? '15-20 minutes' : (s.delivery_quote?.eta || restaurant.delivery_time || '30-45 minutes'),
                     is_scheduled: false,
                     scheduled_for: null,
                     guest_name: s.customer_name,
