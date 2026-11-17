@@ -77,7 +77,7 @@ async function sessionFor(db, call) {
 
 // ── Shaping answers for a voice model ───────────────────────────────────────
 function basketLines(basket) {
-    return (basket || []).map((l) => `${l.line}. ${l.quantity} x ${l.name}${l.options ? ` (${l.options})` : ''} = ${money(l.line_total)}`);
+    return (basket || []).map((l) => `${l.line}. ${l.quantity} x ${l.name}${l.options ? ` (${l.options})` : ''}${l.note ? ` [request: ${l.note}]` : ''} = ${money(l.line_total)}`);
 }
 function quoteText(q) {
     if (!q) return '';
@@ -94,7 +94,9 @@ function question(q) {
         options: (q.options || []).map((o) => o.label),
         ...(extras.length ? { prices: extras } : {}),
         ask_caller: q.say,
-        then: 'Call choose_option with exactly one of the options, as written. If they want something else on this item, ask this question first.',
+        then: q.multiple && q.max_choices > 1
+            ? `They may choose up to ${q.max_choices}. Call choose_option ONCE with everything they chose, each written as listed and joined with " and ".`
+            : 'Call choose_option with exactly one of the options, as written. If they want something else on this item, ask this question first.',
     };
 }
 /**
@@ -116,6 +118,16 @@ function nextFrom(q, customer) {
     if (customer && !customer.name) return 'Ask for a name for the order and save it with set_customer (name).';
     if (customer) return `Call get_order, read the whole order and total back, then ${payAsk(q)}`;
     return `Ask if they would like anything else. ${ITEMS_DONE}carry on: name, read the order back, then ask cash or card.`;
+}
+
+/** Optional extras the core says the line just added could take: offered once, never pushed. */
+function extrasOffer(r) {
+    const groups = r.extras_available || [];
+    if (!groups.length) return {};
+    return {
+        extras: groups.map((g) => `${g.group}: ${g.options.map((o) => (o.extra_price ? `${o.label} (+${money(o.extra_price)})` : o.label)).join(', ')}`),
+        offer_once: 'Before asking "anything else?", ask ONCE whether they would like any extras with that, naming two or three. If yes, call add_extras with what they chose. If no, move on and do not ask again for this item.',
+    };
 }
 
 /** A core refusal in a form the agent can act on. */
@@ -176,18 +188,37 @@ const TOOLS = {
             if (!c?.group || !c?.option) continue;
             options[c.group] = options[c.group] ? [].concat(options[c.group], c.option) : c.option;
         }
-        const r = await core(ctx.base44, 'add_item', { session_id: ctx.sid, menu_item_id: a.menu_item_id, item_name: clip(a.item_name, 120), quantity: a.quantity || 1, options });
+        const r = await core(ctx.base44, 'add_item', { session_id: ctx.sid, menu_item_id: a.menu_item_id, item_name: clip(a.item_name, 120), quantity: a.quantity || 1, options, note: a.note ? clip(a.note, 80) : undefined });
         if (!r.ok) return notFound(r);
         const ignored = r.ignored_options?.length ? { not_understood: r.ignored_options, note: 'Those choices did not match the menu; they will be asked again if needed.' } : {};
         if (!r.added) return { ok: true, added: false, waiting_for: question(r.needs_choice), ...ignored };
-        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), next: nextFrom(r.quote), ...ignored };
+        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), ...extrasOffer(r), next: nextFrom(r.quote), ...ignored };
     },
 
     async choose_option(ctx, a) {
         const r = await core(ctx.base44, 'choose_option', { session_id: ctx.sid, option: clip(String(a.option || '').replace(/\(\s*\+?\s*£?\s*[\d.]+\s*\)/g, ''), 80) });
         if (!r.ok) return refusal(r);
         if (!r.added) return { ok: true, added: false, waiting_for: question(r.needs_choice) };
-        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), next: nextFrom(r.quote) };
+        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), ...extrasOffer(r), next: nextFrom(r.quote) };
+    },
+
+    async add_extras(ctx, a) {
+        const options = {};
+        for (const c of Array.isArray(a.choices) ? a.choices : []) {
+            if (!c?.option) continue;
+            const g = c.group || c.option;
+            options[g] = options[g] ? [].concat(options[g], c.option) : c.option;
+        }
+        const r = await core(ctx.base44, 'add_options', { session_id: ctx.sid, line: a.line ? Number(a.line) : undefined, options });
+        if (!r.ok) return { ...refusal(r), ...(r.extras_available ? { available: extrasOffer(r).extras } : {}) };
+        return { ok: true, line: basketLines([r.line])[0], running_total: money(r.quote?.subtotal),
+            ...(r.ignored_options?.length ? { not_added: r.ignored_options } : {}), next: nextFrom(r.quote) };
+    },
+
+    async item_note(ctx, a) {
+        const r = await core(ctx.base44, 'set_item_note', { session_id: ctx.sid, line: a.line ? Number(a.line) : undefined, note: clip(a.note, 80) });
+        if (!r.ok) return { ...refusal(r), basket: basketLines(r.basket) };
+        return { ok: true, say: r.say, next: nextFrom(r.quote) };
     },
 
     async skip_item(ctx) {
@@ -266,7 +297,7 @@ const TOOLS = {
             return { ok: true, placed: true, order_number: r.order_number || undefined, total: money(r.total), ready_in: r.eta,
                 say: r.say, next: 'Thank them and end the call.' };
         }
-        const r = await core(ctx.base44, 'send_payment_link', { session_id: ctx.sid, send_sms: true });
+        const r = await core(ctx.base44, 'send_payment_link', { session_id: ctx.sid, send_sms: true, notes: a.notes ? clip(a.notes, 200) : undefined });
         if (!r.ok) return refusal(r);
         if (!r.sms_sent) {
             return { ok: false, problem: 'SMS_FAILED', total: money(r.quote?.total),
