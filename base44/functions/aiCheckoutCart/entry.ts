@@ -49,6 +49,10 @@ Deno.serve(async (req) => {
             delivery_address: address,
             phone,
             customer_name: session.customer_name || '',
+            // What the customer asked for in the conversation ("Chicken Burger: no mayo"), so the
+            // checkout's notes box starts with it and it reaches the kitchen on a card order too
+            notes: [...(session.cart || []).filter((l) => l.note).map((l) => `${l.name}: ${l.note}`), session.order_notes]
+                .filter(Boolean).join('. ').slice(0, 500),
         });
     } catch (error) {
         console.error('[aiCheckoutCart]', error);
