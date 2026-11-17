@@ -32,6 +32,9 @@ Deno.serve(async (req) => {
         const cart = (session.cart || []).map((l) => ({
             menu_item_id: l.menu_item_id, name: l.name, price: l.price, quantity: l.quantity,
             image_url: l.image_url, customizations: l.customizations || {}, itemQuantities: l.itemQuantities || {},
+            // Buy-one-get-one-free lines carry the same tags the restaurant page sets, so the checkout
+            // gives the free item the agent quoted
+            ...(l.promotion_type ? { promotion_id: l.promotion_id, promotion_type: l.promotion_type, promotion_name: l.promotion_name } : {}),
         }));
         if (!cart.length) return Response.json({ error: 'Your basket is empty.' }, { status: 409 });
 
