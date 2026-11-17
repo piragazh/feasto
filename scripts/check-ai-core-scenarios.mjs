@@ -117,5 +117,19 @@ r = await call({ action: 'check_delivery', session_id: s4, postcode: 'RM18 7NR' 
 ck('lookup down + postcode zone still matches', r.ok && r.delivery?.available === true, r);
 r = await call({ action: 'check_delivery', session_id: s4, postcode: 'SS1 1AA' });
 ck('lookup down + postcode-only zones, other area -> OUT_OF_AREA', r.code === 'OUT_OF_AREA', r);
+// block list: card only, and the caller is not told why
+tables.DeliveryZone = [];
+tables.AiBlockedNumber = [{ id: 'b1', number: '447700900009', mode: 'card_only', is_active: true }];
+let s5 = await start('07700900009');
+await call({ action: 'add_item', session_id: s5, menu_item_id: 'm2', quantity: 1 });
+await call({ action: 'set_order_type', session_id: s5, order_type: 'collection' });
+r = await call({ action: 'place_cash_order', session_id: s5 });
+ck('blocked number: cash refused, card offered, no mention of a block', r.code === 'CASH_BLOCKED' && /card/.test(r.say) && !/block/i.test(r.say), r);
+r = await call({ action: 'send_payment_link', session_id: s5, send_sms: false });
+ck('blocked number can still pay by card', r.ok && r.checkout_url, r);
+tables.AiBlockedNumber[0].is_active = false;
+r = await call({ action: 'place_cash_order', session_id: s5, dry_run: true });
+ck('switched-off block no longer applies', r.ok && r.dry_run, r);
+
 console.log(`\n${pass}/${total} correct`);
 process.exit(pass === total ? 0 : 1);
