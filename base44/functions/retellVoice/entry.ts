@@ -84,6 +84,7 @@ function quoteText(q) {
     const parts = [`items ${money(q.subtotal)}`];
     if (q.order_type === 'delivery') parts.push(`delivery ${q.delivery_fee ? money(q.delivery_fee) : 'free'}`);
     if (q.small_order_surcharge) parts.push(`service charge ${money(q.small_order_surcharge)}`);
+    if (q.discount) parts.push(`${money(q.discount)} off with ${(q.promotions || []).map((p) => p.name).join(' and ') || 'an offer'} (already applied)`);
     return `${parts.join(', ')}; total ${money(q.total)}`;
 }
 function question(q) {
@@ -119,6 +120,9 @@ function nextFrom(q, customer) {
     if (customer) return `Call get_order, read the whole order and total back, then ${payAsk(q)}`;
     return `Ask if they would like anything else. ${ITEMS_DONE}carry on: name, read the order back, then ask cash or card.`;
 }
+
+/** An offer the caller is one step from (spend a little more, one more is free): mentioned once, never pushed. */
+const tip = (q) => (q?.promo_hints?.length ? { tip: `You may mention ONCE, in a few words: ${q.promo_hints[0]}.` } : {});
 
 /** Optional extras the core says the line just added could take: offered once, never pushed. */
 function extrasOffer(r) {
@@ -192,14 +196,14 @@ const TOOLS = {
         if (!r.ok) return notFound(r);
         const ignored = r.ignored_options?.length ? { not_understood: r.ignored_options, note: 'Those choices did not match the menu; they will be asked again if needed.' } : {};
         if (!r.added) return { ok: true, added: false, waiting_for: question(r.needs_choice), ...ignored };
-        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), ...extrasOffer(r), next: nextFrom(r.quote), ...ignored };
+        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), ...extrasOffer(r), ...tip(r.quote), next: nextFrom(r.quote), ...ignored };
     },
 
     async choose_option(ctx, a) {
         const r = await core(ctx.base44, 'choose_option', { session_id: ctx.sid, option: clip(String(a.option || '').replace(/\(\s*\+?\s*£?\s*[\d.]+\s*\)/g, ''), 80) });
         if (!r.ok) return refusal(r);
         if (!r.added) return { ok: true, added: false, waiting_for: question(r.needs_choice) };
-        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), ...extrasOffer(r), next: nextFrom(r.quote) };
+        return { ok: true, added: `${r.line.quantity} x ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}`, running_total: money(r.quote?.subtotal), ...extrasOffer(r), ...tip(r.quote), next: nextFrom(r.quote) };
     },
 
     async add_extras(ctx, a) {
@@ -244,6 +248,7 @@ const TOOLS = {
             ...(r.removed_unavailable?.length ? { removed_because_unavailable: r.removed_unavailable } : {}),
             ...(r.pending ? { waiting_for: question(r.pending) } : {}),
             ...(r.quote?.below_minimum ? { below_minimum: `Delivery minimum is ${money(r.quote.minimum_order)}; ${money(r.quote.short_by)} short.` } : {}),
+            ...tip(r.quote),
             next: !(r.basket || []).length ? 'The order is empty. Ask what they would like.'
                 : !r.quote?.order_type ? 'Read the order back. Then ASK "Is that for delivery or collection?" and wait for their answer before calling set_order_type.'
                 : `Read the order and total back. If they have given a name (and address for delivery), ${payAsk(r.quote)}`,
