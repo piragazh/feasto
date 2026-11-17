@@ -5,6 +5,7 @@ import { MessageCircle, X, Send, Loader2, Bot, ShoppingCart } from 'lucide-react
 import { motion, AnimatePresence } from 'framer-motion';
 import EscalationDialog from './EscalationDialog';
 import { createPageUrl } from '@/utils';
+import { saveAiCheckoutToken } from '@/lib/ai-checkout-token';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const getCart = () => {
@@ -278,6 +279,8 @@ export default function ChatbotWidget() {
             }));
             if (!res?.ok) throw new Error(res?.error || 'failed');
             saveToken(restaurantId, res.chat_token);
+            // The chat added to the basket: checkout sends this with the order so it counts as chat-assisted
+            if (res.attribution_token) saveAiCheckoutToken(res.attribution_token, restaurantId);
             if (Array.isArray(res.cart_lines) && cartKey(res.cart_lines) !== cartKey(sentCart)) {
                 writeCart(res.cart_lines, currentRestaurant || { id: restaurantId, name: '' });
                 setCart(getCart());
