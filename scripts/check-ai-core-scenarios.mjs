@@ -43,7 +43,7 @@ const T = (name) => {
 const entities = new Proxy({}, { get: (_, k) => T(k) });
 globalThis.__client = { auth: { me: async () => { throw new Error('no'); } }, asServiceRole: { entities, functions: { invoke: async (f, a) => {
   if (f === 'verifyAndCreateOrder') { const o = await entities.Order.create({ ...a.orderData, order_source: 'online' }); return { data: { success: true, order_id: o.id, order_number: 'C-1' } }; }
-  return { data: { success: true } }; } } } };
+  (globalThis.__invoked ||= []).push([f, a]); return { data: { success: true } }; } } } };
 globalThis.Deno = { env: { get: (k) => (k === 'AI_CORE_API_KEY' ? 'k' : undefined) }, serve: (h) => { globalThis.h = h; } };
 let fetchMode = 'down';
 globalThis.fetch = async () => { if (fetchMode === 'down') throw new Error('timeout'); return new Response(JSON.stringify({ result: { latitude: 51.46, longitude: 0.36, postcode: 'RM18 7NR' } })); };
@@ -162,6 +162,32 @@ ck('kitchen note has each request and the order note', /Cheese Burger: no bsalad
 ck('order stores the delivery time the customer was told', od.estimated_delivery === '20-30 mins', od.estimated_delivery);
 r = await call({ action: 'send_payment_link', session_id: s6, send_sms: false, notes: 'side gate' });
 ck('card orders keep the note too', r.ok && tables.AiOrderSession.find((x) => x.id === s6).order_notes === 'side gate', r);
+
+// offers the website applies on its own: spend offers and buy-one-get-one-free
+tables.DeliveryZone = [];
+tables.Promotion = [
+    { id: 'p1', restaurant_id: 'r1', is_active: true, name: 'Ten percent off', promotion_code: 'TEN', promotion_type: 'percentage_off', discount_value: 10, condition_type: 'minimum_order', minimum_order: 20, start_date: '2026-01-01T00:00', end_date: '2031-01-01T00:00' },
+    { id: 'p2', restaurant_id: 'r1', is_active: true, name: 'Wrap BOGO', promotion_type: 'buy_one_get_one', applicable_items: ['m2'], start_date: '2026-01-01T00:00', end_date: '2031-01-01T00:00' },
+    { id: 'p3', restaurant_id: 'r1', is_active: true, name: 'Old half price', promotion_type: 'percentage_off', discount_value: 50, condition_type: 'minimum_order', minimum_order: 1, start_date: '2025-01-01T00:00', end_date: '2025-02-01T00:00' },
+    { id: 'p4', restaurant_id: 'r1', is_active: true, name: 'Used up', promotion_type: 'fixed_amount_off', discount_value: 5, condition_type: 'minimum_order', minimum_order: 1, usage_limit: 3, usage_count: 3, start_date: '2026-01-01T00:00', end_date: '2031-01-01T00:00' },
+];
+let s7 = await start('07700900011');
+r = await call({ action: 'add_item', session_id: s7, menu_item_id: 'm1', quantity: 2 });
+ck('under the spend offer: no discount, told how close', r.quote.discount === 0 && r.quote.total === 18 && /Spend £2.00 more for 10% off/.test(r.quote.promo_hints.join()), r.quote);
+r = await call({ action: 'add_item', session_id: s7, menu_item_id: 'm2', quantity: 1 });
+ck('over it: 10% off the items; expired and used-up offers ignored', r.quote.subtotal === 23 && r.quote.discount === 2.3 && r.quote.total === 20.7 && r.quote.promotions.length === 1, r.quote);
+ck('one wrap: told the second is free', /Veggie Wrap is buy one get one free/.test(r.quote.promo_hints.join()), r.quote.promo_hints);
+r = await call({ action: 'set_quantity', session_id: s7, line: 2, quantity: 2 });
+ck('two wraps: one free, on top of the 10%', r.quote.subtotal === 28 && r.quote.discount === 7.8 && r.quote.total === 20.2 && /less £7.80/.test(r.say), r);
+await call({ action: 'set_order_type', session_id: s7, order_type: 'collection' });
+r = await call({ action: 'get_basket', session_id: s7 });
+const wrapLine = tables.AiOrderSession.find((x) => x.id === s7).cart[1];
+ck('free-item line tagged the way the website checkout expects', wrapLine.promotion_type === 'buy_one_get_one' && wrapLine.promotion_name === 'Wrap BOGO', wrapLine);
+globalThis.__invoked = [];
+r = await call({ action: 'place_cash_order', session_id: s7 });
+const placed = tables.Order.at(-1);
+ck('cash order carries the discount and names real promotions', r.ok && placed.discount === 7.8 && placed.total === 20.2 && placed.promotion_codes.join() === 'TEN,Wrap BOGO', placed);
+ck('spend offer use is counted once; the item offer is not', globalThis.__invoked.filter(([f]) => f === 'incrementPromotionUsage').map(([, a]) => a.promoId).join() === 'p1', globalThis.__invoked);
 
 console.log(`\n${pass}/${total} correct`);
 process.exit(pass === total ? 0 : 1);
