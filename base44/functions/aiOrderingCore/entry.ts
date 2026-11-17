@@ -171,7 +171,27 @@ async function loadMenu(db, restaurantId, fresh = false) {
         all.push(...batch);
         if (batch.length < PAGE) break;
     }
-    const available = all.filter((i) => isOrderable(i));
+    const items = all.filter((i) => isOrderable(i));
+    // Fixed meal deals ("2 burgers and fries £9.69") are sold like menu entries: id `deal_<id>`,
+    // the deal's own price, no options - the same basket line the restaurant page builds, which
+    // verifyAndCreateOrder prices from MealDeal. Deals where the customer picks the contents
+    // (category_rules) are not offered by AI agents. A deal is hidden while one of its items is off.
+    let deals = [];
+    try {
+        const known = new Set(all.map((i) => i.id));
+        const sellable = new Set(items.map((i) => i.id));
+        deals = ((await db.MealDeal.filter({ restaurant_id: restaurantId, is_active: true })) || [])
+            .filter((d) => !(d.category_rules || []).length && Number(d.deal_price) > 0 && String(d.name || '').trim()
+                && !(d.items || []).some((x) => known.has(x.menu_item_id) && !sellable.has(x.menu_item_id)))
+            .map((d) => ({
+                id: `deal_${d.id}`, name: String(d.name).trim(), price: Number(d.deal_price), category: 'Meal Deals',
+                description: String(d.description || '').trim() || (d.items || []).map((x) => `${x.quantity || 1}x ${x.name}`).join(', '),
+                image_url: d.image_url || undefined, is_deal: true, fixed_items: d.items || [], customization_options: [],
+            }));
+    } catch (e) {
+        console.warn(`${LOG} meal deals lookup failed - menu offered without deals: ${e?.message}`);
+    }
+    const available = [...items, ...deals];
     const menu = { all, available, byId: new Map(available.map((i) => [i.id, i])) };
     menuCache.set(restaurantId, { at: Date.now(), menu });
     return menu;
@@ -240,6 +260,7 @@ function itemSummary(item) {
         price: round2(item.price),
         description: item.description ? clip(item.description, 160) : undefined,
         has_required_options: requiredGroups(item).length > 0,
+        ...(item.is_deal ? { deal: true } : {}),
         popular: !!item.is_popular,
         vegetarian: !!item.is_vegetarian,
         spicy: !!item.is_spicy,
@@ -491,6 +512,8 @@ function finishPending(session, item) {
         itemQuantities: p.itemQuantities || {},
         options_summary: (p.summary || []).join(', '),
         ...(p.note ? { note: p.note } : {}),
+        // a meal deal line, in the shape the website basket and checkout use
+        ...(item.is_deal ? { is_deal: true, fixed_items: item.fixed_items || [], selected_items: null } : {}),
     });
     session.pending_item = null;
     return { quantity: p.quantity, name: String(item.name || '').trim(), unit_price: round2(serverPrice), options: (p.summary || []).join(', '), ...(p.note ? { note: p.note } : {}) };
@@ -876,6 +899,7 @@ function webLines(session) {
             menu_item_id: l.menu_item_id, name: l.name, price: l.price, quantity: l.quantity,
             image_url: l.image_url, customizations: l.customizations || {}, itemQuantities: l.itemQuantities || {},
             options_summary: l.options_summary || '',
+            ...(l.is_deal ? { is_deal: true, fixed_items: l.fixed_items || [], selected_items: l.selected_items ?? null } : {}),
         };
     });
 }
