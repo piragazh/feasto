@@ -73,9 +73,17 @@
           },
           "options_summary": {
             "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "description": "The customer's request for this line, in their words (no mayo). Goes into the order's notes for the kitchen; never changes a price."
           }
         }
       }
+    },
+    "order_notes": {
+      "type": "string",
+      "description": "Note for the whole order (kitchen or driver), as the customer gave it"
     },
     "pending_item": {
       "type": "object",
