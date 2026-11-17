@@ -189,5 +189,24 @@ const placed = tables.Order.at(-1);
 ck('cash order carries the discount and names real promotions', r.ok && placed.discount === 7.8 && placed.total === 20.2 && placed.promotion_codes.join() === 'TEN,Wrap BOGO', placed);
 ck('spend offer use is counted once; the item offer is not', globalThis.__invoked.filter(([f]) => f === 'incrementPromotionUsage').map(([, a]) => a.promoId).join() === 'p1', globalThis.__invoked);
 
+// fixed meal deals are orderable like menu entries
+tables.Promotion = [];
+tables.MenuItem.push({ id: 'm9', restaurant_id: 'r1', name: 'Sold Out Side', price: 2, category: 'Sides', is_available: false });
+tables.MealDeal = [
+    { id: 'd1', restaurant_id: 'r1', is_active: true, name: 'Two Burger Deal', deal_price: 12, description: 'Say normal or spicy', items: [{ menu_item_id: 'm1', name: 'Chicken Burger', quantity: 2 }], category_rules: [] },
+    { id: 'd2', restaurant_id: 'r1', is_active: true, name: 'Pick Your Own Deal', deal_price: 15, items: [], category_rules: [{ category: 'Burgers', quantity: 2 }] },
+    { id: 'd3', restaurant_id: 'r1', is_active: true, name: 'Deal With A Sold Out Side', deal_price: 9, items: [{ menu_item_id: 'm9', name: 'Sold Out Side', quantity: 1 }], category_rules: [] },
+];
+let s8 = await start('07700900012');
+r = await call({ action: 'browse_menu', session_id: s8, mode: 'category', category: 'Meal Deals' });
+ck('only the fixed, fully available deal is on the AI menu', r.ok && r.items.length === 1 && r.items[0].menu_item_id === 'deal_d1' && r.items[0].price === 12, r);
+r = await call({ action: 'add_item', session_id: s8, item_name: 'two burger deal', quantity: 1, note: 'spicy' });
+ck('a deal is added by name at the deal price', r.added === true && r.line.unit_price === 12 && r.quote.subtotal === 12, r);
+r = await call({ action: 'get_basket', session_id: s8, full: true });
+ck('deal line has the shape the website basket uses', r.cart_lines[0].is_deal === true && r.cart_lines[0].menu_item_id === 'deal_d1' && r.cart_lines[0].fixed_items.length === 1 && r.cart_lines[0].selected_items === null, r.cart_lines);
+await call({ action: 'set_order_type', session_id: s8, order_type: 'collection' });
+r = await call({ action: 'place_cash_order', session_id: s8, dry_run: true });
+ck('cash order carries the deal for the validator, with the request', r.ok && r.order_data.items[0].menu_item_id === 'deal_d1' && r.order_data.items[0].price === 12 && /Two Burger Deal: spicy/.test(r.order_data.notes), r.order_data);
+
 console.log(`\n${pass}/${total} correct`);
 process.exit(pass === total ? 0 : 1);
