@@ -15,6 +15,10 @@
  * VOICE_ID=cartesia-Willa. Number +441473943323 (Tilbury Chicken pilot) on Twilio trunk
  * mealdrop-retell (TK07f7278098658b5ec50b27c90fbaa9ec), origination sip:sip.retellai.com,
  * termination by IP ACL 18.98.16.120/30; in Retell its inbound webhook is retellVoice.
+ *
+ * 17 Nov 2026: prompt and tools changed (item requests, optional extras, multi-choice answers;
+ * tools add_extras and item_note added). RE-RUN this script with LLM_ID and AGENT_ID above to
+ * update the live agent - until then it works as before but cannot take requests or extras.
  */
 const KEY = process.env.RETELL_API_KEY;
 if (!KEY) { console.error('Set RETELL_API_KEY'); process.exit(1); }
@@ -57,6 +61,9 @@ const PROMPT = `You answer the phone for {{restaurant_name}}, a UK takeaway, and
 4. Call add_item with item_name copied EXACTLY as written in THE MENU (or a menu_item_id from search_menu), and the quantity. If it returns did_you_mean, ask the caller which of those they meant. Put any choices they ALREADY said in "choices" (group + option). Do not guess choices they haven't given.
 5. If add_item or choose_option returns waiting_for, ask the caller that question (ask_caller has the wording; read the options if they're unsure), then call choose_option with the option they picked, exactly as listed. Keep going until the tool says added - meals usually ask for a drink or side next. Only call skip_item if the CALLER no longer wants the item. If the same question comes back twice after a clear answer, apologise and offer to put them through to the team - never drop the item without telling them.
    - If the caller says several choices at once ("spicy, as a meal, with a Pepsi"), put them all in add_item's choices; you will only be asked for what's missing.
+   - Some questions allow more than one answer (the tool says how many): pass everything they chose in ONE choose_option, e.g. "Garlic Mayo and Chilli Sauce".
+   - Requests for the kitchen ("no mayo", "well done", "sauce on the side"): put them in add_item's note in the caller's words, or call item_note for an item already added. A note never changes the price and is not for menu choices - a paid extra must be one of the item's choices.
+   - If add_item or choose_option returns "extras", ask ONCE whether they'd like any with that, naming two or three. If yes, call add_extras. If no, move on. Never push, and never ask twice for the same item.
 6. After each item, ask "Anything else?" Use change_quantity to change or remove a line (quantity 0 removes it); call get_order first if you need line numbers.
 7. ASK "Is that for delivery or collection?" and wait for the caller's answer - never assume or choose it yourself. Then call set_order_type with what they said.
    - Delivery: ask for the postcode. People often say it in two parts ("RM18... 7NR"): if you only catch part, say back what you heard and ask for the rest - don't start over. Read the full postcode back letter by letter to confirm, then call check_delivery. If outside the area, offer collection. If below the minimum, say how much more they need.
@@ -99,7 +106,16 @@ const TOOLS = [
         menu_item_id: { type: 'string', description: 'Only if you have one from search_menu' },
         quantity: { type: 'integer', minimum: 1 },
         choices: { type: 'array', description: 'Choices the caller already gave', items: { type: 'object', properties: { group: { type: 'string', description: 'e.g. Size, Flavour, Drink' }, option: { type: 'string', description: 'e.g. Large, Hot, Pepsi' } }, required: ['group', 'option'] } },
+        note: { type: 'string', description: "A request for the kitchen about this item, in the caller's words, e.g. 'no mayo'. Not for menu choices." },
     }, ['quantity']),
+    fn('add_extras', 'Add optional extras (e.g. cheese, a sauce) to an item already in the order. Only extras listed for that item.', {
+        line: { type: 'integer', minimum: 1, description: 'Line number from get_order. Leave out for the item just added.' },
+        choices: { type: 'array', description: 'The extras the caller chose', items: { type: 'object', properties: { group: { type: 'string', description: 'The extras group, e.g. Extras, Sauces' }, option: { type: 'string', description: 'e.g. Cheese, Garlic Mayo' } }, required: ['option'] } },
+    }, ['choices']),
+    fn('item_note', "Add or change a request for the kitchen on an item already in the order, e.g. 'no mayo'. An empty note removes it.", {
+        line: { type: 'integer', minimum: 1, description: 'Line number from get_order. Leave out for the item just added.' },
+        note: { type: 'string', description: "The request, in the caller's words" },
+    }, ['note']),
     fn('choose_option', 'Give the caller\'s answer to the waiting_for question.', { option: { type: 'string', description: 'The option the caller chose' } }, ['option']),
     fn('skip_item', 'Drop the item that is waiting for a choice, if the caller no longer wants it.'),
     fn('change_quantity', 'Change how many of a basket line. Quantity 0 removes the line.', {
