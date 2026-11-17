@@ -131,5 +131,37 @@ tables.AiBlockedNumber[0].is_active = false;
 r = await call({ action: 'place_cash_order', session_id: s5, dry_run: true });
 ck('switched-off block no longer applies', r.ok && r.dry_run, r);
 
+// requests, multi-choice answers, optional extras, map position and the time promised
+tables.MenuItem.push({ id: 'm3', restaurant_id: 'r1', name: 'Cheese Burger', price: 6, category: 'Burgers', is_available: true, customization_options: [
+    { name: 'Sauces', type: 'multiple', required: true, max_quantity: 2, options: [{ label: 'Garlic Mayo', price: 0 }, { label: 'Chilli Sauce', price: 0 }, { label: 'Ketchup', price: 0 }] },
+    { name: 'Extras', type: 'multiple', required: false, options: [{ label: 'Cheese', price: 0.5 }, { label: 'Bacon', price: 1 }] },
+] });
+let s6 = await start('07700900010');
+r = await call({ action: 'add_item', session_id: s6, menu_item_id: 'm3', quantity: 1, note: 'no <b>salad</b>' });
+ck('multi-choice question says how many', r.needs_choice?.multiple === true && r.needs_choice.max_choices === 2 && /up to 2/.test(r.say), r);
+r = await call({ action: 'choose_option', session_id: s6, option: 'garlic mayo, chilli sauce and ketchup' });
+ck('three sauces where two are allowed -> TOO_MANY_OPTIONS', r.code === 'TOO_MANY_OPTIONS', r);
+r = await call({ action: 'choose_option', session_id: s6, option: 'Garlic Mayo and Chilli Sauce' });
+ck('two sauces said together are both taken', r.added === true && r.line.options === 'Garlic Mayo, Chilli Sauce', r);
+ck('the request stays on the line, markup stripped', r.line.note === 'no bsalad/b' && r.basket[0].note === 'no bsalad/b', r.line);
+ck('optional extras are offered, not asked as a question', r.extras_available?.[0]?.options?.length === 2 && !r.needs_choice, r.extras_available);
+r = await call({ action: 'add_options', session_id: s6, options: { Extras: ['Cheese', 'Bacon', 'Pineapple'] } });
+ck('extras added to the line and priced from the menu', r.ok && r.line.unit_price === 7.5 && r.ignored_options.length === 1, r);
+r = await call({ action: 'add_item', session_id: s6, menu_item_id: 'm3', quantity: 1, options: { Sauces: ['Ketchup'] } });
+ck('same item without the request is a separate line', r.added === true && r.basket.length === 2, r.basket);
+r = await call({ action: 'set_item_note', session_id: s6, line: 2, note: 'well done' });
+ck('a request can be added afterwards', r.ok && r.basket[1].note === 'well done' && r.quote.subtotal === 13.5, r);
+fetchMode = 'up';
+tables.DeliveryZone = [{ id: 'z3', restaurant_id: 'r1', is_active: true, zone_type: 'postcode', postcodes: ['RM18'], delivery_fee: 1, min_order_value: 0, estimated_delivery_time: '20-30 mins' }];
+await call({ action: 'set_order_type', session_id: s6, order_type: 'delivery' });
+await call({ action: 'check_delivery', session_id: s6, postcode: 'RM18 7NR', address: '1 High Street' });
+r = await call({ action: 'place_cash_order', session_id: s6, notes: 'ring the bell', dry_run: true });
+const od = r.order_data || {};
+ck('cash order carries a map position', od.delivery_coordinates?.lat === 51.46 && od.delivery_coordinates?.lng === 0.36, od.delivery_coordinates);
+ck('kitchen note has each request and the order note', /Cheese Burger: no bsalad\/b/.test(od.notes) && /Cheese Burger: well done/.test(od.notes) && /ring the bell/.test(od.notes), od.notes);
+ck('order stores the delivery time the customer was told', od.estimated_delivery === '20-30 mins', od.estimated_delivery);
+r = await call({ action: 'send_payment_link', session_id: s6, send_sms: false, notes: 'side gate' });
+ck('card orders keep the note too', r.ok && tables.AiOrderSession.find((x) => x.id === s6).order_notes === 'side gate', r);
+
 console.log(`\n${pass}/${total} correct`);
 process.exit(pass === total ? 0 : 1);
