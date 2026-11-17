@@ -260,7 +260,7 @@ const TOOLS = {
             const r = await core(ctx.base44, 'place_cash_order', { session_id: ctx.sid, notes: a.notes ? clip(a.notes, 200) : undefined });
             if (!r.ok) {
                 const out = refusal(r);
-                if (['NO_CASH', 'CASH_LIMIT', 'CASH_ORDER_OPEN'].includes(r.code)) out.next = 'Cash is not possible for this order. Offer to text a card payment link instead (place_order with payment card).';
+                if (['NO_CASH', 'CASH_LIMIT', 'CASH_ORDER_OPEN', 'CASH_BLOCKED'].includes(r.code)) out.next = 'Cash is not possible for this order. Offer to text a card payment link instead (place_order with payment card).';
                 return out;
             }
             return { ok: true, placed: true, order_number: r.order_number || undefined, total: money(r.total), ready_in: r.eta,
@@ -285,6 +285,44 @@ const TOOLS = {
     },
 };
 
+/**
+ * The ordering system can't take this call (the core failed to start a session), but we know
+ * which restaurant was dialled: put the caller through to its staff instead of a dead line.
+ * No prompt change is needed in Retell - the facts the agent already reads carry the instruction,
+ * and transfer_to_restaurant is Retell's own tool, so it works with no session.
+ */
+function putThrough(name, transfer) {
+    if (!transfer) return { call_inbound: { reject: true } };
+    const must = 'IMPORTANT: the ordering system is unavailable on this call. Do NOT take an order and do NOT call any ordering tool. Call transfer_to_restaurant straight away.';
+    return { call_inbound: {
+        dynamic_variables: {
+            session_id: '', restaurant_name: name || 'the restaurant', restaurant_open: 'yes', closed_reason: must,
+            delivery_available: 'unknown', collection_available: 'unknown', cash_accepted: 'no', delivery_time: '', restaurant_address: '',
+            caller_number: 'unknown', caller_is_mobile: 'no', returning_customer: 'no',
+            transfer_available: 'yes', transfer_number: transfer, menu: must,
+        },
+        agent_override: { retell_llm: {
+            begin_message: `Thanks for calling ${name || 'us'}. Our automated ordering assistant isn't available at the moment, so I'll put you straight through to the team.`,
+        } },
+    } };
+}
+
+/** A text to the restaurant after a caller is put through, so a call nobody picked up can be returned. */
+async function transferAlert(base44, db, session) {
+    if (!session?.customer_phone) return; // withheld number: nothing to ring back
+    const rest = (await db.Restaurant.filter({ id: session.restaurant_id }).catch(() => []))[0];
+    if (!rest?.alert_phone) return;
+    const items = (session.cart || []).slice(0, 4).map((l) => `${l.quantity}x ${l.name}`).join(', ');
+    const message = clip(`${rest.name} AI phone line: a caller was put through to you. Their number: ${sayPhone(session.customer_phone)}`
+        + `${session.customer_name ? ` (${session.customer_name})` : ''}.`
+        + `${session.handoff_reason ? ` Reason: ${session.handoff_reason}.` : ''}`
+        + `${items ? ` They had asked for: ${items}.` : ''} If you missed the call, please ring them back.`, 320);
+    await base44.asServiceRole.functions.invoke('sendSMS', {
+        to: rest.alert_phone, message, restaurantId: rest.id, restaurantName: rest.name, smsType: 'ai_transfer_alert',
+        dedupeKey: `ai_${session.id}`, aiCoreKey: Deno.env.get('AI_CORE_API_KEY'),
+    });
+}
+
 // ── Inbound call: find the restaurant, start the session ────────────────────
 async function inbound(base44, db, ev) {
     const c = ev.call_inbound || {};
@@ -296,17 +334,24 @@ async function inbound(base44, db, ev) {
         return { call_inbound: { reject: true } };
     }
     const caller = phoneDigits(c.from_number);
+    // Block list (Super Admin > AI Ordering > Blocked numbers): 'reject_calls' numbers are not answered
+    const blocks = caller ? await db.AiBlockedNumber.filter({ number: caller }).catch(() => []) : [];
+    if (blocks.some((b) => b.is_active !== false && b.mode === 'reject_calls')) {
+        console.warn(`${LOG} call from a blocked number rejected`);
+        return { call_inbound: { reject: true } };
+    }
+    // Looked up first: if the session can't start, this is who the caller is put through to
+    const rest = (await db.Restaurant.filter({ id: link.restaurant_id }).catch(() => []))[0] || {};
+    const transfer = e164(link.transfer_number || rest.alert_phone || '');
     const s = await core(base44, 'start_session', {
         channel: 'phone', restaurant_id: link.restaurant_id, external_id: String(c.call_id || ''), include_menu: true,
         customer_phone: caller || undefined,
-    });
+    }).catch((e) => ({ ok: false, code: `CORE_ERROR: ${e?.message}` }));
     if (!s.ok) {
-        console.error(`${LOG} start_session failed for ${dialled}: ${s.code}`);
-        return { call_inbound: { reject: true } };
+        console.error(`${LOG} start_session failed for ${dialled}: ${s.code} - ${transfer ? 'putting the caller through to the restaurant' : 'no transfer number, rejecting the call'}`);
+        return putThrough(rest.name, transfer);
     }
     const r = s.restaurant;
-    const rest = (await db.Restaurant.filter({ id: link.restaurant_id }).catch(() => []))[0] || {};
-    const transfer = e164(link.transfer_number || rest.alert_phone || '');
     const back = s.returning_customer;
     const vars = {
         session_id: s.session_id,
@@ -352,7 +397,13 @@ async function callEvent(base44, db, ev) {
     if (call.call_analysis?.call_summary) patch.call_summary = clip(call.call_analysis.call_summary, 2000);
     if (Object.keys(patch).length) await db.AiOrderSession.update(sid, patch).catch((e) => console.error(`${LOG} save call data: ${e?.message}`));
     if (ev.event === 'call_ended') {
-        if (call.disconnection_reason === 'call_transfer') await core(base44, 'handoff', { session_id: sid, reason: 'transferred to the restaurant' }).catch(() => null);
+        if (call.disconnection_reason === 'call_transfer') {
+            const before = (await db.AiOrderSession.filter({ id: sid }).catch(() => []))[0];
+            // Keep the reason the agent noted (note_transfer); only record one when there is none
+            if (before?.state !== 'handoff') await core(base44, 'handoff', { session_id: sid, reason: 'transferred to the restaurant' }).catch(() => null);
+            // A cold transfer doesn't report whether anyone picked up, so the restaurant gets the number either way
+            await transferAlert(base44, db, before).catch((e) => console.warn(`${LOG} transfer alert failed: ${e?.message}`));
+        }
         await core(base44, 'end_session', { session_id: sid, outcome: call.disconnection_reason || 'call ended' }).catch(() => null);
     }
 }
@@ -383,6 +434,8 @@ Deno.serve(async (req) => {
         return Response.json(out);
     } catch (e) {
         console.error(`${LOG} ${body.event || body.name} failed:`, e?.message);
+        // A failed inbound lookup answers 500 so Retell tries again, rather than a 200 it would take as "carry on with no restaurant"
+        if (body.event === 'call_inbound') return Response.json({ error: 'temporary failure' }, { status: 500 });
         return Response.json({ ok: false, problem: 'INTERNAL', say: 'Sorry, something went wrong on our side.', next: 'Apologise and offer to transfer to the team.' });
     }
 });
