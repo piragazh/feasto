@@ -26,7 +26,13 @@
  * REQUEST  { restaurant_id, chat_token?, message? | tap?, cart? }
  *   tap: { type: 'add', menu_item_id } | { type: 'option', index } | { type: 'cancel' }
  *        | { type: 'checkout' } | { type: 'clear' }
- * REPLY    { ok, chat_token, reply, suggestions, question, quick_replies, cart_lines,
+ * ATTRIBUTION
+ *   When the chat adds to the basket, the reply carries attribution_token. The widget stores
+ *   it for this restaurant (3 hours); the checkout sends it with the order, which is then
+ *   tagged ai_channel 'web_chat'. "Chat-assisted" means: ordered in that browser, at that
+ *   restaurant, within 3 hours of the chat adding an item.
+ *
+ * REPLY    { ok, chat_token, reply, suggestions, question, quick_replies, cart_lines, attribution_token,
  *            quote, checkout, handoff, track, closed_reason }
  *
  * LIMITS   message 500 chars; 60 AI replies per session per hour; 20 new sessions
@@ -202,6 +208,7 @@ Deno.serve(async (req) => {
         // ── One basket: bring in anything the customer did on the page ──
         let state = await call('get_basket', { full: true });
         const notes = [];
+        let chatAdded = false; // did the chat itself put something in the basket this turn?
         if (state.ok && cartKey(state.cart_lines) !== cartKey(pageCart)) {
             const imp = await call('import_basket', { lines: pageCart });
             if (imp.removed_unavailable?.length) notes.push(`${imp.removed_unavailable.join(', ')} isn't available right now, so I took it out of your basket.`);
@@ -218,12 +225,13 @@ Deno.serve(async (req) => {
                     if (r.ok && r.added) out.reply = `✅ Added ${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}.`;
                     else if (r.ok && r.needs_choice) out.reply = `Great choice! Which ${r.needs_choice.group} would you like?`;
                     else out.reply = r.say || "Sorry, that item isn't available right now.";
-                    if (r.ok && r.added) out.quick_replies = ['Add a drink', 'Show deals', 'Checkout'];
+                    if (r.ok && r.added) { chatAdded = true; out.quick_replies = ['Add a drink', 'Show deals', 'Checkout']; }
                     break;
                 }
                 case 'option': {
                     const r = await call('choose_option', { option_index: Math.floor(Number(tap.index)) });
                     if (r.ok && r.added) {
+                        chatAdded = true;
                         out.reply = `✅ Added ${r.line.quantity > 1 ? `${r.line.quantity}× ` : ''}${r.line.name}${r.line.options ? ` (${r.line.options})` : ''}.`;
                         out.quick_replies = ['Add a drink', 'Show deals', 'Checkout'];
                     } else if (r.ok && r.needs_choice) out.reply = `And which ${r.needs_choice.group}?`;
@@ -340,6 +348,7 @@ RULES
             if (steps.length) {
                 const r = await call('apply', { steps });
                 for (const st of r.results || []) {
+                    if (st.ok && st.action === 'add_item' && st.added) chatAdded = true;
                     if (st.ignored_options?.length) notes.push(`(I couldn't match: ${st.ignored_options.join(', ')})`);
                     if (!st.ok && st.code !== 'OPTIONS_PENDING') notes.push(st.say || st.error);
                 }
@@ -366,6 +375,13 @@ RULES
         state = await call('get_basket', { full: true });
         out.cart_lines = state.cart_lines || [];
         out.quote = state.quote || null;
+        // Attribution: once the chat has added something (or is sending the customer to checkout),
+        // the widget keeps a token and the checkout sends it with the order, so the order is tagged
+        // as chat-assisted and this session is closed as 'ordered'.
+        if (out.cart_lines.length && (chatAdded || out.checkout)) {
+            const t = await call('attribution_token').catch(() => null);
+            if (t?.ok && t.token) out.attribution_token = t.token;
+        }
         if (state.pending) {
             out.question = { menu_item_id: state.pending.menu_item_id, item_name: state.pending.item_name, group: state.pending.group, options: state.pending.options };
             out.checkout = false;
