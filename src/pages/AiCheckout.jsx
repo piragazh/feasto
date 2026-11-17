@@ -44,7 +44,7 @@ export default function AiCheckout() {
                     // Checkout prefills these, so the customer doesn't retype what they told the agent
                     // and the paid order carries the same number the session is matched on
                     localStorage.setItem('aiCheckoutPrefill', JSON.stringify({
-                        phone: data.phone || '', name: data.customer_name || '', address: data.delivery_address || '',
+                        phone: data.phone || '', name: data.customer_name || '', address: data.delivery_address || '', notes: data.notes || '',
                     }));
                     localStorage.removeItem('groupOrderId');
                     localStorage.removeItem('appliedPromotions');
