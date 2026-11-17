@@ -72,7 +72,7 @@ globalThis.fetch = async (url, opts = {}) => {
     }
     throw new Error(`unexpected fetch ${url}`);
 };
-globalThis.Deno = { env: { get: (k) => ({ AI_CORE_API_KEY: 'k', RETELL_API_KEY: 'rk' }[k]) }, serve: () => {} };
+globalThis.Deno = { env: { get: (k) => ({ AI_CORE_API_KEY: 'k', RETELL_API_KEY: 'rk', AI_CORE_CACHE_MS: '0' }[k]) }, serve: () => {} };
 
 handlers.aiOrderingCore = await load('aiOrderingCore');
 const webChat = await load('webChatAgent');
@@ -100,8 +100,12 @@ const token = r.chat_token;
 aiActions = [{ type: 'add_item', menu_item_id: 'm1', quantity: 2 }];
 r = await chat({ message: 'two chicken burgers please', chat_token: token });
 ck('the agent can still add to the basket', r.cart_lines?.[0]?.quantity === 2 && r.quote?.subtotal === 18, r);
+const chatRow = () => tables.AiOrderSession.find((x) => x.channel === 'web_chat');
+ck('chat-assisted basket gets an attribution token; session stays active', !!r.attribution_token && chatRow().checkout_token === r.attribution_token && chatRow().state === 'active', r);
+const logLen = chatRow().event_log.length;
 aiActions = [];
 r = await chat({ message: 'thanks', chat_token: token, cart: r.cart_lines });
+ck('no token without a chat add this turn; reading the basket writes nothing', !r.attribution_token && chatRow().event_log.length === logLen + 1, [r.attribution_token, chatRow().event_log.slice(logLen)]);
 ck('the AI is shown the real earlier turns', prompts.at(-1).includes('Customer: two chicken burgers please') && prompts.at(-1).includes('Customer: hello'), prompts.at(-1).slice(-400));
 const usage = () => tables.AiUsageDay?.find((u) => u.restaurant_id === 'r1');
 ck('usage counted: 1 chat, 3 AI replies', usage()?.sessions === 1 && usage()?.ai_turns === 3, usage());

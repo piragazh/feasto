@@ -44,7 +44,7 @@ const entities = new Proxy({}, { get: (_, k) => T(k) });
 globalThis.__client = { auth: { me: async () => { throw new Error('no'); } }, asServiceRole: { entities, functions: { invoke: async (f, a) => {
   if (f === 'verifyAndCreateOrder') { const o = await entities.Order.create({ ...a.orderData, order_source: 'online' }); return { data: { success: true, order_id: o.id, order_number: 'C-1' } }; }
   (globalThis.__invoked ||= []).push([f, a]); return { data: { success: true } }; } } } };
-globalThis.Deno = { env: { get: (k) => (k === 'AI_CORE_API_KEY' ? 'k' : undefined) }, serve: (h) => { globalThis.h = h; } };
+globalThis.Deno = { env: { get: (k) => ({ AI_CORE_API_KEY: 'k', AI_CORE_CACHE_MS: '0' }[k]) }, serve: (h) => { globalThis.h = h; } };
 let fetchMode = 'down';
 globalThis.fetch = async () => { if (fetchMode === 'down') throw new Error('timeout'); return new Response(JSON.stringify({ result: { latitude: 51.46, longitude: 0.36, postcode: 'RM18 7NR' } })); };
 await import(CORE);
