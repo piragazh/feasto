@@ -202,6 +202,10 @@ export default function Checkout() {
         if (aiPrefill && (aiPrefill.phone || aiPrefill.name)) {
             setFormData(prev => ({ ...prev, phone: aiPrefill.phone || prev.phone, guest_name: prev.guest_name || aiPrefill.name || '' }));
         }
+        // Requests made to the AI agent ("no mayo") start in the notes box, so they reach the kitchen
+        if (aiPrefill?.notes) {
+            setFormData(prev => ({ ...prev, notes: prev.notes || String(aiPrefill.notes).slice(0, 500) }));
+        }
         
         // Restore address coordinates — guarded against corrupted data
         if (savedCoords) {
