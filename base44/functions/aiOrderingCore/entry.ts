@@ -35,6 +35,8 @@
  *   send_payment_link  { session_id, send_sms?, details_at_checkout? }  card: one-time checkout link (+ SMS);
  *                      details_at_checkout lets the website checkout take the address and run the zone check (chat)
  *   place_cash_order   { session_id, notes?, dry_run? }     cash: creates the order now
+ *   attribution_token  { session_id }                       web chat: a token the checkout sends with the order, so a
+ *                      chat-assisted order is tagged as one
  *   handoff            { session_id, reason? }
  *   end_session        { session_id, outcome? }
  *
@@ -151,7 +153,16 @@ function isOrderable(item, date = new Date()) {
     return true;
 }
 
-async function loadMenu(db, restaurantId) {
+// A voice or chat turn makes several calls in a few seconds, and each one used to re-read the
+// whole menu and the promotions. They are kept for a short while per server instance instead.
+// Anything that takes money or places an order (pay link, cash order) always reads fresh.
+const CACHE_MS = Number(Deno.env.get('AI_CORE_CACHE_MS') ?? 45000);
+const menuCache = new Map();   // restaurantId -> { at, menu }
+const promoCache = new Map();  // restaurantId -> { at, promos }
+
+async function loadMenu(db, restaurantId, fresh = false) {
+    const hit = menuCache.get(restaurantId);
+    if (!fresh && hit && Date.now() - hit.at < CACHE_MS) return hit.menu;
     const all = [];
     const PAGE = 200;
     for (let skip = 0; skip < 5000; skip += PAGE) {
@@ -161,7 +172,9 @@ async function loadMenu(db, restaurantId) {
         if (batch.length < PAGE) break;
     }
     const available = all.filter((i) => isOrderable(i));
-    return { all, available, byId: new Map(available.map((i) => [i.id, i])) };
+    const menu = { all, available, byId: new Map(available.map((i) => [i.id, i])) };
+    menuCache.set(restaurantId, { at: Date.now(), menu });
+    return menu;
 }
 
 const SYNONYMS = { fries: 'chips', chip: 'chips', coke: 'cola', pop: 'drink', soda: 'drink', burgers: 'burger', wings: 'wing' };
@@ -770,15 +783,19 @@ function ukInstant(value) {
 }
 
 /** This restaurant's promotions that are live right now. A failed lookup means no offers, never a refused order. */
-async function loadPromotions(db, restaurantId) {
+async function loadPromotions(db, restaurantId, fresh = false) {
+    const hit = promoCache.get(restaurantId);
+    if (!fresh && hit && Date.now() - hit.at < CACHE_MS) return hit.promos;
     try {
         const now = new Date();
-        return ((await db.Promotion.filter({ restaurant_id: restaurantId, is_active: true })) || []).filter((p) => {
+        const promos = ((await db.Promotion.filter({ restaurant_id: restaurantId, is_active: true })) || []).filter((p) => {
             if (!p.start_date || !p.end_date) return false;
             if (ukInstant(p.start_date) > now || ukInstant(p.end_date) < now) return false;
             if (p.usage_limit && Number(p.usage_count || 0) >= Number(p.usage_limit)) return false;
             return true;
         });
+        promoCache.set(restaurantId, { at: Date.now(), promos });
+        return promos;
     } catch (e) {
         console.warn(`${LOG} promotions lookup failed - quoting without offers: ${e?.message}`);
         return [];
@@ -920,6 +937,7 @@ function readiness(session, restaurant, menu, opts = {}) {
 }
 
 // ── Session persistence ─────────────────────────────────────────────────────
+const QUIET_ACTIONS = ['get_basket', 'browse_menu', 'get_context', 'get_item'];
 const OWNED = ['cart', 'pending_item', 'order_type', 'delivery_address', 'delivery_postcode', 'delivery_quote',
     'customer_name', 'customer_phone', 'state', 'checkout_token', 'checkout_token_expires_at', 'order_id',
     'handoff_reason', 'ended_at', 'order_notes'];
@@ -938,6 +956,9 @@ async function saveSession(db, before, after, action, okFlag, note, allowRetry =
         const a = after[f] ?? null;
         if (JSON.stringify(a) !== JSON.stringify(before[f] ?? null)) patch[f] = a;
     }
+    // Looking at the basket or the menu changes nothing: no write, so a chat turn that reads the
+    // basket three times is not three database writes, and the event log keeps what happened.
+    if (!Object.keys(patch).length && okFlag && QUIET_ACTIONS.includes(action)) return false;
     if (Object.keys(patch).length) {
         const cur = (await db.AiOrderSession.filter({ id: before.id }))[0];
         const curRev = Number(cur?.rev) || 0;
@@ -1113,17 +1134,18 @@ Deno.serve(async (req) => {
         if (!before) return fail('SESSION_NOT_FOUND', 'Session not found.');
         if (['closed'].includes(before.state) && action !== 'get_context') return fail('SESSION_CLOSED', 'This session has ended.');
         // Once an order exists (cash, or a paid link linked by aiOrderLink) the basket is frozen
-        const CHANGES_ORDER = ['add_item', 'choose_option', 'cancel_pending', 'remove_item', 'set_quantity', 'clear_basket', 'import_basket', 'set_order_type', 'check_delivery', 'send_payment_link', 'set_item_note', 'add_options'];
+        const CHANGES_ORDER = ['add_item', 'choose_option', 'cancel_pending', 'remove_item', 'set_quantity', 'clear_basket', 'import_basket', 'set_order_type', 'check_delivery', 'send_payment_link', 'set_item_note', 'add_options', 'attribution_token'];
         if (before.order_id && CHANGES_ORDER.includes(action)) {
             return fail('ALREADY_ORDERED', 'This order has already been placed.', { order_id: before.order_id, say: 'Your order is already placed. For any changes, let me put you through to the team.' });
         }
         const restaurant = (await db.Restaurant.filter({ id: before.restaurant_id }))[0];
         if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
-        restaurant.__promos = await loadPromotions(db, restaurant.id); // read by quote()
+        const fresh = ['place_cash_order', 'send_payment_link'].includes(action);
+        restaurant.__promos = await loadPromotions(db, restaurant.id, fresh); // read by quote()
 
         const s = JSON.parse(JSON.stringify(before)); // handlers mutate the copy; saveSession diffs it
-        const needsMenu = action === 'apply' || !['get_context', 'set_customer', 'handoff', 'end_session', 'check_delivery', 'set_order_type'].includes(action);
-        const menu = needsMenu ? await loadMenu(db, restaurant.id) : null;
+        const needsMenu = action === 'apply' || !['get_context', 'set_customer', 'handoff', 'end_session', 'check_delivery', 'set_order_type', 'attribution_token'].includes(action);
+        const menu = needsMenu ? await loadMenu(db, restaurant.id, fresh) : null;
 
         let resultOk = true;
         let note = '';
@@ -1465,6 +1487,20 @@ Deno.serve(async (req) => {
                     if (pc && pc !== s.delivery_postcode) { s.delivery_postcode = pc; s.delivery_quote = null; }
                 }
                 done({ customer: { name: s.customer_name || null, phone: s.customer_phone ? localPhone(s.customer_phone) : null, address: s.delivery_address || null, postcode: s.delivery_postcode || null }, say: 'Thanks.' });
+                break;
+            }
+
+            case 'attribution_token': {
+                // Website chat: the customer pays through the normal checkout in the same browser, so there
+                // is no pay link. The widget keeps this token and the checkout sends it with the order,
+                // which is how a chat-assisted order is known to be one (verifyAndCreateOrder + aiOrderLink).
+                // The session stays 'active': nothing is being waited for.
+                const left = s.checkout_token && s.checkout_token_expires_at ? new Date(s.checkout_token_expires_at).getTime() - Date.now() : 0;
+                if (!(left > 30 * 60 * 1000)) {
+                    s.checkout_token = randomToken();
+                    s.checkout_token_expires_at = new Date(Date.now() + CHECKOUT_TTL_MS).toISOString();
+                }
+                done({ token: s.checkout_token, expires_at: s.checkout_token_expires_at });
                 break;
             }
 
