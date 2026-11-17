@@ -304,7 +304,7 @@ async function ensureSession(ctx) {
 /** Keep the inbox's display copy of the basket in step with the core. */
 function syncCart(convo, basket) {
     if (!Array.isArray(basket)) return;
-    convo.cart = basket.map((l) => ({ menu_item_id: l.menu_item_id, name: l.name, quantity: l.quantity, price: l.unit_price, options_summary: l.options || '' }));
+    convo.cart = basket.map((l) => ({ menu_item_id: l.menu_item_id, name: l.name, quantity: l.quantity, price: l.unit_price, options_summary: [l.options, l.note].filter(Boolean).join(' · ') }));
     if (convo.cart.length && convo.state === 'browsing') convo.state = 'cart';
     if (!convo.cart.length && convo.state === 'cart') convo.state = 'browsing';
 }
@@ -467,12 +467,13 @@ const AGENT_SCHEMA = {
                 properties: {
                     type: {
                         type: 'string',
-                        enum: ['add_item', 'remove_item', 'set_quantity', 'clear_cart', 'set_order_type',
+                        enum: ['add_item', 'remove_item', 'set_quantity', 'set_item_note', 'clear_cart', 'set_order_type',
                             'set_address', 'show_menu', 'show_category', 'show_cart', 'checkout', 'handoff'],
                     },
                     menu_item_id: { type: 'string' },
                     quantity: { type: 'number' },
                     line: { type: 'number', description: 'basket line number, 1-based' },
+                    note: { type: 'string', description: "A request for the kitchen on one item, in the customer's words, e.g. 'no mayo'" },
                     options: { type: 'object', description: 'group name -> option label, only labels from the menu' },
                     category: { type: 'string' },
                     order_type: { type: 'string', enum: ['delivery', 'collection'] },
@@ -514,6 +515,7 @@ Order type: ${basketRes.quote?.order_type || 'not chosen'}${waiting}
 RULES
 - Use ONLY menu ids above in actions. Never quote a price that is not on the menu.
 - To add an item use add_item with menu_item_id and quantity. Put options the customer already stated in "options" using exact group and option labels. Do not guess required options - the system will ask the customer.
+- Requests for the kitchen ("no mayo", "well done"): put them in add_item "note" in the customer's words, or use set_item_note with the basket line for an item already added. A note never changes the price and is not for menu options.
 - Allergies: repeat the listed allergens, and say to call the restaurant to confirm if it matters medically. Never claim an item is allergen-free.
 - When the customer is done, or says pay/checkout/that's all, use checkout.
 - Complaints, refunds, a problem with an order, or asking for a person: use handoff.
@@ -542,7 +544,10 @@ RULES
     for (const a of actions) {
         switch (a.type) {
             case 'add_item':
-                steps.push({ action: 'add_item', menu_item_id: a.menu_item_id, quantity: a.quantity || 1, options: a.options || {} });
+                steps.push({ action: 'add_item', menu_item_id: a.menu_item_id, quantity: a.quantity || 1, options: a.options || {}, note: a.note ? clip(a.note, 80) : undefined });
+                break;
+            case 'set_item_note':
+                steps.push({ action: 'set_item_note', line: a.line, note: clip(a.note || '', 80) }); showCart = true;
                 break;
             case 'remove_item':
                 steps.push({ action: 'remove_item', line: a.line, menu_item_id: a.menu_item_id, quantity: a.quantity }); showCart = true;
