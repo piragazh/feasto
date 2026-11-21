@@ -10,6 +10,7 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import Stripe from 'npm:stripe';
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -65,10 +66,36 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Invalid refund amount on order' }, { status: 400 });
         }
 
+        // Actually return the money. Marking the order refunded without this left the
+        // customer unpaid unless someone also refunded by hand in Stripe.
+        let stripeRefundId = null;
+        const isStripePaid = ['card', 'apple_pay', 'google_pay'].includes(order.payment_method);
+        if (isStripePaid) {
+            if (!order.payment_intent_id) {
+                return Response.json({ error: 'This card order has no Stripe payment reference — refund it in the Stripe dashboard, then mark it here.' }, { status: 409 });
+            }
+            try {
+                const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
+                const refund = await stripe.refunds.create(
+                    { payment_intent: order.payment_intent_id, amount: Math.round(refundAmount * 100), reason: 'requested_by_customer', metadata: { order_id, approved_by: user.email, refund_type: 'platform_override' } },
+                    { idempotencyKey: `refund_${order_id}_${Math.round(refundAmount * 100)}` },
+                );
+                stripeRefundId = refund.id;
+            } catch (stripeErr) {
+                if (stripeErr.code === 'charge_already_refunded') {
+                    stripeRefundId = 'already_refunded';
+                } else {
+                    console.error(`[REFUND] platform override Stripe refund failed for ${order_id}:`, stripeErr.message);
+                    return Response.json({ error: `Stripe refund failed: ${stripeErr.message}. Nothing was changed.` }, { status: 502 });
+                }
+            }
+        }
+
         await base44.asServiceRole.entities.Order.update(order_id, {
             status: 'refunded',
             refund_paid_by: 'platform',
             refund_amount: refundAmount,
+            refund_approved_date: new Date().toISOString(),
             platform_override_reason: reason.trim(),
             platform_override_date: new Date().toISOString(),
             platform_override_by: user.email,
@@ -103,7 +130,7 @@ Deno.serve(async (req) => {
             console.error('[AUDIT] Could not persist platform override audit log:', dbErr.message);
         }
 
-        return Response.json({ success: true, order_id, refund_amount: refundAmount });
+        return Response.json({ success: true, order_id, refund_amount: refundAmount, stripe_refund_id: stripeRefundId });
 
     } catch (error) {
         console.error('[REFUND] platformRefundOverride error:', error);
