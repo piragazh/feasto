@@ -47,271 +47,6 @@ export default function PayoutManagement() {
         refetchInterval: 10000,
     });
 
-    const generatePayoutMutation = useMutation({
-        mutationFn: async (restaurantId) => {
-            // Calculate period based on frequency
-            const now = new Date();
-            let periodStart, periodEnd;
-            
-            if (startDate && endDate) {
-                periodStart = new Date(startDate);
-                periodStart.setHours(0, 0, 0, 0);
-                periodEnd = new Date(endDate);
-                periodEnd.setHours(23, 59, 59, 999);
-            } else if (payoutFrequency === 'daily') {
-                // Yesterday (full day)
-                periodStart = new Date(now);
-                periodStart.setDate(periodStart.getDate() - 1);
-                periodStart.setHours(0, 0, 0, 0);
-                periodEnd = new Date(periodStart);
-                periodEnd.setHours(23, 59, 59, 999);
-            } else if (payoutFrequency === 'weekly') {
-                // Last full 7 completed days (not including today)
-                periodEnd = new Date(now);
-                periodEnd.setDate(periodEnd.getDate() - 1);
-                periodEnd.setHours(23, 59, 59, 999);
-                periodStart = new Date(periodEnd);
-                periodStart.setDate(periodStart.getDate() - 6);
-                periodStart.setHours(0, 0, 0, 0);
-            } else {
-                // Monthly (last full calendar month)
-                periodStart = startOfMonth(subMonths(now, 1));
-                periodEnd = endOfMonth(subMonths(now, 1));
-            }
-
-            // Get restaurant details
-            const restaurant = restaurants.find(r => r.id === restaurantId);
-            if (!restaurant) throw new Error('Restaurant not found');
-
-            // ✅ DUPLICATE GUARD: check if a payout already exists for this restaurant + overlapping period
-            const existingPayouts = await base44.entities.Payout.filter({ restaurant_id: restaurantId });
-            const duplicate = existingPayouts.filter(p => !['voided', 'failed'].includes(p.status)).find(p => {
-                const existStart = new Date(p.period_start);
-                const existEnd = new Date(p.period_end);
-                // Overlap check: new period overlaps existing if not (new ends before existing starts OR new starts after existing ends)
-                return !(periodEnd < existStart || periodStart > existEnd);
-            });
-            if (duplicate) {
-                throw new Error(`A payout already exists for this restaurant covering ${new Date(duplicate.period_start).toLocaleDateString()} – ${new Date(duplicate.period_end).toLocaleDateString()}. Void it first or choose a different period.`);
-            }
-            
-            // Fetch ALL online orders for this specific restaurant (server-filtered by restaurant_id)
-            // Use a high limit to avoid pagination truncation on busy restaurants
-            const allRestaurantOrders = await base44.entities.Order.filter({ restaurant_id: restaurantId }, '-created_date', 5000);
-            
-            // ONLY count fully completed orders — this matches what the restaurant sees in their order history.
-            // Counting in-progress orders (confirmed/preparing/out_for_delivery) would inflate the payout count.
-            const completedStatuses = new Set(['delivered', 'collected']);
-            // Excluded sources: POS, kiosk, and third_party orders are NOT included in online platform payouts.
-            // Also exclude null/undefined order_source only if order_source is explicitly pos/kiosk/third_party.
-            // Orders with no order_source (legacy online orders) default to online.
-            const excludedSources = new Set(['pos', 'kiosk', 'third_party']);
-
-            const periodOrders = allRestaurantOrders.filter(order => {
-                const orderDate = new Date(order.created_date);
-                const isCompleted = completedStatuses.has(order.status);
-                const isOnlineOrder = !excludedSources.has(order.order_source);
-                return orderDate >= periodStart && orderDate <= periodEnd 
-                    && isCompleted
-                    && isOnlineOrder;
-            });
-
-            // Calculate totals — split cash vs card, and by order type
-            let grossEarnings = 0;
-            let cashPaymentAmount = 0;   // cash / pay_at_counter collected directly by restaurant
-            let cardPaymentAmount = 0;   // card/apple_pay/google_pay confirmed by platform
-            let deliveryOrders = 0;
-            let collectionOrders = 0;
-            let dineInOrders = 0;
-            let deliveryEarnings = 0;
-            let collectionEarnings = 0;
-            let dineInEarnings = 0;
-
-            // Payment methods the platform collects money for (card-based)
-            const cardMethods = new Set(['card', 'apple_pay', 'google_pay']);
-            // Payment statuses that confirm the platform actually received the card payment
-            const confirmedPaymentStatuses = new Set(['payment_confirmed', 'paid_card']);
-
-            // Refunded orders placed IN this period: the refunded part was never paid out,
-            // so only the part the customer kept (if any) counts towards takings.
-            const inPeriodRefunded = allRestaurantOrders.filter(order => {
-                const orderDate = new Date(order.created_date);
-                return orderDate >= periodStart && orderDate <= periodEnd
-                    && order.status === 'refunded' && !excludedSources.has(order.order_source);
-            });
-            const payoutOrders = [
-                ...periodOrders,
-                ...inPeriodRefunded
-                    .map(o => ({ ...o, total: o.refund_paid_by === 'platform' ? (o.total || 0) : Math.max(0, (o.total || 0) - (o.refund_amount ?? o.total ?? 0)) }))
-                    .filter(o => o.total > 0),
-            ];
-
-            payoutOrders.forEach(order => {
-                const orderTotal = order.total || 0;
-                grossEarnings += orderTotal;
-
-                const method = order.payment_method;
-                const payStatus = order.payment_status;
-
-                if (method === 'cash' || method === 'pay_at_counter') {
-                    // Cash / pay-at-counter: restaurant collects directly, never held by platform
-                    cashPaymentAmount += orderTotal;
-                } else if (cardMethods.has(method)) {
-                    // Card-based: only count as platform-held if payment was confirmed
-                    // (guards against delivered orders with failed/pending payment edge cases)
-                    if (confirmedPaymentStatuses.has(payStatus) || !payStatus) {
-                        // No payStatus = legacy order, assume confirmed
-                        cardPaymentAmount += orderTotal;
-                    } else {
-                        // Failed/pending card payment on a delivered order — treat as cash debt
-                        cashPaymentAmount += orderTotal;
-                    }
-                } else {
-                    // Unknown method — conservative: treat as cash (platform didn't hold it)
-                    cashPaymentAmount += orderTotal;
-                }
-
-                // Order type breakdown
-                const orderType = order.order_type || 'delivery';
-                if (orderType === 'delivery') {
-                    deliveryOrders++;
-                    deliveryEarnings += orderTotal;
-                } else if (orderType === 'collection' || orderType === 'takeaway') {
-                    collectionOrders++;
-                    collectionEarnings += orderTotal;
-                } else if (orderType === 'dine_in') {
-                    dineInOrders++;
-                    dineInEarnings += orderTotal;
-                }
-            });
-
-            // Commission is charged on GROSS earnings (all completed online orders)
-            // and then deducted from the card payments held by the platform
-            let platformCommission = 0;
-            const commissionRate = restaurant.commission_rate || 15;
-            if (restaurant.commission_type === 'fixed') {
-                platformCommission = restaurant.fixed_commission_amount || 0;
-            } else {
-                platformCommission = grossEarnings * (commissionRate / 100);
-            }
-
-            // All in-period online orders for stats (any status, online source only)
-            const inPeriodOnlineOrders = allRestaurantOrders.filter(order => {
-                const orderDate = new Date(order.created_date);
-                return orderDate >= periodStart && orderDate <= periodEnd
-                    && !excludedSources.has(order.order_source);
-            });
-
-            // Cancelled orders in period
-            const cancelledOrders = inPeriodOnlineOrders.filter(o => o.status === 'cancelled');
-            const cancelledOrdersValue = cancelledOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-
-            // Refunds in this period
-            const refundedOrders = inPeriodOnlineOrders.filter(o => o.status === 'refunded');
-            const refundDate = (o) => new Date(o.refund_approved_date || o.updated_date || o.created_date);
-            // Orders placed BEFORE this period (already paid out) but refunded during it:
-            // the restaurant has had the money, so a restaurant-borne refund is recovered now.
-            const earlierOrdersRefundedNow = allRestaurantOrders.filter(o =>
-                o.status === 'refunded' && !excludedSources.has(o.order_source)
-                && new Date(o.created_date) < periodStart
-                && refundDate(o) >= periodStart && refundDate(o) <= periodEnd);
-
-            const refundsPaidByRestaurant = earlierOrdersRefundedNow
-                .filter(o => o.refund_paid_by !== 'platform')
-                .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
-
-            // MealDrop-absorbed refunds are MealDrop's cost — reported, never deducted.
-            const refundsPaidByPlatform = [...refundedOrders, ...earlierOrdersRefundedNow]
-                .filter(o => o.refund_paid_by === 'platform')
-                .reduce((sum, o) => sum + (o.refund_amount || 0), 0);
-
-            // Net payout = card payments held by platform, minus commission on gross, minus restaurant-borne refunds
-            // Commission is on GROSS (all orders). The portion attributable to cash orders is a debt 
-            // owed by the restaurant to the platform (they collected that cash directly).
-            const cashCommissionDebt = grossEarnings > 0
-                ? platformCommission * (cashPaymentAmount / grossEarnings)
-                : 0;
-
-            // Net payout formula:
-            // Card payments held by platform
-            // MINUS commission on ALL gross (card + cash)
-            // MINUS refunds the restaurant is responsible for
-            // MINUS refunds the PLATFORM covered (MealDrop paid these — must claw back from payout)
-            const pence = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
-            platformCommission = pence(platformCommission);
-            let netPayout = pence(cardPaymentAmount - platformCommission - refundsPaidByRestaurant);
-            const finalNetPayout = Math.max(0, netPayout);
-            const shortfall = netPayout < 0 ? pence(-netPayout) : 0;
-
-            // Audit log in browser console for verification
-            console.log(`[Payout Audit] ==========================================`);
-            console.log(`[Payout Audit] Restaurant: ${restaurant.name}`);
-            console.log(`[Payout Audit] Period: ${periodStart.toLocaleDateString()} → ${periodEnd.toLocaleDateString()}`);
-            console.log(`[Payout Audit] All orders fetched for restaurant: ${allRestaurantOrders.length}`);
-            console.log(`[Payout Audit] In-period online COMPLETED orders (delivered/collected): ${periodOrders.length}`);
-            const inPeriodAll = allRestaurantOrders.filter(o => new Date(o.created_date) >= periodStart && new Date(o.created_date) <= periodEnd);
-            console.log(`[Payout Audit] In-period ALL orders (any status/source): ${inPeriodAll.length}`);
-            console.log(`[Payout Audit]   ↳ Excluded POS/kiosk/third_party: ${inPeriodAll.filter(o => excludedSources.has(o.order_source)).length}`);
-            console.log(`[Payout Audit]   ↳ Cancelled online orders: ${cancelledOrders.length}`);
-            console.log(`[Payout Audit]   ↳ Refunded online orders: ${refundedOrders.length}`);
-            console.log(`[Payout Audit] Gross: £${grossEarnings.toFixed(2)} | Card: £${cardPaymentAmount.toFixed(2)} | Cash: £${cashPaymentAmount.toFixed(2)}`);
-            console.log(`[Payout Audit] Commission (${commissionRate}%): £${platformCommission.toFixed(2)} | Cash commission debt: £${cashCommissionDebt.toFixed(2)}`);
-            console.log(`[Payout Audit] Refunds by restaurant: -£${refundsPaidByRestaurant.toFixed(2)} | Refunds by platform (clawed back): -£${refundsPaidByPlatform.toFixed(2)}`);
-            console.log(`[Payout Audit] Net payout: £${finalNetPayout.toFixed(2)} (raw: £${netPayout.toFixed(2)})`);
-            console.log(`[Payout Audit] ==========================================`);
-
-            const notes = [];
-            if (shortfall > 0) {
-                notes.push(`⚠️ Commission and refunds exceeded card takings by £${shortfall.toFixed(2)} — the restaurant owes MealDrop this amount. Carry it forward or invoice it.`);
-            }
-            if (cashCommissionDebt > 0) {
-                notes.push(`ℹ️ Includes £${cashCommissionDebt.toFixed(2)} commission on £${cashPaymentAmount.toFixed(2)} of cash orders, already deducted from this payout.`);
-            }
-            if (refundsPaidByPlatform > 0) {
-                notes.push(`ℹ️ £${refundsPaidByPlatform.toFixed(2)} of refunds were covered by MealDrop and not deducted.`);
-            }
-            const finalNotes = notes.length > 0 ? notes.join(' | ') : undefined;
-
-            return base44.entities.Payout.create({
-                restaurant_id: restaurantId,
-                restaurant_name: restaurant.name,
-                period_start: periodStart.toISOString(),
-                period_end: periodEnd.toISOString(),
-                payout_frequency: payoutFrequency,
-                total_orders: payoutOrders.length,
-                cancelled_orders: cancelledOrders.length,
-                cancelled_orders_value: cancelledOrdersValue,
-                refunded_orders_count: refundedOrders.length,
-                delivery_orders: deliveryOrders,
-                collection_orders: collectionOrders,
-                dine_in_orders: dineInOrders,
-                gross_earnings: pence(grossEarnings),
-                delivery_earnings: pence(deliveryEarnings),
-                collection_earnings: pence(collectionEarnings),
-                cash_payment_amount: pence(cashPaymentAmount),
-                card_payment_amount: pence(cardPaymentAmount),
-                platform_commission: platformCommission,
-                commission_rate: commissionRate,
-                commission_type: restaurant.commission_type || 'percentage',
-                refunds_paid_by_platform: pence(refundsPaidByPlatform),
-                refunds_paid_by_restaurant: pence(refundsPaidByRestaurant),
-                shortfall_amount: shortfall,
-                net_payout: finalNetPayout,
-                status: 'pending',
-                notes: finalNotes,
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries(['payouts']);
-            toast.success('Payout generated successfully');
-            setGeneratingFor(null);
-        },
-        onError: (err) => {
-            toast.error(err?.message || 'Failed to generate payout');
-            setGeneratingFor(null);
-        }
-    });
-
     const financeCall = async (action, payload) => {
         const res = await base44.functions.invoke('finance-operations', { action, company_id: MEALDROP_FINANCE_COMPANY_ID, ...payload })
             .catch((e) => { throw new Error(e?.response?.data?.error || e?.message || 'Request failed'); });
@@ -319,6 +54,31 @@ export default function PayoutManagement() {
         if (!data?.success) throw new Error(data?.error || 'Request failed');
         return data;
     };
+
+    // The payout is calculated on the server (finance-operations): continuous periods,
+    // late orders, refunds and carried-forward balances are all handled there.
+    const payoutBody = () => ({
+        restaurant_id: generatingFor,
+        frequency: payoutFrequency,
+        ...(payoutFrequency === 'custom' ? { end_date: endDate } : {}),
+        ...(startDate ? { start_date: startDate } : {}),
+    });
+    const [preview, setPreview] = useState(null);
+    const previewMutation = useMutation({
+        mutationFn: () => financeCall('preview_payout', payoutBody()),
+        onSuccess: (data) => setPreview(data.preview),
+        onError: (e) => { setPreview(null); toast.error(e.message || 'Could not calculate payout'); },
+    });
+    const generatePayoutMutation = useMutation({
+        mutationFn: () => financeCall('generate_payout', payoutBody()),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['payouts']);
+            toast.success('Payout generated');
+            setPreview(null);
+            setGeneratingFor('');
+        },
+        onError: (e) => toast.error(e.message || 'Failed to generate payout'),
+    });
 
     const voidPayoutMutation = useMutation({
         mutationFn: ({ payoutId, reason }) => financeCall('void_payout', { payout_id: payoutId, reason }),
