@@ -157,6 +157,19 @@ export function generatePayoutPDF(payout) {
     if (n(payout.refunds_paid_by_restaurant) > 0) {
         rows.push({ label: 'Refunds on orders paid to you earlier', value: `-${currency(payout.refunds_paid_by_restaurant)}`, negative: true });
     }
+    const signed = (v) => (n(v) < 0 ? `-${currency(Math.abs(n(v)))}` : `+${currency(n(v))}`);
+    if (n(payout.chargebacks_amount) !== 0) {
+        rows.push({ label: 'Card disputes (chargebacks and Stripe dispute fees)', value: signed(payout.chargebacks_amount), negative: n(payout.chargebacks_amount) < 0, positive: n(payout.chargebacks_amount) > 0 });
+    }
+    if (n(payout.manual_adjustments_amount) !== 0) {
+        rows.push({ label: 'Adjustments (see notes / CSV)', value: signed(payout.manual_adjustments_amount), negative: n(payout.manual_adjustments_amount) < 0, positive: n(payout.manual_adjustments_amount) > 0 });
+    }
+    if (n(payout.reserve_released_amount) > 0) {
+        rows.push({ label: 'Reserve released from earlier statements', value: `+${currency(payout.reserve_released_amount)}`, positive: true });
+    }
+    if (n(payout.reserve_held) > 0) {
+        rows.push({ label: `Reserve held (${payout.reserve_percent ?? ''}% of card, paid after ${payout.reserve_until ? format(new Date(payout.reserve_until), 'dd MMM yyyy') : 'the reserve period'})`, value: `-${currency(payout.reserve_held)}`, negative: true });
+    }
     if (n(payout.brought_forward_amount) > 0) {
         rows.push({ label: 'Balance owed from your last statement', value: `-${currency(payout.brought_forward_amount)}`, negative: true });
     }
