@@ -493,6 +493,158 @@ async function restaurantBalances(ctx: Ctx, company: any, body: any) {
   return { as_of: asOf, from: company.marketplace_from || null, rows, total_held: r2(held), stripe_balance_per_books: r2(stripe) };
 }
 
+// ───────────────────────── restaurant payouts ─────────────────────────
+// The payout is calculated here, never in the browser. Which orders a payout
+// covered is recorded on the payout (order_ids / refund_order_ids), not on the
+// order: writing to old orders would re-fire every Order workflow (loyalty,
+// notifications, CRM). An order is "paid" when it is in a live payout's
+// order_ids; voiding the payout releases it automatically.
+const PAYOUT_SETTLED = new Set(["delivered", "collected", "refund_rejected_by_restaurant", "refunded"]);
+const NOT_ONLINE = new Set(["pos", "kiosk", "third_party"]);
+const CARD_METHODS = new Set(["card", "apple_pay", "google_pay"]);
+const CARD_PAID = new Set(["payment_confirmed", "paid_card"]);
+const toPence = (v: unknown) => Math.round((Number(v) || 0) * 100);
+const fromPence = (p: number) => Math.round(p) / 100;
+function londonOffsetMs(utcMs: number) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(new Date(utcMs));
+  const g = (t: string) => Number(parts.find((p) => p.type === t)!.value);
+  return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute"), g("second")) - Math.floor(utcMs / 1000) * 1000;
+}
+const ukStartOfDay = (day: string) => { const t = Date.parse(day + "T00:00:00Z"); return new Date(t - londonOffsetMs(t)).toISOString(); };
+const ukEndOfDay = (day: string) => { const t = Date.parse(day + "T23:59:59.999Z"); return new Date(t - londonOffsetMs(t)).toISOString(); };
+const ukDay = (d: Date | string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(d));
+const lastDayOfMonth = (day: string) => addDays(addPeriod(day.slice(0, 8) + "01", "monthly"), -1);
+const isLivePayout = (p: any) => !["voided", "failed"].includes(p.status);
+
+function payoutEndDay(freq: string, today: string, body: any) {
+  if (freq === "custom") return needDate(body.end_date, "End date");
+  if (freq === "daily") return addDays(today, -1);
+  if (freq === "weekly") { const dow = new Date(today + "T00:00:00Z").getUTCDay(); return addDays(today, -(dow === 0 ? 7 : dow)); } // last full Mon–Sun week
+  return addDays(today.slice(0, 8) + "01", -1); // monthly: last day of previous month
+}
+// Calendar months whose last day falls inside the period — one fixed fee each.
+function monthEndsIn(startIso: string, endIso: string) {
+  let n = 0;
+  for (let d = lastDayOfMonth(ukDay(startIso)); d <= ukDay(endIso); d = lastDayOfMonth(addDays(d, 1))) {
+    const t = ukEndOfDay(d);
+    if (t > startIso && t <= endIso) n++;
+  }
+  return n;
+}
+
+async function buildPayout(ctx: Ctx, body: any) {
+  const restaurantId = str(body.restaurant_id, 80);
+  if (!restaurantId) fail("Choose a restaurant");
+  const restaurant = (await ctx.db.Restaurant.filter({ id: restaurantId }, null, 1, 0))?.[0];
+  if (!restaurant) fail("Restaurant not found", 404);
+  const freq = ["daily", "weekly", "monthly", "custom"].includes(body.frequency) ? body.frequency : "monthly";
+  const today = ukDay(new Date());
+  const endDay = payoutEndDay(freq, today, body);
+  if (endDay >= today) fail("A payout can only cover days that have finished — choose an end date before today");
+  const periodEnd = ukEndOfDay(endDay);
+
+  const live = (await all(ctx.db.Payout, { restaurant_id: restaurantId })).filter(isLivePayout)
+    .sort((a: any, b: any) => Date.parse(a.period_end) - Date.parse(b.period_end));
+  const last = live[live.length - 1] || null;
+  const online = (await all(ctx.db.Order, { restaurant_id: restaurantId })).filter((o: any) => !NOT_ONLINE.has(String(o.order_source || "online")));
+
+  // Periods are continuous: each payout starts the instant the last one ended.
+  let periodStart: string;
+  if (last) periodStart = new Date(Date.parse(last.period_end) + 1).toISOString();
+  else if (body.start_date) periodStart = ukStartOfDay(needDate(body.start_date, "Start date"));
+  else {
+    const first = online.reduce((m: string | null, o: any) => (!m || o.created_date < m ? o.created_date : m), null);
+    periodStart = ukStartOfDay(first ? ukDay(first) : endDay);
+  }
+  const startMs = Date.parse(periodStart), endMs = Date.parse(periodEnd);
+  if (endMs <= startMs) fail(`Nothing new to pay — ${restaurant.name}'s last payout already runs to ${ukDay(last.period_end)}`);
+
+  const paidIds = new Set(live.flatMap((p: any) => p.order_ids || []));
+  const refundDone = new Set(live.flatMap((p: any) => p.refund_order_ids || []));
+  const c = { gross: 0, card: 0, cash: 0, refundsDeducted: 0, refundsPlatform: 0, cashRefunds: 0, cancelledValue: 0, unpaidCardValue: 0, heldValue: 0, delivery: 0, collection: 0, dineIn: 0 };
+  const n = { paid: 0, late: 0, held: 0, cancelled: 0, unpaidCard: 0, refunded: 0, earlierRefunds: 0, disputed: 0, delivery: 0, collection: 0, dineIn: 0 };
+  const orderIds: string[] = [], refundIds: string[] = [];
+  for (const o of online) {
+    const created = Date.parse(o.created_date);
+    if (!(created <= endMs)) continue; // after the cut-off: next payout
+    const total = Math.max(0, toPence(o.total));
+    const refund = Math.min(toPence(o.refund_amount ?? o.total), total);
+    const isCard = CARD_METHODS.has(o.payment_method);
+    if (paidIds.has(o.id)) {
+      // Paid out earlier and refunded since. Only a restaurant-borne refund of a CARD
+      // order comes back out of their money: MealDrop refunded it from Stripe. A cash
+      // refund was handed back by the restaurant itself.
+      if (o.status === "refunded" && !refundDone.has(o.id)) {
+        refundIds.push(o.id); n.earlierRefunds++;
+        if (o.refund_paid_by === "platform") c.refundsPlatform += refund;
+        else if (isCard) c.refundsDeducted += refund;
+        else c.cashRefunds += refund;
+      }
+      continue;
+    }
+    if (o.status === "cancelled") { if (created >= startMs) { n.cancelled++; c.cancelledValue += total; } continue; }
+    // Unfinished or refund still being decided: wait for a later payout, never drop.
+    if (!PAYOUT_SETTLED.has(o.status)) { n.held++; c.heldValue += total; continue; }
+    // Card order whose payment never went through: no money to pay out or charge on.
+    if (isCard && o.payment_status && !CARD_PAID.has(o.payment_status)) { n.unpaidCard++; c.unpaidCardValue += total; continue; }
+    let kept = total;
+    if (o.status === "refunded") {
+      refundIds.push(o.id); n.refunded++;
+      if (o.refund_paid_by === "platform") c.refundsPlatform += refund; else kept -= refund;
+    }
+    orderIds.push(o.id);
+    if (created < startMs) n.late++;
+    if (o.status === "refund_rejected_by_restaurant") n.disputed++;
+    if (kept <= 0) continue;
+    n.paid++;
+    c.gross += kept;
+    if (isCard) c.card += kept; else c.cash += kept;
+    const type = o.order_type || "delivery";
+    if (type === "delivery") { n.delivery++; c.delivery += kept; }
+    else if (type === "collection" || type === "takeaway") { n.collection++; c.collection += kept; }
+    else { n.dineIn++; c.dineIn += kept; }
+  }
+
+  const commissionType = restaurant.commission_type === "fixed" ? "fixed" : "percentage";
+  const rate = Number(restaurant.commission_rate ?? 15);
+  if (commissionType === "percentage" && !(Number.isFinite(rate) && rate >= 0 && rate <= 100)) fail(`${restaurant.name}'s commission rate isn't a valid percentage`);
+  let commission = 0, months = 0;
+  if (commissionType === "fixed") { months = monthEndsIn(periodStart, periodEnd); commission = toPence(restaurant.fixed_commission_amount) * months; }
+  else commission = Math.round(c.gross * rate / 100);
+  const broughtForward = last ? toPence(last.shortfall_amount) : 0;
+  const raw = c.card - commission - c.refundsDeducted - broughtForward;
+  const net = Math.max(0, raw), shortfall = Math.max(0, -raw);
+
+  const notes: string[] = [];
+  if (shortfall > 0) notes.push(`⚠️ Deductions exceeded card takings by £${fromPence(shortfall).toFixed(2)}. This is carried forward and taken from the next payout.`);
+  if (broughtForward > 0) notes.push(`Includes £${fromPence(broughtForward).toFixed(2)} brought forward from the previous payout.`);
+  if (n.late > 0) notes.push(`Includes ${n.late} order(s) from before this period that were completed late.`);
+  if (n.disputed > 0) notes.push(`Includes ${n.disputed} order(s) where the restaurant declined a refund request.`);
+  if (n.held > 0) notes.push(`ℹ️ ${n.held} order(s) (£${fromPence(c.heldValue).toFixed(2)}) not finished or refund pending — they'll be paid in a later payout once completed.`);
+  if (n.unpaidCard > 0) notes.push(`ℹ️ ${n.unpaidCard} card order(s) (£${fromPence(c.unpaidCardValue).toFixed(2)}) were marked completed but the card payment never went through — not included.`);
+  if (c.refundsPlatform > 0) notes.push(`ℹ️ £${fromPence(c.refundsPlatform).toFixed(2)} of refunds were covered by MealDrop and not deducted.`);
+  if (c.cashRefunds > 0) notes.push(`ℹ️ £${fromPence(c.cashRefunds).toFixed(2)} of cash-order refunds were handled by the restaurant and not deducted.`);
+
+  return {
+    restaurant_id: restaurantId, restaurant_name: restaurant.name,
+    period_start: periodStart, period_end: periodEnd, payout_frequency: freq,
+    total_orders: n.paid, late_orders: n.late, held_orders: n.held, held_orders_value: fromPence(c.heldValue),
+    unpaid_card_orders: n.unpaidCard, unpaid_card_value: fromPence(c.unpaidCardValue),
+    cancelled_orders: n.cancelled, cancelled_orders_value: fromPence(c.cancelledValue),
+    refunded_orders_count: n.refunded + n.earlierRefunds,
+    delivery_orders: n.delivery, collection_orders: n.collection, dine_in_orders: n.dineIn,
+    delivery_earnings: fromPence(c.delivery), collection_earnings: fromPence(c.collection),
+    gross_earnings: fromPence(c.gross), card_payment_amount: fromPence(c.card), cash_payment_amount: fromPence(c.cash),
+    platform_commission: fromPence(commission), commission_type: commissionType,
+    ...(commissionType === "percentage" ? { commission_rate: rate } : { fixed_commission_amount: fromPence(toPence(restaurant.fixed_commission_amount)), commission_months: months }),
+    refunds_paid_by_platform: fromPence(c.refundsPlatform), refunds_paid_by_restaurant: fromPence(c.refundsDeducted),
+    cash_refunds_not_deducted: fromPence(c.cashRefunds), brought_forward_amount: fromPence(broughtForward),
+    shortfall_amount: fromPence(shortfall), net_payout: fromPence(net), status: "pending",
+    order_ids: orderIds, refund_order_ids: refundIds,
+    ...(notes.length ? { notes: notes.join(" | ") } : {}),
+  };
+}
+
 // ───────────────────────── action handlers ─────────────────────────
 const COMPANY_FIELDS = ["legal_name", "trading_name", "company_number", "registered_in", "utr", "email", "phone", "website", "logo_url", "bank_account_name", "bank_sort_code", "bank_account_number", "invoice_prefix", "credit_note_prefix", "invoice_footer", "notes"];
 
@@ -973,8 +1125,34 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
       const company = await getCompany(ctx, body.company_id);
       await reverseEntry(ctx, company, p.finance_commission_entry_id, today(), `Payout voided: ${reason}`);
     }
+    // Only the latest payout can be voided: voiding one in the middle would leave a gap.
+    const later = (await all(ctx.db.Payout, { restaurant_id: p.restaurant_id })).filter((x: any) => x.id !== p.id && isLivePayout(x) && Date.parse(x.period_end) > Date.parse(p.period_end));
+    if (later.length) fail("Only the most recent payout for a restaurant can be voided — a later payout already follows this one");
     const payout = await ctx.db.Payout.update(p.id, { status: "voided", voided_at: new Date().toISOString(), void_reason: reason });
     if (body.company_id) await audit(ctx, body.company_id, "Payout", p.id, "void", `${p.restaurant_name} payout voided: ${reason}`, p);
+    return { payout };
+  },
+
+  async preview_payout(ctx, body) {
+    const draft = await buildPayout(ctx, body);
+    const { order_ids, refund_order_ids, ...rest } = draft;
+    return { preview: { ...rest, order_count: order_ids.length } };
+  },
+
+  async generate_payout(ctx, body) {
+    const draft = await buildPayout(ctx, body);
+    if (draft.order_ids.length === 0 && draft.refund_order_ids.length === 0 && draft.platform_commission === 0 && draft.brought_forward_amount === 0) {
+      fail(`No completed online orders for ${draft.restaurant_name} in this period — nothing to pay`);
+    }
+    const payout = await ctx.db.Payout.create({ ...draft, generated_by: ctx.user.email, generated_at: new Date().toISOString() });
+    // Two admins pressing Generate at once: the first one created wins.
+    const rivals = (await all(ctx.db.Payout, { restaurant_id: draft.restaurant_id })).filter((x: any) => x.id !== payout.id && isLivePayout(x)
+      && Date.parse(x.period_start) <= Date.parse(payout.period_end) && Date.parse(x.period_end) >= Date.parse(payout.period_start));
+    if (rivals.length) {
+      await ctx.db.Payout.update(payout.id, { status: "voided", voided_at: new Date().toISOString(), void_reason: "Duplicate — another payout for this period was generated at the same time" });
+      fail("Another payout for this period was generated at the same moment — refresh and check", 409);
+    }
+    if (body.company_id) await audit(ctx, body.company_id, "Payout", payout.id, "generate", `${draft.restaurant_name} payout ${ukDay(draft.period_start)} to ${ukDay(draft.period_end)}: £${draft.net_payout.toFixed(2)}`);
     return { payout };
   },
 
