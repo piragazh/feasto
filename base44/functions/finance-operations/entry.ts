@@ -1182,6 +1182,37 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
       }
     }
 
+    // 3b. Payout adjustments that move money (reserve holds/releases don't — the money
+    //     stays in 2400 either way).
+    //   chargeback/fee taken by Stripe   Dr 2400 (restaurant bears) or 6900 (waived)   Cr 1210
+    //   dispute won, money returned       Dr 1210   Cr 2400 (or 6900 if waived)
+    //   manual credit to restaurant       Dr 6900   Cr 2400
+    //   manual debit from restaurant      Dr 2400   Cr 4900
+    //   posted chargeback later waived    Dr 6900   Cr 2400 (reverse for a returned amount)
+    const GENERAL = "6900", OTHER_INCOME = "4900";
+    for (const x of await all(ctx.db.PayoutAdjustment, {})) {
+      if (x.status === "cancelled" || x.type === "reserve_release") continue;
+      const date = day(x.available_from || x.created_date);
+      const amt = r2(Math.abs(Number(x.amount || 0)));
+      if (!date || date < from || !(amt > 0)) continue;
+      const dispute = x.type === "chargeback" || x.type === "dispute_fee";
+      const out_ = Number(x.amount) < 0;
+      const base = { date, source_type: "payout_adjustment", source_id: x.id, source_reference: x.stripe_dispute_id || x.type, restaurant_id: x.restaurant_id, restaurant_name: x.restaurant_name };
+      if (!x.ledger_entry_id) {
+        if (!dispute && x.status === "waived") continue; // a waived manual adjustment never happened
+        const other = dispute ? (x.status === "waived" ? GENERAL : HELD) : (out_ ? OTHER_INCOME : GENERAL);
+        const lines = dispute
+          ? (out_ ? [{ account_code: other, debit: amt, credit: 0 }, { account_code: STRIPE, debit: 0, credit: amt }] : [{ account_code: STRIPE, debit: amt, credit: 0 }, { account_code: other, debit: 0, credit: amt }])
+          : (out_ ? [{ account_code: HELD, debit: amt, credit: 0 }, { account_code: other, debit: 0, credit: amt }] : [{ account_code: other, debit: amt, credit: 0 }, { account_code: HELD, debit: 0, credit: amt }]);
+        const entry = await attempt(() => postEntry(ctx, company, { ...base, description: `${x.description || x.type} — ${x.restaurant_name}${x.status === "waived" ? " (absorbed by MealDrop)" : ""}`, lines }, accounts));
+        if (entry) { await ctx.db.PayoutAdjustment.update(x.id, { ledger_entry_id: entry.id }); out.adjustments = (out.adjustments || 0) + 1; }
+      } else if (dispute && x.status === "waived" && !x.waive_entry_id) {
+        const lines = out_ ? [{ account_code: GENERAL, debit: amt, credit: 0 }, { account_code: HELD, debit: 0, credit: amt }] : [{ account_code: HELD, debit: amt, credit: 0 }, { account_code: GENERAL, debit: 0, credit: amt }];
+        const entry = await attempt(() => postEntry(ctx, company, { ...base, date: day(x.waived_at) || today(), description: `Waived: ${x.description || x.type} — ${x.restaurant_name}`, lines }, accounts));
+        if (entry) { await ctx.db.PayoutAdjustment.update(x.id, { waive_entry_id: entry.id }); out.adjustments = (out.adjustments || 0) + 1; }
+      }
+    }
+
     // 4. Stripe → bank settlements, and Stripe's fees
     const settlements = await all(ctx.db.FinanceStripeSettlement, { company_id: company.id });
     for (const s of settlements) {
