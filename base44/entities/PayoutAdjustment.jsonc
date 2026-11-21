@@ -1,0 +1,107 @@
+{
+  "name": "PayoutAdjustment",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "chargeback",
+        "dispute_fee",
+        "manual_credit",
+        "manual_debit",
+        "reserve_release"
+      ],
+      "description": "chargeback/dispute_fee come from Stripe disputes (restaurant bears them); manual_* are added by an admin; reserve_release pays back a reserve held from an earlier payout."
+    },
+    "amount": {
+      "type": "number",
+      "description": "Signed from the restaurant's side: positive = MealDrop owes the restaurant, negative = the restaurant owes MealDrop."
+    },
+    "description": {
+      "type": "string",
+      "description": "Shown on the restaurant's statement."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "waived",
+        "cancelled"
+      ],
+      "default": "open",
+      "description": "Settled-ness is not stored here: an adjustment is settled once it appears in a live payout's adjustment_ids (voiding the payout releases it)."
+    },
+    "available_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Not included in a payout whose period ends before this (e.g. a reserve release date)."
+    },
+    "source_payout_id": {
+      "type": "string",
+      "description": "Payout that created this (reserve releases). Ignored if that payout is voided."
+    },
+    "order_id": {
+      "type": "string"
+    },
+    "stripe_dispute_id": {
+      "type": "string"
+    },
+    "payment_intent_id": {
+      "type": "string"
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "waived_by": {
+      "type": "string"
+    },
+    "waived_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "waive_reason": {
+      "type": "string"
+    },
+    "ledger_entry_id": {
+      "type": "string",
+      "description": "Finance ledger entry for this adjustment (chargebacks, fees, manual)."
+    },
+    "waive_entry_id": {
+      "type": "string",
+      "description": "Correcting ledger entry when a posted chargeback is later waived."
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "type",
+    "amount"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    }
+  }
+}

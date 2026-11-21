@@ -1,0 +1,70 @@
+{
+  "name": "RestaurantBankAccount",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string"
+    },
+    "restaurant_name": {
+      "type": "string"
+    },
+    "account_name": {
+      "type": "string"
+    },
+    "sort_code": {
+      "type": "string",
+      "description": "6 digits, no dashes"
+    },
+    "account_number": {
+      "type": "string",
+      "description": "8 digits"
+    },
+    "active_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Payments can't be exported to these details before this. Set 48 hours after any change, to give time to spot a fraudulent change."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_by": {
+      "type": "string"
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Previous details (masked), newest first."
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "account_name",
+    "sort_code",
+    "account_number"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "finance_backend_only"
+      }
+    }
+  }
+}
