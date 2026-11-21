@@ -356,9 +356,20 @@ async function handleChargeRefunded(base44, charge) {
             // Also update the Order to refunded status if it exists
             if (pts[0].order_id) {
                 try {
+                    // approveRefund / platformRefundOverride record who pays and how much.
+                    // Overwriting them here used to turn restaurant-paid refunds into
+                    // MealDrop's cost and treat partial refunds as full ones. Only fill in
+                    // a refund made outside the app (e.g. from the Stripe dashboard).
+                    const existing = (await base44.asServiceRole.entities.Order.filter({ id: pts[0].order_id }))?.[0];
+                    if (!existing || existing.status === 'refunded') {
+                        console.log(`[WEBHOOK] Order ${pts[0].order_id} already refunded in-app — left unchanged`);
+                        return;
+                    }
                     await base44.asServiceRole.entities.Order.update(pts[0].order_id, {
                         status: 'refunded',
-                        refund_paid_by: 'platform'
+                        refund_amount: Math.round(Number(charge.amount_refunded || 0)) / 100,
+                        refund_paid_by: existing.refund_paid_by || 'platform',
+                        refund_approved_date: new Date().toISOString(),
                     });
                     console.log(`[WEBHOOK] Updated Order ${pts[0].order_id} to refunded status`);
                 } catch (orderErr) {
