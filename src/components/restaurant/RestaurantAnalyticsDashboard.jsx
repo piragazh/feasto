@@ -31,7 +31,7 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
     // Fetch payouts
     const { data: payouts = [], isLoading: payoutsLoading } = useQuery({
         queryKey: ['restaurant-payouts', restaurantId],
-        queryFn: () => base44.entities.Payout.filter({ restaurant_id: restaurantId }, '-created_date'),
+        queryFn: () => fetchRestaurantPayouts(restaurantId),
     });
 
     // Filter orders by date range
