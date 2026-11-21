@@ -2,9 +2,25 @@
   "name": "Restaurant",
   "type": "object",
   "properties": {
-    "payout_schedule": { "type": "string", "enum": ["manual", "weekly", "monthly"], "default": "manual", "description": "weekly/monthly: a payout draft is created automatically (Mon for the last full Mon-Sun week; 1st for last month) and waits for admin approval." },
-    "reserve_percent": { "type": "number", "description": "Share of card takings held back from each payout until reserve_until. Set to 10 automatically at a new restaurant's first payout." },
-    "reserve_until": { "type": "string", "format": "date-time", "description": "Reserve stops being held after this; held amounts are released in the next payout." },
+    "payout_schedule": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "weekly",
+        "monthly"
+      ],
+      "default": "manual",
+      "description": "weekly/monthly: a payout draft is created automatically (Mon for the last full Mon-Sun week; 1st for last month) and waits for admin approval."
+    },
+    "reserve_percent": {
+      "type": "number",
+      "description": "Share of card takings held back from each payout until reserve_until. Set to 10 automatically at a new restaurant's first payout."
+    },
+    "reserve_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Reserve stops being held after this; held amounts are released in the next payout after this date."
+    },
     "name": {
       "type": "string",
       "description": "Restaurant name"
