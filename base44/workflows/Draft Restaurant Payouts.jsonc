@@ -1,0 +1,43 @@
+{
+  "name": "Draft Restaurant Payouts",
+  "description": "Every morning: for each restaurant on a weekly or monthly payout schedule, drafts the payout that has come due (weekly: last full Mon-Sun week; monthly: last calendar month). Drafts wait in Super Admin > Payouts for approval - nothing is paid automatically. Idempotent: a restaurant already covered to its cut-off is skipped, and a missed morning catches up the next day.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "41 6 * * *",
+      "one_time_date": null,
+      "timezone": "Europe/London",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "draft_restaurant_payouts",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "finance-operations",
+            "args": {
+              "action": "run_schedule"
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}
