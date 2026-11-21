@@ -515,6 +515,11 @@ const ukEndOfDay = (day: string) => { const t = Date.parse(day + "T23:59:59.999Z
 const ukDay = (d: Date | string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(d));
 const lastDayOfMonth = (day: string) => addDays(addPeriod(day.slice(0, 8) + "01", "monthly"), -1);
 const isLivePayout = (p: any) => !["voided", "failed"].includes(p.status);
+// New restaurants: hold back this share of card takings for this long after their first payout starts.
+const DEFAULT_RESERVE_PCT = 10, RESERVE_DAYS = 90;
+const ADJUSTMENT_TYPES = ["chargeback", "dispute_fee", "manual_credit", "manual_debit", "reserve_release"];
+const hasPayoutContent = (d: any) => d.order_ids.length > 0 || d.refund_order_ids.length > 0 || d.adjustment_ids.length > 0
+  || d.platform_commission > 0 || d.brought_forward_amount > 0;
 
 function payoutEndDay(freq: string, today: string, body: any) {
   if (freq === "custom") return needDate(body.end_date, "End date");
@@ -619,6 +624,24 @@ async function buildPayout(ctx: Ctx, body: any) {
     else { n.dineIn++; c.dineIn += kept; }
   }
 
+  // Adjustments (chargebacks, dispute fees and credits, manual credits/debits, reserve
+  // releases). Settled like orders: an adjustment is done once it's in a live payout's
+  // adjustment_ids. Signed from the restaurant's side: + we owe them, − they owe us.
+  const livePayoutIds = new Set(live.map((p: any) => p.id));
+  const settledAdj = new Set(live.flatMap((p: any) => p.adjustment_ids || []));
+  const adjIds: string[] = [];
+  const a = { chargebacks: 0, manual: 0, reserveReleased: 0, total: 0 };
+  for (const x of await all(ctx.db.PayoutAdjustment, { restaurant_id: restaurantId })) {
+    if (["waived", "cancelled"].includes(x.status) || settledAdj.has(x.id)) continue;
+    if (x.source_payout_id && !livePayoutIds.has(x.source_payout_id)) continue; // made by a payout that was voided
+    if (!(Date.parse(x.available_from || x.created_date) <= endMs)) continue;   // not due yet
+    const amt = toPence(x.amount);
+    adjIds.push(x.id); a.total += amt;
+    if (x.type === "chargeback" || x.type === "dispute_fee") a.chargebacks += amt;
+    else if (x.type === "reserve_release") a.reserveReleased += amt;
+    else a.manual += amt;
+  }
+
   const commissionType = restaurant.commission_type === "fixed" ? "fixed" : "percentage";
   const rate = Number(restaurant.commission_rate ?? 15);
   if (commissionType === "percentage" && !(Number.isFinite(rate) && rate >= 0 && rate <= 100)) fail(`${restaurant.name}'s commission rate isn't a valid percentage`);
@@ -626,7 +649,15 @@ async function buildPayout(ctx: Ctx, body: any) {
   if (commissionType === "fixed") { months = monthEndsIn(periodStart, periodEnd); commission = toPence(restaurant.fixed_commission_amount) * months; }
   else commission = Math.round(c.gross * rate / 100);
   const broughtForward = last ? toPence(last.shortfall_amount) : 0;
-  const raw = c.card - commission - c.refundsDeducted - broughtForward;
+  const beforeReserve = c.card - commission - c.refundsDeducted - broughtForward + a.total;
+  // Reserve: new restaurants (no payout yet) get the default; it's saved on the restaurant
+  // when their first payout is generated. Never holds more than would be paid.
+  const firstPayout = live.length === 0;
+  const reservePct = Number(restaurant.reserve_percent ?? (firstPayout ? DEFAULT_RESERVE_PCT : 0)) || 0;
+  const reserveUntil: string | null = restaurant.reserve_until || (firstPayout && reservePct > 0 ? ukEndOfDay(addDays(ukDay(periodStart), RESERVE_DAYS)) : null);
+  const reserveHeld = reservePct > 0 && reserveUntil && endMs < Date.parse(reserveUntil)
+    ? Math.max(0, Math.min(Math.round(c.card * reservePct / 100), beforeReserve)) : 0;
+  const raw = beforeReserve - reserveHeld;
   const net = Math.max(0, raw), shortfall = Math.max(0, -raw);
 
   const notes: string[] = [];
@@ -638,6 +669,10 @@ async function buildPayout(ctx: Ctx, body: any) {
   if (n.unpaidCard > 0) notes.push(`ℹ️ ${n.unpaidCard} card order(s) (£${fromPence(c.unpaidCardValue).toFixed(2)}) were marked completed but the card payment never went through — not included.`);
   if (c.refundsPlatform > 0) notes.push(`ℹ️ £${fromPence(c.refundsPlatform).toFixed(2)} of refunds were covered by MealDrop and not deducted.`);
   if (c.cashRefunds > 0) notes.push(`ℹ️ £${fromPence(c.cashRefunds).toFixed(2)} of cash-order refunds were handled by the restaurant and not deducted.`);
+  if (a.chargebacks !== 0) notes.push(`Card disputes (chargebacks and Stripe dispute fees): ${a.chargebacks < 0 ? "−" : "+"}£${fromPence(Math.abs(a.chargebacks)).toFixed(2)}.`);
+  if (a.manual !== 0) notes.push(`Manual adjustments: ${a.manual < 0 ? "−" : "+"}£${fromPence(Math.abs(a.manual)).toFixed(2)}.`);
+  if (a.reserveReleased > 0) notes.push(`Includes £${fromPence(a.reserveReleased).toFixed(2)} of reserve released.`);
+  if (reserveHeld > 0) notes.push(`£${fromPence(reserveHeld).toFixed(2)} (${reservePct}% of card takings) held in reserve until ${ukDay(reserveUntil!)} — paid automatically after that.`);
 
   return {
     restaurant_id: restaurantId, restaurant_name: restaurant.name,
@@ -653,8 +688,13 @@ async function buildPayout(ctx: Ctx, body: any) {
     ...(commissionType === "percentage" ? { commission_rate: rate } : { fixed_commission_amount: fromPence(toPence(restaurant.fixed_commission_amount)), commission_months: months }),
     refunds_paid_by_platform: fromPence(c.refundsPlatform), refunds_paid_by_restaurant: fromPence(c.refundsDeducted),
     cash_refunds_not_deducted: fromPence(c.cashRefunds), brought_forward_amount: fromPence(broughtForward),
+    adjustments_total: fromPence(a.total), chargebacks_amount: fromPence(a.chargebacks), manual_adjustments_amount: fromPence(a.manual),
+    reserve_released_amount: fromPence(a.reserveReleased), reserve_held: fromPence(reserveHeld),
+    ...(reserveHeld > 0 ? { reserve_percent: reservePct, reserve_until: reserveUntil } : {}),
     shortfall_amount: fromPence(shortfall), net_payout: fromPence(net), status: "pending",
-    order_ids: orderIds, refund_order_ids: refundIds,
+    order_ids: orderIds, refund_order_ids: refundIds, adjustment_ids: adjIds,
+    // Saved on the restaurant when a first payout is actually generated (not on preview).
+    _reserve_init: firstPayout && restaurant.reserve_percent == null && reservePct > 0 ? { reserve_percent: reservePct, reserve_until: reserveUntil } : null,
     ...(notes.length ? { notes: notes.join(" | ") } : {}),
   };
 }
