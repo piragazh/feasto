@@ -76,7 +76,7 @@ await call("save_bank_details", { restaurant_id: "rS", account_name: "Scheduled 
 const masked = (await call("get_bank_details", { restaurant_id: "rS" })).bank;
 check("bank details come back masked", masked.sort_code === "**-**-56" && masked.account_number === "****5678" && masked.usable, masked);
 const ex = await call("export_payment_batch", {});
-check("export includes approved payout", ex.included?.length === 1 && ex.csv.includes("Scheduled Pizza Ltd,123456,12345678,90.00,MEALDROP 260930"), ex);
+check("export includes approved payout", ex.included?.length === 1 && ex.csv.includes("Scheduled Pizza Lt,123456,12345678,90.00,MEALDROP ") /* name cut to 18 chars for Bacs */, ex);
 check("exported payout is processing", store.Payout.find((p: any) => p.id === draft.id).status === "processing");
 const bp = await call("mark_batch_paid", { batch_id: ex.batch_id, paid_date: "2026-10-05" });
 check("batch marked paid", bp.paid === 1 && store.Payout.find((p: any) => p.id === draft.id).status === "paid", bp);
@@ -93,7 +93,7 @@ check("manager can't see another restaurant", (await call("my_payouts", { restau
 check("manager can't use admin actions", (await call("generate_payout", { restaurant_id: "rS" })).status === 403);
 const st = await call("my_statement", { restaurant_id: "rS", payout_id: draft.id });
 check("statement lines", st.lines?.length === 1 && st.lines[0].total === 100, st);
-setUser({ id: "anon" }); // signed out
+setUser(null); // signed out
 check("signed-out can't read", (await call("my_payouts", { restaurant_id: "rS" })).status === 401);
 setUser(null);
 check("scheduler runs without a user", (await call("run_schedule", {})).success === true);

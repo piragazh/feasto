@@ -3,9 +3,9 @@ import { store, call, check, done } from "./mock.ts";
 
 // Restaurant payout engine: generate_payout / preview_payout / void_payout.
 store.Restaurant = [
-  { id: "r1", name: "Tilbury Chicken", commission_rate: 5, commission_type: "percentage" },
-  { id: "r0", name: "Free Trial Grill", commission_rate: 0, commission_type: "percentage" },
-  { id: "rf", name: "Flat Fee Cafe", commission_type: "fixed", fixed_commission_amount: 30 },
+  { id: "r1", name: "Tilbury Chicken", commission_rate: 5, commission_type: "percentage", reserve_percent: 0 },
+  { id: "r0", name: "Free Trial Grill", commission_rate: 0, commission_type: "percentage", reserve_percent: 0 },
+  { id: "rf", name: "Flat Fee Cafe", commission_type: "fixed", fixed_commission_amount: 30, reserve_percent: 0 },
 ];
 const O = (id: string, rid: string, date: string, total: number, extra: any = {}) => ({
   id, restaurant_id: rid, created_date: date + "T12:00:00.000Z", total, order_source: "online",
@@ -85,7 +85,7 @@ const w = (await call("preview_payout", { restaurant_id: "rf", frequency: "weekl
 const endUk = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(w.period_end));
 check("weekly ends on a Sunday before today", new Date(endUk + "T00:00:00Z").getUTCDay() === 0 && endUk < new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()), endUk);
 // 9. Legacy payouts (no order_ids): covered what was complete when generated
-store.Restaurant.push({ id: "rL", name: "Legacy", commission_rate: 5 });
+store.Restaurant.push({ id: "rL", name: "Legacy", commission_rate: 5, reserve_percent: 0 });
 const H = (t: string) => [{ status: "delivered", timestamp: t }];
 store.Order.push(
   O("L1", "rL", "2026-08-20", 10, { status_history: H("2026-08-20T13:00:00Z") }),
