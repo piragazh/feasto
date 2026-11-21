@@ -385,6 +385,54 @@ async function handleChargeRefunded(base44, charge) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// CARD DISPUTES (chargebacks) → restaurant payout adjustments
+// Policy: the restaurant bears the disputed amount and Stripe's dispute fee; if the
+// dispute is won, whatever Stripe returns goes back to them. Every dispute event
+// recalculates the dispute's total effect from its Stripe balance transactions and
+// records only the difference, so repeats or out-of-order events can't double-charge.
+// ─────────────────────────────────────────────────────────────────────
+async function handleDispute(base44, dispute) {
+    const db = base44.asServiceRole.entities;
+    const piId = dispute.payment_intent;
+    const order = piId ? (await db.Order.filter({ payment_intent_id: piId }))?.[0] : null;
+    if (!order) {
+        console.error(`[WEBHOOK] Dispute ${dispute.id}: no order for payment_intent ${piId}`);
+        try {
+            await db.FailureLog.create({ failure_type: 'dispute_unmatched', severity: 'critical', payment_intent_id: piId || '', error_message: `Stripe dispute ${dispute.id} (£${(Number(dispute.amount || 0) / 100).toFixed(2)}, ${dispute.reason}) has no matching order — charge the restaurant manually`, logged_at: new Date().toISOString(), alert_triggered: true, alert_condition: 'critical_payment_issue' });
+        } catch (_) {}
+        return { success: true, status: 'dispute_no_order' };
+    }
+    const bts = Array.isArray(dispute.balance_transactions) ? dispute.balance_transactions : [];
+    const target = {
+        chargeback: bts.reduce((s, b) => s + Number(b.amount || 0), 0), // pence; negative once funds are withdrawn
+        dispute_fee: -bts.reduce((s, b) => s + Number(b.fee || 0), 0),
+    };
+    const existing = (await db.PayoutAdjustment.filter({ stripe_dispute_id: dispute.id })) || [];
+    const created = [];
+    for (const type of ['chargeback', 'dispute_fee']) {
+        const mine = existing.filter((x) => x.type === type && x.status !== 'cancelled');
+        const have = mine.reduce((s, x) => s + Math.round(Number(x.amount || 0) * 100), 0);
+        const delta = target[type] - have;
+        if (delta === 0) continue;
+        // If an admin waived this dispute (MealDrop absorbs it), money Stripe later returns is MealDrop's too.
+        const waived = mine.some((x) => x.status === 'waived');
+        const num = order.order_number || order.id.slice(-6).toUpperCase();
+        const what = type === 'chargeback'
+            ? (delta < 0 ? `Card dispute on order ${num} (${dispute.reason || 'unspecified'})` : `Card dispute on order ${num} won — amount returned`)
+            : (delta < 0 ? `Stripe dispute fee, order ${num}` : `Stripe dispute fee returned, order ${num}`);
+        const adj = await db.PayoutAdjustment.create({
+            restaurant_id: order.restaurant_id, restaurant_name: order.restaurant_name, type, amount: delta / 100,
+            description: what, status: waived ? 'waived' : 'open', available_from: new Date().toISOString(),
+            order_id: order.id, stripe_dispute_id: dispute.id, payment_intent_id: piId, created_by: 'stripe',
+            ...(waived ? { waived_by: 'system', waived_at: new Date().toISOString(), waive_reason: 'Dispute already waived — MealDrop keeps any amount returned' } : {}),
+        });
+        created.push({ id: adj.id, type, amount: delta / 100 });
+    }
+    console.log(`[WEBHOOK] Dispute ${dispute.id} (${dispute.status}) order=${order.id}: ${JSON.stringify(created)}`);
+    return { success: true, status: 'dispute_recorded', adjustments: created };
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // MAIN WEBHOOK HANDLER
 // ─────────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
@@ -444,6 +492,13 @@ Deno.serve(async (req) => {
                     break;
                 case 'charge.refunded':
                     result = await handleChargeRefunded(base44, event.data.object);
+                    break;
+                case 'charge.dispute.created':
+                case 'charge.dispute.updated':
+                case 'charge.dispute.closed':
+                case 'charge.dispute.funds_withdrawn':
+                case 'charge.dispute.funds_reinstated':
+                    result = await handleDispute(base44, event.data.object);
                     break;
                 default:
                     console.log(`[WEBHOOK] Ignoring event type: ${eventType}`);
