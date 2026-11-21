@@ -441,7 +441,7 @@ export default function PayoutManagement() {
                                                     >
                                                         <CheckCircle className="h-4 w-4 mr-2" />
                                                         Mark as Paid
-                                                    </Button>
+                                                    </Button>}
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
