@@ -136,27 +136,40 @@ export function generatePayoutPDF(payout) {
     y += 7;
 
     // Row data
-    const totalInPeriod = (payout.total_orders ?? 0) + (payout.cancelled_orders ?? 0) + (payout.refunded_orders_count ?? 0);
+    // The money rows add up exactly: card takings − commission − refunds − brought
+    // forward (+ any shortfall carried to next time) = NET PAYOUT. Cash the restaurant
+    // already holds is shown for the commission base only, never in the sum.
+    const n = (v) => Number(v || 0);
+    const commissionLabel = payout.commission_type === 'fixed'
+        ? `Commission (fixed monthly fee × ${payout.commission_months ?? 1})`
+        : `Commission (${payout.commission_rate ?? 0}% of ${currency(payout.gross_earnings)} total sales)`;
     const rows = [
-        { label: 'Total Orders Received in Period', value: `${totalInPeriod} orders`, bold: false, indent: false },
-        { label: '  ↳ Completed & Paid (included in payout)', value: `${payout.total_orders ?? 0} orders`, bold: false, indent: true, positive: true },
-        { label: '  ↳ Cancelled (excluded — no charge)', value: `${payout.cancelled_orders ?? 0} orders  (${currency(payout.cancelled_orders_value)})`, bold: false, indent: true },
-        { label: '  ↳ Refunded (see refund lines below)', value: `${payout.refunded_orders_count ?? 0} orders`, bold: false, indent: true },
-        { label: '', value: '', bold: false, divider: true },
-        { label: 'Gross Earnings (Completed Orders)', value: currency(payout.gross_earnings), bold: false, indent: false },
-        { label: '  ↳ Card / Online Payments (held by MealDrop)', value: currency(payout.card_payment_amount), bold: false, indent: true },
-        { label: '  ↳ Cash Payments (collected by restaurant)', value: currency(payout.cash_payment_amount), bold: false, indent: true },
-        { label: '', value: '', bold: false, divider: true },
-        { label: `Platform Commission (${payout.commission_rate ?? 0}% of gross)`, value: `-${currency(payout.platform_commission)}`, bold: false, indent: false, negative: true },
+        { label: 'Orders paid in this statement', value: `${payout.total_orders ?? 0} orders${n(payout.late_orders) > 0 ? ` (incl. ${payout.late_orders} completed late)` : ''}`, indent: false },
+        ...(n(payout.cancelled_orders) > 0 ? [{ label: '  ↳ Cancelled in period (no charge)', value: `${payout.cancelled_orders} orders  (${currency(payout.cancelled_orders_value)})`, indent: true }] : []),
+        ...(n(payout.held_orders) > 0 ? [{ label: '  ↳ Not finished yet — will be paid next time', value: `${payout.held_orders} orders  (${currency(payout.held_orders_value)})`, indent: true }] : []),
+        { label: '', value: '', divider: true },
+        { label: 'Total sales (card + cash)', value: currency(payout.gross_earnings), indent: false },
+        { label: '  ↳ Cash you collected yourself (already with you)', value: currency(payout.cash_payment_amount), indent: true },
+        { label: '', value: '', divider: true },
+        { label: 'Card / online payments held by MealDrop', value: currency(payout.card_payment_amount), bold: true },
+        { label: commissionLabel, value: `-${currency(payout.platform_commission)}`, negative: true },
     ];
-
-    if (payout.refunds_paid_by_restaurant > 0) {
-        rows.push({ label: `Refunds Deducted (${payout.refunded_orders_count ?? 0} order(s) — paid by restaurant)`, value: `-${currency(payout.refunds_paid_by_restaurant)}`, bold: false, negative: true });
+    if (n(payout.refunds_paid_by_restaurant) > 0) {
+        rows.push({ label: 'Refunds on orders paid to you earlier', value: `-${currency(payout.refunds_paid_by_restaurant)}`, negative: true });
     }
-    if (payout.refunds_paid_by_platform > 0) {
-        rows.push({ label: 'Refunds Covered by MealDrop', value: currency(payout.refunds_paid_by_platform), bold: false, positive: true, prefix: '+' });
+    if (n(payout.brought_forward_amount) > 0) {
+        rows.push({ label: 'Balance owed from your last statement', value: `-${currency(payout.brought_forward_amount)}`, negative: true });
     }
-    rows.push({ label: '', value: '', bold: false, divider: true });
+    if (n(payout.shortfall_amount) > 0) {
+        rows.push({ label: 'Owed to MealDrop — carried to your next statement', value: `+${currency(payout.shortfall_amount)}`, positive: true });
+    }
+    rows.push({ label: '', value: '', divider: true });
+    if (n(payout.refunds_paid_by_platform) > 0) {
+        rows.push({ label: `For information: refunds covered by MealDrop (not charged to you) ${currency(payout.refunds_paid_by_platform)}`, value: '', note: true });
+    }
+    if (n(payout.cash_refunds_not_deducted) > 0) {
+        rows.push({ label: `For information: cash-order refunds you handled (not deducted) ${currency(payout.cash_refunds_not_deducted)}`, value: '', note: true });
+    }
 
     rows.forEach((row, idx) => {
         // Divider row
