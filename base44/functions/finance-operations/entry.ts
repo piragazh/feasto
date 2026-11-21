@@ -561,6 +561,20 @@ async function buildPayout(ctx: Ctx, body: any) {
 
   const paidIds = new Set(live.flatMap((p: any) => p.order_ids || []));
   const refundDone = new Set(live.flatMap((p: any) => p.refund_order_ids || []));
+  // Payouts made before order_ids existed (up to Oct 2026) covered every order in
+  // their dates that was already delivered/collected/refunded when the payout was
+  // generated. Anything completed afterwards was missed then, so it's paid now.
+  for (const p of live.filter((x: any) => !Array.isArray(x.order_ids))) {
+    const s = Date.parse(p.period_start), e = Date.parse(p.period_end), made = Date.parse(p.created_date);
+    for (const o of online) {
+      const t = Date.parse(o.created_date);
+      if (t < s || t > e || !["delivered", "collected", "refunded"].includes(o.status)) continue;
+      const doneAt = (o.status_history || []).filter((h: any) => ["delivered", "collected", "refunded"].includes(h.status)).map((h: any) => Date.parse(h.timestamp)).filter(Number.isFinite);
+      if (doneAt.length && Math.min(...doneAt) > made) continue; // completed after that payout was made
+      paidIds.add(o.id);
+      if (o.status === "refunded" && o.refund_approved_date && Date.parse(o.refund_approved_date) <= made) refundDone.add(o.id);
+    }
+  }
   const c = { gross: 0, card: 0, cash: 0, refundsDeducted: 0, refundsPlatform: 0, cashRefunds: 0, cancelledValue: 0, unpaidCardValue: 0, heldValue: 0, delivery: 0, collection: 0, dineIn: 0 };
   const n = { paid: 0, late: 0, held: 0, cancelled: 0, unpaidCard: 0, refunded: 0, earlierRefunds: 0, disputed: 0, delivery: 0, collection: 0, dineIn: 0 };
   const orderIds: string[] = [], refundIds: string[] = [];
