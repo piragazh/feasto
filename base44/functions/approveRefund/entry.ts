@@ -116,7 +116,9 @@ Deno.serve(async (req) => {
 
         // ── Stripe refund (card orders only) ──────────────────────────────────────
         let stripeRefundId = null;
-        if (order.payment_method === 'card' && order.payment_intent_id) {
+        // Apple Pay / Google Pay are Stripe card payments too — they need the Stripe refund.
+        const isStripePaid = ['card', 'apple_pay', 'google_pay'].includes(order.payment_method);
+        if (isStripePaid && order.payment_intent_id) {
             const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
             try {
                 const refund = await stripe.refunds.create(
@@ -190,7 +192,7 @@ Deno.serve(async (req) => {
             } catch (ptErr) {
                 console.warn('[REFUND] PT update failed (non-fatal, refund already issued):', ptErr.message);
             }
-        } else if (order.payment_method === 'card' && !order.payment_intent_id) {
+        } else if (isStripePaid && !order.payment_intent_id) {
             console.warn(`[REFUND] Card order ${order_id} has no payment_intent_id — skipping Stripe refund. Manual action required.`);
         }
         // Cash/non-card orders: no Stripe refund needed, proceed to Order update
