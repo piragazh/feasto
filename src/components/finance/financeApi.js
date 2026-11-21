@@ -50,17 +50,21 @@ export function useReport(companyId, type, params = {}, deps = []) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const key = JSON.stringify(params);
+  const [loadedKey, setLoadedKey] = useState(null);
+  const key = JSON.stringify({ companyId, type, params });
   const reload = useCallback(async () => {
     if (!companyId) return;
     setLoading(true);
-    try { setData((await fin('report', { company_id: companyId, type, ...params })).report); setError(''); }
+    try { setData((await fin('report', { company_id: companyId, type, ...params })).report); setLoadedKey(key); setError(''); }
     catch (e) { setError(e.message); }
     finally { setLoading(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, type, key, ...deps]);
+  }, [companyId, key, ...deps]);
   useEffect(() => { reload(); }, [reload]);
-  return { data, loading, error, reload };
+  // A previous report type's payload must never be rendered against the new one —
+  // e.g. the P&L screen reading a trial-balance payload crashes on missing sections.
+  const fresh = loadedKey === key;
+  return { data: fresh ? data : null, loading: loading || !fresh, error, reload };
 }
 
 export function downloadCsv(filename, rows) {
