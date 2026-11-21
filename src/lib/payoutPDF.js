@@ -145,11 +145,11 @@ export function generatePayoutPDF(payout) {
         : `Commission (${payout.commission_rate ?? 0}% of ${currency(payout.gross_earnings)} total sales)`;
     const rows = [
         { label: 'Orders paid in this statement', value: `${payout.total_orders ?? 0} orders${n(payout.late_orders) > 0 ? ` (incl. ${payout.late_orders} completed late)` : ''}`, indent: false },
-        ...(n(payout.cancelled_orders) > 0 ? [{ label: '  ↳ Cancelled in period (no charge)', value: `${payout.cancelled_orders} orders  (${currency(payout.cancelled_orders_value)})`, indent: true }] : []),
-        ...(n(payout.held_orders) > 0 ? [{ label: '  ↳ Not finished yet — will be paid next time', value: `${payout.held_orders} orders  (${currency(payout.held_orders_value)})`, indent: true }] : []),
+        ...(n(payout.cancelled_orders) > 0 ? [{ label: '   - Cancelled in period (no charge)', value: `${payout.cancelled_orders} orders  (${currency(payout.cancelled_orders_value)})`, indent: true }] : []),
+        ...(n(payout.held_orders) > 0 ? [{ label: '   - Not finished yet — will be paid next time', value: `${payout.held_orders} orders  (${currency(payout.held_orders_value)})`, indent: true }] : []),
         { label: '', value: '', divider: true },
         { label: 'Total sales (card + cash)', value: currency(payout.gross_earnings), indent: false },
-        { label: '  ↳ Cash you collected yourself (already with you)', value: currency(payout.cash_payment_amount), indent: true },
+        { label: '   - Cash you collected yourself (already with you)', value: currency(payout.cash_payment_amount), indent: true },
         { label: '', value: '', divider: true },
         { label: 'Card / online payments held by MealDrop', value: currency(payout.card_payment_amount), bold: true },
         { label: commissionLabel, value: `-${currency(payout.platform_commission)}`, negative: true },
