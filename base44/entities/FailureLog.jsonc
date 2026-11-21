@@ -26,7 +26,8 @@
         "payment_succeeded_order_failed_refund_failed",
         "webhook_order_creation_failed",
         "refund_failed_requires_manual_review",
-        "payment_failed_via_webhook"
+        "payment_failed_via_webhook",
+        "dispute_unmatched"
       ],
       "description": "Category of failure for grouping and alerting"
     },
