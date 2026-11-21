@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, ShoppingBag, TrendingUp, Users, Star, Calendar as CalendarIcon, Award, CreditCard, Download } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Users, Calendar as CalendarIcon, Award, CreditCard, Download } from 'lucide-react';
 import { generateReportPDF } from '@/lib/generatePDF';
 import { format, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 

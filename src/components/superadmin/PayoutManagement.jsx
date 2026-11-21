@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, Download, Trash2, AlertTriangle } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, Download, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { generatePayoutPDF } from '@/lib/payoutPDF';
 
