@@ -12,6 +12,8 @@ import { DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, Download, Tras
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { generatePayoutPDF } from '@/lib/payoutPDF';
+import PayoutBatchBar from './PayoutBatchBar';
+import PayoutRestaurantSettings from './PayoutRestaurantSettings';
 
 // Finance company whose books payouts are posted to.
 const MEALDROP_FINANCE_COMPANY_ID = '6adb27b5c246acfa7f3c9b9a';
@@ -80,6 +82,20 @@ export default function PayoutManagement() {
         onError: (e) => toast.error(e.message || 'Failed to generate payout'),
     });
 
+    // Everything waiting for approval, payment or bank confirmation — not just the latest 50.
+    const { data: openPayouts = [] } = useQuery({
+        queryKey: ['payouts', 'open'],
+        queryFn: () => base44.entities.Payout.filter({ status: { $in: ['awaiting_approval', 'pending', 'processing'] } }, '-created_date', 500),
+        refetchInterval: 15000,
+    });
+    const drafts = openPayouts.filter((p) => p.status === 'awaiting_approval');
+
+    const approveMutation = useMutation({
+        mutationFn: (payoutId) => financeCall('approve_payout', { payout_id: payoutId }),
+        onSuccess: () => { queryClient.invalidateQueries(['payouts']); toast.success('Approved — ready to pay'); },
+        onError: (e) => toast.error(e.message || 'Could not approve'),
+    });
+
     const voidPayoutMutation = useMutation({
         mutationFn: ({ payoutId, reason }) => financeCall('void_payout', { payout_id: payoutId, reason }),
         onSuccess: () => {
@@ -107,7 +123,8 @@ export default function PayoutManagement() {
     });
 
     const statusConfig = {
-        pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+        awaiting_approval: { label: 'Draft — needs approval', color: 'bg-purple-100 text-purple-800', icon: Clock },
+        pending: { label: 'Approved — to pay', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
         processing: { label: 'Processing', color: 'bg-blue-100 text-blue-800', icon: TrendingUp },
         paid: { label: 'Paid', color: 'bg-green-100 text-green-800', icon: CheckCircle },
         failed: { label: 'Failed', color: 'bg-red-100 text-red-800', icon: AlertCircle },
@@ -288,6 +305,28 @@ export default function PayoutManagement() {
                         </div>
                     </div>
 
+                    {drafts.length > 0 && (
+                        <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm">
+                            <p className="mb-2 font-semibold text-purple-900">{drafts.length} scheduled draft(s) waiting for your approval</p>
+                            {drafts.map((d) => (
+                                <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-purple-200 py-2">
+                                    <span>{d.restaurant_name}: {format(new Date(d.period_start), 'd MMM')} – {format(new Date(d.period_end), 'd MMM yyyy')} · <strong>£{d.net_payout?.toFixed(2)}</strong>{d.notes ? <span className="block text-xs text-gray-600">{d.notes.split(' | ').join(' · ')}</span> : null}</span>
+                                    <div className="flex gap-2">
+                                        <Button size="sm" variant="outline" onClick={() => generatePayoutPDF(d)}><Download className="h-4 w-4" /></Button>
+                                        <Button size="sm" className="bg-purple-700 hover:bg-purple-800" disabled={approveMutation.isPending} onClick={() => approveMutation.mutate(d.id)}>Approve</Button>
+                                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => { const reason = window.prompt(`Void this draft for ${d.restaurant_name}? Reason:`); if (reason) voidPayoutMutation.mutate({ payoutId: d.id, reason }); }}>Void</Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <PayoutBatchBar payouts={openPayouts} financeCall={financeCall} />
+
+                    {selectedRestaurant && restaurants.find((r) => r.id === selectedRestaurant) && (
+                        <PayoutRestaurantSettings restaurant={restaurants.find((r) => r.id === selectedRestaurant)} financeCall={financeCall} />
+                    )}
+
                     {/* Payouts List */}
                     {isLoading ? (
                         <p className="text-center text-gray-500 py-8">Loading...</p>
@@ -387,9 +426,15 @@ export default function PayoutManagement() {
                                         )}
 
                                         <div className="flex items-center gap-2">
-                                            {payout.status === 'pending' && (
+                                            {payout.status === 'awaiting_approval' && (
+                                                <Button size="sm" className="bg-purple-700 hover:bg-purple-800" disabled={approveMutation.isPending} onClick={() => approveMutation.mutate(payout.id)}>
+                                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                                    Approve
+                                                </Button>
+                                            )}
+                                            {['awaiting_approval', 'pending'].includes(payout.status) && (
                                                 <>
-                                                    <Button
+                                                    {payout.status === 'pending' && <Button
                                                         size="sm"
                                                         onClick={() => setPayoutDialog(payout)}
                                                         className="bg-green-600 hover:bg-green-700"
