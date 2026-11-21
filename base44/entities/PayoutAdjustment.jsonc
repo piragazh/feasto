@@ -25,7 +25,7 @@
     },
     "description": {
       "type": "string",
-      "description": "Shown on the restaurant's statement."
+      "description": "Shown on the restaurant's statement and CSV."
     },
     "status": {
       "type": "string",
