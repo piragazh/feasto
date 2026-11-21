@@ -42,14 +42,26 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // IDEMPOTENCY GUARD: If order is already cancelled/refunded, reject retry
+    // IDEMPOTENCY GUARD: If order is already cancelled/refunded, don't cancel it twice.
+    // Exception: a cancelled card order whose refund never went through (e.g. the function
+    // crashed after cancelling) resumes at the refund step instead of silently reporting success.
+    let resumeRefund = false;
     if (['cancelled', 'refunded'].includes(order.status)) {
-      console.log(`[REJECT-IDEMPOTENT] Order ${order_id} already in status=${order.status} — blocking double rejection`);
-      return Response.json({
-        success: true,
-        message: 'Order already cancelled/refunded',
-        refunded: order.status === 'refunded',
-      });
+      if (order.status === 'cancelled' && order.payment_method === 'card' && order.payment_intent_id) {
+        const pts = await base44.asServiceRole.entities.PaymentTransaction.filter({
+          payment_intent_id: order.payment_intent_id,
+        });
+        resumeRefund = !(pts || []).some((p) => p.status === 'refunded');
+      }
+      if (!resumeRefund) {
+        console.log(`[REJECT-IDEMPOTENT] Order ${order_id} already in status=${order.status} — blocking double rejection`);
+        return Response.json({
+          success: true,
+          message: 'Order already cancelled/refunded',
+          refunded: order.status === 'refunded',
+        });
+      }
+      console.log(`[REJECT-RESUME] Order ${order_id} is cancelled but its card payment was never refunded — resuming refund`);
     }
 
     // Permission check: user must belong to restaurant or be admin
@@ -67,59 +79,68 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update order status to cancelled with rejection reason
-    const statusHistory = order.status_history || [];
-    statusHistory.push({
-      status: 'cancelled',
-      timestamp: new Date().toISOString(),
-      note: `Rejected by restaurant: ${rejection_reason}`,
-    });
+    // Cancel, free the driver and notify the customer — skipped when resuming a refund,
+    // because all of this already happened the first time.
+    if (!resumeRefund) {
+      // Update order status to cancelled with rejection reason
+      const statusHistory = order.status_history || [];
+      statusHistory.push({
+        status: 'cancelled',
+        timestamp: new Date().toISOString(),
+        note: `Rejected by restaurant: ${rejection_reason}`,
+      });
 
-    await base44.asServiceRole.entities.Order.update(order_id, {
-      status: 'cancelled',
-      rejection_reason,
-      status_history: statusHistory,
-    });
+      await base44.asServiceRole.entities.Order.update(order_id, {
+        status: 'cancelled',
+        rejection_reason,
+        status_history: statusHistory,
+      });
 
-    console.log(`[REJECT] Order ${order_id} rejected by ${user.email}. Reason: ${rejection_reason}`);
+      console.log(`[REJECT] Order ${order_id} rejected by ${user.email}. Reason: ${rejection_reason}`);
 
-    // A cancelled order must not leave its driver marked busy. Free them unless
-    // they are still carrying another live order.
-    if (order.driver_id) {
+      // A cancelled order must not leave its driver marked busy. Free them unless
+      // they are still carrying another live order.
+      if (order.driver_id) {
+        try {
+          const live = await base44.asServiceRole.entities.Order.filter({
+            driver_id: order.driver_id,
+            status: 'out_for_delivery',
+          });
+          const others = (live || []).filter((o) => o.id !== order_id);
+          await base44.asServiceRole.entities.Driver.update(order.driver_id, others.length === 0
+            ? { current_order_id: null, is_available: true }
+            : { current_order_id: others[0].id, is_available: false });
+        } catch (e) {
+          console.error('[REJECT] Driver release failed for order', order_id, e?.message || e);
+        }
+      }
+
+      // Notify the customer of the cancellation (SMS/WhatsApp per restaurant settings) — fire and forget.
+      // Sent regardless of refund outcome so the customer is always informed.
+      // Wrapped in try so a notification problem can never stop the refund below.
       try {
-        const live = await base44.asServiceRole.entities.Order.filter({
-          driver_id: order.driver_id,
-          status: 'out_for_delivery',
-        });
-        const others = (live || []).filter((o) => o.id !== order_id);
-        await base44.asServiceRole.entities.Driver.update(order.driver_id, others.length === 0
-          ? { current_order_id: null, is_available: true }
-          : { current_order_id: others[0].id, is_available: false });
+        base44.asServiceRole.functions
+          .invoke('sendNotificationFromTemplate', {
+            restaurantId: order.restaurant_id,
+            orderId: order_id,
+            newStatus: 'cancelled',
+            orderData: {
+              order_number: order.order_number,
+              phone: order.phone,
+              guest_phone: order.phone,
+              guest_name: order.guest_name,
+              guest_email: order.guest_email,
+              delivery_address: order.delivery_address,
+              estimated_delivery: order.estimated_delivery,
+              items: order.items,
+            },
+            rejectionReason: rejection_reason,
+          })
+          .catch((e) => console.error('[rejectOrderWithRefund] Cancellation notification failed:', e?.message));
       } catch (e) {
-        console.error('[REJECT] Driver release failed for order', order_id, e?.message || e);
+        console.error('[rejectOrderWithRefund] Cancellation notification threw:', e?.message || e);
       }
     }
-
-    // Notify the customer of the cancellation (SMS/WhatsApp per restaurant settings) — fire and forget.
-    // Sent regardless of refund outcome so the customer is always informed.
-    base44.asServiceRole.functions
-      .invoke('sendNotificationFromTemplate', {
-        restaurantId: order.restaurant_id,
-        orderId: order_id,
-        newStatus: 'cancelled',
-        orderData: {
-          order_number: order.order_number,
-          phone: order.phone,
-          guest_phone: order.phone,
-          guest_name: order.guest_name,
-          guest_email: order.guest_email,
-          delivery_address: order.delivery_address,
-          estimated_delivery: order.estimated_delivery,
-          items: order.items,
-        },
-        rejectionReason,
-      })
-      .catch((e) => console.error('[rejectOrderWithRefund] Cancellation notification failed:', e?.message));
 
     // ─────────────────────────────────────────────────────────────────────────
     // AUTO-REFUND LOGIC: Only for paid card orders
