@@ -17,7 +17,7 @@
     },
     "account_number": {
       "type": "string",
-      "description": "8 digits"
+      "description": "8 digits. Admin-only; never sent to restaurant screens."
     },
     "active_from": {
       "type": "string",
