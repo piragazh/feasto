@@ -115,7 +115,7 @@ export default function PayoutManagement() {
     };
 
     const totalPending = payouts
-        .filter(p => p.status === 'pending')
+        .filter(p => ['pending', 'processing'].includes(p.status))
         .reduce((sum, p) => sum + (p.net_payout || 0), 0);
 
     const totalPaid = payouts
@@ -163,7 +163,7 @@ export default function PayoutManagement() {
                             <div>
                                 <p className="text-sm text-gray-500">Avg Payout</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    £{payouts.length > 0 ? ((totalPaid + totalPending) / payouts.length).toFixed(2) : '0.00'}
+                                    {(() => { const live = payouts.filter(p => !['voided', 'failed'].includes(p.status)); return `£${live.length > 0 ? ((totalPaid + totalPending) / live.length).toFixed(2) : '0.00'}`; })()}
                                 </p>
                             </div>
                         </div>
@@ -205,7 +205,7 @@ export default function PayoutManagement() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label className="text-sm font-medium text-blue-900 mb-1 block">Restaurant</label>
-                                <Select value={generatingFor || ''} onValueChange={setGeneratingFor}>
+                                <Select value={generatingFor || ''} onValueChange={(v) => { setGeneratingFor(v); setPreview(null); }}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select restaurant" />
                                     </SelectTrigger>
@@ -224,41 +224,68 @@ export default function PayoutManagement() {
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-blue-900 mb-1 block">Payout Frequency</label>
-                                <Select value={payoutFrequency} onValueChange={setPayoutFrequency}>
+                                <Select value={payoutFrequency} onValueChange={(v) => { setPayoutFrequency(v); setStartDate(''); setEndDate(''); setPreview(null); }}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="daily">Daily (Yesterday)</SelectItem>
-                                        <SelectItem value="weekly">Weekly (Last 7 Days)</SelectItem>
-                                        <SelectItem value="monthly">Monthly (Last Month)</SelectItem>
-                                        <SelectItem value="custom">Custom Range</SelectItem>
+                                        <SelectItem value="daily">Daily (up to yesterday)</SelectItem>
+                                        <SelectItem value="weekly">Weekly (up to last Sunday)</SelectItem>
+                                        <SelectItem value="monthly">Monthly (up to end of last month)</SelectItem>
+                                        <SelectItem value="custom">Custom end date</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
                         
-                        {payoutFrequency === 'custom' && (
-                            <div className="grid grid-cols-2 gap-4 mb-4">
+                        <p className="text-xs text-blue-800 mb-3">Each payout starts exactly where the restaurant's last one ended, so no days are missed or paid twice. Orders finished late, and refunds or balances owed, are carried into the next payout automatically.</p>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            {payoutFrequency === 'custom' && (
                                 <div>
-                                    <label className="text-sm font-medium text-blue-900 mb-1 block">Start Date</label>
-                                    <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                    <label className="text-sm font-medium text-blue-900 mb-1 block">End date</label>
+                                    <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPreview(null); }} />
                                 </div>
-                                <div>
-                                    <label className="text-sm font-medium text-blue-900 mb-1 block">End Date</label>
-                                    <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                            )}
+                            <div>
+                                <label className="text-sm font-medium text-blue-900 mb-1 block">Start date <span className="font-normal">(first payout only)</span></label>
+                                <Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPreview(null); }} />
+                            </div>
+                        </div>
+
+                        {preview && (
+                            <div className="mb-4 rounded-lg border border-blue-300 bg-white p-3 text-sm">
+                                <p className="font-semibold">{preview.restaurant_name}: {format(new Date(preview.period_start), 'd MMM yyyy')} – {format(new Date(preview.period_end), 'd MMM yyyy')}</p>
+                                <div className="mt-2 space-y-1">
+                                    <div className="flex justify-between"><span>Card takings held by MealDrop ({preview.total_orders} orders{preview.late_orders ? `, ${preview.late_orders} late` : ''})</span><span>£{preview.card_payment_amount.toFixed(2)}</span></div>
+                                    <div className="flex justify-between text-gray-500"><span>Cash already collected by restaurant</span><span>£{preview.cash_payment_amount.toFixed(2)}</span></div>
+                                    <div className="flex justify-between text-orange-700"><span>Commission {preview.commission_type === 'fixed' ? `(fixed, ${preview.commission_months} month${preview.commission_months === 1 ? '' : 's'})` : `(${preview.commission_rate}% of £${preview.gross_earnings.toFixed(2)})`}</span><span>−£{preview.platform_commission.toFixed(2)}</span></div>
+                                    {preview.refunds_paid_by_restaurant > 0 && <div className="flex justify-between text-red-700"><span>Refunds on earlier orders</span><span>−£{preview.refunds_paid_by_restaurant.toFixed(2)}</span></div>}
+                                    {preview.brought_forward_amount > 0 && <div className="flex justify-between text-red-700"><span>Brought forward from last payout</span><span>−£{preview.brought_forward_amount.toFixed(2)}</span></div>}
+                                    <div className="flex justify-between border-t pt-1 font-bold text-green-700"><span>Net payout</span><span>£{preview.net_payout.toFixed(2)}</span></div>
+                                    {preview.shortfall_amount > 0 && <p className="text-xs text-red-700">Restaurant owes £{preview.shortfall_amount.toFixed(2)} — carried into the next payout.</p>}
+                                    {preview.notes && <p className="text-xs text-gray-500 pt-1">{preview.notes.split(' | ').join(' · ')}</p>}
                                 </div>
                             </div>
                         )}
-                        
-                        <Button
-                            onClick={() => generatingFor && generatePayoutMutation.mutate(generatingFor)}
-                            disabled={!generatingFor || generatePayoutMutation.isPending || (payoutFrequency === 'custom' && (!startDate || !endDate))}
-                            className="bg-blue-600 hover:bg-blue-700 w-full"
-                        >
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            Generate Payout
-                        </Button>
+
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => previewMutation.mutate()}
+                                disabled={!generatingFor || previewMutation.isPending || (payoutFrequency === 'custom' && !endDate)}
+                                className="flex-1"
+                            >
+                                {previewMutation.isPending ? 'Calculating…' : 'Preview'}
+                            </Button>
+                            <Button
+                                onClick={() => generatePayoutMutation.mutate()}
+                                disabled={!preview || generatePayoutMutation.isPending}
+                                className="bg-blue-600 hover:bg-blue-700 flex-1"
+                            >
+                                <DollarSign className="h-4 w-4 mr-2" />
+                                {generatePayoutMutation.isPending ? 'Generating…' : 'Generate Payout'}
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Payouts List */}
@@ -305,7 +332,7 @@ export default function PayoutManagement() {
                                             <div className="bg-red-50 p-2 rounded text-center">
                                                 <p className="text-xs text-red-500">Refunded</p>
                                                 <p className="font-semibold text-red-600">{payout.refunded_orders_count ?? 0}</p>
-                                                <p className="text-xs font-medium text-red-500">{(payout.refunds_paid_by_restaurant ?? 0) + (payout.refunds_paid_by_platform ?? 0) > 0 ? `-£${((payout.refunds_paid_by_restaurant ?? 0) + (payout.refunds_paid_by_platform ?? 0)).toFixed(2)}` : '—'}</p>
+                                                <p className="text-xs font-medium text-red-500">{(payout.refunds_paid_by_restaurant ?? 0) > 0 ? `-£${payout.refunds_paid_by_restaurant.toFixed(2)}` : '—'}</p>
                                             </div>
                                             <div className="bg-gray-50 p-2 rounded text-center">
                                                 <p className="text-xs text-gray-500">Delivery</p>
@@ -354,7 +381,7 @@ export default function PayoutManagement() {
                                                     <span className="bg-red-50 text-red-700 px-2 py-1 rounded">Restaurant refunds deducted: -£{payout.refunds_paid_by_restaurant.toFixed(2)}</span>
                                                 )}
                                                 {payout.refunds_paid_by_platform > 0 && (
-                                                    <span className="bg-orange-50 text-orange-700 px-2 py-1 rounded">Platform refunds clawed back: -£{payout.refunds_paid_by_platform.toFixed(2)}</span>
+                                                    <span className="bg-orange-50 text-orange-700 px-2 py-1 rounded">Refunds covered by MealDrop (not deducted): £{payout.refunds_paid_by_platform.toFixed(2)}</span>
                                                 )}
                                             </div>
                                         )}
