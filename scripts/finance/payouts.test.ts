@@ -84,5 +84,16 @@ check("preview creates nothing", !store.Payout.some((p: any) => p.restaurant_id 
 const w = (await call("preview_payout", { restaurant_id: "rf", frequency: "weekly" })).preview;
 const endUk = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(w.period_end));
 check("weekly ends on a Sunday before today", new Date(endUk + "T00:00:00Z").getUTCDay() === 0 && endUk < new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()), endUk);
+// 9. Legacy payouts (no order_ids): covered what was complete when generated
+store.Restaurant.push({ id: "rL", name: "Legacy", commission_rate: 5 });
+const H = (t: string) => [{ status: "delivered", timestamp: t }];
+store.Order.push(
+  O("L1", "rL", "2026-08-20", 10, { status_history: H("2026-08-20T13:00:00Z") }),
+  O("L2", "rL", "2026-08-31", 54.03, { status_history: H("2026-09-01T11:05:13Z") }),
+  O("L3", "rL", "2026-08-21", 20),
+);
+store.Payout.push({ id: "legacyAug", restaurant_id: "rL", status: "paid", period_start: "2026-07-31T23:00:00.000Z", period_end: "2026-08-31T22:59:59.999Z", created_date: "2026-09-01T07:55:00.753Z", shortfall_amount: 0 });
+const lg = (await call("preview_payout", { restaurant_id: "rL", frequency: "custom", end_date: "2026-09-30" })).preview;
+check("legacy: order completed after the payout was made is paid now", lg.late_orders === 1 && lg.card_payment_amount === 54.03, lg);
 check("future end date refused", (await gen({ restaurant_id: "rf", frequency: "custom", end_date: "2099-01-01" })).success === false);
 done();
