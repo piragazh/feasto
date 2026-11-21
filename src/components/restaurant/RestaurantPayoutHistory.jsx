@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Download, Calendar } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generatePayoutPDF } from '@/lib/payoutPDF';
+import { fetchRestaurantPayouts } from '@/lib/restaurantPayouts';
 
 export default function RestaurantPayoutHistory({ restaurantId }) {
     const [statusFilter, setStatusFilter] = useState('all');
@@ -17,7 +18,7 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
     // Fetch payouts for this restaurant (server-filtered)
     const { data: payouts, isLoading, error } = useQuery({
         queryKey: ['restaurant-payouts', restaurantId],
-        queryFn: () => base44.entities.Payout.filter({ restaurant_id: restaurantId }, '-period_start'),
+        queryFn: () => fetchRestaurantPayouts(restaurantId),
         enabled: !!restaurantId,
     });
 
