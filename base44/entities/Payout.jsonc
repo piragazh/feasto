@@ -1,32 +1,123 @@
 {
   "name": "Payout",
   "properties": {
-    "adjustment_ids": { "type": "array", "items": { "type": "string" }, "description": "PayoutAdjustment records settled in this payout." },
-    "adjustments_total": { "default": 0, "type": "number" },
-    "chargebacks_amount": { "default": 0, "type": "number", "description": "Chargebacks and Stripe dispute fees (negative) or dispute wins (positive)." },
-    "manual_adjustments_amount": { "default": 0, "type": "number" },
-    "reserve_held": { "default": 0, "type": "number", "description": "Held back from this payout; paid later by a reserve_release adjustment." },
-    "reserve_released_amount": { "default": 0, "type": "number" },
-    "reserve_percent": { "type": "number" },
-    "reserve_until": { "type": "string", "format": "date-time" },
-    "approved_by": { "type": "string" },
-    "approved_at": { "type": "string", "format": "date-time" },
-    "batch_id": { "type": "string", "description": "Bank payment file this payout was exported in." },
-    "exported_at": { "type": "string", "format": "date-time" },
-    "paid_to_account": { "type": "string", "description": "Masked bank details used for the export." },
-    "order_ids": { "type": "array", "items": { "type": "string" }, "description": "Online orders this payout paid for. An order is paid once it appears in a live (not voided/failed) payout; voiding releases it. Kept here, not on Order, so payouts never re-fire Order workflows." },
-    "refund_order_ids": { "type": "array", "items": { "type": "string" }, "description": "Refunded orders settled in this payout (deducted, covered by MealDrop, or handled in cash), so a refund is never counted twice." },
-    "late_orders": { "default": 0, "type": "number", "description": "Orders from before period_start that were completed after their own period was paid." },
-    "held_orders": { "default": 0, "type": "number", "description": "Orders up to period_end not yet completed or with a refund pending - paid in a later payout." },
-    "held_orders_value": { "default": 0, "type": "number" },
-    "unpaid_card_orders": { "default": 0, "type": "number", "description": "Completed card orders whose payment never went through - excluded." },
-    "unpaid_card_value": { "default": 0, "type": "number" },
-    "cash_refunds_not_deducted": { "default": 0, "type": "number", "description": "Restaurant-borne refunds on cash orders - handed back by the restaurant, so not deducted." },
-    "brought_forward_amount": { "default": 0, "type": "number", "description": "Previous payout's shortfall recovered in this one." },
-    "fixed_commission_amount": { "type": "number", "description": "Monthly fixed fee in force when generated (fixed commission only)." },
-    "commission_months": { "type": "number", "description": "Calendar months whose month-end falls in this period - one fixed fee each." },
-    "generated_by": { "type": "string" },
-    "generated_at": { "type": "string", "format": "date-time" },
+    "adjustment_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "PayoutAdjustment records settled in this payout."
+    },
+    "adjustments_total": {
+      "default": 0,
+      "type": "number"
+    },
+    "chargebacks_amount": {
+      "default": 0,
+      "type": "number",
+      "description": "Chargebacks and Stripe dispute fees (negative) or dispute wins (positive)."
+    },
+    "manual_adjustments_amount": {
+      "default": 0,
+      "type": "number"
+    },
+    "reserve_held": {
+      "default": 0,
+      "type": "number",
+      "description": "Held back from this payout; paid later by a reserve_release adjustment."
+    },
+    "reserve_released_amount": {
+      "default": 0,
+      "type": "number"
+    },
+    "reserve_percent": {
+      "type": "number"
+    },
+    "reserve_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_by": {
+      "type": "string"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "batch_id": {
+      "type": "string",
+      "description": "Bank payment file (batch) this payout was exported in."
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "paid_to_account": {
+      "type": "string",
+      "description": "Masked bank details used for the export."
+    },
+    "order_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Online orders this payout paid for. An order is paid once it appears in a live (not voided/failed) payout; voiding releases it. Kept here, not on Order, so payouts never re-fire Order workflows."
+    },
+    "refund_order_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Refunded orders settled in this payout (deducted, covered by MealDrop, or handled in cash), so a refund is never counted twice."
+    },
+    "late_orders": {
+      "default": 0,
+      "type": "number",
+      "description": "Orders from before period_start that were completed after their own period was paid."
+    },
+    "held_orders": {
+      "default": 0,
+      "type": "number",
+      "description": "Orders up to period_end not yet completed or with a refund pending - paid in a later payout."
+    },
+    "held_orders_value": {
+      "default": 0,
+      "type": "number"
+    },
+    "unpaid_card_orders": {
+      "default": 0,
+      "type": "number",
+      "description": "Completed card orders whose payment never went through - excluded."
+    },
+    "unpaid_card_value": {
+      "default": 0,
+      "type": "number"
+    },
+    "cash_refunds_not_deducted": {
+      "default": 0,
+      "type": "number",
+      "description": "Restaurant-borne refunds on cash orders - handed back by the restaurant, so not deducted."
+    },
+    "brought_forward_amount": {
+      "default": 0,
+      "type": "number",
+      "description": "Previous payout's shortfall recovered in this one."
+    },
+    "fixed_commission_amount": {
+      "type": "number",
+      "description": "Monthly fixed fee in force when generated (fixed commission only)."
+    },
+    "commission_months": {
+      "type": "number",
+      "description": "Calendar months whose month-end falls in this period - one fixed fee each."
+    },
+    "generated_by": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "cancelled_orders": {
       "default": 0,
       "type": "number"
