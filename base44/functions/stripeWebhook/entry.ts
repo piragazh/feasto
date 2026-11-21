@@ -363,7 +363,7 @@ async function handleChargeRefunded(base44, charge) {
                     const existing = (await base44.asServiceRole.entities.Order.filter({ id: pts[0].order_id }))?.[0];
                     if (!existing || existing.status === 'refunded') {
                         console.log(`[WEBHOOK] Order ${pts[0].order_id} already refunded in-app — left unchanged`);
-                        return;
+                        return { success: true, status: 'tracked' };
                     }
                     await base44.asServiceRole.entities.Order.update(pts[0].order_id, {
                         status: 'refunded',
