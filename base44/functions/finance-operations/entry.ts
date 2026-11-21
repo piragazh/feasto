@@ -699,6 +699,53 @@ async function buildPayout(ctx: Ctx, body: any) {
   };
 }
 
+
+const BANK_CHANGE_HOLD_HOURS = 48;
+const maskSort = (s: string) => `**-**-${String(s || "").slice(-2)}`;
+const maskAcct = (s: string) => `****${String(s || "").slice(-4)}`;
+const RESTAURANT_HIDDEN = ["order_ids", "refund_order_ids", "adjustment_ids", "generated_by", "approved_by", "finance_commission_entry_id", "finance_payment_entry_id", "batch_id", "_reserve_init"];
+function restaurantSafePayout(p: any) { const out = { ...p }; for (const k of RESTAURANT_HIDDEN) delete out[k]; return out; }
+
+async function createPayout(ctx: Ctx, draft: any, status: string, companyId: string | null) {
+  const { _reserve_init, ...record } = draft;
+  const payout = await ctx.db.Payout.create({ ...record, status, generated_by: ctx.user.email, generated_at: new Date().toISOString() });
+  // Two runs at once (two admins, or admin + scheduler): the first one created wins.
+  const rivals = (await all(ctx.db.Payout, { restaurant_id: draft.restaurant_id })).filter((x: any) => x.id !== payout.id && isLivePayout(x)
+    && Date.parse(x.period_start) <= Date.parse(payout.period_end) && Date.parse(x.period_end) >= Date.parse(payout.period_start));
+  if (rivals.length) {
+    await ctx.db.Payout.update(payout.id, { status: "voided", voided_at: new Date().toISOString(), void_reason: "Duplicate — another payout for this period was generated at the same time" });
+    fail("Another payout for this period was generated at the same moment — refresh and check", 409);
+  }
+  if (_reserve_init) await ctx.db.Restaurant.update(draft.restaurant_id, _reserve_init);
+  if (draft.reserve_held > 0) {
+    await ctx.db.PayoutAdjustment.create({ restaurant_id: draft.restaurant_id, restaurant_name: draft.restaurant_name, type: "reserve_release", amount: draft.reserve_held,
+      description: `Reserve held from the ${ukDay(draft.period_start)} to ${ukDay(draft.period_end)} statement`, status: "open", available_from: draft.reserve_until, source_payout_id: payout.id, created_by: "system" });
+  }
+  if (companyId) await audit(ctx, companyId, "Payout", payout.id, "generate", `${draft.restaurant_name} payout ${ukDay(draft.period_start)} to ${ukDay(draft.period_end)}: £${draft.net_payout.toFixed(2)}${status === "awaiting_approval" ? " (draft)" : ""}`);
+  return payout;
+}
+
+async function markPayoutPaid(ctx: Ctx, p: any, body: any) {
+  if (!["pending", "processing"].includes(p.status)) fail(p.status === "awaiting_approval" ? "Approve this payout before marking it paid" : "Only an approved, unpaid payout can be marked paid");
+  const paidDate = body.paid_date ? needDate(body.paid_date, "Paid date") : today();
+  const method = str(body.payment_method || "bank_transfer", 40);
+  const updated = await ctx.db.Payout.update(p.id, { status: "paid", paid_date: new Date(paidDate + "T12:00:00Z").toISOString(), payment_method: method, transaction_reference: str(body.transaction_reference, 120), net_payout: r2(p.net_payout), ...(body.notes ? { notes: [p.notes, str(body.notes, 1000)].filter(Boolean).join(" | ") } : {}) });
+  let posted = false, posting_error = "";
+  if (body.company_id) {
+    const company = await getCompany(ctx, body.company_id);
+    if (company.marketplace_from && company.chart_seeded) {
+      const accounts = await accountMap(ctx, company.id);
+      const attempt = async (fn: () => Promise<any>) => { try { return await fn(); } catch (e) { posting_error = e instanceof Error ? e.message : String(e); return null; } };
+      if (!updated.finance_commission_entry_id && String(updated.period_end).slice(0, 10) >= company.marketplace_from && Number(updated.platform_commission) > 0) {
+        const e = await postPayoutCommission(ctx, company, updated, accounts, attempt); if (e) updated.finance_commission_entry_id = e.id;
+      }
+      if (paidDate >= company.marketplace_from && Number(updated.net_payout) > 0) posted = !!(await postPayoutPayment(ctx, company, updated, accounts, attempt));
+    }
+    await audit(ctx, company.id, "Payout", p.id, "payment", `Paid ${p.restaurant_name} £${r2(p.net_payout).toFixed(2)} (${method}${body.transaction_reference ? ` ref ${body.transaction_reference}` : ""})`);
+  }
+  return { payout: { ...updated, status: "paid" }, posted, posting_error };
+}
+
 // ───────────────────────── action handlers ─────────────────────────
 const COMPANY_FIELDS = ["legal_name", "trading_name", "company_number", "registered_in", "utr", "email", "phone", "website", "logo_url", "bank_account_name", "bank_sort_code", "bank_account_number", "invoice_prefix", "credit_note_prefix", "invoice_footer", "notes"];
 
@@ -1151,63 +1198,225 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
 
   async mark_payout_paid(ctx, body) {
     const p = await getOne(ctx.db.Payout, body.payout_id, "Payout");
-    if (!["pending", "processing"].includes(p.status)) fail("Only a pending payout can be marked paid");
-    const paidDate = body.paid_date ? needDate(body.paid_date, "Paid date") : today();
-    const method = str(body.payment_method || "bank_transfer", 40);
-    const updated = await ctx.db.Payout.update(p.id, { status: "paid", paid_date: new Date(paidDate + "T12:00:00Z").toISOString(), payment_method: method, transaction_reference: str(body.transaction_reference, 120), net_payout: r2(p.net_payout), ...(body.notes ? { notes: [p.notes, str(body.notes, 1000)].filter(Boolean).join(" | ") } : {}) });
-    let posted = false, posting_error = "";
-    if (body.company_id) {
-      const company = await getCompany(ctx, body.company_id);
-      if (company.marketplace_from && company.chart_seeded) {
-        const accounts = await accountMap(ctx, company.id);
-        const attempt = async (fn: () => Promise<any>) => { try { return await fn(); } catch (e) { posting_error = e instanceof Error ? e.message : String(e); return null; } };
-        if (!updated.finance_commission_entry_id && String(updated.period_end).slice(0, 10) >= company.marketplace_from && Number(updated.platform_commission) > 0) {
-          const e = await postPayoutCommission(ctx, company, updated, accounts, attempt); if (e) updated.finance_commission_entry_id = e.id;
-        }
-        if (paidDate >= company.marketplace_from && Number(updated.net_payout) > 0) posted = !!(await postPayoutPayment(ctx, company, updated, accounts, attempt));
-      }
-      await audit(ctx, company.id, "Payout", p.id, "payment", `Paid ${p.restaurant_name} £${r2(p.net_payout).toFixed(2)} (${method}${body.transaction_reference ? ` ref ${body.transaction_reference}` : ""})`);
-    }
-    return { payout: { ...updated, status: "paid" }, posted, posting_error };
+    return await markPayoutPaid(ctx, p, body);
   },
 
   async void_payout(ctx, body) {
     const p = await getOne(ctx.db.Payout, body.payout_id, "Payout");
-    if (!["pending", "processing"].includes(p.status)) fail("Only a pending payout can be voided — a paid one has already left the bank");
+    if (!["awaiting_approval", "pending", "processing"].includes(p.status)) fail("Only an unpaid payout can be voided — a paid one has already left the bank");
     const reason = str(body.reason, 300) || "Voided";
+    // Only the latest payout can be voided: voiding one in the middle would leave a gap.
+    const later = (await all(ctx.db.Payout, { restaurant_id: p.restaurant_id })).filter((x: any) => x.id !== p.id && isLivePayout(x) && Date.parse(x.period_end) > Date.parse(p.period_end));
+    if (later.length) fail("Only the most recent payout for a restaurant can be voided — a later payout already follows this one");
     if (p.finance_commission_entry_id) {
       const company = await getCompany(ctx, body.company_id);
       await reverseEntry(ctx, company, p.finance_commission_entry_id, today(), `Payout voided: ${reason}`);
     }
-    // Only the latest payout can be voided: voiding one in the middle would leave a gap.
-    const later = (await all(ctx.db.Payout, { restaurant_id: p.restaurant_id })).filter((x: any) => x.id !== p.id && isLivePayout(x) && Date.parse(x.period_end) > Date.parse(p.period_end));
-    if (later.length) fail("Only the most recent payout for a restaurant can be voided — a later payout already follows this one");
     const payout = await ctx.db.Payout.update(p.id, { status: "voided", voided_at: new Date().toISOString(), void_reason: reason });
+    // Its orders and adjustments are released automatically (only live payouts count);
+    // the reserve release it created is ignored because its source payout is no longer live.
     if (body.company_id) await audit(ctx, body.company_id, "Payout", p.id, "void", `${p.restaurant_name} payout voided: ${reason}`, p);
     return { payout };
   },
 
   async preview_payout(ctx, body) {
     const draft = await buildPayout(ctx, body);
-    const { order_ids, refund_order_ids, ...rest } = draft;
-    return { preview: { ...rest, order_count: order_ids.length } };
+    const { order_ids, refund_order_ids, adjustment_ids, _reserve_init, ...rest } = draft;
+    return { preview: { ...rest, order_count: order_ids.length, adjustment_count: adjustment_ids.length } };
   },
 
+  // Admin pressing Generate is the approval, so the payout is ready to pay straight away.
   async generate_payout(ctx, body) {
     const draft = await buildPayout(ctx, body);
-    if (draft.order_ids.length === 0 && draft.refund_order_ids.length === 0 && draft.platform_commission === 0 && draft.brought_forward_amount === 0) {
-      fail(`No completed online orders for ${draft.restaurant_name} in this period — nothing to pay`);
-    }
-    const payout = await ctx.db.Payout.create({ ...draft, generated_by: ctx.user.email, generated_at: new Date().toISOString() });
-    // Two admins pressing Generate at once: the first one created wins.
-    const rivals = (await all(ctx.db.Payout, { restaurant_id: draft.restaurant_id })).filter((x: any) => x.id !== payout.id && isLivePayout(x)
-      && Date.parse(x.period_start) <= Date.parse(payout.period_end) && Date.parse(x.period_end) >= Date.parse(payout.period_start));
-    if (rivals.length) {
-      await ctx.db.Payout.update(payout.id, { status: "voided", voided_at: new Date().toISOString(), void_reason: "Duplicate — another payout for this period was generated at the same time" });
-      fail("Another payout for this period was generated at the same moment — refresh and check", 409);
-    }
-    if (body.company_id) await audit(ctx, body.company_id, "Payout", payout.id, "generate", `${draft.restaurant_name} payout ${ukDay(draft.period_start)} to ${ukDay(draft.period_end)}: £${draft.net_payout.toFixed(2)}`);
+    if (!hasPayoutContent(draft)) fail(`Nothing to pay for ${draft.restaurant_name} in this period — no completed online orders or adjustments`);
+    const payout = await createPayout(ctx, draft, "pending", body.company_id);
     return { payout };
+  },
+
+  async approve_payout(ctx, body) {
+    const p = await getOne(ctx.db.Payout, body.payout_id, "Payout");
+    if (p.status !== "awaiting_approval") fail("Only a draft waiting for approval can be approved");
+    const payout = await ctx.db.Payout.update(p.id, { status: "pending", approved_by: ctx.user.email, approved_at: new Date().toISOString() });
+    if (body.company_id) await audit(ctx, body.company_id, "Payout", p.id, "approve", `${p.restaurant_name} payout approved: £${r2(p.net_payout).toFixed(2)}`);
+    return { payout };
+  },
+
+  // Called every morning by the "Draft Restaurant Payouts" workflow (no signed-in user).
+  // Only ever creates drafts that wait for an admin's approval, and is idempotent:
+  // a restaurant already covered up to its cut-off is skipped.
+  async run_schedule(ctx) {
+    const out = { drafted: [] as any[], skipped: [] as any[] };
+    for (const r of await all(ctx.db.Restaurant, {})) {
+      if (!["weekly", "monthly"].includes(r.payout_schedule)) continue;
+      try {
+        const draft = await buildPayout(ctx, { restaurant_id: r.id, frequency: r.payout_schedule });
+        if (!hasPayoutContent(draft)) { out.skipped.push({ restaurant: r.name, reason: "nothing to pay" }); continue; }
+        const p = await createPayout(ctx, draft, "awaiting_approval", null);
+        out.drafted.push({ restaurant: r.name, payout_id: p.id, net_payout: p.net_payout });
+      } catch (e) { out.skipped.push({ restaurant: r.name, reason: e instanceof Error ? e.message : String(e) }); }
+    }
+    console.log("[payout-schedule]", JSON.stringify(out));
+    return out;
+  },
+
+  async set_payout_settings(ctx, body) {
+    const r = await getOne(ctx.db.Restaurant, body.restaurant_id, "Restaurant");
+    const patch: any = {};
+    if (body.payout_schedule !== undefined) {
+      if (!["manual", "weekly", "monthly"].includes(body.payout_schedule)) fail("Schedule must be manual, weekly or monthly");
+      patch.payout_schedule = body.payout_schedule;
+    }
+    if (body.reserve_percent !== undefined) {
+      const pct = Number(body.reserve_percent);
+      if (!(Number.isFinite(pct) && pct >= 0 && pct <= 50)) fail("Reserve must be between 0% and 50%");
+      patch.reserve_percent = pct;
+    }
+    if (body.reserve_until !== undefined) patch.reserve_until = body.reserve_until ? ukEndOfDay(needDate(body.reserve_until, "Reserve end date")) : null;
+    const updated = await ctx.db.Restaurant.update(r.id, patch);
+    if (body.company_id) await audit(ctx, body.company_id, "Restaurant", r.id, "payout_settings", `${r.name} payout settings: ${JSON.stringify(patch)}`);
+    return { restaurant: { id: updated.id, payout_schedule: updated.payout_schedule, reserve_percent: updated.reserve_percent, reserve_until: updated.reserve_until } };
+  },
+
+  // ── adjustments ──
+  async list_adjustments(ctx, body) {
+    const rid = str(body.restaurant_id, 80); if (!rid) fail("Choose a restaurant");
+    const payouts = (await all(ctx.db.Payout, { restaurant_id: rid })).filter(isLivePayout);
+    const settledBy = new Map<string, any>();
+    for (const p of payouts) for (const id of p.adjustment_ids || []) settledBy.set(id, p);
+    const rows = (await all(ctx.db.PayoutAdjustment, { restaurant_id: rid })).filter((x: any) => !x.source_payout_id || payouts.some((p: any) => p.id === x.source_payout_id))
+      .map((x: any) => ({ ...x, settled_in_payout_id: settledBy.get(x.id)?.id || null, settled_in_period_end: settledBy.get(x.id)?.period_end || null }))
+      .sort((a: any, b: any) => String(b.created_date).localeCompare(String(a.created_date)));
+    return { adjustments: rows };
+  },
+
+  async add_adjustment(ctx, body) {
+    const r = await getOne(ctx.db.Restaurant, body.restaurant_id, "Restaurant");
+    if (!["manual_credit", "manual_debit"].includes(body.type)) fail("Choose a credit (MealDrop owes the restaurant) or a debit (the restaurant owes MealDrop)");
+    const amount = r2(body.amount); if (!(amount > 0)) fail("Enter an amount above £0");
+    const reason = str(body.reason, 300); if (!reason) fail("Give a reason — it appears on the restaurant's statement");
+    const adj = await ctx.db.PayoutAdjustment.create({ restaurant_id: r.id, restaurant_name: r.name, type: body.type, amount: body.type === "manual_credit" ? amount : -amount,
+      description: reason, status: "open", available_from: new Date().toISOString(), created_by: ctx.user.email });
+    if (body.company_id) await audit(ctx, body.company_id, "PayoutAdjustment", adj.id, "create", `${r.name}: ${body.type === "manual_credit" ? "credit" : "debit"} £${amount.toFixed(2)} — ${reason}`);
+    return { adjustment: adj };
+  },
+
+  async waive_adjustment(ctx, body) {
+    const x = await getOne(ctx.db.PayoutAdjustment, body.adjustment_id, "Adjustment");
+    if (x.status !== "open") fail("Only an open adjustment can be waived");
+    const settled = (await all(ctx.db.Payout, { restaurant_id: x.restaurant_id })).some((p: any) => isLivePayout(p) && (p.adjustment_ids || []).includes(x.id));
+    if (settled) fail("This adjustment is already in a payout — void that payout first, or add a manual credit instead");
+    if (x.type === "reserve_release") fail("A reserve release can't be waived — change the reserve settings instead");
+    const reason = str(body.reason, 300) || "Waived";
+    const adj = await ctx.db.PayoutAdjustment.update(x.id, { status: "waived", waived_by: ctx.user.email, waived_at: new Date().toISOString(), waive_reason: reason });
+    if (body.company_id) await audit(ctx, body.company_id, "PayoutAdjustment", x.id, "waive", `${x.restaurant_name}: ${x.type} £${r2(x.amount).toFixed(2)} waived — ${reason}`);
+    return { adjustment: adj };
+  },
+
+  // ── bank details & payment batches ──
+  async get_bank_details(ctx, body) {
+    const acct = (await ctx.db.RestaurantBankAccount.filter({ restaurant_id: str(body.restaurant_id, 80) }, null, 1, 0))?.[0];
+    if (!acct) return { bank: null };
+    return { bank: { account_name: acct.account_name, sort_code: maskSort(acct.sort_code), account_number: maskAcct(acct.account_number), active_from: acct.active_from, updated_at: acct.updated_at, updated_by: acct.updated_by, history: acct.history || [], usable: Date.parse(acct.active_from) <= Date.now() } };
+  },
+
+  async save_bank_details(ctx, body) {
+    const r = await getOne(ctx.db.Restaurant, body.restaurant_id, "Restaurant");
+    const name = str(body.account_name, 60), sort = String(body.sort_code || "").replace(/\D/g, ""), acctNo = String(body.account_number || "").replace(/\D/g, "");
+    if (!name) fail("Account name is required");
+    if (sort.length !== 6) fail("Sort code must be 6 digits");
+    if (acctNo.length !== 8) fail("Account number must be 8 digits");
+    const now = new Date();
+    const existing = (await ctx.db.RestaurantBankAccount.filter({ restaurant_id: r.id }, null, 1, 0))?.[0];
+    let acct;
+    if (!existing) {
+      acct = await ctx.db.RestaurantBankAccount.create({ restaurant_id: r.id, restaurant_name: r.name, account_name: name, sort_code: sort, account_number: acctNo, active_from: now.toISOString(), updated_at: now.toISOString(), updated_by: ctx.user.email, history: [] });
+    } else {
+      if (existing.account_name === name && existing.sort_code === sort && existing.account_number === acctNo) return { unchanged: true };
+      // A change of bank details is the classic payout fraud. Hold it for 48 hours so
+      // there's time to notice, and keep a record of what it was before.
+      const history = [{ changed_at: now.toISOString(), changed_by: ctx.user.email, previous: `${existing.account_name} ${maskSort(existing.sort_code)} ${maskAcct(existing.account_number)}` }, ...(existing.history || [])].slice(0, 20);
+      acct = await ctx.db.RestaurantBankAccount.update(existing.id, { account_name: name, sort_code: sort, account_number: acctNo, active_from: new Date(now.getTime() + BANK_CHANGE_HOLD_HOURS * 3600000).toISOString(), updated_at: now.toISOString(), updated_by: ctx.user.email, history });
+    }
+    if (body.company_id) await audit(ctx, body.company_id, "RestaurantBankAccount", acct.id, existing ? "change" : "create", `${r.name} bank details ${existing ? "changed" : "added"}: ${name} ${maskSort(sort)} ${maskAcct(acctNo)}${existing ? ` (usable from ${acct.active_from})` : ""}`);
+    return { saved: true, active_from: acct.active_from, held: !!existing };
+  },
+
+  // Bulk-payment file for the bank. Takes every approved payout ready to pay; payouts
+  // without usable bank details are listed and left as they are.
+  async export_payment_batch(ctx, body) {
+    const wanted = Array.isArray(body.payout_ids) && body.payout_ids.length ? new Set(body.payout_ids) : null;
+    const ready = (await all(ctx.db.Payout, { status: "pending" })).filter((p: any) => Number(p.net_payout) > 0 && (!wanted || wanted.has(p.id)));
+    if (!ready.length) fail("No approved payouts are waiting to be paid");
+    const batchId = "MD" + new Date().toISOString().replace(/\D/g, "").slice(2, 12);
+    const rows: string[] = ["Payee name,Sort code,Account number,Amount,Reference"], included: any[] = [], skipped: any[] = [];
+    const csvCell = (s: string) => /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    for (const p of ready) {
+      const acct = (await ctx.db.RestaurantBankAccount.filter({ restaurant_id: p.restaurant_id }, null, 1, 0))?.[0];
+      if (!acct) { skipped.push({ restaurant: p.restaurant_name, reason: "no bank details" }); continue; }
+      if (Date.parse(acct.active_from) > Date.now()) { skipped.push({ restaurant: p.restaurant_name, reason: `bank details changed — usable from ${acct.active_from}` }); continue; }
+      const ref = `MEALDROP ${ukDay(p.period_end).slice(2).replace(/-/g, "")}`; // ≤18 chars for Faster Payments / Bacs
+      rows.push([csvCell(acct.account_name.slice(0, 18)), acct.sort_code, acct.account_number, r2(p.net_payout).toFixed(2), ref].join(","));
+      await ctx.db.Payout.update(p.id, { status: "processing", batch_id: batchId, exported_at: new Date().toISOString(), transaction_reference: ref, paid_to_account: `${maskSort(acct.sort_code)} ${maskAcct(acct.account_number)}` });
+      included.push({ restaurant: p.restaurant_name, amount: r2(p.net_payout) });
+    }
+    if (!included.length) fail(`Nothing exported: ${skipped.map((s) => `${s.restaurant} (${s.reason})`).join("; ")}`);
+    if (body.company_id) await audit(ctx, body.company_id, "Payout", batchId, "export", `Payment batch ${batchId}: ${included.length} payout(s), £${included.reduce((s, x) => s + x.amount, 0).toFixed(2)}`);
+    return { batch_id: batchId, csv: rows.join("\n"), included, skipped, total: r2(included.reduce((s, x) => s + x.amount, 0)) };
+  },
+
+  async mark_batch_paid(ctx, body) {
+    const batchId = str(body.batch_id, 40); if (!batchId) fail("Batch required");
+    const items = await all(ctx.db.Payout, { batch_id: batchId, status: "processing" });
+    if (!items.length) fail("No unpaid payouts in that batch");
+    const results = [];
+    for (const p of items) results.push(await markPayoutPaid(ctx, p, { ...body, payment_method: "bank_transfer", transaction_reference: p.transaction_reference }));
+    return { paid: results.length, posting_errors: results.filter((r: any) => r.posting_error).map((r: any) => r.posting_error) };
+  },
+
+  async cancel_batch(ctx, body) {
+    const batchId = str(body.batch_id, 40);
+    const items = await all(ctx.db.Payout, { batch_id: batchId, status: "processing" });
+    for (const p of items) await ctx.db.Payout.update(p.id, { status: "pending", batch_id: null, exported_at: null });
+    if (body.company_id) await audit(ctx, body.company_id, "Payout", batchId, "cancel_batch", `Payment batch ${batchId} cancelled: ${items.length} payout(s) back to approved`);
+    return { returned: items.length };
+  },
+
+  // ── restaurant's own view (admins, or active managers of body.restaurant_id) ──
+  async my_payouts(ctx, body) {
+    const rows = (await all(ctx.db.Payout, { restaurant_id: str(body.restaurant_id, 80) }, "-period_start"))
+      .filter((p: any) => !["voided", "awaiting_approval"].includes(p.status))
+      .sort((a: any, b: any) => String(b.period_start).localeCompare(String(a.period_start)));
+    return { payouts: rows.map(restaurantSafePayout) };
+  },
+
+  // What the next payout would be if it were made today (orders up to yesterday).
+  async my_balance(ctx, body) {
+    try {
+      const d = await buildPayout(ctx, { restaurant_id: body.restaurant_id, frequency: "daily" });
+      const { order_ids, refund_order_ids, adjustment_ids, _reserve_init, ...rest } = d;
+      return { balance: restaurantSafePayout(rest) };
+    } catch (e) {
+      if (e instanceof FinError && /Nothing new to pay|finished/.test(e.message)) return { balance: null, message: "Nothing new since your last statement" };
+      throw e;
+    }
+  },
+
+  // Order-by-order lines behind one statement, for the restaurant's CSV download.
+  async my_statement(ctx, body) {
+    const p = await getOne(ctx.db.Payout, body.payout_id, "Payout");
+    if (p.restaurant_id !== body.restaurant_id || p.status === "voided") fail("Statement not found", 404);
+    const orders = (await all(ctx.db.Order, { restaurant_id: p.restaurant_id }));
+    const byId = new Map(orders.map((o: any) => [o.id, o]));
+    let ids: string[] = p.order_ids || [];
+    if (!Array.isArray(p.order_ids)) { // older statements: orders completed in the period
+      const s = Date.parse(p.period_start), e = Date.parse(p.period_end);
+      ids = orders.filter((o: any) => !NOT_ONLINE.has(String(o.order_source || "online")) && ["delivered", "collected", "refunded"].includes(o.status) && Date.parse(o.created_date) >= s && Date.parse(o.created_date) <= e).map((o: any) => o.id);
+    }
+    const line = (o: any, kind: string) => ({ kind, order_number: o.order_number || o.id.slice(-6).toUpperCase(), date: o.created_date, order_type: o.order_type || "delivery", payment_method: o.payment_method || "", status: o.status, total: r2(o.total || 0), refund_amount: o.status === "refunded" ? r2(Math.min(Number(o.refund_amount ?? o.total ?? 0), Number(o.total || 0))) : 0, refund_paid_by: o.status === "refunded" ? (o.refund_paid_by || "restaurant") : "" });
+    const lines = ids.map((id) => byId.get(id)).filter(Boolean).map((o: any) => line(o, "order"));
+    for (const id of p.refund_order_ids || []) { const o = byId.get(id); if (o && !ids.includes(id)) lines.push(line(o, "earlier_order_refund")); }
+    const adjs = (p.adjustment_ids || []).length ? (await all(ctx.db.PayoutAdjustment, { restaurant_id: p.restaurant_id })).filter((x: any) => p.adjustment_ids.includes(x.id)) : [];
+    return { payout: restaurantSafePayout(p), lines, adjustments: adjs.map((x: any) => ({ type: x.type, date: x.available_from || x.created_date, amount: r2(x.amount), description: x.description || "" })) };
   },
 
   async save_payouts(ctx, body) {
@@ -1227,15 +1436,27 @@ const handlers: Record<string, (ctx: Ctx, body: any) => Promise<any>> = {
   },
 };
 
+const RESTAURANT_ACTIONS = new Set(["my_payouts", "my_balance", "my_statement"]);
+const SYSTEM_ACTIONS = new Set(["run_schedule"]);
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return Response.json({ success: false, error: "POST only" }, { status: 405 });
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user?.id) fail("Please sign in", 401);
-    if (user.role !== "admin") fail("Finance is restricted to MealDrop administrators", 403);
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "");
+    let user: any = await base44.auth.me().catch(() => null);
+    if (SYSTEM_ACTIONS.has(action)) {
+      // Scheduled workflow: runs without a signed-in user. Only drafts payouts for approval.
+      if (user?.role !== "admin") user = { id: "payout-scheduler", email: "payout-scheduler", role: "system" };
+    } else {
+      if (!user?.id) fail("Please sign in", 401);
+      if (user.role !== "admin") {
+        if (!RESTAURANT_ACTIONS.has(action)) fail("Finance is restricted to MealDrop administrators", 403);
+        const managers = await base44.asServiceRole.entities.RestaurantManager.filter({ user_email: user.email, is_active: true });
+        if (!body.restaurant_id || !(managers || []).some((m: any) => m.restaurant_ids?.includes(body.restaurant_id))) fail("Access denied to this restaurant", 403);
+      }
+    }
     const handler = handlers[action];
     if (!handler) fail(`Unknown action "${action}"`);
     const result = await handler({ db: base44.asServiceRole.entities, user, base44 }, body);
