@@ -231,24 +231,24 @@ export function generatePayoutPDF(payout) {
 
     const breakdownRows = [];
     if (payout.delivery_orders > 0) {
-        breakdownRows.push(['🚚 Delivery', payout.delivery_orders, payout.delivery_earnings ?? 0]);
+        breakdownRows.push(['Delivery', payout.delivery_orders, payout.delivery_earnings ?? 0]);
     }
     if (payout.collection_orders > 0) {
-        breakdownRows.push(['🥡 Collection / Takeaway', payout.collection_orders, payout.collection_earnings ?? 0]);
+        breakdownRows.push(['Collection / Takeaway', payout.collection_orders, payout.collection_earnings ?? 0]);
     }
     if (payout.dine_in_orders > 0) {
         const dineInEarnings = (payout.gross_earnings ?? 0) - (payout.delivery_earnings ?? 0) - (payout.collection_earnings ?? 0);
-        breakdownRows.push(['🍽 Dine-In', payout.dine_in_orders, Math.max(0, dineInEarnings)]);
+        breakdownRows.push(['Dine-In', payout.dine_in_orders, Math.max(0, dineInEarnings)]);
     }
     if (breakdownRows.length === 0) {
         breakdownRows.push(['Online Orders', payout.total_orders ?? 0, payout.gross_earnings ?? 0]);
     }
     // Cancelled / Refunded (info rows)
     if ((payout.cancelled_orders ?? 0) > 0) {
-        breakdownRows.push(['❌ Cancelled (not charged)', payout.cancelled_orders, payout.cancelled_orders_value ?? 0, true]);
+        breakdownRows.push(['Cancelled (not charged)', payout.cancelled_orders, payout.cancelled_orders_value ?? 0, true]);
     }
-    if ((payout.refunded_orders_count ?? 0) > 0) {
-        breakdownRows.push([`↩ Refunded`, payout.refunded_orders_count, -(payout.refunds_paid_by_restaurant ?? 0), false, true]);
+    if ((payout.refunds_paid_by_restaurant ?? 0) > 0) {
+        breakdownRows.push(['Refunds on earlier orders', '', -(payout.refunds_paid_by_restaurant ?? 0), false, true]);
     }
 
     breakdownRows.forEach(([label, count, earnings, isCancelled, isRefund], idx) => {
@@ -289,7 +289,9 @@ export function generatePayoutPDF(payout) {
     y += 15;
 
     /* ─── COMMISSION BREAKDOWN ─── */
-    const commRate = payout.commission_rate ? `${payout.commission_rate}%` : 'N/A';
+    const commRate = payout.commission_type === 'fixed'
+        ? `${currency(payout.fixed_commission_amount)} per month`
+        : (payout.commission_rate != null ? `${payout.commission_rate}%` : 'N/A');
     setColor(doc, [239, 246, 255], 'fill');
     setColor(doc, [147, 197, 253], 'draw');
     doc.setLineWidth(0.3);
