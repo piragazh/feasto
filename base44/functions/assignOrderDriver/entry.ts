@@ -242,12 +242,12 @@ Deno.serve(async (req) => {
         try {
             eta = estimateEta(restaurant, orders, driver.vehicle_type);
         } catch (etaErr) {
-            console.warn(`[ASSIGN-DRIVER] ETA calculation failed, using fallback: ${etaErr?.message}`);
+            console.warn(`[ASSIGN-DRIVER] ETA calculation failed, using fallback: ${(etaErr as any)?.message}`);
         }
 
         // ── Re-check just before writing ──────────────────────────────────────
-        // The ETA call above takes a few seconds. Read the driver and the orders
-        // again so that anything taken in the meantime is refused, not overwritten.
+        // Read the driver and the orders again so that anything taken in the
+        // meantime is refused, not overwritten.
         const freshDriverResult = await loadAssignableDriver();
         if (freshDriverResult.error) return freshDriverResult.error;
 
