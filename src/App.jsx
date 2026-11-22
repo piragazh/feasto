@@ -23,6 +23,7 @@ const lazyWithRetry = (importFn) =>
 const OfflineRiskControlCenter = lazyWithRetry(() => import('./pages/OfflineRiskControlCenter'));
 const RestaurantOfflineRiskOverview = lazyWithRetry(() => import('./pages/RestaurantOfflineRiskOverview'));
 const ReconciliationDashboard = lazyWithRetry(() => import('./pages/ReconciliationDashboard'));
+const IntegrationCreditUsage = lazyWithRetry(() => import('./pages/IntegrationCreditUsage'));
 const Finance = lazyWithRetry(() => import('./pages/Finance'));
 const SuperAdmin = lazyWithRetry(() => import('./pages/SuperAdmin'));
 const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
@@ -301,6 +302,15 @@ const AuthenticatedApp = ({ customDomainRestaurantId }) => {
             <Suspense fallback={<RouteLoadingFallback />}>
               <LayoutWrapper currentPageName="ReconciliationDashboard">
                 <ReconciliationDashboard />
+              </LayoutWrapper>
+            </Suspense>
+          } />
+          <Route path="/IntegrationCreditUsage" element={
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <LayoutWrapper currentPageName="IntegrationCreditUsage">
+                <RequireAdmin>
+                  <IntegrationCreditUsage />
+                </RequireAdmin>
               </LayoutWrapper>
             </Suspense>
           } />

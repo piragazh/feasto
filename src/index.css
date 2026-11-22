@@ -408,3 +408,21 @@ html.brand-accent .text-orange-700,
 html.brand-accent .hover\:text-orange-600:hover,
 html.brand-accent .hover\:text-orange-700:hover { color: var(--brand-accent-text) !important; }
 html.brand-font body { font-family: var(--brand-font); }
+
+/* ── Integration credit inventory: stat-card dot accent ──────────────────────
+   The descending dot grid on each credit stat card fills in once as the card
+   comes into view, in step with the number count-up. Each dot's delay is set
+   inline by diagonal position. */
+@keyframes credit-dot-in {
+  0%   { opacity: 0.3; transform: scale(0.82); }
+  60%  { opacity: 1;   transform: scale(1.06); }
+  100% { opacity: 1;   transform: scale(1); }
+}
+.credit-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: credit-dot-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) var(--credit-d, 0s) 1 forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .credit-dot { animation: none; opacity: 1; transform: none; }
+}

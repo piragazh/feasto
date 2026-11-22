@@ -15,7 +15,7 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart, Wallet } from 'lucide-react';
+import { Home, ShoppingBag, User, LogOut, Menu, Tag, MessageSquare, Bell, Heart, Wallet, Coins } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ChatbotWidget from '@/components/chatbot/ChatbotWidget';
 import { Toaster } from 'sonner';
@@ -408,8 +408,8 @@ export default function Layout({ children, currentPageName }) {
 
     const hideHeader = ['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'POSDashboard', 'DriverApp', 'MediaScreen', 'MediaScreenManagement', 'Sitemap', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'RestaurantDashboard'].includes(currentPageName);
     const isFullScreenPage = ['MediaScreen', 'MediaScreenManagement', 'POSDashboard', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'KitchenDisplay', 'WaiterApp'].includes(currentPageName);
-    const showBottomNav = !['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'MediaScreenManagement', 'Sitemap', 'CustomerDisplay', 'KioskDashboard', 'Finance'].includes(currentPageName);
-    const hideFooter = ['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'MediaScreenManagement', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'Finance'].includes(currentPageName);
+    const showBottomNav = !['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'IntegrationCreditUsage', 'DriverDashboard', 'POSDashboard', 'PrivacyPolicy', 'TermsOfService', 'DriverApp', 'MediaScreen', 'MediaScreenManagement', 'Sitemap', 'CustomerDisplay', 'KioskDashboard', 'Finance'].includes(currentPageName);
+    const hideFooter = ['Checkout', 'WhatsAppCheckout', 'AiCheckout', 'WhatsAppOrdering', 'RestaurantDashboard', 'AdminDashboard', 'AdminRestaurants', 'SuperAdmin', 'ManageRestaurantManagers', 'IntegrationCreditUsage', 'DriverDashboard', 'POSDashboard', 'DriverApp', 'MediaScreen', 'MediaScreenManagement', 'Sitemap', 'KitchenDisplay', 'TabletDashboard', 'KioskDashboard', 'CustomerDisplay', 'Finance'].includes(currentPageName);
     
     // Custom domain home link
     const isRootRestaurantContext = location.pathname === '/' && !!customDomainRestaurantId;
@@ -672,6 +672,12 @@ export default function Layout({ children, currentPageName }) {
                                                <Link to={createPageUrl('ManageRestaurantManagers')} className="flex items-center gap-2">
                                                    <User className="h-4 w-4" />
                                                    Restaurant Managers
+                                               </Link>
+                                           </DropdownMenuItem>
+                                           <DropdownMenuItem asChild>
+                                               <Link to={createPageUrl('IntegrationCreditUsage')} className="flex items-center gap-2">
+                                                   <Coins className="h-4 w-4" />
+                                                   Credit Usage
                                                </Link>
                                            </DropdownMenuItem>
                                        </>
