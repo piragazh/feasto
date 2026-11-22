@@ -8,7 +8,7 @@ import {
 import { captureScreen, nativeAppVersion } from '@/lib/screenCapture';
 
 const PAIRING_POLL_MS = 4000;
-const DEFAULT_HEARTBEAT_S = 20;
+const DEFAULT_HEARTBEAT_S = 300; // server sends the real value with each check-in
 const RELOAD_COMMANDS = ['reload', 'reboot', 'refresh_content', 'clear_cache'];
 const PLAYS_KEY = 'mealdrop_screen_pending_plays';
 
