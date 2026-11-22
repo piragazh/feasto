@@ -25,7 +25,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 const CODE_TTL_MS = 10 * 60 * 1000;
 const COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
-const HEARTBEAT_INTERVAL_S = 20;
+// 5 minutes: each check-in is one function run (integration credits), so keep it
+// slow. Commands, takeovers and content changes reach the screen on its next
+// check-in, i.e. within ~5 minutes.
+const HEARTBEAT_INTERVAL_S = 300;
 const ALLOWED_COMMANDS = ['refresh_content', 'reload', 'reboot', 'clear_cache', 'screenshot'];
 const MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024;
 
@@ -317,6 +320,8 @@ Deno.serve(async (req) => {
                 sr.entities.Screen.update(screen.id, {
                     last_heartbeat: nowIso,
                     health_status: 'online',
+                    // Health checks judge online/offline against this value
+                    heartbeat_interval: HEARTBEAT_INTERVAL_S,
                     screen_info: { browser: info.user_agent, resolution: info.resolution, drawing: info.drawing, pixel_ratio: info.pixel_ratio, os: info.platform, app_version: info.app_version, paired: true },
                     ...(body.now_showing ? { now_showing: { ...cleanNowShowing(body.now_showing), reported_at: nowIso } } : {}),
                 }),
