@@ -103,6 +103,9 @@ export default function DriverApp() {
     // driver unavailable, so tracking must not depend on is_available alone - it used to
     // stop mid-delivery after a page reload.)
     const hasActiveOrders = activeOrders.length > 0;
+    // The GPS watch is created once, so its callback reads this ref for the current value
+    const hasActiveOrdersRef = useRef(hasActiveOrders);
+    hasActiveOrdersRef.current = hasActiveOrders;
     useEffect(() => {
         if (!driver || driver === 'not_found' || !driver.id || (!driver.is_available && !hasActiveOrders)) {
             if (locationWatchRef.current) {
@@ -126,7 +129,7 @@ export default function DriverApp() {
                 // customer's tracking map refreshes every 12s) and every 60s while just
                 // online. Each send is a backend function run (integration credits).
                 const now = Date.now();
-                const sendEveryMs = hasActiveOrders ? 20000 : 60000;
+                const sendEveryMs = hasActiveOrdersRef.current ? 20000 : 60000;
                 if (now - lastLocationSentRef.current >= sendEveryMs) {
                     lastLocationSentRef.current = now;
                     base44.functions.invoke('driverAction', { action: 'updateLocation', lat: loc.lat, lng: loc.lng }).catch(() => {});
