@@ -14,7 +14,7 @@
  *      - Driver must belong to the same restaurant
  *   3. Validate order state: only 'preparing' orders with no driver can receive one
  *   4. Validate driver state: must be active and available
- *   5. Calculate ETA via LLM (server-side, not frontend)
+ *   5. Calculate ETA server-side from distance, vehicle and time of day (no AI call)
  *   6. Re-read driver and orders immediately before writing, so a driver or order
  *      taken in the meantime is refused instead of overwritten
  *   7. Update Orders and Driver, rolling the orders back if a later write fails
@@ -32,6 +32,45 @@ const ASSIGNABLE_ORDER_STATUSES = ['preparing'];
 
 // Most orders one driver can be given in a single batch
 const MAX_BATCH_SIZE = 10;
+
+// ── ETA ─────────────────────────────────────────────────────────────────────
+// This used to ask the AI (InvokeLLM) on every assignment, with no real distance
+// to work from - it spent integration credits to guess. Now it is worked out from
+// the straight-line distance between the restaurant and the drop-off.
+const SPEED_KMH: Record<string, number> = { bike: 15, scooter: 25, car: 25 };   // urban averages
+const ROAD_FACTOR = 1.3;        // roads are longer than a straight line
+const HANDOVER_MIN = 4;         // parking, finding the door, handing over - per drop
+const EXTRA_DROP_MIN = 6;       // each additional order in a batch
+const FALLBACK_KM = 4;          // when an order has no coordinates
+
+function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+    const rad = (d: number) => (d * Math.PI) / 180;
+    const dLat = rad(b.lat - a.lat);
+    const dLng = rad(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
+function ukHour(date = new Date()) {
+    return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hour12: false }).format(date)) % 24;
+}
+
+/** e.g. "20-30 min" */
+function estimateEta(restaurant: any, orders: any[], vehicleType: string): string {
+    const origin = Number.isFinite(restaurant?.latitude) && Number.isFinite(restaurant?.longitude)
+        ? { lat: restaurant.latitude, lng: restaurant.longitude } : null;
+    const kms = orders.map(o => {
+        const c = o?.delivery_coordinates;
+        return origin && Number.isFinite(c?.lat) && Number.isFinite(c?.lng) ? distanceKm(origin, c) : FALLBACK_KM;
+    });
+    const furthestKm = Math.max(FALLBACK_KM / 2, ...kms) * ROAD_FACTOR;
+    const speed = SPEED_KMH[vehicleType] || SPEED_KMH.bike;
+    const hour = ukHour();
+    const peak = (hour >= 12 && hour < 14) || (hour >= 18 && hour < 21) ? 1.25 : 1;
+    const minutes = (furthestKm / speed) * 60 * peak + HANDOVER_MIN + EXTRA_DROP_MIN * (orders.length - 1);
+    const low = Math.max(10, Math.round(minutes / 5) * 5);
+    return `${low}-${low + 10} min`;
+}
 
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
@@ -199,22 +238,11 @@ Deno.serve(async (req) => {
         const driver = driverResult.driver;
 
         // ── Calculate ETA (server-side) ───────────────────────────────────────
-        const etaPrompt = `Calculate estimated delivery time for a food delivery order.
-Distance: Assume 3-5 km average urban delivery.
-Traffic: Consider it's ${new Date().getHours()}:00, adjust for peak hours (12-14, 18-21).
-Vehicle: ${driver.vehicle_type}
-Provide only the time range (e.g., "25-30 min").`;
-
-        let eta = '30-45 min'; // fallback if LLM fails
+        let eta = '30-45 min';
         try {
-            const etaResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                prompt: etaPrompt
-            });
-            if (etaResponse?.data) {
-                eta = etaResponse.data;
-            }
+            eta = estimateEta(restaurant, orders, driver.vehicle_type);
         } catch (etaErr) {
-            console.warn(`[ASSIGN-DRIVER] ETA calculation failed, using fallback: ${etaErr.message}`);
+            console.warn(`[ASSIGN-DRIVER] ETA calculation failed, using fallback: ${etaErr?.message}`);
         }
 
         // ── Re-check just before writing ──────────────────────────────────────
