@@ -127,9 +127,10 @@ User: "Problem with my order" → Sympathise, offer escalation to restaurant`;
             { role: 'user', content: message }
         ];
 
+        // No model named: "Automatic" is Base44's cheapest option (~1 integration
+        // credit per call); naming a model costs more.
         const response = await base44.integrations.Core.InvokeLLM({
             prompt: JSON.stringify(messages),
-            model: 'gpt_5_mini'
         });
 
         // Parse structured blocks
