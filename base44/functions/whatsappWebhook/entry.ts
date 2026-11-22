@@ -44,6 +44,25 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const GRAPH = `https://graph.facebook.com/${Deno.env.get('WHATSAPP_GRAPH_VERSION') || 'v23.0'}`;
 const HISTORY_TURNS = 12;
+// Each AI reply costs integration credits. Past this many per restaurant per UK day the
+// chat stops calling the AI and shows the menu buttons instead - ordering keeps working.
+const MAX_AI_TURNS_PER_DAY = 300;
+
+const ukDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+
+/** Counts an AI reply for today; false when the restaurant is over its daily cap. Never throws. */
+async function takeAiTurn(db, restaurantId) {
+    try {
+        const key = { restaurant_id: restaurantId, day: ukDay(), channel: 'whatsapp' };
+        const row = (await db.AiUsageDay.filter(key))[0] || await db.AiUsageDay.create({ ...key, sessions: 0, ai_turns: 0 });
+        const used = Number(row.ai_turns) || 0;
+        if (used >= MAX_AI_TURNS_PER_DAY) return false;
+        await db.AiUsageDay.update(row.id, { ai_turns: used + 1 });
+    } catch (e) {
+        console.warn('[whatsappWebhook] AI usage count failed:', e?.message);   // a counter must not break the chat
+    }
+    return true;
+}
 
 // ── Small helpers ───────────────────────────────────────────────────────────
 const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
@@ -489,6 +508,9 @@ const AGENT_SCHEMA = {
 
 async function runAgent(ctx, userText) {
     const { convo, restaurant } = ctx;
+    if (!(await takeAiTurn(ctx.db, ctx.channel.restaurant_id))) {
+        return showCategories(ctx, 'Tap below to choose from the menu 👇');
+    }
     const menuRes = await core(ctx, 'browse_menu', { mode: 'agent' });
     // ensureSession already fetched the basket this turn; only ask again if it didn't
     const basketRes = Array.isArray(ctx.context?.basket) ? { basket: ctx.context.basket, quote: ctx.context.quote } : await core(ctx, 'get_basket');
