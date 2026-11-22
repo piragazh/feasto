@@ -88,7 +88,7 @@ export default function ScreenControl({ restaurantId }) {
         try {
             const data = await queueCommand([screenId], command);
             if (!data?.ok) throw new Error('Command was not accepted');
-            toast.success(`${command} command sent to screen`);
+            toast.success(`${command} command sent — the screen picks it up within 5 minutes`);
         } catch (error) {
             toast.error(functionErrorMessage(error, 'Failed to send command'));
         }
@@ -104,22 +104,22 @@ export default function ScreenControl({ restaurantId }) {
             const data = await queueCommand(selectedScreens, command);
             const sent = (data?.results || []).filter(r => r.ok).length;
             if (!sent) throw new Error('No commands were accepted');
-            toast.success(`${command} command sent to ${sent} screen(s)`);
+            toast.success(`${command} command sent to ${sent} screen(s) — picked up within 5 minutes`);
             setSelectedScreens([]);
         } catch (error) {
             toast.error(functionErrorMessage(error, 'Failed to send bulk command'));
         }
     };
 
-    // Remote screenshot: the paired screen captures itself and uploads within ~20s
+    // Remote screenshot: the paired screen captures itself on its next check-in (within ~5 min)
     const requestScreenshot = async (screenId) => {
         try {
             const data = await queueCommand([screenId], 'screenshot');
             if (data?.results?.[0]?.reason === 'not_paired') throw new Error('Pair this screen first');
             if (!data?.ok) throw new Error('Request was not accepted');
             setScreenshotRequested(r => ({ ...r, [screenId]: Date.now() }));
-            setTimeout(() => setScreenshotRequested(r => { const n = { ...r }; delete n[screenId]; return n; }), 60000);
-            toast.success('Screenshot requested — it appears here within about 20 seconds');
+            setTimeout(() => setScreenshotRequested(r => { const n = { ...r }; delete n[screenId]; return n; }), 6 * 60000);
+            toast.success('Screenshot requested — it appears here within 5 minutes');
         } catch (error) {
             toast.error(functionErrorMessage(error, 'Could not request screenshot'));
         }
