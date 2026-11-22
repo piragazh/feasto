@@ -38,7 +38,8 @@
  * LIMITS   message 500 chars; 60 AI replies per session per hour; 20 new sessions
  *          per IP per hour (per server instance, best effort - the address can be faked).
  *          The limits that hold whatever the caller does are per restaurant per UK day,
- *          counted in the database (AiUsageDay): 500 new chats and 3,000 AI replies.
+ *          counted in the database (AiUsageDay): 200 new chats and 300 AI replies
+ *          (each AI reply costs integration credits).
  *          Past either, the chat says it is busy; ordering from the page is unaffected.
  *
  * ENV      AI_CORE_API_KEY (shared with the other agents)
@@ -47,11 +48,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const LOG = '[webChatAgent]';
 const HOUR = 60 * 60 * 1000;
-const MAX_TURNS_PER_HOUR = 60;
+const MAX_TURNS_PER_HOUR = 30;
 const MAX_NEW_SESSIONS_PER_IP = 20;
 const MAX_MESSAGE = 500;
-const MAX_SESSIONS_PER_DAY = 500;    // new chats per restaurant per UK day
-const MAX_AI_TURNS_PER_DAY = 3000;   // AI replies per restaurant per UK day
+const MAX_SESSIONS_PER_DAY = 200;    // new chats per restaurant per UK day
+const MAX_AI_TURNS_PER_DAY = 300;    // AI replies per restaurant per UK day (each costs integration credits)
 const HISTORY_TURNS = 8;
 
 const ukDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
