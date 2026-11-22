@@ -49,7 +49,7 @@ export default function TakeoverControl({ restaurantId, screens = [], selectedSc
                 title: form.title, message: form.message, style: form.style, duration_minutes: Number(form.duration),
             });
             const data = res?.data ?? res;
-            toast.success(`Message showing on ${data?.screens || 0} screen(s) within ~20 seconds`);
+            toast.success(`Message showing on ${data?.screens || 0} screen(s) within 5 minutes`);
             setOpen(false);
             onChanged?.();
         } catch (error) {
