@@ -3,11 +3,11 @@
  * (base44/functions/checkScreenHealth uses the same factors — keep in sync.)
  *
  *   online   last check-in within 2 × heartbeat interval
- *   warning  within 5 × interval
+ *   warning  within 3 × interval (offline after 3 missed check-ins)
  *   offline  longer, or never checked in
  */
 export const ONLINE_FACTOR = 2;
-export const WARNING_FACTOR = 5;
+export const WARNING_FACTOR = 3;
 
 export function getScreenHealth(screen, now = Date.now()) {
     if (!screen?.last_heartbeat) return 'offline';
