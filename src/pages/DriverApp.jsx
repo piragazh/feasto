@@ -122,10 +122,12 @@ export default function DriverApp() {
                 const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
                 setGpsActive(true);
                 setDriver(prev => prev && prev !== 'not_found' ? { ...prev, current_location: loc } : prev);
-                // Send to the server at most every 10 seconds; it also copies the
-                // position onto the orders this driver is carrying.
+                // Send to the server at most every 20s while carrying an order (the
+                // customer's tracking map refreshes every 12s) and every 60s while just
+                // online. Each send is a backend function run (integration credits).
                 const now = Date.now();
-                if (now - lastLocationSentRef.current >= 10000) {
+                const sendEveryMs = hasActiveOrders ? 20000 : 60000;
+                if (now - lastLocationSentRef.current >= sendEveryMs) {
                     lastLocationSentRef.current = now;
                     base44.functions.invoke('driverAction', { action: 'updateLocation', lat: loc.lat, lng: loc.lng }).catch(() => {});
                 }
