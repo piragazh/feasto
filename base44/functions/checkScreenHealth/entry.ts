@@ -17,7 +17,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  */
 
 const ONLINE_FACTOR = 2;
-const WARNING_FACTOR = 5;
+const WARNING_FACTOR = 3; // offline (and alert) after 3 missed check-ins
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const LEGACY_COMMAND_TIMEOUT_MS = 30 * 60 * 1000;
 const ALERT_MAX_SILENCE_MS = 24 * 60 * 60 * 1000;
