@@ -44,8 +44,11 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
             });
             return (response?.data || response)?.messages || [];
         },
-        enabled: !!driver?.id && !!order?.id,
-        refetchInterval: 3000,
+        // Each check is a backend function run (integration credits), and the
+        // messages are only shown inside the chat dialog - so only check while
+        // it is open.
+        enabled: !!driver?.id && !!order?.id && showChat,
+        refetchInterval: showChat ? 5000 : false,
     });
 
     const updateStatusMutation = useMutation({
