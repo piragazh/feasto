@@ -1,0 +1,60 @@
+{
+  "name": "Expire Unpaid Kiosk Order Timer",
+  "description": "Replaces the every-5-minute 'Expire Unpaid Kiosk Orders' schedule (which cost ~1,700 credits a month with no kiosk orders). Starts only when a kiosk order is created unpaid, waits 15.5 minutes (the default limit) and runs expireUnpaidKioskOrders, then once more at ~31 minutes as a backup. The function only ever cancels kiosk orders that are still unpaid, still pending and past the restaurant's limit, so a paid order is never touched.",
+  "trigger": {
+    "condition": "${ .trigger.data.order_source == \"kiosk\" and .trigger.data.payment_status == \"pending_payment\" }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Order"
+    }
+  },
+  "definition": {
+    "do": [
+      {
+        "wait_15m": {
+          "then": "expire_1",
+          "wait": {
+            "seconds": 930
+          }
+        }
+      },
+      {
+        "expire_1": {
+          "call": "invoke_backend_function",
+          "then": "wait_backup",
+          "with": {
+            "args": {},
+            "function_name": "expireUnpaidKioskOrders"
+          }
+        }
+      },
+      {
+        "wait_backup": {
+          "then": "expire_2",
+          "wait": {
+            "seconds": 900
+          }
+        }
+      },
+      {
+        "expire_2": {
+          "call": "invoke_backend_function",
+          "then": "end",
+          "with": {
+            "args": {},
+            "function_name": "expireUnpaidKioskOrders"
+          }
+        }
+      }
+    ],
+    "document": {
+      "dsl": "1.0.0",
+      "name": "expire_unpaid_kiosk_order_timer",
+      "namespace": "base44",
+      "version": "1.0"
+    }
+  }
+}
