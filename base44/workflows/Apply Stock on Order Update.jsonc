@@ -2,7 +2,7 @@
   "name": "Apply Stock on Order Update",
   "description": "Deducts stock when a pending order becomes committed (e.g. online payment confirmed), and restores it when a committed order is cancelled or refunded. Exactly-once in each direction via Order.stock_applied / stock_restored, so this re-firing on its own marker writes is a harmless no-op.",
   "trigger": {
-    "condition": null,
+    "condition": "${ ((.trigger.changed_fields == null) or any(.trigger.changed_fields[]; IN(\"status\"))) }",
     "config": {
       "trigger_type": "entity",
       "events": [
