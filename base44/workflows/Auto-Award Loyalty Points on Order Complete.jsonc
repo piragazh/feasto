@@ -2,7 +2,7 @@
   "name": "Auto-Award Loyalty Points on Order Complete",
   "description": "Awards loyalty points (supports both registered users and guests via phone) when an order is delivered or collected",
   "trigger": {
-    "condition": null,
+    "condition": "${ (.trigger.data.status | IN(\"delivered\", \"collected\")) and ((.trigger.changed_fields == null) or any(.trigger.changed_fields[]; IN(\"status\"))) }",
     "config": {
       "trigger_type": "entity",
       "events": [
