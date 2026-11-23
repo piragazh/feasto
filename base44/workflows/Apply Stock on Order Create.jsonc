@@ -2,7 +2,7 @@
   "name": "Apply Stock on Order Create",
   "description": "Deducts tracked item stock when an order is created in a committed state, on every order path (till, offline, kiosk, QR, online, marketplaces), and auto-86s items that reach zero. Exactly-once per order via Order.stock_applied.",
   "trigger": {
-    "condition": null,
+    "condition": "${ .trigger.data.status == null or (.trigger.data.status | IN(\"confirmed\", \"preparing\", \"ready_for_collection\", \"out_for_delivery\", \"delivered\", \"collected\")) }",
     "config": {
       "trigger_type": "entity",
       "events": [
