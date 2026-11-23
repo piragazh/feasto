@@ -1,4 +1,6 @@
 {
+  "name": "Screen Health Check \u2014 Every 10 Minutes",
+  "description": "Updates media screen online/offline status and 24h uptime, alerts restaurant managers when a screen goes offline, and times out screen commands nobody picked up.",
   "trigger": {
     "condition": null,
     "config": {
@@ -8,16 +10,14 @@
       "cron_expression": null,
       "one_time_date": null,
       "timezone": "UTC",
-      "interval_value": 5,
+      "interval_value": 10,
       "interval_unit": "minutes",
-      "interval_anchor": "2026-09-30T22:00:00",
+      "interval_anchor": "2026-11-23T14:40:00Z",
       "ends_type": "never",
       "ends_on_date": null,
       "ends_after_count": null
     }
   },
-  "name": "Screen Health Check \u2014 Every 5 Minutes",
-  "description": "Updates media screen online/offline status and 24h uptime, alerts restaurant managers when a screen goes offline, and times out screen commands nobody picked up.",
   "definition": {
     "document": {
       "dsl": "1.0.0",
