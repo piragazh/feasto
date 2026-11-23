@@ -1,0 +1,124 @@
+{
+  "name": "Retry Uber Eats Push On Failure",
+  "description": "Replaces the every-5-minute 'Retry Failed Uber Eats Pushes' schedule (which cost ~1,700 credits a month while finding nothing to do). Starts only when an Uber Eats status push fails (Order.uber_push_pending turns true), then retries on the same back-off as uberEatsPushStatus (30s, 1, 2, 3, 4 min) - 5 retries inside Uber's 11.5-minute auto-cancel window. Each retry is the normal sweep, so it respects next_retry_at, gives up after 6 attempts and never pushes twice.",
+  "trigger": {
+    "condition": "${ .trigger.data.third_party_platform == \"uber_eats\" and .trigger.data.uber_push_pending == true and ((.trigger.changed_fields == null) or any(.trigger.changed_fields[]; IN(\"uber_push_pending\"))) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Order"
+    }
+  },
+  "definition": {
+    "do": [
+      {
+        "wait_30s": {
+          "then": "retry_1",
+          "wait": {
+            "seconds": 32
+          }
+        }
+      },
+      {
+        "retry_1": {
+          "call": "invoke_backend_function",
+          "then": "wait_1m",
+          "with": {
+            "args": {
+              "sweep": true
+            },
+            "function_name": "uberEatsPushStatus"
+          }
+        }
+      },
+      {
+        "wait_1m": {
+          "then": "retry_2",
+          "wait": {
+            "seconds": 62
+          }
+        }
+      },
+      {
+        "retry_2": {
+          "call": "invoke_backend_function",
+          "then": "wait_2m",
+          "with": {
+            "args": {
+              "sweep": true
+            },
+            "function_name": "uberEatsPushStatus"
+          }
+        }
+      },
+      {
+        "wait_2m": {
+          "then": "retry_3",
+          "wait": {
+            "seconds": 122
+          }
+        }
+      },
+      {
+        "retry_3": {
+          "call": "invoke_backend_function",
+          "then": "wait_3m",
+          "with": {
+            "args": {
+              "sweep": true
+            },
+            "function_name": "uberEatsPushStatus"
+          }
+        }
+      },
+      {
+        "wait_3m": {
+          "then": "retry_4",
+          "wait": {
+            "seconds": 182
+          }
+        }
+      },
+      {
+        "retry_4": {
+          "call": "invoke_backend_function",
+          "then": "wait_4m",
+          "with": {
+            "args": {
+              "sweep": true
+            },
+            "function_name": "uberEatsPushStatus"
+          }
+        }
+      },
+      {
+        "wait_4m": {
+          "then": "retry_5",
+          "wait": {
+            "seconds": 242
+          }
+        }
+      },
+      {
+        "retry_5": {
+          "call": "invoke_backend_function",
+          "then": "end",
+          "with": {
+            "args": {
+              "sweep": true
+            },
+            "function_name": "uberEatsPushStatus"
+          }
+        }
+      }
+    ],
+    "document": {
+      "dsl": "1.0.0",
+      "name": "retry_uber_eats_push_on_failure",
+      "namespace": "base44",
+      "version": "1.0"
+    }
+  }
+}
