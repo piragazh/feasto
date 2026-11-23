@@ -2,7 +2,7 @@
   "name": "CRM Ingest Order",
   "description": "On every order create and update, puts the order on the right customer profile (matched by phone, then email), records any marketing consent ticked at checkout or given to the cashier, and recalculates that customer's stats and lifecycle stage. Never writes to the Order, so it cannot re-trigger the other order workflows.",
   "trigger": {
-    "condition": null,
+    "condition": "${ .trigger.event_type == \"create\" or (.trigger.changed_fields == null) or any(.trigger.changed_fields[]; IN(\"status\", \"payment_status\", \"total\", \"items\", \"phone\", \"customer_phone\", \"customer_email\")) or any(.trigger.changed_fields[]; IN(\"guest_email\", \"guest_name\", \"created_by\", \"marketing_opt_in\", \"coupon_code\", \"coupon_codes\")) or any(.trigger.changed_fields[]; IN(\"order_type\", \"delivery_address\", \"order_source\", \"table_id\", \"restaurant_id\", \"crm_profile_id\")) }",
     "config": {
       "trigger_type": "entity",
       "events": [
