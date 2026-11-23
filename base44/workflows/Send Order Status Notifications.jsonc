@@ -2,7 +2,7 @@
   "name": "Send Order Status Notifications",
   "description": "Sends push notifications when order status changes",
   "trigger": {
-    "condition": null,
+    "condition": "${ ((.trigger.changed_fields == null) or any(.trigger.changed_fields[]; IN(\"status\"))) }",
     "config": {
       "trigger_type": "entity",
       "events": [
