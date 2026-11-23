@@ -1,18 +1,18 @@
 {
   "name": "Reconcile Orphaned Payments",
-  "description": "Every 15 minutes: finds PaymentTransaction records stuck in 'authorized' (order never created after charge) and initiates automatic Stripe refunds. Escalates failed refunds to manual_review for ops.",
+  "description": "Daily safety net (was every 15 minutes, ~580 credits/month): finds PaymentTransaction records stuck in 'authorized' or 'order_failed' (order never created after charge) and refunds them via Stripe; escalates 'refund_failed' to manual_review. No current code path writes those statuses - the Stripe webhook now creates the order or refunds directly - so this only catches leftovers.",
   "trigger": {
     "condition": null,
     "config": {
       "trigger_type": "scheduled",
       "events": [],
-      "schedule_mode": "interval",
-      "cron_expression": null,
+      "schedule_mode": "recurring",
+      "cron_expression": "13 4 * * *",
       "one_time_date": null,
-      "timezone": "UTC",
-      "interval_value": 15,
-      "interval_unit": "minutes",
-      "interval_anchor": "2026-03-27T11:42:58.910000",
+      "timezone": "Europe/London",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
       "ends_type": "never",
       "ends_on_date": null,
       "ends_after_count": null
