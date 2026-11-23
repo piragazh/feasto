@@ -2,7 +2,7 @@
   "name": "WhatsApp Order Updates",
   "description": "Links an order placed from a WhatsApp checkout link back to its chat, then sends each status change (received, accepted, on its way, ready, cancelled) to the customer on the restaurant's own WhatsApp number. Does nothing for orders that did not come from WhatsApp.",
   "trigger": {
-    "condition": null,
+    "condition": "${ .trigger.data.ai_channel == \"whatsapp\" and (.trigger.event_type == \"create\" or ((.trigger.changed_fields == null) or any(.trigger.changed_fields[]; IN(\"status\", \"ai_channel\", \"ai_session_id\")))) }",
     "config": {
       "trigger_type": "entity",
       "events": [
