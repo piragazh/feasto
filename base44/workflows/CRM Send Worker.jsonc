@@ -1,18 +1,18 @@
 {
   "name": "CRM Send Worker",
-  "description": "Every 5 minutes (the platform minimum): starts scheduled campaigns that are due and sends queued marketing messages, re-checking consent, opt-outs, the weekly cap, quiet hours and the monthly SMS budget for every message at the moment it is sent. Normally finds nothing to do.",
+  "description": "Every hour (was every 5 minutes, ~1,700 credits/month for no work): starts scheduled campaigns that are due and sends queued marketing messages held back by quiet hours, re-checking consent, opt-outs, the weekly cap, quiet hours and the monthly SMS budget at the moment of sending. Campaign starts and CRM automations already run the worker directly, so this is the catch-up pass.",
   "trigger": {
     "condition": null,
     "config": {
       "trigger_type": "scheduled",
       "events": [],
-      "schedule_mode": "interval",
-      "cron_expression": null,
+      "schedule_mode": "recurring",
+      "cron_expression": "4 * * * *",
       "one_time_date": null,
-      "timezone": "UTC",
-      "interval_value": 5,
-      "interval_unit": "minutes",
-      "interval_anchor": "2026-10-17T15:00:00",
+      "timezone": "Europe/London",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
       "ends_type": "never",
       "ends_on_date": null,
       "ends_after_count": null
