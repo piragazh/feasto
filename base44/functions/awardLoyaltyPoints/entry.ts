@@ -262,13 +262,15 @@ Deno.serve(async (req) => {
                 total_points: newTotal,
                 orders_count: newOrdersCount,
                 tier,
-                phone: identifier.type === 'phone' ? normalizePhone(order.phone) : record.phone,
+                // normalizePhone did not exist: every guest (phone) award crashed here AFTER
+                // the order was marked awarded, so guests silently lost their points.
+                phone: identifier.type === 'phone' ? (normalizeUkPhone(order.phone ?? order.customer_phone ?? order.guest_phone) || record.phone) : record.phone,
             });
         } else {
             const tier = pointsToAward >= 500 ? 'gold' : pointsToAward >= 200 ? 'silver' : 'bronze';
             await base44.asServiceRole.entities.LoyaltyPoints.create({
                 user_email: identifier.key,
-                phone: identifier.type === 'phone' ? normalizePhone(order.phone) : null,
+                phone: identifier.type === 'phone' ? (normalizeUkPhone(order.phone ?? order.customer_phone ?? order.guest_phone) || null) : null,
                 points_earned: pointsToAward,
                 points_redeemed: 0,
                 total_points: pointsToAward,
