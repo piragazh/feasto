@@ -2,7 +2,7 @@
   "name": "Push Order Status to Uber Eats",
   "description": "Tells Uber Eats when the kitchen accepts, marks ready, or cancels one of their orders. Without it an accepted order still looks unacknowledged to Uber and is auto-cancelled. Exactly-once per action via Order.uber_status_pushed; does nothing for non-Uber orders or when credentials are unset.",
   "trigger": {
-    "condition": null,
+    "condition": "${ .trigger.data.third_party_platform == \"uber_eats\" and ((.trigger.changed_fields == null) or any(.trigger.changed_fields[]; IN(\"status\"))) }",
     "config": {
       "trigger_type": "entity",
       "events": [
