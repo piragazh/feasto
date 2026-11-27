@@ -122,7 +122,7 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
 
 // 6. The server money copy (receipts, restaurant alerts) - identical copies, same text.
 {
-    const MONEY_MIRRORS = ['base44/functions/androidPrint/entry.ts', 'base44/functions/networkPrint/entry.ts',
+    const MONEY_MIRRORS = ['base44/functions/aiOrderingCore/entry.ts', 'base44/functions/webChatAgent/entry.ts', 'base44/functions/androidPrint/entry.ts', 'base44/functions/networkPrint/entry.ts',
         'base44/functions/sendWhatsAppOrder/entry.ts', 'base44/functions/notifyRestaurantNewOrder/entry.ts',
         'base44/functions/whatsappOrderNotify/entry.ts', 'base44/functions/sendNotificationFromTemplate/entry.ts'];
     const mblock = (s) => (s.match(/\/\/ region-money:start[\s\S]*?\/\/ region-money:end/) || [null])[0];
@@ -148,7 +148,7 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
 
 // 7. The server card-provider copy (createPaymentIntent, processCardTerminal).
 {
-    const CARD_MIRRORS = ['base44/functions/createPaymentIntent/entry.ts', 'base44/functions/processCardTerminal/entry.ts'];
+    const CARD_MIRRORS = ['base44/functions/createPaymentIntent/entry.ts', 'base44/functions/processCardTerminal/entry.ts', 'base44/functions/aiOrderingCore/entry.ts'];
     const cb = (s) => (s.match(/\/\/ region-card:start[\s\S]*?\/\/ region-card:end/) || [null])[0];
     const canon = cb(fs.readFileSync('scripts/region-card.snippet.js', 'utf8'));
     for (const file of CARD_MIRRORS) {
