@@ -19,7 +19,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSectionErrorBoundary';
 import TemporaryClosureBanner from '@/components/restaurant/TemporaryClosureBanner';
-import { sellsAt, inHours, nextOpening } from '@/lib/item-availability';
+import { sellsAt, inHours, nextOpening, restaurantTz } from '@/lib/item-availability';
 import { sanitizeBranding, brandTokens, ensureBrandFont } from '@/lib/branding';
 
 // Lazy load heavy components
@@ -203,16 +203,18 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     // hours" - then it shows greyed with "Available from 17:00". Either way it
     // cannot be added; checkout and the server refuse it too.
     const [menuNow, setMenuNow] = useState(() => new Date());
+    // Item times run on the restaurant's own clock (UK unless its country says otherwise).
+    const menuTz = restaurantTz(restaurant);
     useEffect(() => {
         const t = setInterval(() => setMenuNow(new Date()), 60 * 1000);
         return () => clearInterval(t);
     }, []);
     const menuItems = useMemo(
-        () => onlineItems.filter(i => i.show_outside_hours === true || inHours(i, menuNow)),
-        [onlineItems, menuNow]);
+        () => onlineItems.filter(i => i.show_outside_hours === true || inHours(i, menuNow, menuTz)),
+        [onlineItems, menuNow, menuTz]);
     const offHours = useMemo(() => new Map(
-        menuItems.filter(i => !inHours(i, menuNow)).map(i => [i.id, nextOpening(i, menuNow) || ''])
-    ), [menuItems, menuNow]);
+        menuItems.filter(i => !inHours(i, menuNow, menuTz)).map(i => [i.id, nextOpening(i, menuNow, menuTz) || ''])
+    ), [menuItems, menuNow, menuTz]);
 
     const { data: mealDeals = [], error: dealsError } = useQuery({
         queryKey: ['mealDeals', restaurantId],
@@ -428,8 +430,8 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
     const handleItemClick = (item) => {
         // Nothing outside its hours can be added, shown greyed or not (a search
         // result, a deal, a stale screen) - checkout and the server refuse it.
-        if (item && !inHours(item, menuNow)) {
-            const at = nextOpening(item, menuNow);
+        if (item && !inHours(item, menuNow, menuTz)) {
+            const at = nextOpening(item, menuNow, menuTz);
             toast.error(at ? `${item.name} is available from ${at}` : `${item.name} isn't available right now`);
             return;
         }

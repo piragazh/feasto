@@ -4,7 +4,7 @@ import { useBrandAccent } from '@/lib/useBrandAccent';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, ShoppingCart, X, ChevronRight, CheckCircle, Search } from 'lucide-react';
-import { sellsAt, inHours } from '@/lib/item-availability';
+import { sellsAt, inHours, restaurantTz } from '@/lib/item-availability';
 
 // tableCreateOrder charges the POS price when set (dine-in is served in store),
 // so the menu and cart must show that price, not the online one.
@@ -111,7 +111,9 @@ export default function TableOrder() {
         const t = setInterval(() => setQrNow(new Date()), 60 * 1000);
         return () => clearInterval(t);
     }, []);
-    const inHoursItems = useMemo(() => menuItems.filter(i => inHours(i, qrNow)), [menuItems, qrNow]);
+    // Item times run on the restaurant's own clock (UK unless its country says otherwise).
+    const qrTz = restaurantTz(restaurant);
+    const inHoursItems = useMemo(() => menuItems.filter(i => inHours(i, qrNow, qrTz)), [menuItems, qrNow, qrTz]);
 
     const filteredItems = inHoursItems.filter(item => {
         const matchCat = activeCategory === 'all' || item.category === activeCategory;

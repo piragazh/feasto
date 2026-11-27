@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { ShoppingCart, Search, ArrowLeft, ChevronRight, X, WifiOff } from 'lucide-react';
 import KioskItemModal from './KioskItemModal';
 import { StaffHelpScreen } from './KioskStaffHelp';
-import { sellsAt, inHours } from '@/lib/item-availability';
+import { sellsAt, inHours, restaurantTz } from '@/lib/item-availability';
 
 export default function KioskMenu({
     restaurant, restaurantId, cart, cartTotal, cartCount,
@@ -37,7 +37,9 @@ export default function KioskMenu({
         const t = setInterval(() => setKioskNow(new Date()), 60 * 1000);
         return () => clearInterval(t);
     }, []);
-    const menuItems = useMemo(() => kioskItems.filter(i => inHours(i, kioskNow)), [kioskItems, kioskNow]);
+    // Item times run on the restaurant's own clock (UK unless its country says otherwise).
+    const kioskTz = restaurantTz(restaurant);
+    const menuItems = useMemo(() => kioskItems.filter(i => inHours(i, kioskNow, kioskTz)), [kioskItems, kioskNow, kioskTz]);
 
     const getOrderedCategories = () => {
         const order = restaurant?.category_order || [];
