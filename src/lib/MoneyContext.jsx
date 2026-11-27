@@ -34,6 +34,14 @@ export function useMoney() {
     }), [country]);
 }
 
+/**
+ * The country of the restaurant the screen is showing ('GB' outside a
+ * provider). The same provider decides currency, address lookup and units.
+ */
+export function useRegionCountry() {
+    return useContext(MoneyContext);
+}
+
 /** What goes in front of a raw number: "£" in the UK (unchanged), "Rs " in Sri Lanka. */
 export function moneyPrefix(country) {
     const s = currencySymbol(country);
