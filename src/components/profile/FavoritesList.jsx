@@ -8,10 +8,10 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useMoney } from '@/lib/MoneyContext';
+import { useRestaurantCountries } from '@/lib/useRestaurantCountries';
 
 export default function FavoritesList({ user, onUpdate }) {
-    const { money } = useMoney();
+    const { moneyFor } = useRestaurantCountries();
     const queryClient = useQueryClient();
 
     const { data: favoriteRestaurants = [] } = useQuery({
@@ -142,7 +142,7 @@ export default function FavoritesList({ user, onUpdate }) {
                                     <h3 className="font-semibold mb-1">{item.name}</h3>
                                     <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
                                     <div className="flex items-center justify-between">
-                                        <p className="text-lg font-bold text-orange-600">{money(item.price)}</p>
+                                        <p className="text-lg font-bold text-orange-600">{moneyFor(item.price, item.restaurant_id)}</p>
                                         <Button
                                             size="sm"
                                             variant="outline"

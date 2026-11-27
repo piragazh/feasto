@@ -12,9 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Search, Filter, ArrowLeft, Package, DollarSign, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { useRestaurantCountries } from '@/lib/useRestaurantCountries';
+import { formatMoney } from '@/lib/money';
+import { moneyPrefix } from '@/lib/MoneyContext';
 
 export default function OrderHistory() {
     const [statusFilter, setStatusFilter] = useState('all');
+    // Each order in its own restaurant's currency; summary totals only use a non-£
+    // currency when every listed order is from that country (GB = as before).
+    const { moneyFor, commonCountry, countryOf } = useRestaurantCountries();
     const [searchQuery, setSearchQuery] = useState('');
     const [dateFilter, setDateFilter] = useState('all'); // all, today, week, month, year
 
@@ -74,6 +80,7 @@ export default function OrderHistory() {
 
     const totalSpent = filteredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
     const totalOrders = filteredOrders.length;
+    const summaryCountry = commonCountry(filteredOrders.map(o => o.restaurant_id));
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -119,7 +126,7 @@ export default function OrderHistory() {
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-500">Total Spent</p>
-                                    <p className="text-2xl font-bold text-gray-900">£{totalSpent.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{formatMoney(totalSpent, summaryCountry)}</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -134,7 +141,7 @@ export default function OrderHistory() {
                                 <div>
                                     <p className="text-sm text-gray-500">Avg. Order Value</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        £{totalOrders > 0 ? (totalSpent / totalOrders).toFixed(2) : '0.00'}
+                                        {formatMoney(totalOrders > 0 ? (totalSpent / totalOrders) : 0, summaryCountry)}
                                     </p>
                                 </div>
                             </div>
@@ -261,7 +268,7 @@ export default function OrderHistory() {
                                                             {item.quantity}x {item.name}
                                                         </span>
                                                         <span className="text-gray-900">
-                                                            £{(item.price * item.quantity).toFixed(2)}
+                                                            {moneyFor((item.price * item.quantity), order.restaurant_id)}
                                                         </span>
                                                     </div>
                                                 ))}
@@ -271,7 +278,7 @@ export default function OrderHistory() {
                                             <div className="flex justify-between items-center pt-3 border-t">
                                                 <span className="font-semibold text-gray-900">Total</span>
                                                 <span className="text-xl font-bold text-orange-600">
-                                                    £{order.total?.toFixed(2)}
+                                                    {order.total == null ? `${moneyPrefix(countryOf(order.restaurant_id))}undefined` : moneyFor(order.total, order.restaurant_id)}
                                                 </span>
                                             </div>
 

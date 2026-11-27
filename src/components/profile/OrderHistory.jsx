@@ -8,10 +8,10 @@ import { Package, Clock, CheckCircle, XCircle, ChevronRight } from 'lucide-react
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import moment from 'moment';
-import { useMoney } from '@/lib/MoneyContext';
+import { useRestaurantCountries } from '@/lib/useRestaurantCountries';
 
 export default function OrderHistory({ userEmail }) {
-    const { money } = useMoney();
+    const { moneyFor } = useRestaurantCountries();
     const { data: orders = [], isLoading } = useQuery({
         queryKey: ['user-orders', userEmail],
         queryFn: () => base44.entities.Order.filter({ created_by: userEmail }, '-created_date', 50),
@@ -77,7 +77,7 @@ export default function OrderHistory({ userEmail }) {
                                         </div>
                                         <div>
                                             <p className="text-gray-500">Total</p>
-                                            <p className="font-medium text-lg text-orange-600">{money(order.total)}</p>
+                                            <p className="font-medium text-lg text-orange-600">{moneyFor(order.total, order.restaurant_id)}</p>
                                         </div>
                                     </div>
 

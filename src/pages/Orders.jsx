@@ -26,6 +26,7 @@ import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useSEO } from '@/lib/useSEO';
 import { formatMoney } from '@/lib/money';
 import { moneyPrefix } from '@/lib/MoneyContext';
+import { useRestaurantCountries } from '@/lib/useRestaurantCountries';
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -182,6 +183,8 @@ export default function Orders() {
     });
 
     const [reordering, setReordering] = useState(null);
+    // Each order is shown in its own restaurant's currency (GB = £ exactly as before).
+    const { moneyFor, countryOf } = useRestaurantCountries();
 
     const reorderOrder = async (order) => {
         if (!order || !order.items || !order.restaurant_id) {
@@ -399,9 +402,6 @@ export default function Orders() {
         );
     }
 
-    // Orders from several restaurants are listed here; until each order records its
-    // currency they are shown in £, as before (src/lib/money.js).
-    const money = (amount) => formatMoney(amount);
     return (
          <PullToRefresh onRefresh={() => refetch()}>
          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -642,7 +642,7 @@ export default function Orders() {
                                                                {item?.quantity || 0}x {item?.name || 'Item'}
                                                            </span>
                                                            <span className="text-gray-900">
-                                                               {money(((item?.price || 0) * (item?.quantity || 0)))}
+                                                               {moneyFor(((item?.price || 0) * (item?.quantity || 0)), order.restaurant_id)}
                                                            </span>
                                                        </div>
                                                        {item?.customizations && typeof item.customizations === 'object' && (
@@ -703,7 +703,7 @@ export default function Orders() {
                                                            ETA: {order.estimated_delivery}
                                                        </span>
                                                     )}
-                                                    <span className="font-bold text-lg">{money((order?.total || 0))}</span>
+                                                    <span className="font-bold text-lg">{moneyFor((order?.total || 0), order.restaurant_id)}</span>
                                                     </div>
                                                     </div>
 
@@ -746,7 +746,7 @@ export default function Orders() {
                                                                         <p className="text-sm font-semibold text-yellow-900">Refund Requested</p>
                                                                         <p className="text-xs text-yellow-700 mt-1">
                                                                             Your refund request is being reviewed by the restaurant.
-                                                                            Amount: {moneyPrefix()}{order.refund_requested_amount?.toFixed(2) || '0.00'}
+                                                                            Amount: {moneyPrefix(countryOf(order.restaurant_id))}{order.refund_requested_amount?.toFixed(2) || '0.00'}
                                                                         </p>
                                                                     </div>
                                                                 </div>
@@ -759,7 +759,7 @@ export default function Orders() {
                                                             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                                                 <p className="text-sm font-semibold text-green-900">Refund Processed</p>
                                                                 <p className="text-xs text-green-700 mt-1">
-                                                                    Amount refunded: {moneyPrefix()}{order?.refund_amount?.toFixed(2) || '0.00'}
+                                                                    Amount refunded: {moneyPrefix(countryOf(order.restaurant_id))}{order?.refund_amount?.toFixed(2) || '0.00'}
                                                                 </p>
                                                             </div>
                                                         </div>
