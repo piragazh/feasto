@@ -1,0 +1,96 @@
+import { describe, it, expect } from 'vitest';
+import {
+    REGIONS, DEFAULT_COUNTRY, COUNTRY_OPTIONS,
+    normaliseCountry, getRegion, getRestaurantTimeZone, hasCardPayments,
+} from '../region.js';
+
+describe('region — existing UK restaurants are unchanged', () => {
+    // Every live record today: country null, timezone "UTC" (schema default).
+    const liveUk = { name: 'Tilbury Chicken', country: null, timezone: 'UTC' };
+
+    it('no country means GB', () => {
+        expect(DEFAULT_COUNTRY).toBe('GB');
+        expect(getRegion(liveUk).country).toBe('GB');
+        expect(getRegion({}).country).toBe('GB');
+        expect(getRegion(undefined).country).toBe('GB');
+        expect(getRegion(null).country).toBe('GB');
+    });
+
+    it('GB keeps pounds, UK clock, +44, miles, postcode lookup, Stripe', () => {
+        const r = getRegion(liveUk);
+        expect(r.currency).toBe('GBP');
+        expect(r.currencySymbol).toBe('£');
+        expect(r.timezone).toBe('Europe/London');
+        expect(r.dialCode).toBe('44');
+        expect(r.distanceUnit).toBe('mi');
+        expect(r.addressLookup).toBe('uk_postcode');
+        expect(r.cardProvider).toBe('stripe');
+        expect(hasCardPayments(liveUk)).toBe(true);
+    });
+
+    it('stored "UTC" or blank timezone means the country clock', () => {
+        expect(getRestaurantTimeZone(liveUk)).toBe('Europe/London');
+        expect(getRestaurantTimeZone({ timezone: '' })).toBe('Europe/London');
+        expect(getRestaurantTimeZone({ timezone: 'utc' })).toBe('Europe/London');
+        expect(getRestaurantTimeZone({})).toBe('Europe/London');
+        expect(getRestaurantTimeZone(null)).toBe('Europe/London');
+    });
+
+    it('unknown or badly typed country falls back to GB', () => {
+        expect(normaliseCountry('XX')).toBe('GB');
+        expect(normaliseCountry(44)).toBe('GB');
+        expect(normaliseCountry('')).toBe('GB');
+        expect(getRegion('United Kingdom').country).toBe('GB');
+    });
+});
+
+describe('region — Sri Lanka', () => {
+    const lk = { name: 'Veg shop', country: 'LK', timezone: 'UTC' };
+
+    it('rupees, Colombo clock, +94, km, free-text address, no card provider', () => {
+        const r = getRegion(lk);
+        expect(r.currency).toBe('LKR');
+        expect(r.timezone).toBe('Asia/Colombo');
+        expect(r.dialCode).toBe('94');
+        expect(r.distanceUnit).toBe('km');
+        expect(r.addressLookup).toBe('free_text');
+        expect(r.cardProvider).toBeNull();
+        expect(hasCardPayments(lk)).toBe(false);
+        expect(getRestaurantTimeZone(lk)).toBe('Asia/Colombo');
+    });
+
+    it('lower-case and padded codes work', () => {
+        expect(getRegion(' lk ').country).toBe('LK');
+        expect(getRegion({ country: 'lk' }).currency).toBe('LKR');
+    });
+
+    it('a deliberately set zone overrides the country default', () => {
+        expect(getRestaurantTimeZone({ country: 'LK', timezone: 'Asia/Dubai' })).toBe('Asia/Dubai');
+    });
+});
+
+describe('region — table shape', () => {
+    const REQUIRED = ['country', 'name', 'currency', 'currencySymbol', 'currencyDecimals', 'locale',
+        'timezone', 'dialCode', 'trunkPrefix', 'mobileNational', 'phoneExample', 'distanceUnit',
+        'addressLookup', 'geocodeCountry', 'cardProvider'];
+
+    it('every region has every field and a valid timezone and currency', () => {
+        for (const [code, r] of Object.entries(REGIONS)) {
+            expect(r.country).toBe(code);
+            for (const k of REQUIRED) expect(r, `${code}.${k}`).toHaveProperty(k);
+            expect(() => new Intl.DateTimeFormat('en-GB', { timeZone: r.timezone })).not.toThrow();
+            expect(() => new Intl.NumberFormat(r.locale, { style: 'currency', currency: r.currency })).not.toThrow();
+            expect(['mi', 'km']).toContain(r.distanceUnit);
+        }
+    });
+
+    it('picker lists every region, GB first', () => {
+        expect(COUNTRY_OPTIONS[0].value).toBe('GB');
+        expect(COUNTRY_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(REGIONS).sort());
+    });
+
+    it('the table cannot be changed at runtime', () => {
+        expect(Object.isFrozen(REGIONS)).toBe(true);
+        expect(Object.isFrozen(REGIONS.GB)).toBe(true);
+    });
+});
