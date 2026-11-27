@@ -552,7 +552,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                         {/* Zone Type Selector */}
                         <div>
                             <Label className="mb-2 block">Zone Type *</Label>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className={isUk ? "grid grid-cols-3 gap-2" : "grid grid-cols-2 gap-2"}>
                                 {[{ value: 'polygon', label: '🗺️ Draw on Map' }, { value: 'postcode', label: '📮 Postcode Areas' }, { value: 'radius', label: '📍 Radius' }].filter(opt => isUk || opt.value !== 'postcode').map(opt => (
                                     <button
                                         key={opt.value}
