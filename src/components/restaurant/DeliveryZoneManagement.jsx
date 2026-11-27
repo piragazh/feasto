@@ -21,7 +21,8 @@ const restaurantIcon = new L.Icon({
 });
 import { MapPin, Trash2, Edit, Plus, DollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { useMoney } from '@/lib/MoneyContext';
+import { useMoney, useRegionCountry } from '@/lib/MoneyContext';
+import { milesToDisplay, displayToMiles, distanceLabels } from '@/lib/distance';
 import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import '@geoman-io/leaflet-geoman-free';
@@ -110,6 +111,11 @@ function GeomanControl({ onDrawn, editingZone, mapKey }) {
 
 export default function DeliveryZoneManagement({ restaurantId, restaurantLocation, restaurantAddress }) {
     const { money, symbol } = useMoney();
+    // Radii are stored in miles; Sri Lankan shops see and type km (src/lib/distance.js).
+    // UK shops: miles, and postcode zones, exactly as before.
+    const regionCountry = useRegionCountry();
+    const isUk = regionCountry === 'GB';
+    const dist = distanceLabels(regionCountry);
     const [showDialog, setShowDialog] = useState(false);
     const [editingZone, setEditingZone] = useState(null);
     const [drawnCoordinates, setDrawnCoordinates] = useState(null);
@@ -201,7 +207,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             color: zone.color || '#FF6B35',
             zone_type: zoneType,
             postcodes_input: (zone.postcodes || []).join(', '),
-            radius_miles: zone.radius_miles || '',
+            radius_miles: zone.radius_miles ? milesToDisplay(zone.radius_miles, regionCountry) : '',
             manual_lat: zone.radius_center?.lat || '',
             manual_lng: zone.radius_center?.lng || ''
         });
@@ -248,9 +254,9 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
             }
             zoneData.postcodes = postcodes;
         } else if (formData.zone_type === 'radius') {
-            const miles = parseFloat(formData.radius_miles);
+            const miles = parseFloat(displayToMiles(formData.radius_miles, regionCountry));
             if (!miles || miles <= 0) {
-                toast.error('Please enter a valid radius in miles');
+                toast.error(`Please enter a valid radius in ${dist.long}`);
                 return;
             }
             zoneData.radius_miles = miles;
@@ -418,7 +424,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                 <Badge variant="outline" className="text-blue-700 border-blue-300">📮 Postcode</Badge>
                                             )}
                                             {(zone.zone_type === 'radius' || zone.radius_miles) && (
-                                                <Badge variant="outline" className="text-purple-700 border-purple-300">📍 {zone.radius_miles} mi radius</Badge>
+                                                <Badge variant="outline" className="text-purple-700 border-purple-300">📍 {milesToDisplay(zone.radius_miles, regionCountry)} {dist.short} radius</Badge>
                                             )}
                                         </div>
                                         {zone.postcodes?.length > 0 && (
@@ -547,7 +553,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                         <div>
                             <Label className="mb-2 block">Zone Type *</Label>
                             <div className="grid grid-cols-3 gap-2">
-                                {[{ value: 'polygon', label: '🗺️ Draw on Map' }, { value: 'postcode', label: '📮 Postcode Areas' }, { value: 'radius', label: '📍 Radius' }].map(opt => (
+                                {[{ value: 'polygon', label: '🗺️ Draw on Map' }, { value: 'postcode', label: '📮 Postcode Areas' }, { value: 'radius', label: '📍 Radius' }].filter(opt => isUk || opt.value !== 'postcode').map(opt => (
                                     <button
                                         key={opt.value}
                                         type="button"
@@ -678,10 +684,10 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                         {/* Radius Input */}
                         {formData.zone_type === 'radius' && (
                         <div>
-                            <Label htmlFor="radius_miles">Delivery Radius (miles) *</Label>
+                            <Label htmlFor="radius_miles">Delivery Radius ({dist.long}) *</Label>
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-2">
                                 <p className="text-sm text-blue-800">
-                                    📍 Enter the maximum delivery radius in miles from your restaurant location. Customers within this distance will be able to order.
+                                    📍 Enter the maximum delivery radius in {dist.long} from your restaurant location. Customers within this distance will be able to order.
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
@@ -690,13 +696,13 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                     type="number"
                                     step="0.1"
                                     min="0.1"
-                                    max="50"
+                                    max={isUk ? "50" : "80"}
                                     placeholder="e.g., 3"
                                     value={formData.radius_miles}
                                     onChange={(e) => setFormData({ ...formData, radius_miles: e.target.value })}
                                     className="max-w-[200px]"
                                 />
-                                <span className="text-gray-600 font-medium">miles from restaurant</span>
+                                <span className="text-gray-600 font-medium">{dist.long} from restaurant</span>
                             </div>
                             {restaurantLocation ? (
                                 <p className="text-sm text-green-700 mt-2">✓ Using restaurant GPS: ({restaurantLocation.lat.toFixed(4)}, {restaurantLocation.lng.toFixed(4)})</p>
