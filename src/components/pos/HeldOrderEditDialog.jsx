@@ -69,7 +69,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                                     <div className="flex-1 min-w-0">
                                         <p className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>{item.name}</p>
                                         <p className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                                            £{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}
+                                            {money(((item.pos_price != null ? item.pos_price : item.price) * item.quantity))}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-1 ml-2">
@@ -103,7 +103,7 @@ export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, 
                     {/* Total */}
                     <div className={`p-3 rounded-xl ${isDark ? 'bg-blue-500/10 border-blue-500/30 border' : 'bg-blue-50 border-blue-200 border'}`}>
                         <p className={`text-xs ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>Total</p>
-                        <p className={`text-2xl font-bold ${isDark ? 'text-blue-200' : 'text-blue-900'}`}>£{total.toFixed(2)}</p>
+                        <p className={`text-2xl font-bold ${isDark ? 'text-blue-200' : 'text-blue-900'}`}>{money(total)}</p>
                     </div>
                 </div>
 

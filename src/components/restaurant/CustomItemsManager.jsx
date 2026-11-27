@@ -204,7 +204,7 @@ export default function CustomItemsManager({ restaurantId }) {
                                         ) : (
                                             <>
                                                 <p className="font-semibold text-sm flex-1">{item.name}</p>
-                                                <p className="text-orange-600 font-bold text-sm w-16 text-right">£{Number(item.price).toFixed(2)}</p>
+                                                <p className="text-orange-600 font-bold text-sm w-16 text-right">{money(Number(item.price))}</p>
                                                 <Button size="sm" variant="outline" onClick={() => startEdit(item._idx)} className="h-8 w-8 p-0">
                                                     <Edit2 className="h-3.5 w-3.5" />
                                                 </Button>

@@ -63,7 +63,7 @@ function OrderRow({ order, t, isDark }) {
                 </div>
 
                 <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className={`${t.text} font-bold text-base`}>£{order.total?.toFixed(2)}</span>
+                    <span className={`${t.text} font-bold text-base`}>{money(order.total)}</span>
                     {expanded
                         ? <ChevronUp className={`h-4 w-4 ${t.textSub}`} />
                         : <ChevronDown className={`h-4 w-4 ${t.textSub}`} />
@@ -99,7 +99,7 @@ function OrderRow({ order, t, isDark }) {
                                             </p>
                                         )}
                                     </div>
-                                    <p className="text-accent-500 text-xs font-bold flex-shrink-0">£{(item.price * item.quantity).toFixed(2)}</p>
+                                    <p className="text-accent-500 text-xs font-bold flex-shrink-0">{money((item.price * item.quantity))}</p>
                                 </div>
                             ))}
                         </div>
@@ -110,18 +110,18 @@ function OrderRow({ order, t, isDark }) {
                         {order.discount > 0 && (
                             <div className="flex justify-between text-xs">
                                 <span className={t.textMuted}>Discount</span>
-                                <span className="text-green-400">-£{order.discount?.toFixed(2)}</span>
+                                <span className="text-green-400">-{money(order.discount)}</span>
                             </div>
                         )}
                         {order.delivery_fee > 0 && (
                             <div className="flex justify-between text-xs">
                                 <span className={t.textMuted}>Delivery</span>
-                                <span className={t.text}>£{order.delivery_fee?.toFixed(2)}</span>
+                                <span className={t.text}>{money(order.delivery_fee)}</span>
                             </div>
                         )}
                         <div className="flex justify-between text-sm font-bold">
                             <span className={t.text}>Total</span>
-                            <span className="text-accent-500">£{order.total?.toFixed(2)}</span>
+                            <span className="text-accent-500">{money(order.total)}</span>
                         </div>
                         {order.payment_method && (
                             <p className={`${t.textSub} text-[11px] text-right capitalize`}>Paid by {order.payment_method.replace('_', ' ')}</p>
@@ -243,7 +243,7 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
                 </div>
                 <div>
                     <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider`}>Revenue</p>
-                    <p className="text-accent-500 font-bold text-lg">£{totalRevenue.toFixed(2)}</p>
+                    <p className="text-accent-500 font-bold text-lg">{money(totalRevenue)}</p>
                 </div>
                 <div>
                     <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider`}>Avg. Order</p>

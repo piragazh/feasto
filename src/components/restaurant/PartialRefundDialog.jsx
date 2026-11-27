@@ -80,7 +80,7 @@ export default function PartialRefundDialog({ open, onClose, order, onRefund }) 
                                     />
                                     <div className="flex-1">
                                         <p className="text-sm font-medium">{item.quantity}x {item.name}</p>
-                                        <p className="text-xs text-gray-600">£{(item.price * item.quantity).toFixed(2)}</p>
+                                        <p className="text-xs text-gray-600">{money((item.price * item.quantity))}</p>
                                     </div>
                                 </div>
                             ))}
@@ -102,11 +102,11 @@ export default function PartialRefundDialog({ open, onClose, order, onRefund }) 
                         <div className="flex items-center justify-between">
                             <span className="font-semibold">Refund Amount:</span>
                             <span className="text-2xl font-bold text-orange-600">
-                                £{refundAmount.toFixed(2)}
+                                {money(refundAmount)}
                             </span>
                         </div>
                         <p className="text-xs text-gray-600 mt-1">
-                            Original total: £{order.total.toFixed(2)}
+                            Original total: {money(order.total)}
                         </p>
                     </div>
                 </div>

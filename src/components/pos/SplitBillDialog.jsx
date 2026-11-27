@@ -61,7 +61,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
 
     const handleProcessSplit = async () => {
         if (splitMethod === 'equal') {
-            toast.success(`Bill split equally: £${(totalAmount / numberOfPeople).toFixed(2)} per person`);
+            toast.success(`Bill split equally: ${money((totalAmount / numberOfPeople))} per person`);
         } else {
             const totalAssigned = customSplits.reduce((sum, split) => sum + split.amount, 0);
             if (Math.abs(totalAssigned - totalAmount) > 0.01) {
@@ -100,7 +100,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
                     {/* Total Amount */}
                     <div className="bg-gray-100 p-4 rounded-xl">
                         <p className="text-sm text-gray-600">Total Bill Amount</p>
-                        <p className="text-3xl font-bold text-gray-900">£{totalAmount.toFixed(2)}</p>
+                        <p className="text-3xl font-bold text-gray-900">{money(totalAmount)}</p>
                     </div>
 
                     {/* Split Method Selection */}
@@ -146,7 +146,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
                             <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
                                 <p className="text-sm text-blue-700 mb-1">Amount per person:</p>
                                 <p className="text-2xl font-bold text-blue-900">
-                                    £{(totalAmount / numberOfPeople).toFixed(2)}
+                                    {money((totalAmount / numberOfPeople))}
                                 </p>
                             </div>
                         </div>
@@ -169,7 +169,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
                                                 <p className="font-medium text-sm">{item.name}</p>
                                                 <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                                             </div>
-                                            <p className="font-bold text-sm">£{(item.price * item.quantity).toFixed(2)}</p>
+                                            <p className="font-bold text-sm">{money((item.price * item.quantity))}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -206,7 +206,7 @@ export default function SplitBillDialog({ open, onClose, orders, table, onSplitC
                                                     >
                                                         Assign Selected
                                                     </Button>
-                                                    <p className="font-bold text-lg">£{split.amount.toFixed(2)}</p>
+                                                    <p className="font-bold text-lg">{money(split.amount)}</p>
                                                 </div>
                                             </div>
                                             {split.items?.length > 0 && (

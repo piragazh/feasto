@@ -475,7 +475,7 @@ export default function MealDealsManagement({ restaurantId }) {
                                             >
                                                 <option value="">Select item</option>
                                                 {menuItems.map(m => (
-                                                    <option key={m.id} value={m.id}>{m.name} — £{m.price?.toFixed(2)}</option>
+                                                    <option key={m.id} value={m.id}>{m.name} — {money(m.price)}</option>
                                                 ))}
                                             </select>
                                             <Input
@@ -597,9 +597,9 @@ function DealCard({ deal, onEdit, onDelete }) {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 {deal.original_price > 0 && (
-                                    <span className="text-xs text-gray-400 line-through">£{deal.original_price.toFixed(2)}</span>
+                                    <span className="text-xs text-gray-400 line-through">{money(deal.original_price)}</span>
                                 )}
-                                <span className="text-xl font-bold text-orange-600">£{deal.deal_price.toFixed(2)}</span>
+                                <span className="text-xl font-bold text-orange-600">{money(deal.deal_price)}</span>
                             </div>
                             <div className="flex gap-1">
                                 <Button size="sm" variant="outline" onClick={onEdit} className="h-8 w-8 p-0">

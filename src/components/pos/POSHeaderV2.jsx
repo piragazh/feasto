@@ -86,7 +86,7 @@ export default function POSHeaderV2({
             {activeTab !== 'order-entry' && cartCount > 0 && (
                 <button type="button" onClick={() => onTab('order-entry')}
                     className={`h-11 px-3 rounded-xl border border-accent-500/40 bg-accent-500/10 ${isDark ? "text-accent-300" : "text-accent-800"} text-sm font-extrabold whitespace-nowrap flex items-center gap-2`}>
-                    <ShoppingCart className="h-4 w-4" aria-hidden="true" />{cartCount} · £{Number(cartTotal).toFixed(2)}
+                    <ShoppingCart className="h-4 w-4" aria-hidden="true" />{cartCount} · {money(Number(cartTotal))}
                 </button>
             )}
 

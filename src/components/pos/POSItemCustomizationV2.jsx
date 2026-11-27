@@ -223,7 +223,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                 <div className={`flex items-center justify-between px-5 py-4 border-b ${divider} flex-shrink-0`}>
                     <div>
                         <p className={`font-bold text-lg ${text}`}>{item.name}</p>
-                        <p className="text-accent-400 font-bold text-xl mt-0.5">£{currentPrice.toFixed(2)}</p>
+                        <p className="text-accent-400 font-bold text-xl mt-0.5">{money(currentPrice)}</p>
                     </div>
                     <button onClick={onClose} className={`h-11 w-11 rounded-full flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} aria-label="Close">
                         <X className="h-5 w-5" />
@@ -264,7 +264,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                             >
                                 <span className="font-semibold text-lg">{opt.label}</span>
                                 <div className="flex items-center gap-3">
-                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-accent-400'}`}>+{money(optPrice(opt))}</span>}
                                     {isSelected && <Check className="h-6 w-6" />}
                                 </div>
                             </button>
@@ -283,7 +283,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                             >
                                 <span className="font-semibold text-lg">{opt.label}</span>
                                 <div className="flex items-center gap-3">
-                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${selected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${selected ? 'text-white' : 'text-accent-400'}`}>+{money(optPrice(opt))}</span>}
                                     {selected && <Check className="h-6 w-6" />}
                                 </div>
                             </button>
@@ -301,7 +301,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                             >
                                 <span className="font-semibold text-lg">{opt.label}</span>
                                 <div className="flex items-center gap-3">
-                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${selected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                    {optPrice(opt) > 0 && <span className={`font-bold text-base ${selected ? 'text-white' : 'text-accent-400'}`}>+{money(optPrice(opt))}</span>}
                                     <div className={`h-6 w-6 rounded-xl border-2 flex items-center justify-center flex-shrink-0 ${selected ? 'bg-white border-white' : isDark ? 'border-white/30' : 'border-gray-300'}`}>
                                         {selected && <Check className="h-4 w-4 text-accent-500" />}
                                     </div>
@@ -347,7 +347,7 @@ export default function POSItemCustomizationV2({ item, open, onClose, onConfirm,
                         {isLastStep ? (
                             <>
                                 <Check className="h-5 w-5" />
-                                {isEditing ? 'Update Item' : 'Add to Cart'} — £{currentPrice.toFixed(2)}
+                                {isEditing ? 'Update Item' : 'Add to Cart'} — {money(currentPrice)}
                             </>
                         ) : currentStep?.type === 'instructions' ? (
                             <>Skip / Next <ChevronRight className="h-5 w-5" /></>

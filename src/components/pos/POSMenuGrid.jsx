@@ -194,11 +194,11 @@ export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange
                                 <div className="mt-auto pt-1 flex items-baseline justify-end gap-1.5">
                                     {hasPosOverride && (
                                         <span className={`text-[11px] line-through ${t.textMuted}`}>
-                                            £{Number(struckPrice).toFixed(2)}
+                                            {money(Number(struckPrice))}
                                         </span>
                                     )}
                                     <span className={`text-accent-500 font-bold tabular-nums leading-none ${type.price}`}>
-                                        £{effectivePrice.toFixed(2)}
+                                        {money(effectivePrice)}
                                     </span>
                                 </div>
                             </div>

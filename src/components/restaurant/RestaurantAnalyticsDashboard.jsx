@@ -158,11 +158,11 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
             subtitle: `Period: ${dateRange === 'custom' ? `${customDateFrom ? format(customDateFrom, 'dd MMM yyyy') : ''} – ${customDateTo ? format(customDateTo, 'dd MMM yyyy') : ''}` : dateRange}`,
             metrics: [
                 { label: 'Total Orders', value: metrics.totalOrders },
-                { label: 'Total Revenue', value: `£${metrics.totalRevenue.toFixed(2)}` },
-                { label: 'Avg Order Value', value: `£${metrics.avgOrderValue.toFixed(2)}` },
-                { label: 'Net Earnings', value: `£${metrics.earnings.toFixed(2)}` },
-                { label: 'Platform Commission', value: `£${metrics.totalCommission.toFixed(2)}` },
-                { label: 'Total Refunds', value: `£${metrics.totalRefunds.toFixed(2)}` },
+                { label: 'Total Revenue', value: `${money(metrics.totalRevenue)}` },
+                { label: 'Avg Order Value', value: `${money(metrics.avgOrderValue)}` },
+                { label: 'Net Earnings', value: `${money(metrics.earnings)}` },
+                { label: 'Platform Commission', value: `${money(metrics.totalCommission)}` },
+                { label: 'Total Refunds', value: `${money(metrics.totalRefunds)}` },
                 { label: 'Returning Customers', value: customerStats.returning },
                 { label: 'One-Time Customers', value: customerStats.oneTime },
             ],
@@ -170,17 +170,17 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                 {
                     title: 'Top Selling Items',
                     headers: ['Item', 'Qty Sold', 'Revenue'],
-                    rows: popularItems.map(i => [i.name, i.count, `£${i.revenue.toFixed(2)}`]),
+                    rows: popularItems.map(i => [i.name, i.count, `${money(i.revenue)}`]),
                 },
                 {
                     title: 'Daily Revenue',
                     headers: ['Date', 'Revenue', 'Orders'],
-                    rows: revenueByDay.map(d => [d.date, `£${d.revenue.toFixed(2)}`, d.orders]),
+                    rows: revenueByDay.map(d => [d.date, `${money(d.revenue)}`, d.orders]),
                 },
                 {
                     title: 'Top Customers',
                     headers: ['Customer', 'Orders', 'Total Spent'],
-                    rows: customerStats.topCustomers.map(c => [c.email, c.orderCount, `£${c.totalSpent.toFixed(2)}`]),
+                    rows: customerStats.topCustomers.map(c => [c.email, c.orderCount, `${money(c.totalSpent)}`]),
                 },
             ],
             filename: `analytics-report-${dateRange}.pdf`,
@@ -286,7 +286,7 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">Total Revenue</p>
-                                <p className="text-2xl font-bold">£{metrics.totalRevenue.toFixed(2)}</p>
+                                <p className="text-2xl font-bold">{money(metrics.totalRevenue)}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -300,7 +300,7 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">Avg Order Value</p>
-                                <p className="text-2xl font-bold">£{metrics.avgOrderValue.toFixed(2)}</p>
+                                <p className="text-2xl font-bold">{money(metrics.avgOrderValue)}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -314,7 +314,7 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">Net Earnings</p>
-                                <p className="text-2xl font-bold text-green-600">£{metrics.earnings.toFixed(2)}</p>
+                                <p className="text-2xl font-bold text-green-600">{money(metrics.earnings)}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -364,7 +364,7 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                             {popularItems.slice(0, 5).map((item, idx) => (
                                 <div key={idx} className="flex justify-between text-sm">
                                     <span>{idx + 1}. {item.name}</span>
-                                    <span className="font-semibold">{item.count} sold • £{item.revenue.toFixed(2)}</span>
+                                    <span className="font-semibold">{item.count} sold • {money(item.revenue)}</span>
                                 </div>
                             ))}
                         </div>
@@ -419,7 +419,7 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                                             <p className="text-sm font-medium">{customer.email}</p>
                                             <p className="text-xs text-gray-500">{customer.orderCount} orders</p>
                                         </div>
-                                        <p className="font-semibold text-green-600">£{customer.totalSpent.toFixed(2)}</p>
+                                        <p className="font-semibold text-green-600">{money(customer.totalSpent)}</p>
                                     </div>
                                 ))}
                             </div>
@@ -470,12 +470,12 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                                         </p>
                                         <div className="flex gap-4 text-sm text-gray-600 mt-1">
                                             <span>{payout.total_orders} orders</span>
-                                            <span>Gross: £{payout.gross_earnings?.toFixed(2)}</span>
-                                            <span>Commission: £{payout.platform_commission?.toFixed(2)}</span>
+                                            <span>Gross: {money(payout.gross_earnings)}</span>
+                                            <span>Commission: {money(payout.platform_commission)}</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-2xl font-bold text-green-600">£{payout.net_payout?.toFixed(2)}</p>
+                                        <p className="text-2xl font-bold text-green-600">{money(payout.net_payout)}</p>
                                         <Badge className={
                                             payout.status === 'paid' ? 'bg-green-100 text-green-800' :
                                             payout.status === 'processing' ? 'bg-blue-100 text-blue-800' :
@@ -500,21 +500,21 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                     <div className="grid md:grid-cols-3 gap-4">
                         <div className="p-4 bg-gray-50 rounded-lg">
                             <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-                            <p className="text-2xl font-bold">£{metrics.totalRevenue.toFixed(2)}</p>
+                            <p className="text-2xl font-bold">{money(metrics.totalRevenue)}</p>
                         </div>
                         <div className="p-4 bg-orange-50 rounded-lg">
                             <p className="text-sm text-gray-600 mb-1">Platform Commission</p>
-                            <p className="text-2xl font-bold text-orange-600">-£{metrics.totalCommission.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-orange-600">-{money(metrics.totalCommission)}</p>
                         </div>
                         <div className="p-4 bg-red-50 rounded-lg">
                             <p className="text-sm text-gray-600 mb-1">Refunds</p>
-                            <p className="text-2xl font-bold text-red-600">-£{metrics.totalRefunds.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-red-600">-{money(metrics.totalRefunds)}</p>
                             <p className="text-xs text-gray-500">{metrics.refundCount} refunded orders</p>
                         </div>
                     </div>
                     <div className="mt-4 p-4 bg-green-50 rounded-lg border-2 border-green-200">
                         <p className="text-sm text-green-700 mb-1">Net Earnings</p>
-                        <p className="text-3xl font-bold text-green-700">£{metrics.earnings.toFixed(2)}</p>
+                        <p className="text-3xl font-bold text-green-700">{money(metrics.earnings)}</p>
                     </div>
                 </CardContent>
             </Card>

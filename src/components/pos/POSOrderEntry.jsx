@@ -652,7 +652,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h2 className={`${t.text} font-bold text-xl`}>{viewingTable.table_number}</h2>
-                        <p className={`${t.textSub} text-xs`}>Payment · £{total.toFixed(2)}</p>
+                        <p className={`${t.textSub} text-xs`}>Payment · {money(total)}</p>
                     </div>
                     <div className="flex gap-2">
                         <button onClick={() => setSplitBillOpen(true)} className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-semibold rounded-xl transition-colors flex items-center gap-2">
@@ -874,7 +874,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 {optimisticCart.length} item{optimisticCart.length === 1 ? '' : 's'}
                             </span>
                             <span className="flex items-center gap-2">
-                                <span className={`${t.text} text-xl font-bold tabular-nums`}>£{cartTotal.toFixed(2)}</span>
+                                <span className={`${t.text} text-xl font-bold tabular-nums`}>{money(cartTotal)}</span>
                                 <ChevronUp className={`h-5 w-5 ${t.textSub} transition-transform ${cartOpen ? '' : 'rotate-180'}`} />
                             </span>
                         </button>
@@ -949,7 +949,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
                                 >
                                     <Zap className="h-3.5 w-3.5" />
                                     <span className="max-w-[90px] truncate">{qs.label || menuItem.name}</span>
-                                    <span className="tabular-nums opacity-90">£{Number(price).toFixed(2)}</span>
+                                    <span className="tabular-nums opacity-90">{money(Number(price))}</span>
                                 </button>
                             );
                         })}

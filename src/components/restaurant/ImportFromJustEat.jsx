@@ -304,7 +304,7 @@ Make sure to extract EVERY menu item from ALL categories on the page.`,
                                                         <div className="flex items-start justify-between mb-1">
                                                             <h4 className="font-semibold text-gray-900">{item.name}</h4>
                                                             <span className="text-lg font-bold text-green-600">
-                                                                £{item.price.toFixed(2)}
+                                                                {money(item.price)}
                                                             </span>
                                                         </div>
                                                         {item.description && (

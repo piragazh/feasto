@@ -161,7 +161,7 @@ export default function QuickItemLookupDialog({ open, onClose, menuItems, onItem
                                         </p>
                                     )}
                                     <p className={`text-sm font-bold mt-2 ${isDark ? 'text-accent-400' : 'text-accent-600'}`}>
-                                        £{(selectedItem.pos_price != null ? selectedItem.pos_price : selectedItem.price).toFixed(2)}
+                                        {money((selectedItem.pos_price != null ? selectedItem.pos_price : selectedItem.price))}
                                     </p>
                                 </div>
                             </div>

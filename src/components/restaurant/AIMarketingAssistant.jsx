@@ -46,7 +46,7 @@ export default function AIMarketingAssistant({ restaurantId }) {
 Restaurant Details:
 - Cuisine: ${restaurant?.cuisine_type || 'Various'}
 - Popular Items: ${popularItems.slice(0, 5).map(i => i.name).join(', ')}
-- Average Order Value: £${averageOrderValue.toFixed(2)}
+- Average Order Value: ${money(averageOrderValue)}
 - Total Customers: ${customerSegments.totalCustomers}
 - New Customers: ${customerSegments.newCustomers}
 - Repeat Customers: ${customerSegments.repeatCustomers}

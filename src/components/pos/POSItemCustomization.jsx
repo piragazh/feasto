@@ -175,7 +175,7 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                             {item.name}
                         </DialogTitle>
                         <p className="text-accent-400 font-bold text-lg mt-1">
-                            £{currentPrice.toFixed(2)}
+                            {money(currentPrice)}
                         </p>
                     </div>
                     <Button
@@ -249,9 +249,9 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                    {optPrice(opt) > 0 && (
                                                    <span className="font-bold text-accent-400 text-sm flex items-center gap-1">
                                                        {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && optBasePrice(opt) > 0 && (
-                                                           <span className="line-through text-gray-500 font-normal text-xs">£{optBasePrice(opt).toFixed(2)}</span>
+                                                           <span className="line-through text-gray-500 font-normal text-xs">{money(optBasePrice(opt))}</span>
                                                        )}
-                                                       +£{optPrice(opt).toFixed(2)}
+                                                       +{money(optPrice(opt))}
                                                    </span>
                                                    )}
                                                        </div>
@@ -283,9 +283,9 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             {optPrice(opt) > 0 && (
                                                 <span className={`font-bold text-accent-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'} flex items-center gap-1`}>
                                                     {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && optBasePrice(opt) > 0 && (
-                                                        <span className="line-through text-gray-500 font-normal text-xs">£{optBasePrice(opt).toFixed(2)}</span>
+                                                        <span className="line-through text-gray-500 font-normal text-xs">{money(optBasePrice(opt))}</span>
                                                     )}
-                                                    +£{optPrice(opt).toFixed(2)}
+                                                    +{money(optPrice(opt))}
                                                 </span>
                                             )}
                                             </div>
@@ -314,9 +314,9 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                             {optPrice(opt) > 0 && (
                                                 <span className={`font-bold text-accent-400 ${columns === 1 ? 'text-lg' : columns === 2 ? 'text-sm' : 'text-xs'} flex items-center gap-1`}>
                                                     {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && optBasePrice(opt) > 0 && (
-                                                        <span className="line-through text-gray-500 font-normal text-xs">£{optBasePrice(opt).toFixed(2)}</span>
+                                                        <span className="line-through text-gray-500 font-normal text-xs">{money(optBasePrice(opt))}</span>
                                                     )}
-                                                    +£{optPrice(opt).toFixed(2)}
+                                                    +{money(optPrice(opt))}
                                                 </span>
                                             )}
                                             </div>
@@ -370,9 +370,9 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     {optPrice(opt) > 0 && (
                                                     <span className="font-bold text-accent-400 text-xs flex items-center gap-1">
                                                         {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && (
-                                                            <span className="line-through text-gray-500 font-normal text-[11px]">£{optBasePrice(opt).toFixed(2)}</span>
+                                                            <span className="line-through text-gray-500 font-normal text-[11px]">{money(optBasePrice(opt))}</span>
                                                         )}
-                                                        +£{optPrice(opt).toFixed(2)}
+                                                        +{money(optPrice(opt))}
                                                     </span>
                                                     )}
                                                     </div>
@@ -407,9 +407,9 @@ export default function POSItemCustomization({ item, open, onClose, onConfirm, p
                                                     {optPrice(opt) > 0 && (
                                                         <span className="font-bold text-accent-400 text-xs flex items-center gap-1">
                                                             {opt.pos_price != null && Number(opt.pos_price) !== Number(opt.price) && (
-                                                                <span className="line-through text-gray-500 font-normal text-[11px]">£{optBasePrice(opt).toFixed(2)}</span>
+                                                                <span className="line-through text-gray-500 font-normal text-[11px]">{money(optBasePrice(opt))}</span>
                                                             )}
-                                                            +£{optPrice(opt).toFixed(2)}
+                                                            +{money(optPrice(opt))}
                                                         </span>
                                                     )}
                                                 </div>

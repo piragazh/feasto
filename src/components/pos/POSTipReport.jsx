@@ -96,7 +96,7 @@ export default function POSTipReport({ restaurantId, posTheme = 'dark' }) {
                 ].map(c => (
                     <div key={c.label} className={`${t.panel} border rounded-2xl p-4`}>
                         <p className={`${t.sub} text-xs font-semibold uppercase tracking-wide`}>{c.label}</p>
-                        <p className={`${t.text} text-2xl font-bold tabular-nums mt-1`}>£{c.value.toFixed(2)}</p>
+                        <p className={`${t.text} text-2xl font-bold tabular-nums mt-1`}>{money(c.value)}</p>
                         <p className={`${t.sub} text-[11px] mt-0.5`}>{c.hint}</p>
                     </div>
                 ))}
@@ -135,9 +135,9 @@ export default function POSTipReport({ restaurantId, posTheme = 'dark' }) {
                                             )}
                                         </td>
                                         <td className={`${t.text} py-2.5 text-right tabular-nums`}>{r.orders}</td>
-                                        <td className={`${t.text} py-2.5 text-right tabular-nums`}>£{r.cash.toFixed(2)}</td>
-                                        <td className={`${t.text} py-2.5 text-right tabular-nums`}>£{r.card.toFixed(2)}</td>
-                                        <td className={`${t.text} py-2.5 text-right tabular-nums font-bold`}>£{r.total.toFixed(2)}</td>
+                                        <td className={`${t.text} py-2.5 text-right tabular-nums`}>{money(r.cash)}</td>
+                                        <td className={`${t.text} py-2.5 text-right tabular-nums`}>{money(r.card)}</td>
+                                        <td className={`${t.text} py-2.5 text-right tabular-nums font-bold`}>{money(r.total)}</td>
                                     </tr>
                                 ))}
                             </tbody>

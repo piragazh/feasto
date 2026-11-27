@@ -226,7 +226,7 @@ export default function RefundManagement({ restaurantId }) {
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Order Total:</span>
-                                    <p className="font-medium">£{viewDialog?.total?.toFixed(2)}</p>
+                                    <p className="font-medium">{money(viewDialog?.total)}</p>
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Refund Type:</span>
@@ -235,7 +235,7 @@ export default function RefundManagement({ restaurantId }) {
                                 <div>
                                     <span className="text-gray-600">Refund Amount:</span>
                                     <p className="font-medium text-orange-600">
-                                        £{viewDialog?.refund_requested_amount?.toFixed(2)}
+                                        {money(viewDialog?.refund_requested_amount)}
                                     </p>
                                 </div>
                             </div>
@@ -258,7 +258,7 @@ export default function RefundManagement({ restaurantId }) {
                                     {viewDialog.refund_requested_items.map((item, idx) => (
                                         <div key={idx} className="text-sm flex justify-between bg-gray-50 p-2 rounded">
                                             <span>{item.quantity}x {item.name}</span>
-                                            <span>£{(item.price * item.quantity).toFixed(2)}</span>
+                                            <span>{money((item.price * item.quantity))}</span>
                                         </div>
                                     ))}
                                 </div>

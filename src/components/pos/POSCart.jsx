@@ -111,7 +111,7 @@ export default function POSCart({
                                     {item.specialInstructions && (
                                         <p className={`${t.textSub} text-[11px] italic mt-0.5`}>"{item.specialInstructions}"</p>
                                     )}
-                                    <p className={`text-accent-500 mt-1 ${POS_TEXT.moneySmall}`}>£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</p>
+                                    <p className={`text-accent-500 mt-1 ${POS_TEXT.moneySmall}`}>{money(((item.pos_price != null ? item.pos_price : item.price) * item.quantity))}</p>
                                 </button>
                                 <button
                                     onClick={() => handleRemove(item.id, item.name)}
@@ -148,9 +148,9 @@ export default function POSCart({
                     <span className={`${t.textMuted} text-xs font-semibold uppercase tracking-wide`}>Total</span>
                     <div className="text-right">
                         {discount && (
-                            <p className={`${t.textMuted} text-xs line-through`}>£{cartSubtotal.toFixed(2)}</p>
+                            <p className={`${t.textMuted} text-xs line-through`}>{money(cartSubtotal)}</p>
                         )}
-                        <span className={`${t.text} ${POS_TEXT.moneyLarge}`}>£{discountedTotal.toFixed(2)}</span>
+                        <span className={`${t.text} ${POS_TEXT.moneyLarge}`}>{money(discountedTotal)}</span>
                     </div>
                 </div>
 
@@ -211,7 +211,7 @@ export default function POSCart({
                         >
                             <ShoppingCart className="h-5 w-5" />
                             <span>Charge</span>
-                            <span className="tabular-nums">£{discountedTotal.toFixed(2)}</span>
+                            <span className="tabular-nums">{money(discountedTotal)}</span>
                         </button>
                         {/* Secondary actions share one row: stacked full-width they
                             ate ~40px of height that the cart list needs more. */}

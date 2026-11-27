@@ -111,10 +111,10 @@ export default function POSDiscountPanel({
                 <div className="flex items-center gap-2">
                     <Tag className="h-3.5 w-3.5 text-green-500" />
                     <span className={`text-xs font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
-                        {discount.type === 'percentage' ? `${discount.value}% off` : `£${discount.value.toFixed(2)} off`}
+                        {discount.type === 'percentage' ? `${discount.value}% off` : `${money(discount.value)} off`}
                     </span>
                     <span className={`text-xs ${isDark ? 'text-green-300' : 'text-green-600'}`}>
-                        −£{discount.amount.toFixed(2)}
+                        −{money(discount.amount)}
                     </span>
                     {discount.reason_code && (
                         <span className={`text-xs italic ${isDark ? 'text-green-500' : 'text-green-500'}`}>

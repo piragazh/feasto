@@ -1030,7 +1030,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                             >
                                                 <div>
                                                     <p className="text-xs font-semibold" style={{ fontFamily: fontHeading, color: readableTextOn(pv.card_background).text }}>{item}</p>
-                                                    <p className="text-xs" style={{ color: readableTextOn(pv.card_background).muted }}>£{(8.99 + i * 2).toFixed(2)}</p>
+                                                    <p className="text-xs" style={{ color: readableTextOn(pv.card_background).muted }}>{money((8.99 + i * 2))}</p>
                                                 </div>
                                                 <button
                                                     className="text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full"

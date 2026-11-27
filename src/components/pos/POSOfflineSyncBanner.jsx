@@ -329,7 +329,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                     <p className="text-sm font-semibold text-white">
-                                        £{Number(o.total || 0).toFixed(2)}
+                                        {money(Number(o.total || 0))}
                                         <span className="text-gray-400 font-normal"> · {o.items?.length || 0} item{(o.items?.length || 0) === 1 ? '' : 's'}</span>
                                         {o._kind === 'table' && o.table_number && (
                                             <span className="text-gray-400 font-normal"> · Table {o.table_number}</span>
@@ -380,7 +380,7 @@ export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
     const discardDialog = pendingDiscard ? (
         <POSConfirmDialog
             title="Discard this order?"
-            message={`This £${Number(pendingDiscard.total || 0).toFixed(2)} order will be permanently deleted from this device and never synced. This cannot be undone.`}
+            message={`This ${money(Number(pendingDiscard.total || 0))} order will be permanently deleted from this device and never synced. This cannot be undone.`}
             confirmLabel="Discard"
             onCancel={() => setPendingDiscard(null)}
             onConfirm={async () => {

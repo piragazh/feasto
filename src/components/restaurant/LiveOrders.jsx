@@ -877,7 +877,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-2xl font-bold text-gray-900">£{(order.total || 0).toFixed(2)}</p>
+                                                <p className="text-2xl font-bold text-gray-900">{money((order.total || 0))}</p>
                                                 {order.payment_method && (
                                                     <p className="text-xs text-gray-500 capitalize">
                                                         {order.payment_method.replace(/_/g, ' ')}
@@ -1008,7 +1008,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <span className="ml-2">£{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                                                        <span className="ml-2">{money(((item.price || 0) * item.quantity))}</span>
                                                     </div>
                                         );
                                             })}

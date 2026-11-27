@@ -112,7 +112,7 @@ export default function POSQuickSaleSettings({ restaurantId, restaurant }) {
                                         <option value="">— Select an item —</option>
                                         {menuItems.map(m => (
                                             <option key={m.id} value={m.id}>
-                                                {m.name} — £{Number(m.pos_price != null ? m.pos_price : m.price).toFixed(2)}
+                                                {m.name} — {money(Number(m.pos_price != null ? m.pos_price : m.price))}
                                             </option>
                                         ))}
                                     </select>
@@ -128,7 +128,7 @@ export default function POSQuickSaleSettings({ restaurantId, restaurant }) {
                                 </div>
                                 {price != null && (
                                     <div className="pb-2.5 text-sm font-bold text-gray-700 tabular-nums whitespace-nowrap">
-                                        £{Number(price).toFixed(2)}
+                                        {money(Number(price))}
                                     </div>
                                 )}
                                 <Button

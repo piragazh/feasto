@@ -164,7 +164,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                 <div className={`flex items-center justify-between px-6 py-4 border-b ${divider} flex-shrink-0`}>
                     <div>
                         <p className={`font-bold text-xl ${text}`}>{item.name}</p>
-                        <p className="text-accent-400 font-bold text-2xl">£{currentPrice.toFixed(2)}</p>
+                        <p className="text-accent-400 font-bold text-2xl">{money(currentPrice)}</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <span className={`text-sm font-semibold ${subtext}`}>{step + 1} / {steps.length}</span>
@@ -200,7 +200,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">
-                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+{money(optPrice(opt))}</span>}
                                             {isSelected && <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center"><Check className="h-6 w-6 text-accent-500" /></div>}
                                         </div>
                                     </button>
@@ -223,7 +223,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">
-                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+{money(optPrice(opt))}</span>}
                                             {isSelected && <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center"><Check className="h-6 w-6 text-accent-500" /></div>}
                                         </div>
                                     </button>
@@ -245,7 +245,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                                     >
                                         <span className={`font-bold text-2xl ${isSelected ? 'text-white' : text}`}>{opt.label}</span>
                                         <div className="flex items-center gap-4">
-                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+£{optPrice(opt).toFixed(2)}</span>}
+                                            {optPrice(opt) > 0 && <span className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-accent-400'}`}>+{money(optPrice(opt))}</span>}
                                             <div className={`h-10 w-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-white border-white' : isDark ? 'border-white/30' : 'border-gray-300'}`}>
                                                 {isSelected && <Check className="h-6 w-6 text-accent-500" />}
                                             </div>
@@ -283,7 +283,7 @@ export default function POSItemCustomizationFullscreen({ item, open, onClose, on
                         </Button>
                     )}
                     <Button onClick={handleNext} className={`flex-[4] h-16 font-bold text-xl rounded-2xl flex items-center justify-center gap-3 bg-accent-500 hover:bg-accent-400 text-white`}>
-                        {isLastStep ? (<><Check className="h-6 w-6" />{isEditing ? 'Update Item' : 'Add to Cart'} — £{currentPrice.toFixed(2)}</>) : currentStep?.type === 'instructions' ? (<>Skip / Next <ChevronRight className="h-6 w-6" /></>) : (<>Next <ChevronRight className="h-6 w-6" /></>)}
+                        {isLastStep ? (<><Check className="h-6 w-6" />{isEditing ? 'Update Item' : 'Add to Cart'} — {money(currentPrice)}</>) : currentStep?.type === 'instructions' ? (<>Skip / Next <ChevronRight className="h-6 w-6" /></>) : (<>Next <ChevronRight className="h-6 w-6" /></>)}
                     </Button>
                 </div>
 

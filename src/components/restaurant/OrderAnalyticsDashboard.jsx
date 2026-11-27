@@ -232,7 +232,7 @@ export default function OrderAnalyticsDashboard({ restaurantId }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Total Revenue</p>
-                                <p className="text-2xl font-bold">£{stats.totalRevenue.toFixed(2)}</p>
+                                <p className="text-2xl font-bold">{money(stats.totalRevenue)}</p>
                                 <p className="text-xs text-gray-400 mt-1">Completed orders only</p>
                             </div>
                             <TrendingUp className="h-8 w-8 text-green-500" />
@@ -244,7 +244,7 @@ export default function OrderAnalyticsDashboard({ restaurantId }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Avg Order Value</p>
-                                <p className="text-2xl font-bold">£{stats.avgOrderValue.toFixed(2)}</p>
+                                <p className="text-2xl font-bold">{money(stats.avgOrderValue)}</p>
                             </div>
                             <Calendar className="h-8 w-8 text-orange-500" />
                         </div>
@@ -279,7 +279,7 @@ export default function OrderAnalyticsDashboard({ restaurantId }) {
                         <div className="h-10 w-px bg-red-200 hidden sm:block" />
                         <div>
                             <p className="text-sm text-red-700 font-medium">Lost Revenue</p>
-                            <p className="text-2xl font-bold text-red-800">£{stats.cancelledValue.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-red-800">{money(stats.cancelledValue)}</p>
                         </div>
                         <div className="h-10 w-px bg-red-200 hidden sm:block" />
                         <div>
@@ -318,7 +318,7 @@ export default function OrderAnalyticsDashboard({ restaurantId }) {
                                         <XAxis dataKey="date" />
                                         <YAxis yAxisId="left" />
                                         <YAxis yAxisId="right" orientation="right" />
-                                        <Tooltip formatter={(value, name) => name === 'Revenue (£)' ? `£${value.toFixed(2)}` : value} />
+                                        <Tooltip formatter={(value, name) => name === 'Revenue (£)' ? `${money(value)}` : value} />
                                         <Legend />
                                         <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#f97316" name="Revenue (£)" strokeWidth={2} />
                                         <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#0ea5e9" name="Orders" strokeWidth={2} />
@@ -415,7 +415,7 @@ export default function OrderAnalyticsDashboard({ restaurantId }) {
                                                 </div>
                                                 <div>
                                                     <p className="text-gray-600">Revenue</p>
-                                                    <p className="text-xl font-bold">£{type.revenue.toFixed(2)}</p>
+                                                    <p className="text-xl font-bold">{money(type.revenue)}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -442,11 +442,11 @@ export default function OrderAnalyticsDashboard({ restaurantId }) {
                                             <div className="grid grid-cols-2 gap-4 text-sm">
                                                 <div>
                                                     <p className="text-gray-600">Revenue Generated</p>
-                                                    <p className="font-semibold text-green-600">£{promo.revenue.toFixed(2)}</p>
+                                                    <p className="font-semibold text-green-600">{money(promo.revenue)}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-gray-600">Discounts Given</p>
-                                                    <p className="font-semibold text-red-600">£{promo.discount.toFixed(2)}</p>
+                                                    <p className="font-semibold text-red-600">{money(promo.discount)}</p>
                                                 </div>
                                             </div>
                                         </div>

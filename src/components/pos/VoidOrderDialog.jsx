@@ -77,7 +77,7 @@ export default function VoidOrderDialog({ order, open, onClose, onUpdate, isDark
                         Void Order
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Voiding order <strong>#{order?.id?.slice(0, 8)}</strong> (£{(order?.total || 0).toFixed(2)}).
+                        Voiding order <strong>#{order?.id?.slice(0, 8)}</strong> ({money((order?.total || 0))}).
                         {order?.payment_method === 'card' && (
                             <span className="block mt-2 text-accent-400 font-medium">
                                 Card payment detected — refund will be flagged for admin review.

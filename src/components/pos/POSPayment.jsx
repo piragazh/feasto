@@ -255,7 +255,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
         const dominantMethod = paymentSummary.length === 1 ? paymentSummary[0].method : 'cash';
         const isPhoneOrder = orderType === 'phone_collection' || orderType === 'phone_delivery';
         const splitNotes = paymentSummary.length > 1
-            ? paymentSummary.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ')
+            ? paymentSummary.map(p => `${p.method}: ${money(p.amount)}`).join(', ')
             : undefined;
         const orderNotes = [
             isPhoneOrder && phoneDetails.notes ? phoneDetails.notes : null,
@@ -423,7 +423,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 );
             } else if (hasCash && changeNow > 0.005) {
                 playSuccess();
-                toast.success(`Payment complete. Change: £${changeNow.toFixed(2)}`);
+                toast.success(`Payment complete. Change: ${money(changeNow)}`);
             } else {
                 playSuccess();
                 toast.success('Payment complete');
@@ -449,8 +449,8 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                 payment_method: finalPayments.length === 1 ? finalPayments[0].method : 'cash',
                 notes: (() => {
                     const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery';
-                    const splitNotes = finalPayments.length > 1 ? finalPayments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ') : null;
-                    const changeNote = hasCash && changeNow > 0.005 ? `Change: £${changeNow.toFixed(2)}` : null;
+                    const splitNotes = finalPayments.length > 1 ? finalPayments.map(p => `${p.method}: ${money(p.amount)}`).join(', ') : null;
+                    const changeNote = hasCash && changeNow > 0.005 ? `Change: ${money(changeNow)}` : null;
                     return [isPh && phoneDetails.notes ? phoneDetails.notes : null, isPh && phoneDetails.collectionTime && orderType === 'phone_collection' ? `Ready in: ${phoneDetails.collectionTime}` : null, splitNotes, changeNote].filter(Boolean).join(' | ') || undefined;
                 })(),
                 ...(() => { const isPh = orderType === 'phone_collection' || orderType === 'phone_delivery'; return { ...(isPh && phoneDetails.phone ? { phone: phoneDetails.phone } : {}), ...(isPh && phoneDetails.name ? { guest_name: phoneDetails.name } : {}), ...(isPh && phoneDetails.address ? { delivery_address: phoneDetails.address } : {}), ...(isPh && (phoneDetails.marketing?.sms || phoneDetails.marketing?.whatsapp) ? { marketing_opt_in: { sms: !!phoneDetails.marketing.sms, whatsapp: !!phoneDetails.marketing.whatsapp, email: false, method: 'pos_verbal' } } : {}) }; })(),
@@ -611,7 +611,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     {cart.map(item => (
                         <div key={item.id} className={`flex justify-between ${t.subtext} text-sm`}>
                             <span>{item.quantity}x {item.name}</span>
-                            <span>£{((item.pos_price != null ? item.pos_price : item.price) * item.quantity).toFixed(2)}</span>
+                            <span>{money(((item.pos_price != null ? item.pos_price : item.price) * item.quantity))}</span>
                         </div>
                     ))}
                 </div>
@@ -632,7 +632,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     total: effectiveTotal,
                                     payment_method: payments.length === 1 ? payments[0].method : 'cash',
                                     order_type: orderType || 'takeaway',
-                                    notes: payments.length > 1 ? payments.map(p => `${p.method}: £${p.amount.toFixed(2)}`).join(', ') : undefined,
+                                    notes: payments.length > 1 ? payments.map(p => `${p.method}: ${money(p.amount)}`).join(', ') : undefined,
                                 };
                                 try {
                                     const result = await printWithCentralizedConfig(orderData, restaurant, 'pos_order');
@@ -675,7 +675,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                     {coupon.coupon_code}
                                 </span>
                                 <span className={`text-xs ${isDark ? 'text-green-300' : 'text-green-600'}`}>
-                                    −£{coupon.discount_amount.toFixed(2)}
+                                    −{money(coupon.discount_amount)}
                                 </span>
                             </div>
                             <button onClick={handleRemoveCoupon} className="text-red-400 hover:text-red-300 transition-colors" aria-label="Remove">
@@ -711,9 +711,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         heavier than it, inverting the hierarchy. */}
                     <div className={`${t.totalBox} px-4 py-3 rounded-xl flex items-baseline justify-between gap-3`}>
                         <p className={`${t.totalTxt} text-xs font-semibold uppercase tracking-wide`}>
-                            Total{(manualDiscountAmount > 0 || couponDiscountAmount > 0) ? ` (was £${cartSubtotal.toFixed(2)})` : ''}
+                            Total{(manualDiscountAmount > 0 || couponDiscountAmount > 0) ? ` (was ${money(cartSubtotal)})` : ''}
                         </p>
-                        <p className={`${t.totalAmt} text-4xl font-bold tabular-nums leading-none`}>£{effectiveTotal.toFixed(2)}</p>
+                        <p className={`${t.totalAmt} text-4xl font-bold tabular-nums leading-none`}>{money(effectiveTotal)}</p>
                     </div>
 
                     {payments.length > 0 && (
@@ -722,7 +722,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                 {payments.map((p, i) => (
                                     <div key={i} className={`flex items-center justify-between ${t.row} rounded-xl px-3 py-1.5`}>
                                         <span className={`${t.subtext} text-sm capitalize`}>{p.method}</span>
-                                        <span className={`${t.text} text-sm font-semibold`}>£{p.amount.toFixed(2)}</span>
+                                        <span className={`${t.text} text-sm font-semibold`}>{money(p.amount)}</span>
                                         <button onClick={() => removePayment(i)} className="text-red-400 hover:text-red-300 ml-2">
                                             <Trash2 className="h-3.5 w-3.5" />
                                         </button>
@@ -733,7 +733,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             {remaining > 0 ? (
                                 <div className={`${t.owedBox} px-4 py-2.5 rounded-xl flex items-baseline justify-between gap-3`}>
                                     <p className={`${t.owedTxt} text-xs font-semibold uppercase tracking-wide`}>Still owed</p>
-                                    <p className={`${t.owedAmt} ${POS_TEXT.money}`}>£{remaining.toFixed(2)}</p>
+                                    <p className={`${t.owedAmt} ${POS_TEXT.money}`}>{money(remaining)}</p>
                                 </div>
                             ) : (
                                 /* Change is the one figure a cashier must not miss -
@@ -741,7 +741,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                    differently from every other panel. */
                                 <div className={`${t.changeBox} px-4 py-3 rounded-xl flex items-baseline justify-between gap-3`}>
                                     <p className={`${t.changeTxt} text-xs font-semibold uppercase tracking-wide`}>Change due</p>
-                                    <p className={`${t.changeAmt} ${POS_TEXT.moneyLarge}`}>£{Math.max(0, totalPaid - amountDue).toFixed(2)}</p>
+                                    <p className={`${t.changeAmt} ${POS_TEXT.moneyLarge}`}>{money(Math.max(0, totalPaid - amountDue))}</p>
                                 </div>
                             )}
                         </>
@@ -773,7 +773,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             <div className="mb-4">
                                 <p className={`${t.subtext} text-xs mb-2 flex justify-between`}>
                                     <span>Tip</span>
-                                    {tipAmount > 0 && <span className="tabular-nums">+£{tipAmount.toFixed(2)}</span>}
+                                    {tipAmount > 0 && <span className="tabular-nums">+{money(tipAmount)}</span>}
                                 </p>
                                 <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Tip amount">
                                     {TIP_PRESETS.map(pct => {
@@ -792,7 +792,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                                 }`}
                                             >
                                                 {pct === 0 ? 'No tip' : `${pct}%`}
-                                                {pct > 0 && <span className="block text-[11px] font-normal opacity-80 tabular-nums">£{value.toFixed(2)}</span>}
+                                                {pct > 0 && <span className="block text-[11px] font-normal opacity-80 tabular-nums">{money(value)}</span>}
                                             </button>
                                         );
                                     })}
@@ -840,7 +840,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             setActiveMethod('cash');
                             setShowCashConfirm(true);
                         }} className={`w-full ${POS_TOUCH.control} ${POS_RADIUS.control} text-sm font-bold ${POS_TRANSITION} ${POS_FOCUS} ${t.inactBtn} mb-3`}>
-                            Exact Cash (£{remaining.toFixed(2)})
+                            Exact Cash ({money(remaining)})
                         </Button>
 
                         {/* Pinned to the bottom of the panel: the right column is
@@ -862,7 +862,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                 setActiveMethod('card');
                                 setShowCardConfirm(true);
                             }} disabled={blockedForPhoneDetails} className={`w-full h-16 text-xl font-bold mt-auto disabled:opacity-40 ${t.cardBtn}`}>
-                                Charge £{remaining.toFixed(2)} to Card
+                                Charge {money(remaining)} to Card
                             </Button>
                         )}
                     </>
@@ -894,11 +894,11 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <div className="grid grid-cols-2 gap-3">
                             <Button onClick={() => { setRawValue(String(Math.round(remaining * 100))); setShowCardConfirm(true); }}
                                 className={`h-14 text-sm font-bold ${t.cardBtn}`}>
-                                Full remaining<br/>£{remaining.toFixed(2)}
+                                Full remaining<br/>{money(remaining)}
                             </Button>
                             <Button onClick={() => setShowCardConfirm(true)} disabled={numericInput <= 0}
                                 className={`h-14 text-sm font-bold ${t.cardBtn2}`}>
-                                Custom amount<br/>{numericInput > 0 ? `£${numericInput.toFixed(2)}` : '(enter below)'}
+                                Custom amount<br/>{numericInput > 0 ? `${money(numericInput)}` : '(enter below)'}
                             </Button>
                         </div>
                         <NumericKeypad rawValue={rawValue} onRawChange={setRawValue} onComplete={() => setShowCardConfirm(true)} />
@@ -918,10 +918,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             Confirm Cash Payment
                         </AlertDialogTitle>
                         <AlertDialogDescription className={t.dialogDesc}>
-                            Process cash payment of £{numericInput.toFixed(2)}?
+                            Process cash payment of {money(numericInput)}?
                             {numericInput > remaining + 0.001 && (
                                 <span className="block mt-1 font-semibold text-accent-400">
-                                    Change due: £{(numericInput - remaining).toFixed(2)}
+                                    Change due: {money((numericInput - remaining))}
                                 </span>
                             )}
                         </AlertDialogDescription>
@@ -929,7 +929,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                     <AlertDialogFooter>
                         <AlertDialogCancel className={t.cancelDlg}>Go Back</AlertDialogCancel>
                         <AlertDialogAction onClick={() => { setShowCashConfirm(false); addPayment('cash', numericInput); }} className="bg-green-600 hover:bg-green-700 text-white">
-                            Process £{numericInput.toFixed(2)}
+                            Process {money(numericInput)}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -944,7 +944,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             Cash Under Total
                         </AlertDialogTitle>
                         <AlertDialogDescription className={t.dialogDesc}>
-                            You entered £{numericInput.toFixed(2)} but £{remaining.toFixed(2)} is still owed. Accept as partial payment?
+                            You entered {money(numericInput)} but {money(remaining)} is still owed. Accept as partial payment?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -967,10 +967,10 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <AlertDialogDescription className={t.dialogDesc}>
                             {hasConfiguredTerminal ? (
                                 <>
-                                    Send <strong>£{(numericInput > 0 ? numericInput : remaining).toFixed(2)}</strong> to terminal <strong>{cardTerminal.reader_label || cardTerminal.reader_id}</strong>? The customer will tap/insert their card on the terminal.
+                                    Send <strong>{money((numericInput > 0 ? numericInput : remaining))}</strong> to terminal <strong>{cardTerminal.reader_label || cardTerminal.reader_id}</strong>? The customer will tap/insert their card on the terminal.
                                 </>
                             ) : (
-                                <>Process card payment for £{(numericInput > 0 ? numericInput : remaining).toFixed(2)}?</>
+                                <>Process card payment for {money((numericInput > 0 ? numericInput : remaining))}?</>
                             )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -983,7 +983,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             primary action. */}
                         <AlertDialogAction onClick={processCard} disabled={isProcessing}
                             className="bg-accent-500 hover:bg-accent-400 text-white">
-                            {hasConfiguredTerminal ? `Send £${(numericInput > 0 ? numericInput : remaining).toFixed(2)} to Terminal` : (isProcessing ? 'Processing...' : 'Confirm')}
+                            {hasConfiguredTerminal ? `Send ${money((numericInput > 0 ? numericInput : remaining))} to Terminal` : (isProcessing ? 'Processing...' : 'Confirm')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -1007,7 +1007,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                                         <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
                                     </div>
                                     <div className="text-center">
-                                        <p className={`${POS_TEXT.moneyLarge} ${t.text}`}>£{terminalAmount.toFixed(2)}</p>
+                                        <p className={`${POS_TEXT.moneyLarge} ${t.text}`}>{money(terminalAmount)}</p>
                                         <p className={`${t.subtext} text-sm mt-1`}>
                                             Processing on <strong>{cardTerminal?.reader_label || 'the terminal'}</strong>
                                         </p>
@@ -1047,7 +1047,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <AlertDialogDescription className={t.dialogDesc} asChild>
                             <div className="space-y-3">
                                 <div className="text-center py-4">
-                                    <p className={`${POS_TEXT.moneyLarge} text-green-500`}>£{terminalAmount.toFixed(2)}</p>
+                                    <p className={`${POS_TEXT.moneyLarge} text-green-500`}>{money(terminalAmount)}</p>
                                     <p className={`${t.subtext} text-sm mt-2`}>Transaction approved</p>
                                     <p className={`${t.subtext} text-xs mt-1 font-mono`}>{terminalTransactionRef}</p>
                                 </div>
@@ -1109,7 +1109,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         </div>
                         <h3 className={`${t.text} text-xl font-bold mb-1`}>Payment Complete</h3>
                         <p className={`${t.subtext} text-sm mb-6`}>
-                            £{effectiveTotal.toFixed(2)} — {completedOrder.payment_method || 'paid'}
+                            {money(effectiveTotal)} — {completedOrder.payment_method || 'paid'}
                         </p>
                         <div className="flex flex-col gap-2">
                             <Button

@@ -268,7 +268,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                 <span className={`${t.text} font-semibold text-sm`}>
                                     {order.order_number ? `#${order.order_number}` : `#${order.id.slice(-6)}`}
                                 </span>
-                                <span className={`${t.text} font-bold tabular-nums`}>£{Number(order.total || 0).toFixed(2)}</span>
+                                <span className={`${t.text} font-bold tabular-nums`}>{money(Number(order.total || 0))}</span>
                             </div>
                             <div className="space-y-1 mb-3">
                                 {(order.items || []).map((it, i) => (
@@ -298,7 +298,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                             {Array.from({ length: Math.max(Number(viewingTable.capacity) || 0, 8) }, (_, n) => n + 1)
                                                 .map(n => <option key={n} value={n}>Seat {n}</option>)}
                                         </select>
-                                        <span className="tabular-nums flex-shrink-0 w-14 text-right">£{(Number(it.price || 0) * (it.quantity || 1)).toFixed(2)}</span>
+                                        <span className="tabular-nums flex-shrink-0 w-14 text-right">{money((Number(it.price || 0) * (it.quantity || 1)))}</span>
                                     </div>
                                 ))}
 
@@ -360,7 +360,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                 <div className={`flex items-center justify-between gap-3 flex-shrink-0 ${t.panel} border rounded-2xl p-3`}>
                     <div>
                         <p className={`${t.textSub} text-xs font-semibold uppercase tracking-wide`}>Table total</p>
-                        <p className={`${t.text} text-3xl font-bold tabular-nums leading-none`}>£{total.toFixed(2)}</p>
+                        <p className={`${t.text} text-3xl font-bold tabular-nums leading-none`}>{money(total)}</p>
                     </div>
                     <Button
                         onClick={() => setShowPayment(true)}
@@ -540,7 +540,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                 {hasOrders ? (
                                     <>
                                         <p className="text-accent-300 text-[11px] mt-0.5">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-                                        <p className={`${t.text} font-bold text-sm`}>£{total.toFixed(2)}</p>
+                                        <p className={`${t.text} font-bold text-sm`}>{money(total)}</p>
                                     </>
                                 ) : (
                                     <p className={`${t.textSub} text-[11px] capitalize mt-0.5`}>{table.status?.replace('_', ' ')}</p>
@@ -594,7 +594,7 @@ export default function POSTablesView({ restaurantId, posTheme = 'dark', restaur
                                         {hasOrders ? (
                                             <>
                                                 <p className="text-accent-400 text-[11px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-                                                <p className={`${t.text} font-bold text-sm`}>£{total.toFixed(2)}</p>
+                                                <p className={`${t.text} font-bold text-sm`}>{money(total)}</p>
                                             </>
                                         ) : (
                                             <p className={`${t.textSub} text-[11px] capitalize`}>{table.status?.replace('_', ' ')}</p>

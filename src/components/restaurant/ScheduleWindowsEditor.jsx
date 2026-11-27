@@ -120,7 +120,7 @@ export default function ScheduleWindowsEditor({ value = [], onChange, withPrice 
                         )}
                         {priceIneffective && (
                             <p className="text-xs text-amber-700">
-                                This isn&rsquo;t lower than the normal price (£{Number(basePrice).toFixed(2)}), so it won&rsquo;t
+                                This isn&rsquo;t lower than the normal price ({money(Number(basePrice))}), so it won&rsquo;t
                                 apply. Timed prices can only reduce a price.
                             </p>
                         )}

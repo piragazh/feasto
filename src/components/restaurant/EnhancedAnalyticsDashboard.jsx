@@ -206,7 +206,7 @@ export default function EnhancedAnalyticsDashboard({ restaurantId }) {
             const response = await base44.integrations.Core.InvokeLLM({
                 prompt: `Forecast restaurant daily sales for next 7 days.
 Historical Revenue (last 14 days): ${recent.map(r => `£${r}`).join(', ')}
-Avg Daily: £${avg.toFixed(2)}, Total Orders (${dateRange}d): ${filteredOrders.length}, Growth: ${kpis.growthRate}%
+Avg Daily: ${money(avg)}, Total Orders (${dateRange}d): ${filteredOrders.length}, Growth: ${kpis.growthRate}%
 Return structured forecast.`,
                 response_json_schema: {
                     type: "object",
@@ -235,17 +235,17 @@ Return structured forecast.`,
         generateReportPDF({
             title: 'Analytics Report', subtitle: `Last ${dateRange} days`,
             metrics: [
-                { label: 'Total Revenue', value: `£${kpis.totalRevenue.toFixed(2)}` },
-                { label: 'Net Earnings (after commission)', value: `£${kpis.netEarnings.toFixed(2)}` },
-                { label: 'Commission Paid', value: `£${kpis.totalCommission.toFixed(2)}` },
+                { label: 'Total Revenue', value: `${money(kpis.totalRevenue)}` },
+                { label: 'Net Earnings (after commission)', value: `${money(kpis.netEarnings)}` },
+                { label: 'Commission Paid', value: `${money(kpis.totalCommission)}` },
                 { label: 'Total Orders', value: kpis.totalOrders },
-                { label: 'Avg Order Value', value: `£${kpis.avgOrderValue.toFixed(2)}` },
-                { label: 'Daily Avg Revenue', value: `£${kpis.dailyAvgRevenue.toFixed(2)}` },
-                { label: 'Daily Avg Profit', value: `£${kpis.dailyAvgProfit.toFixed(2)}` },
+                { label: 'Avg Order Value', value: `${money(kpis.avgOrderValue)}` },
+                { label: 'Daily Avg Revenue', value: `${money(kpis.dailyAvgRevenue)}` },
+                { label: 'Daily Avg Profit', value: `${money(kpis.dailyAvgProfit)}` },
                 { label: 'Unique Customers', value: kpis.uniqueCustomers },
             ],
             tables: [
-                { title: 'Top Menu Items', headers: ['Item', 'Qty Sold', 'Revenue'], rows: menuPerformance.map(i => [i.name, i.quantity, `£${i.revenue.toFixed(2)}`]) },
+                { title: 'Top Menu Items', headers: ['Item', 'Qty Sold', 'Revenue'], rows: menuPerformance.map(i => [i.name, i.quantity, `${money(i.revenue)}`]) },
             ],
             filename: `analytics-${dateRange}days.pdf`,
         });
@@ -302,7 +302,7 @@ Return structured forecast.`,
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <KPICard
                     title="Gross Revenue"
-                    value={`£${kpis.totalRevenue.toFixed(2)}`}
+                    value={`${money(kpis.totalRevenue)}`}
                     subtitle={`${kpis.totalOrders} orders`}
                     icon={PoundSterling}
                     iconBg="bg-white/20"
@@ -312,7 +312,7 @@ Return structured forecast.`,
                 />
                 <KPICard
                     title="Net Earnings"
-                    value={`£${kpis.netEarnings.toFixed(2)}`}
+                    value={`${money(kpis.netEarnings)}`}
                     subtitle={`After ${kpis.commissionRate}% commission`}
                     icon={TrendingUp}
                     iconBg="bg-white/20"
@@ -320,7 +320,7 @@ Return structured forecast.`,
                 />
                 <KPICard
                     title="Commission Paid"
-                    value={`£${kpis.totalCommission.toFixed(2)}`}
+                    value={`${money(kpis.totalCommission)}`}
                     subtitle={`${kpis.commissionRate}% platform fee`}
                     icon={Percent}
                     iconBg="bg-white/20"
@@ -328,7 +328,7 @@ Return structured forecast.`,
                 />
                 <KPICard
                     title="Avg Order Value"
-                    value={`£${kpis.avgOrderValue.toFixed(2)}`}
+                    value={`${money(kpis.avgOrderValue)}`}
                     subtitle={`${kpis.uniqueCustomers} customers`}
                     icon={ShoppingBag}
                     iconBg="bg-white/20"
@@ -340,7 +340,7 @@ Return structured forecast.`,
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <KPICard
                     title="Daily Avg Revenue"
-                    value={`£${kpis.dailyAvgRevenue.toFixed(2)}`}
+                    value={`${money(kpis.dailyAvgRevenue)}`}
                     subtitle={`${kpis.dailyAvgOrders.toFixed(1)} orders/day`}
                     icon={Calendar}
                     iconBg="bg-white/20"
@@ -348,7 +348,7 @@ Return structured forecast.`,
                 />
                 <KPICard
                     title="Daily Avg Profit"
-                    value={`£${kpis.dailyAvgProfit.toFixed(2)}`}
+                    value={`${money(kpis.dailyAvgProfit)}`}
                     subtitle="After commission"
                     icon={Target}
                     iconBg="bg-white/20"
@@ -356,7 +356,7 @@ Return structured forecast.`,
                 />
                 <KPICard
                     title="Delivery Fees"
-                    value={`£${kpis.totalDeliveryFees.toFixed(2)}`}
+                    value={`${money(kpis.totalDeliveryFees)}`}
                     subtitle={`${kpis.deliveryOrders} delivery orders`}
                     icon={Truck}
                     iconBg="bg-white/20"
@@ -379,13 +379,13 @@ Return structured forecast.`,
                         <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Revenue Breakdown</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-0">
-                        <StatRow label="Gross Revenue" value={`£${kpis.totalRevenue.toFixed(2)}`} valueClass="text-gray-900" />
-                        <StatRow label="Delivery Fees Collected" value={`+£${kpis.totalDeliveryFees.toFixed(2)}`} valueClass="text-blue-600" />
-                        <StatRow label="Discounts Given" value={`-£${kpis.totalDiscounts.toFixed(2)}`} valueClass="text-red-500" />
-                        <StatRow label="Platform Commission" value={`-£${kpis.totalCommission.toFixed(2)}`} valueClass="text-red-500" />
+                        <StatRow label="Gross Revenue" value={`${money(kpis.totalRevenue)}`} valueClass="text-gray-900" />
+                        <StatRow label="Delivery Fees Collected" value={`+${money(kpis.totalDeliveryFees)}`} valueClass="text-blue-600" />
+                        <StatRow label="Discounts Given" value={`-${money(kpis.totalDiscounts)}`} valueClass="text-red-500" />
+                        <StatRow label="Platform Commission" value={`-${money(kpis.totalCommission)}`} valueClass="text-red-500" />
                         <div className="flex items-center justify-between pt-3 mt-1 border-t-2 border-gray-200">
                             <span className="text-sm font-bold text-gray-700">Net Earnings</span>
-                            <span className="text-base font-bold text-emerald-600">£{kpis.netEarnings.toFixed(2)}</span>
+                            <span className="text-base font-bold text-emerald-600">{money(kpis.netEarnings)}</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -395,9 +395,9 @@ Return structured forecast.`,
                         <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Payment Methods</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-0">
-                        <StatRow label="Card Payments" value={`£${kpis.cardRevenue.toFixed(2)}`} valueClass="text-blue-600" />
+                        <StatRow label="Card Payments" value={`${money(kpis.cardRevenue)}`} valueClass="text-blue-600" />
                         <StatRow label="Card Orders" value={kpis.cardOrders} />
-                        <StatRow label="Cash Payments" value={`£${kpis.cashRevenue.toFixed(2)}`} valueClass="text-green-600" />
+                        <StatRow label="Cash Payments" value={`${money(kpis.cashRevenue)}`} valueClass="text-green-600" />
                         <StatRow label="Cash Orders" value={kpis.cashOrders} />
                         <div className="mt-3">
                             <div className="flex rounded-full overflow-hidden h-2.5 bg-gray-100">
@@ -496,7 +496,7 @@ Return structured forecast.`,
                                                     <span className="text-sm font-medium text-gray-800 truncate">{item.name}</span>
                                                     <div className="flex items-center gap-3 ml-2 flex-shrink-0">
                                                         <span className="text-xs text-gray-400">{item.quantity} sold</span>
-                                                        <span className="text-sm font-bold text-emerald-600">£{item.revenue.toFixed(2)}</span>
+                                                        <span className="text-sm font-bold text-emerald-600">{money(item.revenue)}</span>
                                                     </div>
                                                 </div>
                                                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -616,7 +616,7 @@ Return structured forecast.`,
                                                     <p className="font-semibold text-gray-800 text-sm">{day.day}</p>
                                                     <p className="text-xs text-gray-400">{day.predicted_orders} predicted orders</p>
                                                 </div>
-                                                <p className="text-lg font-bold text-emerald-600">£{parseFloat(day.predicted_revenue).toFixed(2)}</p>
+                                                <p className="text-lg font-bold text-emerald-600">{money(parseFloat(day.predicted_revenue))}</p>
                                             </div>
                                         ))}
                                     </div>

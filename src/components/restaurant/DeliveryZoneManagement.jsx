@@ -342,7 +342,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                 const popupContent = (
                                     <div className="p-2 min-w-[180px]">
                                         <h3 className="font-semibold text-sm">{zone.name}</h3>
-                                        <p className="text-xs text-gray-600 mt-1">Fee: <span className="font-semibold">£{parseFloat(zone.delivery_fee || 0).toFixed(2)}</span></p>
+                                        <p className="text-xs text-gray-600 mt-1">Fee: <span className="font-semibold">{money(parseFloat(zone.delivery_fee || 0))}</span></p>
                                         <p className="text-xs text-gray-600">ETA: <span className="font-semibold">{zone.estimated_delivery_time}</span></p>
                                     </div>
                                 );
@@ -431,7 +431,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                 <DollarSign className="h-4 w-4 text-gray-500" />
                                                 <div>
                                                     <p className="text-xs text-gray-500">Delivery Fee</p>
-                                                    <p className="font-semibold">£{parseFloat(zone.delivery_fee || 0).toFixed(2)}</p>
+                                                    <p className="font-semibold">{money(parseFloat(zone.delivery_fee || 0))}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -446,7 +446,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                                     <MapPin className="h-4 w-4 text-gray-500" />
                                                     <div>
                                                         <p className="text-xs text-gray-500">Min Order</p>
-                                                        <p className="font-semibold">£{parseFloat(zone.min_order_value || 0).toFixed(2)}</p>
+                                                        <p className="font-semibold">{money(parseFloat(zone.min_order_value || 0))}</p>
                                                     </div>
                                                 </div>
                                             )}

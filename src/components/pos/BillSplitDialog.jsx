@@ -48,14 +48,14 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
         const totalSplit = customSplits.reduce((sum, s) => sum + s.amount, 0);
         
         if (Math.abs(totalSplit - order.total) > 0.01) {
-            toast.error(`Split total (£${totalSplit.toFixed(2)}) must equal order total (£${order.total.toFixed(2)})`);
+            toast.error(`Split total (${money(totalSplit)}) must equal order total (${money(order.total)})`);
             return;
         }
 
         try {
             // Store split information in order notes (routed via posUpdateOrder for tenant verification)
             const splitInfo = customSplits.map((s, idx) => 
-                `Split ${idx + 1}: £${s.amount.toFixed(2)}`
+                `Split ${idx + 1}: ${money(s.amount)}`
             ).join(' | ');
 
             const res = await base44.functions.invoke('posUpdateOrder', {
@@ -89,7 +89,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
                     {/* Total */}
                     <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-3 rounded-xl`}>
                         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Order Total</p>
-                        <p className="text-accent-400 text-2xl font-bold">£{order?.total.toFixed(2)}</p>
+                        <p className="text-accent-400 text-2xl font-bold">{money(order?.total)}</p>
                     </div>
 
                     {/* Number of Splits */}
@@ -137,7 +137,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
                                             className={isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}
                                         />
                                     </div>
-                                    <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>£{split.amount.toFixed(2)}</span>
+                                    <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{money(split.amount)}</span>
                                 </div>
                             ))}
                             
@@ -146,7 +146,7 @@ export default function BillSplitDialog({ order, open, onClose, onUpdate, posThe
                                 <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded-xl text-sm`}>
                                     <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
                                         Total: <span className={customSplits.reduce((sum, s) => sum + s.amount, 0) === order?.total ? 'text-green-400' : 'text-red-400'}>
-                                            £{customSplits.reduce((sum, s) => sum + s.amount, 0).toFixed(2)}
+                                            {money(customSplits.reduce((sum, s) => sum + s.amount, 0))}
                                         </span>
                                     </p>
                                 </div>

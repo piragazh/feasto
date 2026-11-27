@@ -318,9 +318,9 @@ export default function AdvancedAnalytics({ restaurantId }) {
             prompt: `Based on this sales data, forecast the next ${forecastDays} days:
 
 Historical Data (last ${dateRange} days):
-- Total Revenue: £${analytics.totalRevenue.toFixed(2)}
+- Total Revenue: ${money(analytics.totalRevenue)}
 - Total Orders: ${analytics.totalOrders}
-- Average Order Value: £${analytics.avgOrderValue.toFixed(2)}
+- Average Order Value: ${money(analytics.avgOrderValue)}
 - Daily Stats: ${JSON.stringify(analytics.dailyStats.slice(-7))}
 
 Consider:
@@ -494,7 +494,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                             <span className="text-sm text-gray-600">Total Revenue</span>
                             <DollarSign className="h-5 w-5 text-green-500" />
                         </div>
-                        <p className="text-3xl font-bold">£{analytics.totalRevenue.toFixed(2)}</p>
+                        <p className="text-3xl font-bold">{money(analytics.totalRevenue)}</p>
                         <p className="text-xs text-gray-500 mt-1">
                             <span className={analytics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}>
                                 {analytics.revenueGrowth >= 0 ? '+' : ''}{analytics.revenueGrowth.toFixed(1)}%
@@ -524,7 +524,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                             <span className="text-sm text-gray-600">Avg Order Value</span>
                             <Target className="h-5 w-5 text-purple-500" />
                         </div>
-                        <p className="text-3xl font-bold">£{analytics.avgOrderValue.toFixed(2)}</p>
+                        <p className="text-3xl font-bold">{money(analytics.avgOrderValue)}</p>
                         <p className="text-xs text-gray-500 mt-1">Per order</p>
                     </CardContent>
                 </Card>
@@ -767,7 +767,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                         <div key={i} className="flex justify-between text-sm border-b pb-2">
                                             <span className="font-medium">{item.name}</span>
                                             <div className="text-right">
-                                                <span className="text-green-600 font-semibold">£{item.revenue.toFixed(2)}</span>
+                                                <span className="text-green-600 font-semibold">{money(item.revenue)}</span>
                                                 <span className="text-gray-500 ml-2">({item.quantity} sold)</span>
                                             </div>
                                         </div>
@@ -833,11 +833,11 @@ Provide daily forecasts with revenue and order count predictions.`,
                                         <div className="grid grid-cols-3 gap-4 text-sm">
                                             <div>
                                                 <p className="text-gray-600">Revenue</p>
-                                                <p className="font-semibold text-green-600">£{promo.revenue.toFixed(2)}</p>
+                                                <p className="font-semibold text-green-600">{money(promo.revenue)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-gray-600">Discounts Given</p>
-                                                <p className="font-semibold text-orange-600">£{promo.discounts.toFixed(2)}</p>
+                                                <p className="font-semibold text-orange-600">{money(promo.discounts)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-gray-600">Usage Count</p>
@@ -887,7 +887,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                                     </td>
                                                     <td className="text-center">{driver.avgDeliveryTime} min</td>
                                                     <td className="text-right font-semibold text-green-600">
-                                                        £{driver.totalEarnings.toFixed(2)}
+                                                        {money(driver.totalEarnings)}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -913,7 +913,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                     {analytics.peakHour?.hour}:00
                                 </p>
                                 <p className="text-sm text-gray-600 mt-1">
-                                    {analytics.peakHour?.orders} orders • £{analytics.peakHour?.revenue.toFixed(2)}
+                                    {analytics.peakHour?.orders} orders • {money(analytics.peakHour?.revenue)}
                                 </p>
                             </div>
                             <div className="bg-blue-50 rounded-lg p-4">
@@ -922,7 +922,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                     {analytics.peakDay?.day}
                                 </p>
                                 <p className="text-sm text-gray-600 mt-1">
-                                    {analytics.peakDay?.orders} orders • £{analytics.peakDay?.revenue.toFixed(2)}
+                                    {analytics.peakDay?.orders} orders • {money(analytics.peakDay?.revenue)}
                                 </p>
                             </div>
                         </div>

@@ -73,14 +73,14 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-1 text-sm">
-                        <div className="flex justify-between"><span>Card / online payments ({balance.total_orders} orders)</span><span>£{balance.card_payment_amount.toFixed(2)}</span></div>
-                        <div className="flex justify-between text-gray-500"><span>Cash you collected yourself</span><span>£{balance.cash_payment_amount.toFixed(2)}</span></div>
-                        <div className="flex justify-between text-orange-700"><span>Commission</span><span>−£{balance.platform_commission.toFixed(2)}</span></div>
-                        {balance.refunds_paid_by_restaurant > 0 && <div className="flex justify-between text-red-700"><span>Refunds on earlier orders</span><span>−£{balance.refunds_paid_by_restaurant.toFixed(2)}</span></div>}
-                        {balance.adjustments_total !== 0 && <div className="flex justify-between"><span>Adjustments (disputes, credits, reserve released)</span><span>{balance.adjustments_total < 0 ? '−' : '+'}£{Math.abs(balance.adjustments_total).toFixed(2)}</span></div>}
-                        {balance.brought_forward_amount > 0 && <div className="flex justify-between text-red-700"><span>Owed from last statement</span><span>−£{balance.brought_forward_amount.toFixed(2)}</span></div>}
-                        {balance.reserve_held > 0 && <div className="flex justify-between text-gray-600"><span>Reserve held until {new Date(balance.reserve_until).toLocaleDateString('en-GB')}</span><span>−£{balance.reserve_held.toFixed(2)}</span></div>}
-                        <div className="flex justify-between border-t pt-1 font-bold text-green-700"><span>Estimated payout</span><span>£{balance.net_payout.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span>Card / online payments ({balance.total_orders} orders)</span><span>{money(balance.card_payment_amount)}</span></div>
+                        <div className="flex justify-between text-gray-500"><span>Cash you collected yourself</span><span>{money(balance.cash_payment_amount)}</span></div>
+                        <div className="flex justify-between text-orange-700"><span>Commission</span><span>−{money(balance.platform_commission)}</span></div>
+                        {balance.refunds_paid_by_restaurant > 0 && <div className="flex justify-between text-red-700"><span>Refunds on earlier orders</span><span>−{money(balance.refunds_paid_by_restaurant)}</span></div>}
+                        {balance.adjustments_total !== 0 && <div className="flex justify-between"><span>Adjustments (disputes, credits, reserve released)</span><span>{balance.adjustments_total < 0 ? '−' : '+'}{money(Math.abs(balance.adjustments_total))}</span></div>}
+                        {balance.brought_forward_amount > 0 && <div className="flex justify-between text-red-700"><span>Owed from last statement</span><span>−{money(balance.brought_forward_amount)}</span></div>}
+                        {balance.reserve_held > 0 && <div className="flex justify-between text-gray-600"><span>Reserve held until {new Date(balance.reserve_until).toLocaleDateString('en-GB')}</span><span>−{money(balance.reserve_held)}</span></div>}
+                        <div className="flex justify-between border-t pt-1 font-bold text-green-700"><span>Estimated payout</span><span>{money(balance.net_payout)}</span></div>
                         {balance.held_orders > 0 && <p className="text-xs text-gray-500">{balance.held_orders} order(s) not marked delivered/collected yet — they're added once completed.</p>}
                     </CardContent>
                 </Card>
@@ -93,7 +93,7 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
                         <CardTitle className="text-sm text-gray-600">Total Earnings</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold">£{totalEarnings.toFixed(2)}</p>
+                        <p className="text-2xl font-bold">{money(totalEarnings)}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -101,7 +101,7 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
                         <CardTitle className="text-sm text-gray-600">Commission Paid</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold text-orange-600">-£{totalCommission.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-orange-600">-{money(totalCommission)}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -109,7 +109,7 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
                         <CardTitle className="text-sm text-gray-600">Total Paid</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold text-green-600">£{totalPaid.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-green-600">{money(totalPaid)}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -117,7 +117,7 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
                         <CardTitle className="text-sm text-gray-600">Pending Payout</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold text-yellow-600">£{totalPending.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-yellow-600">{money(totalPending)}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -208,34 +208,34 @@ export default function RestaurantPayoutHistory({ restaurantId }) {
                                         </div>
                                         <div className="bg-gray-50 p-2 rounded">
                                             <p className="text-xs text-gray-600">Gross</p>
-                                            <p className="font-semibold text-sm">£{(payout.gross_earnings || 0).toFixed(2)}</p>
+                                            <p className="font-semibold text-sm">{money((payout.gross_earnings || 0))}</p>
                                         </div>
                                         <div className="bg-gray-50 p-2 rounded">
                                             <p className="text-xs text-gray-600">Cash</p>
-                                            <p className="font-semibold text-sm">£{(payout.cash_payment_amount || 0).toFixed(2)}</p>
+                                            <p className="font-semibold text-sm">{money((payout.cash_payment_amount || 0))}</p>
                                         </div>
                                         <div className="bg-gray-50 p-2 rounded">
                                             <p className="text-xs text-gray-600">Card</p>
-                                            <p className="font-semibold text-sm">£{(payout.card_payment_amount || 0).toFixed(2)}</p>
+                                            <p className="font-semibold text-sm">{money((payout.card_payment_amount || 0))}</p>
                                         </div>
                                         <div className="bg-gray-50 p-2 rounded">
                                             <p className="text-xs text-gray-600">Commission</p>
-                                            <p className="font-semibold text-orange-600 text-sm">-£{(payout.platform_commission || 0).toFixed(2)}</p>
+                                            <p className="font-semibold text-orange-600 text-sm">-{money((payout.platform_commission || 0))}</p>
                                         </div>
                                         <div className="bg-green-50 p-2 rounded border border-green-200">
                                             <p className="text-xs text-green-700">Net Payout</p>
-                                            <p className="font-bold text-green-700 text-sm">£{(payout.net_payout || 0).toFixed(2)}</p>
+                                            <p className="font-bold text-green-700 text-sm">{money((payout.net_payout || 0))}</p>
                                         </div>
                                     </div>
 
                                     {/* Payment Info */}
                                     {(payout.chargebacks_amount || payout.manual_adjustments_amount || payout.reserve_held || payout.reserve_released_amount || payout.brought_forward_amount) ? (
                                         <div className="flex flex-wrap gap-2 text-xs mb-2">
-                                            {payout.chargebacks_amount ? <span className="rounded bg-red-50 px-2 py-1 text-red-700">Card disputes {payout.chargebacks_amount < 0 ? '−' : '+'}£{Math.abs(payout.chargebacks_amount).toFixed(2)}</span> : null}
-                                            {payout.manual_adjustments_amount ? <span className="rounded bg-gray-100 px-2 py-1">Adjustments {payout.manual_adjustments_amount < 0 ? '−' : '+'}£{Math.abs(payout.manual_adjustments_amount).toFixed(2)}</span> : null}
-                                            {payout.reserve_held ? <span className="rounded bg-gray-100 px-2 py-1">Reserve held −£{payout.reserve_held.toFixed(2)}</span> : null}
-                                            {payout.reserve_released_amount ? <span className="rounded bg-green-50 px-2 py-1 text-green-700">Reserve released +£{payout.reserve_released_amount.toFixed(2)}</span> : null}
-                                            {payout.brought_forward_amount ? <span className="rounded bg-red-50 px-2 py-1 text-red-700">Owed from last statement −£{payout.brought_forward_amount.toFixed(2)}</span> : null}
+                                            {payout.chargebacks_amount ? <span className="rounded bg-red-50 px-2 py-1 text-red-700">Card disputes {payout.chargebacks_amount < 0 ? '−' : '+'}{money(Math.abs(payout.chargebacks_amount))}</span> : null}
+                                            {payout.manual_adjustments_amount ? <span className="rounded bg-gray-100 px-2 py-1">Adjustments {payout.manual_adjustments_amount < 0 ? '−' : '+'}{money(Math.abs(payout.manual_adjustments_amount))}</span> : null}
+                                            {payout.reserve_held ? <span className="rounded bg-gray-100 px-2 py-1">Reserve held −{money(payout.reserve_held)}</span> : null}
+                                            {payout.reserve_released_amount ? <span className="rounded bg-green-50 px-2 py-1 text-green-700">Reserve released +{money(payout.reserve_released_amount)}</span> : null}
+                                            {payout.brought_forward_amount ? <span className="rounded bg-red-50 px-2 py-1 text-red-700">Owed from last statement −{money(payout.brought_forward_amount)}</span> : null}
                                         </div>
                                     ) : null}
 

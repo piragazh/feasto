@@ -292,7 +292,7 @@ export default function CustomOptionTemplates({ restaurantId }) {
                                     <div className="flex flex-wrap gap-2">
                                         {template.options.slice(0, 5).map((opt, optIdx) => (
                                             <span key={optIdx} className="text-xs bg-white px-2 py-1 rounded border">
-                                                {opt.label} {opt.price > 0 && `+£${opt.price.toFixed(2)}`}
+                                                {opt.label} {opt.price > 0 && `+${money(opt.price)}`}
                                             </span>
                                         ))}
                                         {template.options.length > 5 && (

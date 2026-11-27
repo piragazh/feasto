@@ -205,7 +205,7 @@ export default function OrderBatching({ restaurantId }) {
                                                     </p>
                                                 </div>
                                                 <Badge variant="outline">
-                                                    £{order.total.toFixed(2)}
+                                                    {money(order.total)}
                                                 </Badge>
                                             </div>
 

@@ -175,7 +175,7 @@ export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountCha
                         </p>
                         <p className="text-xs opacity-90 truncate">
                             {newest.order_number ? `#${newest.order_number} · ` : ''}
-                            £{Number(newest.total || 0).toFixed(2)}
+                            {money(Number(newest.total || 0))}
                             {newestIsKiosk
                                 ? ' · pay at counter'
                                 : (newest.order_type ? ` · ${String(newest.order_type).replace(/_/g, ' ')}` : '')}

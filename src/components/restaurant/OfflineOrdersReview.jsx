@@ -208,7 +208,7 @@ export default function OfflineOrdersReview({ restaurantId }) {
                                         Order {order.order_number || order.id.slice(-8)}
                                     </p>
                                     <p className="text-xs text-gray-600 mt-0.5">
-                                        £{order.total.toFixed(2)} · {order.items?.length || 0} items
+                                        {money(order.total)} · {order.items?.length || 0} items
                                     </p>
                                 </div>
                                 <div className="flex gap-1.5">
@@ -246,7 +246,7 @@ export default function OfflineOrdersReview({ restaurantId }) {
                                 <div className="text-xs text-gray-700 mb-2 space-y-0.5">
                                     {order.discount > 0 && (
                                         <p>
-                                            <span className="font-medium">Manual discount:</span> £{order.discount.toFixed(2)}
+                                            <span className="font-medium">Manual discount:</span> {money(order.discount)}
                                             {order.discount_reason_code && (
                                                 <span className="text-gray-600"> ({order.discount_reason_code.replace(/_/g, ' ')})</span>
                                             )}

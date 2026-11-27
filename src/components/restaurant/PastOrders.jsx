@@ -106,7 +106,7 @@ export default function PastOrders({ restaurantId }) {
                                     <Badge className={(order.status === 'delivered' || order.status === 'collected') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
                                         {order.status}
                                     </Badge>
-                                    <p className="text-lg font-bold mt-1">£{(order.total || 0).toFixed(2)}</p>
+                                    <p className="text-lg font-bold mt-1">{money((order.total || 0))}</p>
                                 </div>
                             </div>
                             <div className="text-sm text-gray-600 mb-3">
@@ -135,7 +135,7 @@ export default function PastOrders({ restaurantId }) {
                                         {order.items?.map((item, idx) => (
                                             <div key={idx} className="flex justify-between text-sm">
                                                 <span>{item.quantity}x {item.name}</span>
-                                                <span className="font-medium">£{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                                                <span className="font-medium">{money(((item.price || 0) * item.quantity))}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -151,12 +151,12 @@ export default function PastOrders({ restaurantId }) {
                                         {order.discount > 0 && (
                                             <div className="flex justify-between text-green-600">
                                                 <span>Discount:</span>
-                                                <span>-£{order.discount?.toFixed(2)}</span>
+                                                <span>-{money(order.discount)}</span>
                                             </div>
                                         )}
                                         <div className="flex justify-between font-bold text-base border-t pt-1">
                                             <span>Total:</span>
-                                            <span>£{order.total?.toFixed(2)}</span>
+                                            <span>{money(order.total)}</span>
                                         </div>
                                     </div>
                                     {order.notes && (
@@ -181,7 +181,7 @@ export default function PastOrders({ restaurantId }) {
                                 <div className="bg-green-50 border border-green-200 rounded p-3 mt-2">
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                            <p className="text-sm font-semibold text-green-900">Refunded: £{order.refund_amount.toFixed(2)}</p>
+                                            <p className="text-sm font-semibold text-green-900">Refunded: {money(order.refund_amount)}</p>
                                             {order.refund_reason && (
                                                 <p className="text-xs text-gray-600 mt-1"><strong>Reason:</strong> {order.refund_reason}</p>
                                             )}
@@ -190,7 +190,7 @@ export default function PastOrders({ restaurantId }) {
                                                     <p className="font-semibold">Refunded Items:</p>
                                                     <ul className="list-disc list-inside ml-2">
                                                         {order.refunded_items.map((item, idx) => (
-                                                            <li key={idx}>{item.name} (£{(item.price || 0).toFixed(2)})</li>
+                                                            <li key={idx}>{item.name} ({money((item.price || 0))})</li>
                                                         ))}
                                                     </ul>
                                                 </div>
@@ -239,7 +239,7 @@ export default function PastOrders({ restaurantId }) {
                                                 <p className="font-semibold">Items:</p>
                                                 <ul className="list-disc list-inside ml-2">
                                                     {order.refund_requested_items.map((item, idx) => (
-                                                        <li key={idx}>{item.name} (£{(item.price || 0).toFixed(2)})</li>
+                                                        <li key={idx}>{item.name} ({money((item.price || 0))})</li>
                                                     ))}
                                                 </ul>
                                             </div>

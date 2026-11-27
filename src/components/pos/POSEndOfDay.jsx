@@ -162,9 +162,9 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                    { label: 'Total Sales', value: `£${stats.totalSales.toFixed(2)}`, icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-500/10' },
+                    { label: 'Total Sales', value: `${money(stats.totalSales)}`, icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-500/10' },
                     { label: 'Orders', value: stats.orderCount, icon: Receipt, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-                    { label: 'Avg Order', value: `£${stats.avgOrder.toFixed(2)}`, icon: DollarSign, color: 'text-accent-400', bg: 'bg-accent-500/10' },
+                    { label: 'Avg Order', value: `${money(stats.avgOrder)}`, icon: DollarSign, color: 'text-accent-400', bg: 'bg-accent-500/10' },
                     { label: 'Cancelled', value: stats.cancelled.length, icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
                 ].map(({ label, value, icon: Icon, color, bg }) => (
                     <div key={label} className={`${t.card} rounded-2xl p-4 flex items-center gap-3`}>
@@ -196,17 +196,17 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                                         <span className={`${t.text} font-medium`}>{PAYMENT_LABELS[method] || method}</span>
                                         <span className={`${t.textMuted} text-xs`}>({data.count} orders)</span>
                                     </div>
-                                    <span className={`${t.text} font-bold`}>£{data.total.toFixed(2)}</span>
+                                    <span className={`${t.text} font-bold`}>{money(data.total)}</span>
                                 </div>
                             ))}
                             <div className={`flex items-center justify-between pt-2`}>
                                 <span className={`${t.text} font-bold`}>Total</span>
-                                <span className="text-accent-400 font-bold text-lg">£{stats.totalSales.toFixed(2)}</span>
+                                <span className="text-accent-400 font-bold text-lg">{money(stats.totalSales)}</span>
                             </div>
                             {stats.totalDiscount > 0 && (
                                 <div className={`flex items-center justify-between text-sm`}>
                                     <span className={t.textMuted}>Discounts Applied</span>
-                                    <span className="text-red-400 font-semibold">-£{stats.totalDiscount.toFixed(2)}</span>
+                                    <span className="text-red-400 font-semibold">-{money(stats.totalDiscount)}</span>
                                 </div>
                             )}
                         </div>
@@ -225,11 +225,11 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                         </div>
                         <div className={`flex justify-between py-2 border-b ${t.divider}`}>
                             <span className={t.textMuted}>Cash Collected</span>
-                            <span className="text-green-400 font-bold text-lg">£{stats.cashTotal.toFixed(2)}</span>
+                            <span className="text-green-400 font-bold text-lg">{money(stats.cashTotal)}</span>
                         </div>
                         <div className={`rounded-xl p-3 ${isDark ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-100'}`}>
                             <p className={`text-xs ${t.textMuted} mb-1`}>Expected in cash drawer</p>
-                            <p className="text-green-400 font-bold text-xl">£{stats.cashTotal.toFixed(2)}</p>
+                            <p className="text-green-400 font-bold text-xl">{money(stats.cashTotal)}</p>
                         </div>
                     </div>
                 </div>
@@ -257,14 +257,14 @@ export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
                                     )}
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-red-400 font-bold">£{(o.total || 0).toFixed(2)}</span>
+                                    <span className="text-red-400 font-bold">{money((o.total || 0))}</span>
                                     <p className={`${t.textMuted} text-xs`}>{format(new Date(o.created_date), 'HH:mm')}</p>
                                 </div>
                             </div>
                         ))}
                         <div className={`flex justify-between pt-2 text-sm font-semibold`}>
                             <span className={t.textMuted}>Total voided</span>
-                            <span className="text-red-400">£{stats.cancelled.reduce((s, o) => s + (o.total || 0), 0).toFixed(2)}</span>
+                            <span className="text-red-400">{money(stats.cancelled.reduce((s, o) => s + (o.total || 0), 0))}</span>
                         </div>
                     </div>
                 )}

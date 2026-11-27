@@ -159,7 +159,7 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
                         </div>
                         <div className={`${t.panel} border rounded-2xl p-4`}>
                             <p className={`${t.sub} text-xs font-semibold uppercase tracking-wide`}>Wage cost</p>
-                            <p className={`${t.text} text-2xl font-bold tabular-nums mt-1`}>£{summary.labourCost.toFixed(2)}</p>
+                            <p className={`${t.text} text-2xl font-bold tabular-nums mt-1`}>{money(summary.labourCost)}</p>
                         </div>
                         <div className={`${t.panel} border rounded-2xl p-4 col-span-2`}>
                             <p className={`${t.sub} text-xs font-semibold uppercase tracking-wide`}>Labour % of sales</p>
@@ -212,14 +212,14 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
                                                             {canSetRates ? (
                                                                 <button onClick={() => { setEditing(member.id); setRateInput(rate ?? ''); }}
                                                                     className={`underline decoration-dotted ${rate === undefined ? 'text-amber-400' : t.text}`}>
-                                                                    {rate === undefined ? 'Set rate' : `£${rate.toFixed(2)}`}
+                                                                    {rate === undefined ? 'Set rate' : `${money(rate)}`}
                                                                 </button>
                                                             ) : (
                                                                 <span className={t.sub}>{rate === undefined ? '—' : '•••'}</span>
                                                             )}
                                                         </td>
                                                         <td className={`${t.text} py-2.5 text-right tabular-nums font-semibold`}>
-                                                            £{(row?.pay || 0).toFixed(2)}{row?.noRate && <span className="text-amber-400"> *</span>}
+                                                            {money((row?.pay || 0))}{row?.noRate && <span className="text-amber-400"> *</span>}
                                                         </td>
                                                     </tr>
                                                     {editing === member.id && (

@@ -171,7 +171,7 @@ export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableC
                                 {hasOrders ? (
                                     <>
                                         <p className="text-accent-400 text-xs">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-                                        <p className="text-white font-bold text-sm mt-1">£{total.toFixed(2)}</p>
+                                        <p className="text-white font-bold text-sm mt-1">{money(total)}</p>
                                     </>
                                 ) : (
                                     <p className="text-gray-400 text-xs capitalize">{table.status.replace('_', ' ')}</p>

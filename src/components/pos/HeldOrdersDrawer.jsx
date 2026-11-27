@@ -91,7 +91,7 @@ export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, 
                                         </div>
                                     </div>
                                     <span className={`text-xs font-bold text-accent-500 ml-2 flex-shrink-0`}>
-                                        £{held.total.toFixed(2)}
+                                        {money(held.total)}
                                     </span>
                                 </div>
 

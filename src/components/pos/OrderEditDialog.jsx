@@ -145,7 +145,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                                     <div key={idx} className="flex items-center gap-2 bg-gray-600 p-2 rounded-xl">
                                         <div className="flex-1">
                                             <p className="text-white text-sm font-medium">{item.name}</p>
-                                            <p className="text-gray-400 text-xs">£{item.price.toFixed(2)}</p>
+                                            <p className="text-gray-400 text-xs">{money(item.price)}</p>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <Button
@@ -228,11 +228,11 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                         <div className="space-y-2">
                             <div>
                                 <p className="text-gray-400 text-xs">Subtotal</p>
-                                <p className="text-white font-bold">£{subtotal.toFixed(2)}</p>
+                                <p className="text-white font-bold">{money(subtotal)}</p>
                             </div>
                             <div>
                                 <p className="text-gray-400 text-xs">Total</p>
-                                <p className="text-accent-400 text-2xl font-bold">£{total.toFixed(2)}</p>
+                                <p className="text-accent-400 text-2xl font-bold">{money(total)}</p>
                             </div>
                         </div>
                     </div>
@@ -254,7 +254,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
                             <AlertTriangle className="h-5 w-5 text-accent-400" /> Save Order Changes?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will update the live order. New total: £{total.toFixed(2)}. Are you sure?
+                            This will update the live order. New total: {money(total)}. Are you sure?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

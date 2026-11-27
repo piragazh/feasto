@@ -240,7 +240,7 @@ export default function CustomerProfileModal({ customer, onClose, onUpdated, isD
                                                     'bg-accent-500/10 text-accent-500'
                                                 }`}>{order.status?.replace(/_/g, ' ')}</span>
                                             </div>
-                                            <span className={`text-xs font-bold ${text}`}>£{order.total?.toFixed(2)}</span>
+                                            <span className={`text-xs font-bold ${text}`}>{money(order.total)}</span>
                                         </div>
                                         <div className={`text-xs ${textSub}`}>
                                             {order.items?.slice(0, 3).map((item, i) => (

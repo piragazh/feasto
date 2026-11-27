@@ -144,7 +144,7 @@ function StaffStats({ staff, orders, t }) {
             </div>
             <div className="flex items-center gap-1.5">
                 <DollarSign className="h-3 w-3 text-green-400" />
-                <span className={`${t.textSub} text-xs`}>£{revenue.toFixed(2)}</span>
+                <span className={`${t.textSub} text-xs`}>{money(revenue)}</span>
             </div>
         </div>
     );
@@ -330,7 +330,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                 </div>
                                 <div className="flex items-center gap-3 mt-1.5 ml-9">
                                     <span className={`${t.textSub} text-[11px]`}>{stat?.orderCount || 0} orders</span>
-                                    <span className="text-green-400 text-[11px] font-semibold">£{(stat?.revenue || 0).toFixed(2)}</span>
+                                    <span className="text-green-400 text-[11px] font-semibold">{money((stat?.revenue || 0))}</span>
                                     {!s.is_active && <span className="text-[11px] text-red-400">Inactive</span>}
                                 </div>
                             </button>
@@ -404,8 +404,8 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                         <div className="grid grid-cols-3 gap-3">
                             {[
                                 { label: 'Orders', value: selectedOrders.length, icon: ShoppingCart, color: 'text-accent-400' },
-                                { label: 'Revenue', value: `£${selectedRevenue.toFixed(2)}`, icon: TrendingUp, color: 'text-green-400' },
-                                { label: 'Avg. Order', value: selectedOrders.length ? `£${(selectedRevenue / selectedOrders.length).toFixed(2)}` : '£0.00', icon: DollarSign, color: 'text-blue-400' },
+                                { label: 'Revenue', value: `${money(selectedRevenue)}`, icon: TrendingUp, color: 'text-green-400' },
+                                { label: 'Avg. Order', value: selectedOrders.length ? `${money((selectedRevenue / selectedOrders.length))}` : '£0.00', icon: DollarSign, color: 'text-blue-400' },
                             ].map(({ label, value, icon: Icon, color }) => (
                                 <div key={label} className={`${t.panel} border rounded-2xl p-4`}>
                                     <Icon className={`h-5 w-5 ${color} mb-2`} />
@@ -435,7 +435,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                                 {format(new Date(order.created_date), 'dd MMM, HH:mm')} · {order.order_type?.replace('_', ' ')}
                                             </p>
                                         </div>
-                                        <p className="text-accent-500 text-sm font-bold">£{order.total?.toFixed(2)}</p>
+                                        <p className="text-accent-500 text-sm font-bold">{money(order.total)}</p>
                                     </div>
                                 ))}
                             </div>
@@ -463,15 +463,15 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                                             <RoleBadge role={s.role} />
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-green-400 font-bold text-sm tabular-nums">£{s.revenue.toFixed(2)}</p>
+                                            <p className="text-green-400 font-bold text-sm tabular-nums">{money(s.revenue)}</p>
                                             <p className={`${t.textSub} text-[11px] tabular-nums`}>
                                                 {s.orderCount} orders
-                                                {s.orderCount > 0 && ` · avg £${s.avgOrder.toFixed(2)}`}
+                                                {s.orderCount > 0 && ` · avg ${money(s.avgOrder)}`}
                                             </p>
                                             {/* Tips shown beside sales, never inside them - they
                                                 belong to staff, not the business. */}
                                             {s.tips > 0 && (
-                                                <p className="text-sky-400 text-[11px] tabular-nums">+£{s.tips.toFixed(2)} tips</p>
+                                                <p className="text-sky-400 text-[11px] tabular-nums">+{money(s.tips)} tips</p>
                                             )}
                                             {/* Voids surfaced here so a high seller who also
                                                 voids a lot is visible, not hidden by their total. */}

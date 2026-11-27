@@ -84,7 +84,7 @@ export default function ApplyPromotionDialog({
                 return;
             }
 
-            toast.success(`Coupon ${result.coupon_code} applied — £${result.discount_amount.toFixed(2)} off`);
+            toast.success(`Coupon ${result.coupon_code} applied — ${money(result.discount_amount)} off`);
             onApplyCoupon(result);
             setManualCode('');
             setError(null);
@@ -209,7 +209,7 @@ export default function ApplyPromotionDialog({
                                                 )}
                                                 {!meetsMinimum && (
                                                     <p className="text-accent-400 text-xs mt-0.5">
-                                                        Need £{(coupon.minimum_order - cartSubtotal).toFixed(2)} more
+                                                        Need {money((coupon.minimum_order - cartSubtotal))} more
                                                     </p>
                                                 )}
                                             </div>

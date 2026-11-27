@@ -626,8 +626,8 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
                                     {formData.tiered_delivery.lower_minimum && formData.minimum_order && (
                                         <div className="col-span-2 text-xs bg-white border border-amber-200 rounded-lg p-3 text-gray-700">
                                             <strong>Preview:</strong><br/>
-                                            • Orders £{parseFloat(formData.tiered_delivery.lower_minimum).toFixed(2)}–£{(parseFloat(formData.minimum_order) - 0.01).toFixed(2)} → £{parseFloat(formData.tiered_delivery.lower_minimum_fee || 0).toFixed(2)} delivery fee<br/>
-                                            • Orders £{parseFloat(formData.minimum_order).toFixed(2)}+ → £{parseFloat(formData.delivery_fee || 0).toFixed(2)} delivery fee
+                                            • Orders {money(parseFloat(formData.tiered_delivery.lower_minimum))}–{money((parseFloat(formData.minimum_order) - 0.01))} → {money(parseFloat(formData.tiered_delivery.lower_minimum_fee || 0))} delivery fee<br/>
+                                            • Orders {money(parseFloat(formData.minimum_order))}+ → {money(parseFloat(formData.delivery_fee || 0))} delivery fee
                                         </div>
                                     )}
                                 </div>

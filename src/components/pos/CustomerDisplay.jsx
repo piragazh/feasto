@@ -94,7 +94,7 @@ export default function CustomerDisplay() {
                                             )}
                                         </div>
                                     </div>
-                                    <span className="text-white font-bold text-xl">£{(item.price * item.quantity).toFixed(2)}</span>
+                                    <span className="text-white font-bold text-xl">{money((item.price * item.quantity))}</span>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
@@ -112,12 +112,12 @@ export default function CustomerDisplay() {
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between text-gray-300">
                                 <span>Subtotal</span>
-                                <span>£{subtotal.toFixed(2)}</span>
+                                <span>{money(subtotal)}</span>
                             </div>
                             {discount && (
                                 <div className="flex justify-between text-green-400">
                                     <span>Discount</span>
-                                    <span>-£{discount.amount.toFixed(2)}</span>
+                                    <span>-{money(discount.amount)}</span>
                                 </div>
                             )}
                         </div>
@@ -131,14 +131,14 @@ export default function CustomerDisplay() {
                                 className="bg-accent-500/10 border border-accent-500/30 rounded-2xl p-5 text-center"
                             >
                                 <p className="text-accent-300 text-xs font-semibold uppercase tracking-widest mb-1">Total</p>
-                                <p className="text-white text-5xl font-black">£{effectiveTotal.toFixed(2)}</p>
+                                <p className="text-white text-5xl font-black">{money(effectiveTotal)}</p>
                             </motion.div>
                         </div>
 
                         {remaining !== undefined && remaining > 0 && (
                             <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-center">
                                 <p className="text-red-300 text-xs font-semibold uppercase tracking-widest mb-1">Balance Due</p>
-                                <p className="text-white text-3xl font-bold">£{remaining.toFixed(2)}</p>
+                                <p className="text-white text-3xl font-bold">{money(remaining)}</p>
                             </div>
                         )}
 
@@ -203,7 +203,7 @@ function ThankYouScreen({ restaurantName, logoUrl, change }) {
                 {change > 0.005 && (
                     <div className="mt-6 bg-green-500/10 border border-green-500/30 rounded-2xl px-8 py-4">
                         <p className="text-green-300 text-sm mb-1">Your change</p>
-                        <p className="text-white text-4xl font-bold">£{change.toFixed(2)}</p>
+                        <p className="text-white text-4xl font-bold">{money(change)}</p>
                     </div>
                 )}
             </div>

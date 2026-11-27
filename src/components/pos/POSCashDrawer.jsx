@@ -105,17 +105,17 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                     {[['Counted', result.counted_cash], ['Expected', result.expected_cash]].map(([l, n]) => (
                         <div key={l} className={`p-3 rounded-xl border ${t.box}`}>
                             <p className={`${t.sub} text-xs font-semibold uppercase`}>{l}</p>
-                            <p className={`${t.text} text-2xl font-bold tabular-nums`}>£{Number(n || 0).toFixed(2)}</p>
+                            <p className={`${t.text} text-2xl font-bold tabular-nums`}>{money(Number(n || 0))}</p>
                         </div>
                     ))}
                     <div className={`p-3 rounded-xl border ${t.box}`}>
                         <p className={`${t.sub} text-xs font-semibold uppercase`}>{v < 0 ? 'Short' : v > 0 ? 'Over' : 'Exact'}</p>
-                        <p className={`${tone} text-2xl font-bold tabular-nums`}>£{Math.abs(v).toFixed(2)}</p>
+                        <p className={`${tone} text-2xl font-bold tabular-nums`}>{money(Math.abs(v))}</p>
                     </div>
                 </div>
                 <p className={`${t.sub} text-xs`}>
-                    Float £{Number(result.opening_float || 0).toFixed(2)} + cash sales £{Number(result.cash_sales || 0).toFixed(2)}
-                    {' '}+ paid in £{Number(result.paid_in || 0).toFixed(2)} − paid out £{Number(result.paid_out || 0).toFixed(2)}
+                    Float {money(Number(result.opening_float || 0))} + cash sales {money(Number(result.cash_sales || 0))}
+                    {' '}+ paid in {money(Number(result.paid_in || 0))} − paid out {money(Number(result.paid_out || 0))}
                 </p>
                 {result.legacy_split_count > 0 && (
                     <div className="p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs flex gap-2">
@@ -181,7 +181,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                 <DenominationCounter counts={counts} onChange={setCounts} t={t} />
                 <div className="flex items-center justify-between">
                     <span className={`${t.sub} text-sm`}>Float</span>
-                    <span className={`${t.text} text-3xl font-bold tabular-nums`}>£{counted.toFixed(2)}</span>
+                    <span className={`${t.text} text-3xl font-bold tabular-nums`}>{money(counted)}</span>
                 </div>
                 <button
                     disabled={busy}
@@ -192,7 +192,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                         toast.success(`Till ${terminal} opened`);
                     })}
                     className="h-14 w-full rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-bold text-base disabled:opacity-40">
-                    Open till with £{counted.toFixed(2)}
+                    Open till with {money(counted)}
                 </button>
             </div>
         );
@@ -208,7 +208,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                     </h3>
                     <p className={`${t.sub} text-xs`}>
                         Since {new Date(session.opened_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                        {session.opened_by_name ? ` by ${session.opened_by_name}` : ''} · float £{Number(session.opening_float || 0).toFixed(2)}
+                        {session.opened_by_name ? ` by ${session.opened_by_name}` : ''} · float {money(Number(session.opening_float || 0))}
                     </p>
                 </div>
             </div>
@@ -221,7 +221,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                                 {m.type === 'paid_in' ? '↓ In' : '↑ Out'} · {m.reason}
                                 <span className={`${t.sub} text-xs`}> · {m.staff_name}</span>
                             </span>
-                            <span className={`${t.text} tabular-nums font-semibold`}>£{Number(m.amount).toFixed(2)}</span>
+                            <span className={`${t.text} tabular-nums font-semibold`}>{money(Number(m.amount))}</span>
                         </li>
                     ))}
                 </ul>
@@ -276,7 +276,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                     <DenominationCounter counts={counts} onChange={setCounts} t={t} />
                     <div className="flex items-center justify-between">
                         <span className={`${t.sub} text-sm`}>Counted</span>
-                        <span className={`${t.text} text-3xl font-bold tabular-nums`}>£{counted.toFixed(2)}</span>
+                        <span className={`${t.text} text-3xl font-bold tabular-nums`}>{money(counted)}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <button onClick={() => { setMode(null); setCounts({}); }} className={`h-12 rounded-xl font-semibold ${t.btn}`}>Cancel</button>

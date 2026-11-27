@@ -120,7 +120,7 @@ export default function OrderModification({ restaurantId }) {
                 order_id: orderId,
                 restaurant_id: restaurantId,
                 sender_type: 'restaurant',
-                message: `Your order has been modified. New items: ${itemsText}. Updated total: £${newTotal.toFixed(2)}. Note: ${note}`
+                message: `Your order has been modified. New items: ${itemsText}. Updated total: ${money(newTotal)}. Note: ${note}`
             });
         },
         onSuccess: () => {
@@ -197,12 +197,12 @@ export default function OrderModification({ restaurantId }) {
                                         {order.items.map((item, i) => (
                                             <div key={i} className="flex justify-between">
                                                 <span>{item.quantity}x {item.name}</span>
-                                                <span>£{(item.price * item.quantity).toFixed(2)}</span>
+                                                <span>{money((item.price * item.quantity))}</span>
                                             </div>
                                         ))}
                                         <div className="border-t pt-1 flex justify-between font-semibold">
                                             <span>Total:</span>
-                                            <span>£{order.total.toFixed(2)}</span>
+                                            <span>{money(order.total)}</span>
                                         </div>
                                     </div>
 
@@ -283,7 +283,7 @@ export default function OrderModification({ restaurantId }) {
                                                     <Plus className="h-3 w-3" />
                                                 </Button>
                                                 <span className="w-16 text-right">
-                                                    £{(item.price * item.quantity).toFixed(2)}
+                                                    {money((item.price * item.quantity))}
                                                 </span>
                                             </div>
                                         </div>
@@ -295,7 +295,7 @@ export default function OrderModification({ restaurantId }) {
                                     )}
                                     <div className="border-t pt-2 flex justify-between font-semibold">
                                         <span>New Total:</span>
-                                        <span>£{calculateNewTotal().toFixed(2)}</span>
+                                        <span>{money(calculateNewTotal())}</span>
                                     </div>
                                 </div>
                             </div>

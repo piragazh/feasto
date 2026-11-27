@@ -158,8 +158,8 @@ export default function POSExceptionsReport({ restaurantId, posTheme = 'dark' })
             {/* ── Money first ──────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                    { label: 'Voided', value: `£${summary.voided.toFixed(2)}`, tone: 'red' },
-                    { label: 'Manual discounts', value: `£${summary.discounted.toFixed(2)}`, tone: 'amber' },
+                    { label: 'Voided', value: `${money(summary.voided)}`, tone: 'red' },
+                    { label: 'Manual discounts', value: `${money(summary.discounted)}`, tone: 'amber' },
                     { label: 'Manager overrides', value: summary.overrides, tone: 'blue' },
                     { label: 'Refused attempts', value: summary.denied, tone: 'slate' },
                 ].map(c => (
@@ -190,8 +190,8 @@ export default function POSExceptionsReport({ restaurantId, posTheme = 'dark' })
                                     <tr key={r.name} className={`border-t ${t.row}`}>
                                         <td className={`${t.text} py-2`}>{r.name}</td>
                                         <td className={`${t.text} py-2 text-right tabular-nums`}>{r.voids}</td>
-                                        <td className={`${t.text} py-2 text-right tabular-nums`}>£{r.voidValue.toFixed(2)}</td>
-                                        <td className={`${t.text} py-2 text-right tabular-nums`}>£{r.discountValue.toFixed(2)}</td>
+                                        <td className={`${t.text} py-2 text-right tabular-nums`}>{money(r.voidValue)}</td>
+                                        <td className={`${t.text} py-2 text-right tabular-nums`}>{money(r.discountValue)}</td>
                                         <td className={`${t.text} py-2 text-right tabular-nums`}>{r.edits}</td>
                                     </tr>
                                 ))}
@@ -249,7 +249,7 @@ export default function POSExceptionsReport({ restaurantId, posTheme = 'dark' })
                                             {e.staff_name || 'Unattributed'}
                                             {e.staff_role ? ` (${e.staff_role})` : ''}
                                             {e.authorised_by_name ? ` · authorised by ${e.authorised_by_name}` : ''}
-                                            {Number(e.amount) ? ` · £${Math.abs(Number(e.amount)).toFixed(2)}` : ''}
+                                            {Number(e.amount) ? ` · ${money(Math.abs(Number(e.amount)))}` : ''}
                                             {e.reason ? ` · ${String(e.reason).replace(/_/g, ' ')}` : ''}
                                         </p>
                                         {e.detail && <p className="text-[11px] opacity-60 mt-0.5 break-words">{e.detail}</p>}

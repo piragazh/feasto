@@ -50,7 +50,7 @@ export default function AIMenuPerformanceAnalytics({ restaurantId }) {
             });
 
             const salesSummary = Object.entries(itemSales)
-                .map(([name, data]) => `${name}: ${data.quantity} sold, £${data.revenue.toFixed(2)} revenue, ${data.orders} orders`)
+                .map(([name, data]) => `${name}: ${data.quantity} sold, ${money(data.revenue)} revenue, ${data.orders} orders`)
                 .join('\n');
 
             const menuSummary = menuItems.map(item => 
@@ -58,7 +58,7 @@ export default function AIMenuPerformanceAnalytics({ restaurantId }) {
             ).join('\n');
 
             const promotionSummary = promotions.filter(p => p.is_active).map(p =>
-                `${p.name}: ${p.promotion_type}, used ${p.usage_count || 0} times, £${(p.total_revenue_generated || 0).toFixed(2)} revenue`
+                `${p.name}: ${p.promotion_type}, used ${p.usage_count || 0} times, ${money((p.total_revenue_generated || 0))} revenue`
             ).join('\n');
 
             const prompt = `Analyze this restaurant menu performance data and provide actionable insights.

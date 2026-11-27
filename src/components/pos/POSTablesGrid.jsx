@@ -71,7 +71,7 @@ export default function POSTablesGrid({
                                     {hasOrders ? (
                                         <>
                                             <p className="text-accent-400 text-[11px]">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
-                                            <p className={`${isDark ? 'text-white' : 'text-gray-900'} font-bold text-sm`}>£{total.toFixed(2)}</p>
+                                            <p className={`${isDark ? 'text-white' : 'text-gray-900'} font-bold text-sm`}>{money(total)}</p>
                                         </>
                                     ) : (
                                         <p className={`text-[11px] font-medium capitalize ${s.label}`}>{table.status.replace('_', ' ')}</p>

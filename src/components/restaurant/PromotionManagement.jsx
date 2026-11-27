@@ -189,7 +189,7 @@ export default function PromotionManagement({ restaurantId }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Total Revenue</p>
-                                <p className="text-2xl font-bold">£{totalRevenue.toFixed(2)}</p>
+                                <p className="text-2xl font-bold">{money(totalRevenue)}</p>
                             </div>
                             <DollarSign className="h-8 w-8 text-blue-500" />
                         </div>
@@ -200,7 +200,7 @@ export default function PromotionManagement({ restaurantId }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Discounts Given</p>
-                                <p className="text-2xl font-bold">£{totalDiscounts.toFixed(2)}</p>
+                                <p className="text-2xl font-bold">{money(totalDiscounts)}</p>
                             </div>
                             <Gift className="h-8 w-8 text-orange-500" />
                         </div>
@@ -303,13 +303,13 @@ export default function PromotionManagement({ restaurantId }) {
                                                         <div>
                                                             <p className="text-gray-500">Revenue Generated</p>
                                                             <p className="font-semibold text-green-600">
-                                                                £{(promotion.total_revenue_generated || 0).toFixed(2)}
+                                                                {money((promotion.total_revenue_generated || 0))}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <p className="text-gray-500">Discounts Given</p>
                                                             <p className="font-semibold text-orange-600">
-                                                                £{(promotion.total_discount_given || 0).toFixed(2)}
+                                                                {money((promotion.total_discount_given || 0))}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -430,7 +430,7 @@ export default function PromotionManagement({ restaurantId }) {
                                                             }}
                                                             className="rounded"
                                                         />
-                                                        <span className="text-sm">{item.name} - £{item.price.toFixed(2)}</span>
+                                                        <span className="text-sm">{item.name} - {money(item.price)}</span>
                                                     </label>
                                                 ))
                                             )}
@@ -555,7 +555,7 @@ export default function PromotionManagement({ restaurantId }) {
                                                 <SelectContent>
                                                     {menuItems.map(item => (
                                                         <SelectItem key={item.id} value={item.id}>
-                                                            {item.name} - £{item.price.toFixed(2)}
+                                                            {item.name} - {money(item.price)}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -576,7 +576,7 @@ export default function PromotionManagement({ restaurantId }) {
                                                 <SelectContent>
                                                     {menuItems.map(item => (
                                                         <SelectItem key={item.id} value={item.id}>
-                                                            {item.name} - £{item.price.toFixed(2)}
+                                                            {item.name} - {money(item.price)}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -705,13 +705,13 @@ export default function PromotionManagement({ restaurantId }) {
                                             <div className="bg-green-50 p-4 rounded-lg">
                                                 <p className="text-sm text-green-700 mb-1">Revenue</p>
                                                 <p className="text-xl font-bold text-green-600">
-                                                    £{(promotion.total_revenue_generated || 0).toFixed(2)}
+                                                    {money((promotion.total_revenue_generated || 0))}
                                                 </p>
                                             </div>
                                             <div className="bg-orange-50 p-4 rounded-lg">
                                                 <p className="text-sm text-orange-700 mb-1">Discounts</p>
                                                 <p className="text-xl font-bold text-orange-600">
-                                                    £{(promotion.total_discount_given || 0).toFixed(2)}
+                                                    {money((promotion.total_discount_given || 0))}
                                                 </p>
                                             </div>
                                             <div className="bg-blue-50 p-4 rounded-lg">

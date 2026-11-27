@@ -153,7 +153,7 @@ export default function DriverTracking({ restaurantId }) {
                                     <div>
                                         <p className="font-semibold">Order #{order.id.slice(-6)}</p>
                                         <p className="text-sm text-gray-600">{order.delivery_address}</p>
-                                        <p className="text-xs text-gray-500">Total: £{order.total.toFixed(2)}</p>
+                                        <p className="text-xs text-gray-500">Total: {money(order.total)}</p>
                                     </div>
                                     <Button 
                                         onClick={() => setAssigningOrder(order)}

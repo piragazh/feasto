@@ -168,22 +168,22 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
             subtitle: reportLabel,
             metrics: [
                 { label: 'Total Orders', value: filteredOrders.length },
-                { label: 'Total Revenue', value: `£${totalRevenue.toFixed(2)}` },
-                { label: 'Cash Revenue', value: `£${cashRevenue.toFixed(2)}` },
-                { label: 'Card Revenue', value: `£${cardRevenue.toFixed(2)}` },
-                { label: 'Average Order', value: `£${averageOrder.toFixed(2)}` },
+                { label: 'Total Revenue', value: `${money(totalRevenue)}` },
+                { label: 'Cash Revenue', value: `${money(cashRevenue)}` },
+                { label: 'Card Revenue', value: `${money(cardRevenue)}` },
+                { label: 'Average Order', value: `${money(averageOrder)}` },
                 { label: 'Peak Hour', value: peakHour },
             ],
             tables: [
                 {
                     title: 'Top Menu Items',
                     headers: ['Item', 'Qty', 'Revenue', 'Avg'],
-                    rows: menuItemsData.map(i => [i.name, i.count, `£${i.revenue.toFixed(2)}`, `£${(i.revenue / i.count).toFixed(2)}`]),
+                    rows: menuItemsData.map(i => [i.name, i.count, `${money(i.revenue)}`, `${money((i.revenue / i.count))}`]),
                 },
                 {
                     title: 'Daily Sales',
                     headers: ['Date', 'Revenue'],
-                    rows: salesData.map(d => [d.date, `£${d.total.toFixed(2)}`]),
+                    rows: salesData.map(d => [d.date, `${money(d.total)}`]),
                 },
             ],
             filename: `pos-report-${reportLabel.replace(/ /g, '-')}.pdf`,
@@ -197,18 +197,18 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
             [],
             ['Summary'],
             ['Total Orders', filteredOrders.length],
-            ['Total Revenue', `£${totalRevenue.toFixed(2)}`],
-            ['Cash Revenue', `£${cashRevenue.toFixed(2)}`],
-            ['Card Revenue', `£${cardRevenue.toFixed(2)}`],
-            ['Average Order', `£${averageOrder.toFixed(2)}`],
+            ['Total Revenue', `${money(totalRevenue)}`],
+            ['Cash Revenue', `${money(cashRevenue)}`],
+            ['Card Revenue', `${money(cardRevenue)}`],
+            ['Average Order', `${money(averageOrder)}`],
             ['Peak Hour', peakHour],
             [],
             ['Top Menu Items', 'Qty', 'Revenue'],
-            ...menuItemsData.map(i => [i.name, i.count, `£${i.revenue.toFixed(2)}`]),
+            ...menuItemsData.map(i => [i.name, i.count, `${money(i.revenue)}`]),
             [],
             ['Daily Sales'],
             ['Date', 'Revenue'],
-            ...salesData.map(d => [d.date, `£${d.total.toFixed(2)}`]),
+            ...salesData.map(d => [d.date, `${money(d.total)}`]),
         ];
         const csv = rows.map(r => r.join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
@@ -313,10 +313,10 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
             {/* ── KPI Cards ── */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {[
-                    { label: 'Revenue', value: `£${totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-green-400' },
+                    { label: 'Revenue', value: `${money(totalRevenue)}`, icon: DollarSign, color: 'text-green-400' },
                     { label: 'Orders', value: filteredOrders.length, icon: TrendingUp, color: 'text-blue-400' },
-                    { label: 'Avg Order', value: `£${averageOrder.toFixed(2)}`, icon: DollarSign, color: 'text-accent-400' },
-                    { label: 'Cash', value: `£${cashRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-yellow-400' },
+                    { label: 'Avg Order', value: `${money(averageOrder)}`, icon: DollarSign, color: 'text-accent-400' },
+                    { label: 'Cash', value: `${money(cashRevenue)}`, icon: DollarSign, color: 'text-yellow-400' },
                     { label: 'Peak Hour', value: peakHour, icon: Clock, color: 'text-purple-400' },
                 ].map(({ label, value, icon: Icon, color }) => (
                     <Card key={label} className={`${t.panel} border`}>
@@ -371,7 +371,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                                 <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
                                 <XAxis dataKey="date" stroke={t.chartAxis} tick={{ fontSize: 11 }} />
                                 <YAxis stroke={t.chartAxis} tick={{ fontSize: 11 }} />
-                                <Tooltip contentStyle={t.chartTip} labelStyle={t.chartTipLabel} formatter={v => [`£${v.toFixed(2)}`, 'Revenue']} />
+                                <Tooltip contentStyle={t.chartTip} labelStyle={t.chartTipLabel} formatter={v => [`${money(v)}`, 'Revenue']} />
                                 <Line type="monotone" dataKey="total" stroke="#f97316" strokeWidth={2} dot={{ r: 4 }} />
                             </LineChart>
                         </ResponsiveContainer>
@@ -429,7 +429,7 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                                 <div key={method} className="flex items-center gap-3 mb-2">
                                     <div className={`w-3 h-3 rounded-full ${method === 'cash' ? 'bg-green-400' : 'bg-blue-400'}`} />
                                     <span className={`${t.subtext} text-sm capitalize flex-1`}>{method}</span>
-                                    <span className={`${t.text} font-bold text-sm`}>£{rev.toFixed(2)}</span>
+                                    <span className={`${t.text} font-bold text-sm`}>{money(rev)}</span>
                                     <Badge className={t.badge}>{pct}%</Badge>
                                 </div>
                             );
@@ -474,8 +474,8 @@ export default function POSReports({ restaurantId, posTheme = 'dark' }) {
                                     <tr key={idx} className={`border-b ${t.row}`}>
                                         <td className={`${t.text} text-sm py-2 px-4`}>{item.name}</td>
                                         <td className={`${t.text} text-sm text-right py-2 px-4`}>{item.count}</td>
-                                        <td className="text-green-500 text-sm text-right py-2 px-4">£{item.revenue.toFixed(2)}</td>
-                                        <td className={`${t.subtext} text-sm text-right py-2 px-4`}>£{(item.revenue / item.count).toFixed(2)}</td>
+                                        <td className="text-green-500 text-sm text-right py-2 px-4">{money(item.revenue)}</td>
+                                        <td className={`${t.subtext} text-sm text-right py-2 px-4`}>{money((item.revenue / item.count))}</td>
                                     </tr>
                                 ))}
                                 {menuItemsData.length === 0 && (
