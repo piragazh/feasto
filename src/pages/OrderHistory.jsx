@@ -278,7 +278,7 @@ export default function OrderHistory() {
                                             <div className="flex justify-between items-center pt-3 border-t">
                                                 <span className="font-semibold text-gray-900">Total</span>
                                                 <span className="text-xl font-bold text-orange-600">
-                                                    {order.total == null ? `${moneyPrefix(countryOf(order.restaurant_id))}undefined` : moneyFor(order.total, order.restaurant_id)}
+                                                    {order.total == null ? moneyPrefix(countryOf(order.restaurant_id)) : moneyFor(order.total, order.restaurant_id)}
                                                 </span>
                                             </div>
 
