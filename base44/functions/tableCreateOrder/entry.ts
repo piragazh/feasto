@@ -252,7 +252,8 @@ Deno.serve(async (req) => {
             }
             // Switched off, not sold by QR (POS-only or online-only), or outside
             // its time windows - the same rule the QR menu hides by.
-            const whyNot = whyNotSellable(menuItem, 'qr', new Date());
+            // On the restaurant's own clock (UK unless its country says otherwise).
+            const whyNot = whyNotSellable(menuItem, 'qr', new Date(), restaurantTz(restaurant));
             if (whyNot) {
                 return Response.json({ error: notSellableMessage(menuItem.name, whyNot), code: `ITEM_${whyNot.toUpperCase()}`, success: false }, { status: 400 });
             }

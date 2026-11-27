@@ -397,7 +397,7 @@ async function hasActivePromotion(base44, restaurantId, promotionCodes) {
     });
 }
 
-async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS, couponCodes = [], promotionCodes = [], customerPhone = '', customerAccount = '', customerEmail = '', availableAt = new Date() }) {
+async function validateOrderPricing(base44, { items, restaurantId, clientSubtotal, clientTotal, deliveryFee, smallOrderSurcharge, discount, isPOS, couponCodes = [], promotionCodes = [], customerPhone = '', customerAccount = '', customerEmail = '', availableAt = new Date(), availableTz = AVAILABILITY_TZ }) {
     const regularItems = items.filter(i => !String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const dealItems = items.filter(i => String(i.menu_item_id || i.id || '').startsWith('deal_'));
     const requiredIds = [...new Set(regularItems.map(i => i.menu_item_id || i.id).filter(Boolean))];
@@ -437,7 +437,7 @@ async function validateOrderPricing(base44, { items, restaurantId, clientSubtota
         // Channel (a POS-only item can't be bought online) and time windows, at
         // the time the order is FOR - a scheduled order is checked at its slot.
         // Same rule the online menu hides by; this is the backstop.
-        const whyNot = whyNotSellable(dbItem, isPOS ? 'till' : 'online', availableAt);
+        const whyNot = whyNotSellable(dbItem, isPOS ? 'till' : 'online', availableAt, availableTz);
         if (whyNot) return { valid: false, error: notSellableMessage(dbItem.name || orderItem.name, whyNot), code: `ITEM_${whyNot.toUpperCase()}`, compensatable: true };
 
         const quantity = Number(orderItem.quantity || 1);
@@ -792,6 +792,8 @@ Deno.serve(async (req) => {
                     customerAccount: orderData.created_by ?? '',
                     customerEmail: orderData.customer_email ?? '',
                     availableAt: forTime(orderData?.is_scheduled, orderData?.scheduled_for),
+                    // Item time windows on the restaurant's own clock.
+                    availableTz: restaurantTz(restaurants[0]),
                 });
             } catch (valErr) {
                 console.error(`${LOG} VALIDATION_ERROR - accepting order unvalidated (fail-safe) pi=${paymentIntentId || 'none'}: ${valErr?.message}`, valErr?.stack);

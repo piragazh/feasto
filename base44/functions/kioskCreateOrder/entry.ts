@@ -409,7 +409,8 @@ Deno.serve(async (req) => {
 
             // Switched off, not sold at the kiosk (POS-only or online-only), or
             // outside its time windows - the same rule the kiosk screen hides by.
-            const whyNot = whyNotSellable(menuItem, 'kiosk', new Date());
+            // On the restaurant's own clock (UK unless its country says otherwise).
+            const whyNot = whyNotSellable(menuItem, 'kiosk', new Date(), restaurantTz(restaurant));
             if (whyNot) {
                 return Response.json({ error: notSellableMessage(menuItem.name, whyNot), code: `ITEM_${whyNot.toUpperCase()}`, success: false }, { status: 400 });
             }

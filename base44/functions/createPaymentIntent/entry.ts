@@ -272,11 +272,15 @@ Deno.serve(async (req) => {
             const menu = await sb.entities.MenuItem.filter({ restaurant_id });
             const byId = new Map((menu || []).map(m => [m.id, m]));
             const at = forTime(is_scheduled, scheduled_for);
+            // Item time windows run on the restaurant's own clock. If the
+            // restaurant can't be read, the UK clock is used, as before.
+            const tzRow = (await sb.entities.Restaurant.filter({ id: restaurant_id }).catch(() => []))?.[0];
+            const atTz = restaurantTz(tzRow);
             for (const it of items) {
                 const id = String(it?.menu_item_id || it?.id || '');
                 if (!id || id.startsWith('deal_')) continue;       // meal deals are validated by verifyAndCreateOrder
                 const dbItem = byId.get(id);
-                const why = dbItem ? whyNotSellable(dbItem, 'online', at) : 'unavailable';
+                const why = dbItem ? whyNotSellable(dbItem, 'online', at, atTz) : 'unavailable';
                 if (why) return errorResponse(`ITEM_${why.toUpperCase()}`, notSellableMessage(dbItem?.name || it?.name, why));
             }
         }
