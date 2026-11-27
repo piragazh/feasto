@@ -24,6 +24,7 @@ import KioskAdminPanel from '@/components/kiosk/KioskAdminPanel';
 import KioskIdleMediaOverlay from '@/components/kiosk/KioskIdleMediaOverlay';
 import { useKioskPromo } from '@/components/kiosk/useKioskPromo';
 import { resolveRestaurantId } from '@/lib/kioskDeviceBinding';
+import { MoneyProvider } from '@/lib/MoneyContext';
 
 // SCREENS: welcome → menu → cart → payment → confirmation
 // MODES: ordering (show kiosk) | idle_media (show promotions fullscreen)
@@ -278,7 +279,9 @@ export default function KioskDashboard() {
         </div>
     );
 
+    // Prices on the kiosk screens are in this restaurant's currency (UK = £ as before).
     if (showAdmin) return (
+        <MoneyProvider restaurant={restaurant}>
         <KioskAdminPanel
             restaurant={restaurant}
             onClose={() => {
@@ -287,6 +290,7 @@ export default function KioskDashboard() {
             }}
             onRebind={handleAdminRebind}
         />
+        </MoneyProvider>
     );
 
     // Idle media mode: show promotions fullscreen with smooth transitions
@@ -303,6 +307,7 @@ export default function KioskDashboard() {
     }
 
     return (
+        <MoneyProvider restaurant={restaurant}>
         <div className="fixed inset-0 bg-gray-950 overflow-hidden select-none">
             <AnimatePresence mode="wait">
                 {screen === 'welcome' && (
@@ -404,5 +409,6 @@ export default function KioskDashboard() {
                 )}
             </AnimatePresence>
         </div>
+        </MoneyProvider>
     );
 }
