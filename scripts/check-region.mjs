@@ -14,7 +14,7 @@
  * Run: node scripts/check-region.mjs   (part of npm run check:mirrors)
  */
 import fs from 'node:fs';
-import { REGIONS, getRestaurantTimeZone } from '../src/lib/region.js';
+import { REGIONS, getRestaurantTimeZone, getRegion } from '../src/lib/region.js';
 import { restaurantTz, COUNTRY_TZ } from '../src/lib/item-availability.js';
 import { toE164 } from '../src/lib/phone.js';
 import { formatMoney } from '../src/lib/money.js';
@@ -143,6 +143,26 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
     }
     if (diffs.length) bad(`server money text differs from money.js for ${diffs.join(', ')}`);
     else ok('server money text matches src/lib/money.js');
+}
+
+// 7. The server card-provider copy (createPaymentIntent, processCardTerminal).
+{
+    const CARD_MIRRORS = ['base44/functions/createPaymentIntent/entry.ts', 'base44/functions/processCardTerminal/entry.ts'];
+    const cb = (s) => (s.match(/\/\/ region-card:start[\s\S]*?\/\/ region-card:end/) || [null])[0];
+    const canon = cb(fs.readFileSync('scripts/region-card.snippet.js', 'utf8'));
+    for (const file of CARD_MIRRORS) {
+        const b = cb(fs.readFileSync(file, 'utf8'));
+        if (!b) bad(`${file} has no region-card block`);
+        else if (b !== canon) bad(`${file} region-card block differs from scripts/region-card.snippet.js`);
+        else ok(`${file} carries the region card rule unchanged`);
+    }
+    const { REGION_CARD, regionCardProvider } = new Function(`${canon}\nreturn { REGION_CARD, regionCardProvider };`)();
+    const want = Object.fromEntries(Object.entries(REGIONS).map(([c, r]) => [c, r.cardProvider]));
+    if (JSON.stringify(REGION_CARD) !== JSON.stringify(want)) bad(`region-card ${JSON.stringify(REGION_CARD)} != region.js ${JSON.stringify(want)}`);
+    const recs = [null, undefined, {}, { country: null }, { country: 'GB' }, { country: 'LK' }, { country: ' lk ' }, { country: 'XX' }, { country: 7 }];
+    const d = recs.filter((r) => regionCardProvider(r) !== getRegion(r).cardProvider);
+    if (d.length) bad(`regionCardProvider differs from region.js for ${d.map((x) => JSON.stringify(x)).join(', ')}`);
+    else ok('server card rule matches region.js');
 }
 
 if (failures) { console.log(`\ncheck-region: ${failures} problem(s)`); process.exit(1); }
