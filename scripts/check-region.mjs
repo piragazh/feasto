@@ -165,5 +165,32 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
     else ok('server card rule matches region.js');
 }
 
+// 8. The server money-limits copy (discount cap, large-refund flag, money prefix).
+{
+    const LIMIT_MIRRORS = ['posApplyDiscount', 'posUpdateOrder', 'approveRefund', 'posCreateOrder', 'syncOfflineOrder'].map((f) => `base44/functions/${f}/entry.ts`);
+    const lb = (s) => (s.match(/\/\/ region-limits:start[\s\S]*?\/\/ region-limits:end/) || [null])[0];
+    const canon = lb(fs.readFileSync('scripts/region-limits.snippet.js', 'utf8'));
+    for (const file of LIMIT_MIRRORS) {
+        const b = lb(fs.readFileSync(file, 'utf8'));
+        if (!b) bad(`${file} has no region-limits block`);
+        else if (b !== canon) bad(`${file} region-limits block differs from scripts/region-limits.snippet.js`);
+        else ok(`${file} carries the region limits unchanged`);
+    }
+    const { REGION_LIMITS, regionLimits } = new Function(`${canon}\nreturn { REGION_LIMITS, regionLimits };`)();
+    const { moneyPrefix } = await import('../src/lib/MoneyContext.jsx').catch(() => ({ moneyPrefix: null }));
+    const prefixOf = (c) => (getRegion(c).currencySymbol === '£' ? '£' : `${getRegion(c).currencySymbol} `);
+    for (const [code, r] of Object.entries(REGIONS)) {
+        const m = REGION_LIMITS[code];
+        if (!m) { bad(`region-limits has no ${code}`); continue; }
+        if (m.managerDiscountMax !== r.managerDiscountMax || m.largeRefundFlag !== r.largeRefundFlag || m.prefix !== prefixOf(code)) bad(`${code} limits differ from region.js`);
+        else ok(`${code} limits match region.js (cap ${m.managerDiscountMax}, refund flag ${m.largeRefundFlag})`);
+    }
+    if (Object.keys(REGION_LIMITS).sort().join() !== Object.keys(REGIONS).sort().join()) bad('region-limits countries differ from region.js');
+    const uk = regionLimits({ country: null });
+    if (uk.managerDiscountMax !== 20 || uk.largeRefundFlag !== 30 || uk.prefix !== '£') bad('UK limits must stay £20 / £30');
+    else ok('existing UK restaurants keep £20 / £30');
+    void moneyPrefix;
+}
+
 if (failures) { console.log(`\ncheck-region: ${failures} problem(s)`); process.exit(1); }
 console.log('\ncheck-region: all good');
