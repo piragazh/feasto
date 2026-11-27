@@ -1,5 +1,29 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag, aiCashLimit, loyaltySpendPerPoint,
+// cashSignOffTolerance, cashMaxFloat) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = {
+    GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£', aiCashLimit: 50, loyaltySpendPerPoint: 1, cashSignOffTolerance: 5, cashMaxFloat: 5000 },
+    LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ', aiCashLimit: 10000, loyaltySpendPerPoint: 100, cashSignOffTolerance: 500, cashMaxFloat: 500000 },
+};
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -20,6 +44,8 @@ Deno.serve(async (req) => {
         ]);
 
         const currentRestaurant = currentRestaurants[0] || null;
+        // Money prefix of this restaurant's currency: "£" (UK, as before) or "Rs ".
+        const P = regionLimits(currentRestaurant).prefix;
         const menuItems = menuItemsRaw.filter(i => i.is_available !== false);
         const promotions = promotionsRaw.filter(p => {
             const now = new Date();
@@ -40,13 +66,13 @@ Deno.serve(async (req) => {
 
         // Cart context string
         const cartSummary = cartItems.length > 0
-            ? cartItems.map(i => `${i.quantity}x ${i.name} (£${(i.price * i.quantity).toFixed(2)})`).join(', ')
+            ? cartItems.map(i => `${i.quantity}x ${i.name} (${P}${(i.price * i.quantity).toFixed(2)})`).join(', ')
             : 'empty';
 
         // Active promotions context
         const promoSummary = promotions.map(p => {
-            if (p.promotion_type === 'percentage_off') return `${p.promotion_code || p.name}: ${p.discount_value}% off${p.minimum_order ? ` on orders over £${p.minimum_order}` : ''}`;
-            if (p.promotion_type === 'fixed_amount_off') return `${p.promotion_code || p.name}: £${p.discount_value} off${p.minimum_order ? ` on orders over £${p.minimum_order}` : ''}`;
+            if (p.promotion_type === 'percentage_off') return `${p.promotion_code || p.name}: ${p.discount_value}% off${p.minimum_order ? ` on orders over ${P}${p.minimum_order}` : ''}`;
+            if (p.promotion_type === 'fixed_amount_off') return `${p.promotion_code || p.name}: ${P}${p.discount_value} off${p.minimum_order ? ` on orders over ${P}${p.minimum_order}` : ''}`;
             if (p.promotion_type === 'free_delivery') return `${p.name}: Free delivery`;
             return `${p.name}: ${p.description || ''}`;
         }).join('\n');
@@ -62,13 +88,13 @@ YOUR PRIMARY GOALS:
 CUSTOMER CONTEXT:
 - Name: ${user?.full_name || 'Guest'}
 - Current cart: ${cartSummary}
-- Cart total: £${cartTotal.toFixed(2)}
-${orders.length > 0 ? `- Recent order: ${orders[0].restaurant_name} (${orders[0].status}) - £${orders[0].total?.toFixed(2)}` : ''}
+- Cart total: ${P}${cartTotal.toFixed(2)}
+${orders.length > 0 ? `- Recent order: ${orders[0].restaurant_name} (${orders[0].status}) - ${P}${orders[0].total?.toFixed(2)}` : ''}
 
 ${currentRestaurant ? `
 RESTAURANT: ${currentRestaurant.name}
-- Delivery fee: £${currentRestaurant.delivery_fee?.toFixed(2) || '0.00'}
-- Min order: £${currentRestaurant.minimum_order || 0}
+- Delivery fee: ${P}${currentRestaurant.delivery_fee?.toFixed(2) || '0.00'}
+- Min order: ${P}${currentRestaurant.minimum_order || 0}
 - Delivery time: ${currentRestaurant.delivery_time || '30-45 mins'}
 - Collection available: ${currentRestaurant.collection_enabled ? 'Yes' : 'No'}
 - Accepts cash: ${currentRestaurant.accepts_cash_on_delivery ? 'Yes' : 'No'}
@@ -76,13 +102,13 @@ RESTAURANT: ${currentRestaurant.name}
 
 FULL MENU (${menuItems.length} items):
 ${Object.entries(byCategory).map(([cat, items]) =>
-    `[${cat}]\n${items.map(i => `  ID:${i.id} | ${i.name} | £${i.price?.toFixed(2)}${i.is_popular ? ' ⭐BESTSELLER' : ''}${i.description ? ` | ${i.description.slice(0, 60)}` : ''}`).join('\n')}`
+    `[${cat}]\n${items.map(i => `  ID:${i.id} | ${i.name} | ${P}${i.price?.toFixed(2)}${i.is_popular ? ' ⭐BESTSELLER' : ''}${i.description ? ` | ${i.description.slice(0, 60)}` : ''}`).join('\n')}`
 ).join('\n\n')}
 
 ACTIVE PROMOTIONS:
 ${promoSummary || 'None currently active'}
 
-BEST SELLERS: ${bestSellers.map(i => `${i.name} (£${i.price?.toFixed(2)})`).join(', ') || 'Check our menu'}
+BEST SELLERS: ${bestSellers.map(i => `${i.name} (${P}${i.price?.toFixed(2)})`).join(', ') || 'Check our menu'}
 
 BEHAVIOUR RULES:
 - Keep responses SHORT (2-4 lines max). No walls of text.
@@ -91,7 +117,7 @@ BEHAVIOUR RULES:
 - NEVER suggest more than 3 items at once
 - After user adds something, suggest ONE relevant upsell
 - If cart is empty, lead with 2 best sellers
-- Proactively mention promotions when relevant (e.g., "You're £X away from free delivery")
+- Proactively mention promotions when relevant (e.g., "You're ${P}X away from free delivery")
 - If user seems stuck, offer "🔥 Show me best sellers" or "💥 What's the best deal?"
 
 STRUCTURED RESPONSES:

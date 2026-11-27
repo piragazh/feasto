@@ -168,7 +168,7 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
 
 // 8. The server money-limits copy (discount cap, large-refund flag, money prefix).
 {
-    const LIMIT_MIRRORS = ['posApplyDiscount', 'posUpdateOrder', 'approveRefund', 'posCreateOrder', 'syncOfflineOrder', 'aiOrderingCore', 'awardLoyaltyPoints', 'verifyAndCreateOrder', 'loyaltyBackfill', 'posCashSession'].map((f) => `base44/functions/${f}/entry.ts`);
+    const LIMIT_MIRRORS = ['posApplyDiscount', 'posUpdateOrder', 'approveRefund', 'posCreateOrder', 'syncOfflineOrder', 'aiOrderingCore', 'awardLoyaltyPoints', 'verifyAndCreateOrder', 'loyaltyBackfill', 'posCashSession', 'chatbotQuery'].map((f) => `base44/functions/${f}/entry.ts`);
     const lb = (s) => (s.match(/\/\/ region-limits:start[\s\S]*?\/\/ region-limits:end/) || [null])[0];
     const canon = lb(fs.readFileSync('scripts/region-limits.snippet.js', 'utf8'));
     for (const file of LIMIT_MIRRORS) {
