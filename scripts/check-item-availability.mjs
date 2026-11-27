@@ -83,13 +83,14 @@ ck('a scheduled order is checked at its slot; past or unscheduled means now',
 
 // ── 4. every server applies it, with the right channel and time ─────────────
 const srv = (fn) => strip(read(`base44/functions/${fn}/entry.ts`).split('Deno.serve(')[1] || '');
-ck('kioskCreateOrder refuses with the kiosk rule, now', /whyNotSellable\(menuItem, 'kiosk', new Date\(\)\)[\s\S]{0,200}status: 400/.test(srv('kioskCreateOrder')));
-ck('tableCreateOrder refuses with the QR rule, now', /whyNotSellable\(menuItem, 'qr', new Date\(\)\)[\s\S]{0,200}status: 400/.test(srv('tableCreateOrder')));
+ck('kioskCreateOrder refuses with the kiosk rule, now, on the restaurant clock', /whyNotSellable\(menuItem, 'kiosk', new Date\(\), restaurantTz\(restaurant\)\)[\s\S]{0,200}status: 400/.test(srv('kioskCreateOrder')));
+ck('tableCreateOrder refuses with the QR rule, now, on the restaurant clock', /whyNotSellable\(menuItem, 'qr', new Date\(\), restaurantTz\(restaurant\)\)[\s\S]{0,200}status: 400/.test(srv('tableCreateOrder')));
 { const v = strip(read('base44/functions/verifyAndCreateOrder/entry.ts'));
   ck('verifyAndCreateOrder: till or online rule, at the order\'s slot',
-    /whyNotSellable\(dbItem, isPOS \? 'till' : 'online', availableAt\)/.test(v) && /availableAt: forTime\(orderData\?\.is_scheduled, orderData\?\.scheduled_for\)/.test(v)); }
+    /whyNotSellable\(dbItem, isPOS \? 'till' : 'online', availableAt, availableTz\)/.test(v) && /availableAt: forTime\(orderData\?\.is_scheduled, orderData\?\.scheduled_for\)/.test(v)
+    && /availableTz: restaurantTz\(restaurants\[0\]\)/.test(v)); }
 { const c = srv('createPaymentIntent');
-  const i = c.indexOf("whyNotSellable(dbItem, 'online', at)"), j = c.search(/paymentIntents\.create|stripe\.paymentIntents/);
+  const i = c.indexOf("whyNotSellable(dbItem, 'online', at, atTz)"), j = c.search(/paymentIntents\.create|stripe\.paymentIntents/);
   ck('REGRESSION GUARD: createPaymentIntent refuses BEFORE any card intent', i > 0 && (j < 0 || i < j) && /const at = forTime\(is_scheduled, scheduled_for\)/.test(c), i > 0 ? '' : 'no check'); }
 
 // ── 5. every screen shows only what it may sell ──────────────────────────────
