@@ -42,7 +42,7 @@ export default function CheckoutOrderSummary({
                                     )}
                                 </div>
                             </div>
-                            <span className="font-medium">£{(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}</span>
+                            <span className="font-medium">{money((Number(item.price || 0) * Number(item.quantity || 1)))}</span>
                         </div>
                     </div>
                 ))}
@@ -50,7 +50,7 @@ export default function CheckoutOrderSummary({
                 <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between text-gray-600">
                         <span>Subtotal</span>
-                        <span>£{subtotal.toFixed(2)}</span>
+                        <span>{money(subtotal)}</span>
                     </div>
                     {orderType === 'delivery' && (
                         <>
@@ -61,11 +61,11 @@ export default function CheckoutOrderSummary({
                                         <span className="text-xs text-amber-600 ml-1">(reduced rate)</span>
                                     )}
                                 </span>
-                                <span>{deliveryFee === 0 ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
+                                <span>{deliveryFee === 0 ? 'FREE' : `${money(deliveryFee)}`}</span>
                             </div>
                             {zoneAvailable && tiered?.enabled && (tiered.lower_minimum ?? 0) > 0 && subtotal >= tiered.lower_minimum && subtotal < zoneMinimum && (
                                 <div className="text-xs text-amber-600 bg-amber-50 rounded p-2">
-                                    Add £{(zoneMinimum - subtotal).toFixed(2)} more to reach the zone minimum for standard delivery
+                                    Add {money((zoneMinimum - subtotal))} more to reach the zone minimum for standard delivery
                                 </div>
                             )}
                         </>
@@ -79,24 +79,24 @@ export default function CheckoutOrderSummary({
                     {smallOrderSurcharge > 0 && (
                         <div className="flex justify-between text-orange-600">
                             <span>Small Order Fee</span>
-                            <span>£{smallOrderSurcharge.toFixed(2)}</span>
+                            <span>{money(smallOrderSurcharge)}</span>
                         </div>
                     )}
                     {appliedCoupons && appliedCoupons.length > 0 && appliedCoupons.map((coupon) => (
                         <div key={coupon.id} className="flex justify-between text-green-600">
                             <span>Coupon ({String(coupon.code || '')})</span>
-                            <span>-£{Number(coupon.discount || 0).toFixed(2)}</span>
+                            <span>-{money(Number(coupon.discount || 0))}</span>
                         </div>
                     ))}
                     {appliedPromotions && appliedPromotions.length > 0 && appliedPromotions.map((promo) => (
                         <div key={promo.id} className="flex justify-between text-purple-600">
                             <span>Promo ({String(promo.name || '')})</span>
-                            <span>-£{Number(promo.discount || 0).toFixed(2)}</span>
+                            <span>-{money(Number(promo.discount || 0))}</span>
                         </div>
                     ))}
                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
                         <span>Total</span>
-                        <span>£{total.toFixed(2)}</span>
+                        <span>{money(total)}</span>
                     </div>
                     {restaurant?.loyalty_program_enabled !== false && (
                         <div className="flex justify-between text-orange-600 text-sm pt-2">
@@ -106,7 +106,7 @@ export default function CheckoutOrderSummary({
                     )}
                     {smallOrderSurcharge > 0 && (
                         <div className="text-xs text-gray-500 pt-1">
-                            * Minimum order: £{minimumOrder.toFixed(2)}
+                            * Minimum order: {money(minimumOrder)}
                         </div>
                     )}
                 </div>

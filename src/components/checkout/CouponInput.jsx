@@ -28,7 +28,7 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
             const coupon = coupons[0];
             if (!coupon.is_active) { toast.error('This coupon is no longer active'); setIsValidating(false); return; }
             if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) { toast.error('This coupon is not valid for this restaurant'); setIsValidating(false); return; }
-            if (coupon.minimum_order && subtotal < coupon.minimum_order) { toast.error(`Minimum order of £${coupon.minimum_order.toFixed(2)} required`); setIsValidating(false); return; }
+            if (coupon.minimum_order && subtotal < coupon.minimum_order) { toast.error(`Minimum order of ${money(coupon.minimum_order)} required`); setIsValidating(false); return; }
             if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) { toast.error('This coupon has reached its usage limit'); setIsValidating(false); return; }
             const now = new Date();
             if (coupon.valid_from && new Date(coupon.valid_from) > now) { toast.error('This coupon is not yet valid'); setIsValidating(false); return; }
@@ -49,7 +49,7 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
 
             setAppliedCoupon({ ...coupon, discount });
             onCouponApply({ ...coupon, discount });
-            toast.success(`Coupon applied! You saved £${discount.toFixed(2)}`);
+            toast.success(`Coupon applied! You saved ${money(discount)}`);
         } catch (error) {
             toast.error('Failed to validate coupon');
             console.error(error);
@@ -75,7 +75,7 @@ export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
                         </div>
                         <div>
                             <p className="font-semibold text-green-900">{appliedCoupon.code}</p>
-                            <p className="text-sm text-green-700">{appliedCoupon.description || `Saved £${appliedCoupon.discount.toFixed(2)}`}</p>
+                            <p className="text-sm text-green-700">{appliedCoupon.description || `Saved ${money(appliedCoupon.discount)}`}</p>
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" onClick={removeCoupon} className="text-green-600 hover:text-green-800">

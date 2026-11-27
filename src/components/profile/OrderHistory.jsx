@@ -75,7 +75,7 @@ export default function OrderHistory({ userEmail }) {
                                         </div>
                                         <div>
                                             <p className="text-gray-500">Total</p>
-                                            <p className="font-medium text-lg text-orange-600">£{order.total.toFixed(2)}</p>
+                                            <p className="font-medium text-lg text-orange-600">{money(order.total)}</p>
                                         </div>
                                     </div>
 

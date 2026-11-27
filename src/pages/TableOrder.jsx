@@ -199,12 +199,12 @@ export default function TableOrder() {
                     {cart.map(c => (
                         <div key={c.id} className="flex justify-between text-sm">
                             <span>{c.qty}× {c.name}</span>
-                            <span className="text-gray-500">£{(c.price * c.qty).toFixed(2)}</span>
+                            <span className="text-gray-500">{money((c.price * c.qty))}</span>
                         </div>
                     ))}
                     <div className="border-t pt-2 flex justify-between font-semibold">
                         <span>Total</span>
-                        <span>£{cartTotal.toFixed(2)}</span>
+                        <span>{money(cartTotal)}</span>
                     </div>
                 </div>
                 <Button
@@ -236,7 +236,7 @@ export default function TableOrder() {
                     <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
                         <div className="flex-1">
                             <p className="font-semibold text-gray-900">{c.name}</p>
-                            <p className="text-sm text-gray-500">£{c.price.toFixed(2)} each</p>
+                            <p className="text-sm text-gray-500">{money(c.price)} each</p>
                         </div>
                         <div className="flex items-center gap-2">
                             <button onClick={() => removeFromCart(c.id)} className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center hover:bg-orange-200">
@@ -247,7 +247,7 @@ export default function TableOrder() {
                                 <Plus className="h-4 w-4" />
                             </button>
                         </div>
-                        <p className="w-16 text-right font-semibold text-gray-900">£{(c.price * c.qty).toFixed(2)}</p>
+                        <p className="w-16 text-right font-semibold text-gray-900">{money((c.price * c.qty))}</p>
                     </div>
                 ))}
 
@@ -274,7 +274,7 @@ export default function TableOrder() {
                 )}
                 <div className="flex justify-between mb-3">
                     <span className="text-gray-600">Total</span>
-                    <span className="text-xl font-bold text-gray-900">£{cartTotal.toFixed(2)}</span>
+                    <span className="text-xl font-bold text-gray-900">{money(cartTotal)}</span>
                 </div>
                 <Button
                     className="w-full bg-orange-500 hover:bg-orange-600 h-14 text-lg font-semibold"
@@ -358,7 +358,7 @@ export default function TableOrder() {
                                 {item.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.description}</p>}
                             </div>
                             <div className="flex items-center justify-between mt-2">
-                                <span className="font-bold text-gray-900">£{tablePrice(item).toFixed(2)}</span>
+                                <span className="font-bold text-gray-900">{money(tablePrice(item))}</span>
                                 {getQty(item.id) === 0 ? (
                                     <button
                                         onClick={() => addToCart(item)}
@@ -394,7 +394,7 @@ export default function TableOrder() {
                             {cartCount}
                         </span>
                         <span className="font-semibold text-lg">View Order</span>
-                        <span className="font-bold text-lg">£{cartTotal.toFixed(2)}</span>
+                        <span className="font-bold text-lg">{money(cartTotal)}</span>
                     </button>
                 </div>
             )}

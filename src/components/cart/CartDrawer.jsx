@@ -54,7 +54,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
             // In tiered range — allow checkout with tiered fee, don't block
             deliveryFee = lowerFee;
             minimumOrder = 0;
-            activeTierLabel = `£${lowerFee.toFixed(2)} delivery fee`;
+            activeTierLabel = `${money(lowerFee)} delivery fee`;
         }
     }
 
@@ -215,7 +215,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                                     }
                                                 </div>
                                             )}
-                                            <p className="text-orange-500 font-semibold">£{(item.price * item.quantity).toFixed(2)}</p>
+                                            <p className="text-orange-500 font-semibold">{money((item.price * item.quantity))}</p>
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <button
@@ -279,7 +279,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                         <div className="space-y-3 mb-6">
                             <div className="flex justify-between text-gray-600">
                                 <span>Subtotal</span>
-                                <span>£{subtotal.toFixed(2)}</span>
+                                <span>{money(subtotal)}</span>
                             </div>
                             {orderType === 'delivery' && (
                                 <div className="flex justify-between text-gray-600">
@@ -287,7 +287,7 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                                         Delivery Fee
                                         {activeTierLabel && <span className="text-xs text-amber-600 ml-1">({activeTierLabel})</span>}
                                     </span>
-                                    <span>{deliveryFee === 0 ? 'FREE' : `£${deliveryFee.toFixed(2)}`}</span>
+                                    <span>{deliveryFee === 0 ? 'FREE' : `${money(deliveryFee)}`}</span>
                                 </div>
                             )}
                             {orderType === 'collection' && (
@@ -299,21 +299,21 @@ export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, r
                             {/* Tiered delivery hint */}
                             {orderType === 'delivery' && tiered?.enabled && subtotal < tiered.lower_minimum && (
                                 <div className="text-xs text-amber-600 bg-amber-50 rounded p-2">
-                                    Add £{(tiered.lower_minimum - subtotal).toFixed(2)} more to qualify for £{(tiered.lower_minimum_fee ?? 0).toFixed(2)} delivery fee
+                                    Add {money((tiered.lower_minimum - subtotal))} more to qualify for {money((tiered.lower_minimum_fee ?? 0))} delivery fee
                                 </div>
                             )}
                             {orderType === 'delivery' && tiered?.enabled && subtotal >= tiered.lower_minimum && subtotal < (restaurant?.minimum_order || Infinity) && (
                                 <div className="text-xs text-green-600 bg-green-50 rounded p-2">
-                                    Add £{((restaurant?.minimum_order || 0) - subtotal).toFixed(2)} more for free delivery
+                                    Add {money(((restaurant?.minimum_order || 0) - subtotal))} more for free delivery
                                 </div>
                             )}
                             <div className="flex justify-between font-semibold text-lg pt-3 border-t">
                                 <span>Total</span>
-                                <span>£{total.toFixed(2)}</span>
+                                <span>{money(total)}</span>
                             </div>
                             {minimumOrder > 0 && subtotal < minimumOrder && (
                                 <div className="text-xs text-red-500 pt-1">
-                                    * Minimum order: £{minimumOrder.toFixed(2)}
+                                    * Minimum order: {money(minimumOrder)}
                                 </div>
                             )}
                         </div>

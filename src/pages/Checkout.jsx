@@ -1422,12 +1422,12 @@ export default function Checkout() {
                                                             ✓ Delivery available to {String(deliveryZoneInfo.zoneName || 'your area')}
                                                         </p>
                                                         <p className="text-xs text-green-700 mt-1">
-                                                            Fee: £{Number(deliveryZoneInfo.deliveryFee || 0).toFixed(2)} • 
+                                                            Fee: {money(Number(deliveryZoneInfo.deliveryFee || 0))} • 
                                                             ETA: {String(deliveryZoneInfo.estimatedTime || '30-45 min')}
                                                         </p>
                                                         {deliveryZoneInfo.minimumOrder && (
                                                             <p className="text-xs text-green-700">
-                                                                Min order: £{Number(deliveryZoneInfo.minimumOrder).toFixed(2)}
+                                                                Min order: {money(Number(deliveryZoneInfo.minimumOrder))}
                                                             </p>
                                                         )}
                                                     </div>
@@ -1783,7 +1783,7 @@ export default function Checkout() {
                                             Placing Order...
                                         </>
                                     ) : (
-                                        `Place Order • £${total.toFixed(2)}`
+                                        `Place Order • ${money(total)}`
                                     )}
                                 </Button>
                             ) : null}
@@ -1830,7 +1830,7 @@ export default function Checkout() {
                                 Confirm Cash Payment
                             </h3>
                             <p className="text-gray-600 mb-2">
-                                You'll pay <span className="font-bold text-orange-500">£{total.toFixed(2)}</span> in cash when your order arrives.
+                                You'll pay <span className="font-bold text-orange-500">{money(total)}</span> in cash when your order arrives.
                             </p>
                             <p className="text-sm text-gray-500 mb-6">
                                 Please have the exact amount ready or small change.

@@ -210,7 +210,7 @@ export default function LoyaltyRewards({ user }) {
                         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
                             <Gift className="h-6 w-6 text-green-600" />
                         </div>
-                        <p className="text-3xl font-bold text-green-600">£{totalSpent.toFixed(2)}</p>
+                        <p className="text-3xl font-bold text-green-600">{money(totalSpent)}</p>
                         <p className="text-sm text-gray-600">Total Spent</p>
                     </CardContent>
                 </Card>
@@ -457,7 +457,7 @@ export default function LoyaltyRewards({ user }) {
                         {minOrderValue > 0 && (
                             <li className="flex items-center gap-2">
                                 <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                                <span>Minimum order value: £{minOrderValue.toFixed(2)}</span>
+                                <span>Minimum order value: {money(minOrderValue)}</span>
                             </li>
                         )}
                     </ul>

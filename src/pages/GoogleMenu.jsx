@@ -210,7 +210,7 @@ export default function GoogleMenu() {
                                                 itemScope
                                                 itemType="https://schema.org/Offer"
                                             >
-                                                <span itemProp="price">£{item.price.toFixed(2)}</span>
+                                                <span itemProp="price">{money(item.price)}</span>
                                                 <meta itemProp="priceCurrency" content="GBP" />
                                             </div>
                                         </div>

@@ -1254,7 +1254,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                             </div>
                             <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
                                 <Bike className="h-4 w-4 text-white/80 flex-shrink-0" />
-                                <span className="text-white text-sm">{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free delivery'}</span>
+                                <span className="text-white text-sm">{restaurant.delivery_fee ? `${money(restaurant.delivery_fee)}` : 'Free delivery'}</span>
                             </div>
                         </div>
                     </div>
@@ -1419,7 +1419,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                                     <div className="flex-1 text-left">
                                         <p className="font-medium text-gray-900">{item.name}</p>
                                         <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
-                                        <p className="text-sm font-semibold text-orange-500 mt-1">£{item.price.toFixed(2)}</p>
+                                        <p className="text-sm font-semibold text-orange-500 mt-1">{money(item.price)}</p>
                                     </div>
                                     <div className="text-xs text-gray-400 capitalize">{item.category}</div>
                                 </button>
@@ -1583,7 +1583,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                                 </div>
                                 <span>View Cart</span>
                             </div>
-                            <span>£{cartTotal.toFixed(2)}</span>
+                            <span>{money(cartTotal)}</span>
                         </Button>
                     </div>
                 </motion.div>

@@ -52,7 +52,7 @@ export default function PromotionCodeInput({ restaurantId, subtotal, onPromotion
 
             // Check minimum order requirement
             if (promotion.minimum_order && subtotal < promotion.minimum_order) {
-                toast.error(`Minimum order of £${promotion.minimum_order.toFixed(2)} required`);
+                toast.error(`Minimum order of ${money(promotion.minimum_order)} required`);
                 setIsChecking(false);
                 return;
             }
@@ -95,7 +95,7 @@ export default function PromotionCodeInput({ restaurantId, subtotal, onPromotion
                                 {appliedPromotion.promotion_type === 'percentage_off' && 
                                     `${appliedPromotion.discount_value}% off`}
                                 {appliedPromotion.promotion_type === 'fixed_amount_off' && 
-                                    `£${appliedPromotion.discount_value.toFixed(2)} off`}
+                                    `${money(appliedPromotion.discount_value)} off`}
                                 {appliedPromotion.promotion_type === 'free_delivery' && 
                                     'Free delivery'}
                                 {appliedPromotion.promotion_type === 'buy_one_get_one' && 

@@ -194,7 +194,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                     Shows "not available - please ask" until a person has confirmed
                     it; never implies the item is allergen-free. */}
                 <div className="mt-3"><AllergenNotice item={item} /></div>
-                <p className="text-xl font-bold text-gray-900">Base Price: £{item.price?.toFixed(2)}</p>
+                <p className="text-xl font-bold text-gray-900">Base Price: {money(item.price)}</p>
 
                 {hasCustomizations && (
                     <div className="space-y-6 py-4">
@@ -230,7 +230,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                         </Label>
                                                     </div>
                                                     {choice.price > 0 && (
-                                                        <span className="text-sm text-orange-600 font-semibold">+£{choice.price.toFixed(2)}</span>
+                                                        <span className="text-sm text-orange-600 font-semibold">+{money(choice.price)}</span>
                                                     )}
                                                 </div>
                                             ))}
@@ -286,7 +286,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                                             </Label>
                                                                         </div>
                                                                         {mealChoice.price > 0 && (
-                                                                            <span className="text-xs text-orange-600 font-semibold">+£{mealChoice.price.toFixed(2)}</span>
+                                                                            <span className="text-xs text-orange-600 font-semibold">+{money(mealChoice.price)}</span>
                                                                         )}
                                                                     </div>
                                                                 ))}
@@ -431,7 +431,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                                             )}
                                                                             {mealChoice.price > 0 && (
                                                                                 <span className="text-xs text-orange-600 font-semibold ml-2">
-                                                                                    +£{mealChoice.price.toFixed(2)}{currentQty > 1 ? ` × ${currentQty}` : ''}
+                                                                                    +{money(mealChoice.price)}{currentQty > 1 ? ` × ${currentQty}` : ''}
                                                                                 </span>
                                                                             )}
                                                                         </div>
@@ -463,7 +463,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                     </Label>
                                                 </div>
                                                 {choice.price > 0 && (
-                                                    <span className="text-sm text-orange-600 font-semibold">+£{choice.price.toFixed(2)}</span>
+                                                    <span className="text-sm text-orange-600 font-semibold">+{money(choice.price)}</span>
                                                 )}
                                             </div>
                                         ))}
@@ -548,7 +548,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                                                     )}
                                                     {choice.price > 0 && (
                                                         <span className="text-sm text-orange-600 font-semibold ml-2">
-                                                            +£{choice.price.toFixed(2)}{currentQty > 1 ? ` × ${currentQty}` : ''}
+                                                            +{money(choice.price)}{currentQty > 1 ? ` × ${currentQty}` : ''}
                                                         </span>
                                                     )}
                                                 </div>
@@ -589,7 +589,7 @@ export default function ItemCustomizationModal({ item, open, onClose, onAddToCar
                         onClick={handleAddToCart}
                         className="flex-1 bg-orange-500 hover:bg-orange-600 h-12"
                     >
-                        Add to Cart • £{calculatePrice().toFixed(2)}
+                        Add to Cart • {money(calculatePrice())}
                     </Button>
                 </DialogFooter>
             </DialogContent>

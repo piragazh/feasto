@@ -63,7 +63,7 @@ export default function MenuItemCardGrid({ item, promotion, onAddToCart }) {
                     <p className="text-xs text-gray-500 line-clamp-2">{item.description}</p>
                 )}
                 <div className="flex items-center justify-between mt-auto pt-1">
-                    <span className="font-extrabold text-base text-gray-900">£{item.price?.toFixed(2)}</span>
+                    <span className="font-extrabold text-base text-gray-900">{money(item.price)}</span>
                     <div className="flex items-center gap-1">
                         {item.is_vegetarian && <Leaf className="h-3.5 w-3.5 text-green-600" />}
                         {item.is_spicy && <Flame className="h-3.5 w-3.5 text-red-600" />}

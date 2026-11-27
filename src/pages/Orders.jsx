@@ -637,7 +637,7 @@ export default function Orders() {
                                                                {item?.quantity || 0}x {item?.name || 'Item'}
                                                            </span>
                                                            <span className="text-gray-900">
-                                                               £{((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}
+                                                               {money(((item?.price || 0) * (item?.quantity || 0)))}
                                                            </span>
                                                        </div>
                                                        {item?.customizations && typeof item.customizations === 'object' && (
@@ -698,7 +698,7 @@ export default function Orders() {
                                                            ETA: {order.estimated_delivery}
                                                        </span>
                                                     )}
-                                                    <span className="font-bold text-lg">£{(order?.total || 0).toFixed(2)}</span>
+                                                    <span className="font-bold text-lg">{money((order?.total || 0))}</span>
                                                     </div>
                                                     </div>
 

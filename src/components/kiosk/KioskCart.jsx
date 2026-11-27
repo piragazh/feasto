@@ -82,7 +82,7 @@ export default function KioskCart({
                                         </button>
                                     )}
                                     <div className="flex items-center justify-between mt-3">
-                                        <span className="text-orange-400 font-bold text-base">£{(item.price * item.quantity).toFixed(2)}</span>
+                                        <span className="text-orange-400 font-bold text-base">{money((item.price * item.quantity))}</span>
                                         <div className="flex items-center gap-2 bg-gray-800 rounded-xl p-1">
                                             <button
                                                 onClick={() => onUpdateQuantity(item.cartId, item.quantity - 1)}
@@ -110,12 +110,12 @@ export default function KioskCart({
                                 {cart.map(item => (
                                     <div key={item.cartId} className="flex justify-between text-sm">
                                         <span className="text-gray-400">{item.name} × {item.quantity}</span>
-                                        <span className="text-gray-300">£{(item.price * item.quantity).toFixed(2)}</span>
+                                        <span className="text-gray-300">{money((item.price * item.quantity))}</span>
                                     </div>
                                 ))}
                                 <div className="border-t border-white/[0.06] pt-3 mt-3 flex justify-between">
                                     <span className="text-white font-bold text-lg">Total</span>
-                                    <span className="text-orange-400 font-black text-xl">£{cartTotal.toFixed(2)}</span>
+                                    <span className="text-orange-400 font-black text-xl">{money(cartTotal)}</span>
                                 </div>
                             </div>
                         </div>
@@ -146,7 +146,7 @@ export default function KioskCart({
                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5 rounded-2xl text-xl transition-all active:scale-[0.98] shadow-lg shadow-orange-500/30 flex items-center justify-between px-6"
                     >
                         <span>Proceed to Payment</span>
-                        <span>£{cartTotal.toFixed(2)}</span>
+                        <span>{money(cartTotal)}</span>
                     </button>
                 </div>
             )}

@@ -166,7 +166,7 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
                                             </div>
                                             <div className="flex justify-between items-center mt-1">
                                                 <span className="text-xs text-gray-600">
-                                                    £{subtotal.toFixed(2)} / £{promo.minimum_order.toFixed(2)}
+                                                    {money(subtotal)} / {money(promo.minimum_order)}
                                                 </span>
                                                 {isQualified ? (
                                                     <span className="text-xs font-semibold text-green-600">
@@ -174,7 +174,7 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs font-semibold text-purple-600">
-                                                        £{amountLeft.toFixed(2)} to go
+                                                        {money(amountLeft)} to go
                                                     </span>
                                                 )}
                                             </div>

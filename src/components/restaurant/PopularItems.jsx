@@ -163,7 +163,7 @@ function PopularItemCard({ item, onClick }) {
                 {calories && (
                     <p className="text-xs text-gray-500 mb-0.5 brand-page-muted">{calories} kcal</p>
                 )}
-                <p className="text-sm font-semibold text-gray-900 brand-page-text">£{(item.price || 0).toFixed(2)}</p>
+                <p className="text-sm font-semibold text-gray-900 brand-page-text">{money((item.price || 0))}</p>
             </div>
         </button>
     );

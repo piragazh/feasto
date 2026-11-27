@@ -108,7 +108,7 @@ export default function KioskPayment({
                 setInterruptedPayment(interrupted);
                 setPaymentState('interrupted');
                 setErrorMessage(
-                    `A payment of £${Number(interrupted.amount).toFixed(2)} may have been started ` +
+                    `A payment of ${money(Number(interrupted.amount))} may have been started ` +
                     `(ref: ${interrupted.transactionRef}) but the page reloaded before it finished. ` +
                     `Check the terminal — if payment went through, speak to staff before retrying.`
                 );
@@ -420,7 +420,7 @@ export default function KioskPayment({
                 </p>
                 <div className="bg-gray-900 border border-white/[0.06] rounded-2xl px-8 py-5 mb-10">
                     <p className="text-gray-400 text-sm mb-1">Amount to pay</p>
-                    <p className="text-orange-400 font-black text-4xl">£{cartTotal.toFixed(2)}</p>
+                    <p className="text-orange-400 font-black text-4xl">{money(cartTotal)}</p>
                 </div>
                 <div className="flex items-center gap-3 text-gray-500 mb-10">
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -603,7 +603,7 @@ export default function KioskPayment({
                 {/* Order total */}
                 <div className="w-full bg-gray-900 border border-white/[0.06] rounded-3xl p-8 mb-8 text-center">
                     <p className="text-gray-400 text-sm mb-2 uppercase tracking-wider font-medium">Total to Pay</p>
-                    <p className="text-orange-400 font-black text-5xl">£{cartTotal.toFixed(2)}</p>
+                    <p className="text-orange-400 font-black text-5xl">{money(cartTotal)}</p>
                     <p className="text-gray-600 text-sm mt-2">
                         {cart.reduce((s, i) => s + i.quantity, 0)} item{cart.reduce((s, i) => s + i.quantity, 0) !== 1 ? 's' : ''}
                     </p>
@@ -667,7 +667,7 @@ export default function KioskPayment({
                     onClick={handleProceed}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5 rounded-2xl text-xl transition-all active:scale-[0.98] shadow-lg shadow-orange-500/30"
                 >
-                    {paymentMethod === 'card' ? `Pay £${cartTotal.toFixed(2)} by Card` : `Confirm Order — Pay at Counter`}
+                    {paymentMethod === 'card' ? `Pay ${money(cartTotal)} by Card` : `Confirm Order — Pay at Counter`}
                 </button>
 
                 {paymentMethod === 'card' && (

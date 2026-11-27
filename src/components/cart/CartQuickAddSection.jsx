@@ -37,7 +37,7 @@ export default function CartQuickAddSection({ quickAddItems, onAddToCart, onClos
                             >
                                 <span className="text-[10px] sm:text-xs font-medium text-gray-900 line-clamp-2 leading-tight w-full break-words overflow-hidden">{item.name}</span>
                                 <div className="flex items-center justify-between w-full flex-shrink-0">
-                                    <span className="text-[9px] sm:text-xs text-gray-600 font-semibold flex-shrink-0">£{item.price.toFixed(2)}</span>
+                                    <span className="text-[9px] sm:text-xs text-gray-600 font-semibold flex-shrink-0">{money(item.price)}</span>
                                     <Plus className="h-3 w-3 text-orange-500 flex-shrink-0 ml-1" />
                                 </div>
                             </Button>

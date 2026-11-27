@@ -73,10 +73,10 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustom
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
                     <div>
                         {deal.original_price > 0 && (
-                            <div className="text-xs text-gray-400 line-through">£{deal.original_price?.toFixed(2)}</div>
+                            <div className="text-xs text-gray-400 line-through">{money(deal.original_price)}</div>
                         )}
                         <div className="font-bold text-xl text-orange-600 leading-tight">
-                            £{deal.deal_price?.toFixed(2)}
+                            {money(deal.deal_price)}
                         </div>
                         {savings && (
                             <div className="text-xs text-green-600 font-medium">You save £{savings}</div>

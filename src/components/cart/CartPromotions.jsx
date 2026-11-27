@@ -143,7 +143,7 @@ export default function CartPromotions({ restaurantId, subtotal, onPromotionAppl
                                     </div>
                                 </div>
                                 <span className="text-xs font-bold text-green-600 ml-2 whitespace-nowrap">
-                                    You save £{discount.toFixed(2)}!
+                                    You save {money(discount)}!
                                 </span>
                             </div>
                         );
@@ -162,7 +162,7 @@ export default function CartPromotions({ restaurantId, subtotal, onPromotionAppl
                             <div className="min-w-0 flex-1">
                                 <p className="text-xs font-semibold text-gray-700 truncate">{nextPromo.name}</p>
                                 <p className="text-[10px] text-gray-500">
-                                    Add £{Math.max(0, nextPromo.minimum_order - subtotal).toFixed(2)} more
+                                    Add {money(Math.max(0, nextPromo.minimum_order - subtotal))} more
                                 </p>
                             </div>
                         </div>

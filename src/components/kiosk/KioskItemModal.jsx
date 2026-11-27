@@ -45,7 +45,7 @@ function MealSubCustomizations({ opt, selectedUpgrade, customizations, setCustom
                                         <p className="font-semibold text-xs">{mc.label}</p>
                                         {mc.price > 0 && (
                                             <p className={`text-xs mt-0.5 ${customizations[key] === mc.label ? 'text-white/70' : 'text-orange-400'}`}>
-                                                +£{mc.price.toFixed(2)}
+                                                +{money(mc.price)}
                                             </p>
                                         )}
                                     </button>
@@ -80,7 +80,7 @@ function MealSubCustomizations({ opt, selectedUpgrade, customizations, setCustom
                                                 </div>
                                                 <span className={`font-semibold text-xs ${mealSelected ? 'text-white' : 'text-gray-300'}`}>{mc.label}</span>
                                             </div>
-                                            {mc.price > 0 && <span className="text-orange-400 text-xs font-semibold">+£{mc.price.toFixed(2)}</span>}
+                                            {mc.price > 0 && <span className="text-orange-400 text-xs font-semibold">+{money(mc.price)}</span>}
                                         </button>
                                     );
                                 })}
@@ -222,7 +222,7 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                 {kioskConfig?.show_allergens === true && (
                     <div className="mt-3"><AllergenNotice item={item} /></div>
                 )}
-                        <p className="text-orange-400 font-bold text-xl mt-2">£{basePrice.toFixed(2)}</p>
+                        <p className="text-orange-400 font-bold text-xl mt-2">{money(basePrice)}</p>
                     </div>
 
                     {/* Customization Options */}
@@ -253,7 +253,7 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                             <p className="font-semibold text-sm">{choice.label}</p>
                                             {choice.price > 0 && (
                                                 <p className={`text-sm mt-0.5 ${customizations[opt.name] === choice.label ? 'text-white/70' : 'text-orange-400'}`}>
-                                                    +£{choice.price.toFixed(2)}
+                                                    +{money(choice.price)}
                                                 </p>
                                             )}
                                         </button>
@@ -275,7 +275,7 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                                 <p className="font-semibold text-sm">{choice.label}</p>
                                                 {choice.price > 0 && (
                                                     <p className={`text-sm mt-0.5 ${customizations[opt.name] === choice.label ? 'text-white/70' : 'text-orange-400'}`}>
-                                                        +£{choice.price.toFixed(2)}
+                                                        +{money(choice.price)}
                                                     </p>
                                                 )}
                                             </button>
@@ -312,7 +312,7 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                                                     <span className={`font-semibold text-sm ${selected ? 'text-white' : 'text-gray-300'}`}>{choice.label}</span>
                                                 </div>
                                                 {choice.price > 0 && (
-                                                    <span className="text-orange-400 text-sm font-semibold">+£{choice.price.toFixed(2)}</span>
+                                                    <span className="text-orange-400 text-sm font-semibold">+{money(choice.price)}</span>
                                                 )}
                                             </button>
                                         );
@@ -352,7 +352,7 @@ export default function KioskItemModal({ item, onClose, onAdd, initialCustomizat
                         onClick={handleAdd}
                         className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl text-lg transition-all active:scale-[0.98] shadow-lg shadow-orange-500/30"
                     >
-                        Add to Order · £{calculateTotal().toFixed(2)}
+                        Add to Order · {money(calculateTotal())}
                     </button>
                 </div>
             </div>

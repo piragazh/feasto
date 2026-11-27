@@ -20,7 +20,7 @@ const DEFAULT_STYLE = { bg: 'from-orange-500 to-red-500', light: 'bg-orange-50 b
 function getPromoValue(promo) {
     switch (promo.promotion_type) {
         case 'percentage_off':   return `${promo.discount_value}% OFF`;
-        case 'fixed_amount_off': return `£${promo.discount_value?.toFixed(2)} OFF`;
+        case 'fixed_amount_off': return `${money(promo.discount_value)} OFF`;
         case 'free_delivery':    return 'FREE DELIVERY';
         case 'buy_one_get_one':  return 'BUY 1 GET 1';
         case 'buy_two_get_one':  return 'BUY 2 GET 1';
@@ -95,7 +95,7 @@ export default function ActivePromotionsBanner({ restaurantId }) {
                                                 <p className="text-xs text-gray-500 mt-0.5 truncate">{promo.condition_text}</p>
                                             )}
                                             {!promo.condition_text && promo.minimum_order > 0 && (
-                                                <p className="text-xs text-gray-500 mt-0.5">Min. spend £{promo.minimum_order.toFixed(2)}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">Min. spend {money(promo.minimum_order)}</p>
                                             )}
                                             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                                 {promo.promotion_code && (

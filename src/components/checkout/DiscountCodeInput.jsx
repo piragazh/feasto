@@ -100,7 +100,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
         // Basic UX validation (server re-validates authoritatively at checkout)
         if (!coupon.is_active) { toast.error('This coupon is no longer active'); return; }
         if (coupon.restaurant_id && coupon.restaurant_id !== restaurantId) { toast.error('This coupon is not valid for this restaurant'); return; }
-        if (coupon.minimum_order && subtotal < coupon.minimum_order) { toast.error(`Minimum order of £${coupon.minimum_order.toFixed(2)} required`); return; }
+        if (coupon.minimum_order && subtotal < coupon.minimum_order) { toast.error(`Minimum order of ${money(coupon.minimum_order)} required`); return; }
         if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) { toast.error('This coupon has reached its usage limit'); return; }
         const now = new Date();
         // A typed date means a whole UK day - see order-logic.js. Imported, not
@@ -151,7 +151,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             ? 'Coupon applied! Free delivery on this order 🚚'
             : coupon.discount_type === 'free_item'
             ? `Coupon applied! ${coupon.free_item_name || 'Free item'} added 🎁`
-            : `Coupon applied! You saved £${discount.toFixed(2)} 🎉`;
+            : `Coupon applied! You saved ${money(discount)} 🎉`;
         toast.success(successMsg);
     };
 
@@ -179,7 +179,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
         const end = new Date(promotion.end_date);
         if (!isWithinInterval(now, { start, end })) { if (!isAuto) toast.error('This promotion has expired'); return; }
         if (promotion.usage_limit && promotion.usage_count >= promotion.usage_limit) { if (!isAuto) toast.error('This promotion has reached its usage limit'); return; }
-        if (promotion.minimum_order && subtotal < promotion.minimum_order) { if (!isAuto) toast.error(`Minimum order of £${promotion.minimum_order.toFixed(2)} required`); return; }
+        if (promotion.minimum_order && subtotal < promotion.minimum_order) { if (!isAuto) toast.error(`Minimum order of ${money(promotion.minimum_order)} required`); return; }
 
         let discount = 0;
         if (promotion.promotion_type === 'percentage_off') {
@@ -197,7 +197,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
             onPromotionApply(updated);
             return updated;
         });
-        if (!isAuto) toast.success(`Promotion "${promotion.name}" applied! Saved £${discount.toFixed(2)}`);
+        if (!isAuto) toast.success(`Promotion "${promotion.name}" applied! Saved ${money(discount)}`);
     };
 
     const removeDiscount = (type, id) => {
@@ -230,7 +230,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
                                 <div>
                                     <p className="font-semibold text-green-900 text-sm">{coupon.code}</p>
                                     <p className="text-xs text-green-700">
-                                        {coupon.description || `Saved £${coupon.discount.toFixed(2)}`}
+                                        {coupon.description || `Saved ${money(coupon.discount)}`}
                                         {coupon.stackable && appliedCoupons.length > 1 && (
                                             <span className="ml-1 text-green-500">· stackable</span>
                                         )}
@@ -261,7 +261,7 @@ export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = 
                                         )}
                                     </div>
                                     <p className="text-xs text-orange-700 mt-1">
-                                        {promo.condition_text ? `${promo.condition_text} · Saved £${promo.discount.toFixed(2)}` : `Saved £${promo.discount.toFixed(2)}`}
+                                        {promo.condition_text ? `${promo.condition_text} · Saved ${money(promo.discount)}` : `Saved ${money(promo.discount)}`}
                                     </p>
                                 </div>
                             </div>

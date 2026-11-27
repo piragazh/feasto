@@ -27,7 +27,7 @@ export default function MenuItemCardCompact({ item, promotion, onAddToCart }) {
                 {item.description && (
                     <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{item.description}</p>
                 )}
-                <span className="font-bold text-sm text-gray-900 mt-0.5 block">£{item.price?.toFixed(2)}</span>
+                <span className="font-bold text-sm text-gray-900 mt-0.5 block">{money(item.price)}</span>
             </div>
 
             {item.image_url && (

@@ -159,11 +159,11 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                             </div>
                             <div className="text-right">
                                 <div className="text-2xl font-bold text-orange-600">
-                                    £{deal.deal_price.toFixed(2)}
+                                    {money(deal.deal_price)}
                                 </div>
                                 {deal.original_price && (
                                     <div className="text-sm text-gray-500 line-through">
-                                        £{deal.original_price.toFixed(2)}
+                                        {money(deal.original_price)}
                                     </div>
                                 )}
                             </div>
@@ -246,7 +246,7 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                                                         )}
                                                     </div>
                                                     <div className="text-sm font-semibold text-gray-700 flex-shrink-0">
-                                                        £{item.price?.toFixed(2)}
+                                                        {money(item.price)}
                                                     </div>
                                                 </button>
                                                 
@@ -279,7 +279,7 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                                                                                         }`}
                                                                                     >
                                                                                         {opt.label}
-                                                                                        {opt.price > 0 && ` (+£${opt.price.toFixed(2)})`}
+                                                                                        {opt.price > 0 && ` (+${money(opt.price)})`}
                                                                                     </button>
                                                                                 );
                                                                             })}
@@ -325,7 +325,7 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                                                                                             )}
                                                                                         </div>
                                                                                         {opt.label}
-                                                                                        {opt.price > 0 && ` (+£${opt.price.toFixed(2)})`}
+                                                                                        {opt.price > 0 && ` (+${money(opt.price)})`}
                                                                                     </button>
                                                                                 );
                                                                             })}
@@ -381,7 +381,7 @@ export default function CategoryDealCustomizationModal({ deal, menuItems, open, 
                         disabled={!isValid()}
                         className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-lg"
                     >
-                        Add to Cart • £{(deal.deal_price * quantity).toFixed(2)}
+                        Add to Cart • {money((deal.deal_price * quantity))}
                     </Button>
                 </div>
             </DialogContent>

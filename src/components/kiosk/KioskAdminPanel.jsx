@@ -299,8 +299,8 @@ export default function KioskAdminPanel({ restaurant, onClose, onRebind }) {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
                         { label: 'Total Orders', value: todayOrders.length, icon: ShoppingBag, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
-                        { label: 'Revenue', value: `£${totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
-                        { label: 'Avg Order', value: `£${avgOrder.toFixed(2)}`, icon: BarChart3, color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
+                        { label: 'Revenue', value: `${money(totalRevenue)}`, icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
+                        { label: 'Avg Order', value: `${money(avgOrder)}`, icon: BarChart3, color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
                         {
                             label: 'Last Order',
                             value: todayOrders.length > 0
@@ -394,7 +394,7 @@ export default function KioskAdminPanel({ restaurant, onClose, onRebind }) {
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-orange-400 font-bold">£{order.total?.toFixed(2)}</p>
+                                    <p className="text-orange-400 font-bold">{money(order.total)}</p>
                                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${order.status === 'confirmed' ? 'bg-green-500/10 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
                                         {order.status}
                                     </span>

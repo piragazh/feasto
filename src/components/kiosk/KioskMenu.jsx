@@ -117,7 +117,7 @@ export default function KioskMenu({
                     >
                         <ShoppingCart className="h-5 w-5" />
                         <span>{cartCount} item{cartCount > 1 ? 's' : ''}</span>
-                        <span className="bg-white/20 px-2 py-0.5 rounded-lg text-sm">£{cartTotal.toFixed(2)}</span>
+                        <span className="bg-white/20 px-2 py-0.5 rounded-lg text-sm">{money(cartTotal)}</span>
                         <ChevronRight className="h-4 w-4" />
                     </button>
                 )}
@@ -215,7 +215,7 @@ export default function KioskMenu({
                             </div>
                             <span>View Order</span>
                         </div>
-                        <span className="text-xl">£{cartTotal.toFixed(2)}</span>
+                        <span className="text-xl">{money(cartTotal)}</span>
                     </button>
                 </div>
             )}
@@ -264,7 +264,7 @@ function KioskMenuCard({ item, cartCount, onClick }) {
                     <p className="text-gray-500 text-xs line-clamp-2 mb-2">{item.description}</p>
                 )}
                 <div className="flex items-center justify-between mt-auto">
-                    <span className="text-orange-400 font-bold text-base">£{price.toFixed(2)}</span>
+                    <span className="text-orange-400 font-bold text-base">{money(price)}</span>
                     <div className="w-8 h-8 rounded-xl bg-orange-500/10 group-hover:bg-orange-500 flex items-center justify-center transition-colors">
                         <span className="text-orange-400 group-hover:text-white font-bold text-lg leading-none">+</span>
                     </div>

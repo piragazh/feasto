@@ -98,12 +98,12 @@ export default function MenuItemsGrid({
                                 )}
                                 <p className="text-sm text-gray-600 mb-2 line-clamp-2 mt-1">{item.description}</p>
                                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mb-3">
-                                    <p className="text-lg font-bold text-orange-600" title="Online price">£{Number(item.price || 0).toFixed(2)}</p>
+                                    <p className="text-lg font-bold text-orange-600" title="Online price">{money(Number(item.price || 0))}</p>
                                     {item.pos_price != null && item.pos_price !== item.price && (
-                                        <p className="text-sm text-purple-600 font-medium">POS: £{Number(item.pos_price).toFixed(2)}</p>
+                                        <p className="text-sm text-purple-600 font-medium">POS: {money(Number(item.pos_price))}</p>
                                     )}
                                     {item.platform_prices?.default != null && (
-                                        <p className="text-sm text-emerald-700 font-medium" title="Price on Just Eat, Deliveroo and Uber Eats">Marketplace: £{Number(item.platform_prices.default).toFixed(2)}</p>
+                                        <p className="text-sm text-emerald-700 font-medium" title="Price on Just Eat, Deliveroo and Uber Eats">Marketplace: {money(Number(item.platform_prices.default))}</p>
                                     )}
                                 </div>
                                 {item.customization_options?.length > 0 && (
