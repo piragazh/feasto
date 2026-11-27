@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import { REGIONS, getRestaurantTimeZone } from '../src/lib/region.js';
 import { restaurantTz, COUNTRY_TZ } from '../src/lib/item-availability.js';
 import { toE164 } from '../src/lib/phone.js';
+import { formatMoney } from '../src/lib/money.js';
 
 const MIRRORS = [
     'base44/functions/sendSMS/entry.ts',
@@ -117,6 +118,31 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
     const dc = R.filter((r) => regionClockTz(r) !== getRestaurantTimeZone(r));
     if (dc.length) bad(`regionClockTz differs from region.js for ${dc.map((x) => JSON.stringify(x)).join(', ')}`);
     else ok(`server clock rule matches region.js on ${R.length} records`);
+}
+
+// 6. The server money copy (receipts, restaurant alerts) - identical copies, same text.
+{
+    const MONEY_MIRRORS = ['base44/functions/androidPrint/entry.ts', 'base44/functions/networkPrint/entry.ts',
+        'base44/functions/sendWhatsAppOrder/entry.ts', 'base44/functions/notifyRestaurantNewOrder/entry.ts'];
+    const mblock = (s) => (s.match(/\/\/ region-money:start[\s\S]*?\/\/ region-money:end/) || [null])[0];
+    const canon = mblock(fs.readFileSync('scripts/region-money.snippet.js', 'utf8'));
+    for (const file of MONEY_MIRRORS) {
+        const b = mblock(fs.readFileSync(file, 'utf8'));
+        if (!b) bad(`${file} has no region-money block`);
+        else if (b !== canon) bad(`${file} region-money block differs from scripts/region-money.snippet.js`);
+        else ok(`${file} carries the region money rule unchanged`);
+    }
+    const { REGION_MONEY, regionMoney } = new Function(`${canon}\nreturn { REGION_MONEY, regionMoney };`)();
+    if (Object.keys(REGION_MONEY).sort().join() !== Object.keys(REGIONS).sort().join()) bad('region-money countries differ from region.js');
+    const AMTS = [0, 1, 2.5, 12.499, 12.505, 0.1 + 0.2, 99.995, 1065.57, 1234567.891, -3.2, null, undefined, 7, '950'];
+    const WHO = [null, {}, { country: null }, 'GB', 'LK', { country: 'lk' }, { country: 'XX' }];
+    const diffs = [];
+    for (const a of AMTS) for (const w of WHO) {
+        if (a === '950' && (w === null || w === 'GB' || (w && !w.country) || (w && w.country === 'XX'))) continue;  // strings throw in the UK, as toFixed always did
+        if (regionMoney(a, w) !== formatMoney(a, w)) diffs.push(`${JSON.stringify(a)}/${JSON.stringify(w)}`);
+    }
+    if (diffs.length) bad(`server money text differs from money.js for ${diffs.join(', ')}`);
+    else ok('server money text matches src/lib/money.js');
 }
 
 if (failures) { console.log(`\ncheck-region: ${failures} problem(s)`); process.exit(1); }
