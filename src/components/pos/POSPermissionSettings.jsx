@@ -11,6 +11,8 @@ import {
     ROLE_LABELS,
     DEFAULT_ROLE_PERMISSIONS,
 } from '@/lib/posPermissions';
+import { moneyPrefix } from '@/lib/MoneyContext';
+import { getMoneyLimits } from '@/lib/region';
 
 /**
  * Role permission matrix.
@@ -24,6 +26,11 @@ import {
  * policy; they are not themselves the control.
  */
 export default function POSPermissionSettings({ restaurantId, restaurant }) {
+    // The manager cap in this restaurant's currency (src/lib/region.js). UK text
+    // ("20% / £20") is unchanged.
+    const capText = (desc) => (typeof desc === 'string' && desc.includes('£20')
+        ? desc.replace('£20', `${moneyPrefix(restaurant?.country)}${getMoneyLimits(restaurant).managerDiscountMax}`)
+        : desc);
     const [matrix, setMatrix] = useState({});
     const [saving, setSaving] = useState(false);
     const [dirty, setDirty] = useState(false);
@@ -121,7 +128,7 @@ export default function POSPermissionSettings({ restaurantId, restaurant }) {
                                         <tr key={item.key} className="border-t border-gray-100">
                                             <td className="py-2.5 pr-3 align-top">
                                                 <p className="font-medium text-gray-900 leading-tight">{item.label}</p>
-                                                <p className="text-xs text-gray-500 leading-tight mt-0.5">{item.desc}</p>
+                                                <p className="text-xs text-gray-500 leading-tight mt-0.5">{capText(item.desc)}</p>
                                             </td>
                                             {CONFIGURABLE_ROLES.map(role => (
                                                 <td key={role} className="py-2.5 px-2 text-center align-middle">
