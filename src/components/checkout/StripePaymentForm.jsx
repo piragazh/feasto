@@ -225,7 +225,7 @@ export default function StripePaymentForm({ onSuccess, amount, clientSecret, exp
                 ) : (
                     <>
                         <CreditCard className="h-5 w-5 mr-2" />
-                        Pay £{amount ? amount.toFixed(2) : '0.00'}
+                        Pay {prefix}{amount ? amount.toFixed(2) : '0.00'}
                     </>
                 )}
             </Button>

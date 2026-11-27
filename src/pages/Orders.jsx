@@ -741,7 +741,7 @@ export default function Orders() {
                                                                         <p className="text-sm font-semibold text-yellow-900">Refund Requested</p>
                                                                         <p className="text-xs text-yellow-700 mt-1">
                                                                             Your refund request is being reviewed by the restaurant.
-                                                                            Amount: £{order.refund_requested_amount?.toFixed(2) || '0.00'}
+                                                                            Amount: {moneyPrefix(order?.currency_country)}{order.refund_requested_amount?.toFixed(2) || '0.00'}
                                                                         </p>
                                                                     </div>
                                                                 </div>
@@ -754,7 +754,7 @@ export default function Orders() {
                                                             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                                                 <p className="text-sm font-semibold text-green-900">Refund Processed</p>
                                                                 <p className="text-xs text-green-700 mt-1">
-                                                                    Amount refunded: £{order?.refund_amount?.toFixed(2) || '0.00'}
+                                                                    Amount refunded: {moneyPrefix(order?.currency_country)}{order?.refund_amount?.toFixed(2) || '0.00'}
                                                                 </p>
                                                             </div>
                                                         </div>

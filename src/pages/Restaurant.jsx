@@ -831,7 +831,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 "image": restaurant.image_url,
                 "description": restaurant.description,
                 "servesCuisine": restaurant.cuisine_type,
-                "priceRange": "£"
+                "priceRange": currencySymbol(restaurant)
             };
 
             if (restaurant.address) {
@@ -1275,7 +1275,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                             {restaurant.minimum_order > 0 && (
                                 <div className="flex items-center gap-2">
                                     <Info className="h-4 w-4 text-gray-400" />
-                                    <span>Min. order £{restaurant.minimum_order}</span>
+                                    <span>Min. order {moneyPrefix(restaurant?.country)}{restaurant.minimum_order}</span>
                                 </div>
                             )}
                         </div>

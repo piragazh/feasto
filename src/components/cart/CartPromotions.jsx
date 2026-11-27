@@ -121,7 +121,7 @@ export default function CartPromotions({ restaurantId, subtotal, onPromotionAppl
                         if (promo.promotion_type === 'percentage_off') {
                             discountText = `${promo.discount_value}% OFF`;
                         } else if (promo.promotion_type === 'fixed_amount_off') {
-                            discountText = `£${promo.discount_value} OFF`;
+                            discountText = `${prefix}${promo.discount_value} OFF`;
                         } else if (promo.promotion_type === 'free_delivery') {
                             discountText = 'FREE DELIVERY';
                         }

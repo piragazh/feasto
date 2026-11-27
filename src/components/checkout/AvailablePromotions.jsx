@@ -120,7 +120,7 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
                         if (promo.promotion_type === 'percentage_off') {
                             discountText = `${promo.discount_value}% OFF`;
                         } else if (promo.promotion_type === 'fixed_amount_off') {
-                            discountText = `£${promo.discount_value} OFF`;
+                            discountText = `${prefix}${promo.discount_value} OFF`;
                         } else if (promo.promotion_type === 'free_delivery') {
                             discountText = 'FREE DELIVERY';
                         }
@@ -147,7 +147,7 @@ export default function AvailablePromotions({ restaurantId, subtotal, onPromotio
                                                     {promo.name}
                                                 </p>
                                                 <p className="text-xs text-gray-600">
-                                                    {promo.condition_text || `Spend £${promo.minimum_order}`}
+                                                    {promo.condition_text || `Spend ${prefix}${promo.minimum_order}`}
                                                 </p>
                                             </div>
                                         </div>

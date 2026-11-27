@@ -79,7 +79,7 @@ export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustom
                             {money(deal.deal_price)}
                         </div>
                         {savings && (
-                            <div className="text-xs text-green-600 font-medium">You save £{savings}</div>
+                            <div className="text-xs text-green-600 font-medium">You save {prefix}{savings}</div>
                         )}
                     </div>
 

@@ -278,7 +278,7 @@ export default function LoyaltyRewards({ user }) {
                                                     <p className="font-semibold">{reward.name}</p>
                                                     <p className="text-sm text-gray-500">{reward.description}</p>
                                                     <p className="text-sm text-gray-600 mt-1">
-                                                        {reward.points_required} points • {reward.reward_type === 'percentage_discount' ? `${reward.discount_value}% off` : reward.reward_type === 'fixed_discount' ? `£${reward.discount_value} off` : reward.reward_type.replace('_', ' ')}
+                                                        {reward.points_required} points • {reward.reward_type === 'percentage_discount' ? `${reward.discount_value}% off` : reward.reward_type === 'fixed_discount' ? `${prefix}${reward.discount_value} off` : reward.reward_type.replace('_', ' ')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -338,7 +338,7 @@ export default function LoyaltyRewards({ user }) {
                                                         <p className="text-sm text-gray-600 mt-1">
                                                             {coupon.discount_type === 'percentage' 
                                                                 ? `${coupon.discount_value}% off` 
-                                                                : `£${coupon.discount_value} off`}
+                                                                : `${prefix}${coupon.discount_value} off`}
                                                         </p>
                                                     </div>
                                                     <Badge variant={expired ? 'secondary' : 'default'} className="ml-2">
@@ -440,7 +440,7 @@ export default function LoyaltyRewards({ user }) {
                     <ul className="space-y-2 text-sm">
                         <li className="flex items-center gap-2">
                             <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                            <span>Earn {pointsPerPound} points for every £1 spent</span>
+                            <span>Earn {pointsPerPound} points for every {prefix}1 spent</span>
                         </li>
                         {firstOrderBonus > 0 && (
                             <li className="flex items-center gap-2">
