@@ -24,7 +24,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useSEO } from '@/lib/useSEO';
-import { formatMoney } from '@/lib/money';
 import { moneyPrefix } from '@/lib/MoneyContext';
 import { useRestaurantCountries } from '@/lib/useRestaurantCountries';
 
