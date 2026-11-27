@@ -31,6 +31,23 @@ function regionClockTz(restaurant) {
     return REGION_CLOCK[c] || 'Europe/London';
 }
 // region-clock:end
+// region-money:start
+// SYNC RULE: server copy of formatMoney (src/lib/money.js). Every copy must be
+// identical to scripts/region-money.snippet.js; scripts/check-region.mjs
+// enforces it and compares the answers with money.js. GB text is exactly the
+// old `£${x.toFixed(2)}`; other countries: "Rs 1,250.00".
+const REGION_MONEY = { GB: { symbol: '£', locale: 'en-GB', decimals: 2 }, LK: { symbol: 'Rs', locale: 'en-LK', decimals: 2 } };
+function regionMoney(amount, restaurantOrCountry) {
+    const raw = typeof restaurantOrCountry === 'string' ? restaurantOrCountry : restaurantOrCountry?.country;
+    const c = typeof raw === 'string' ? raw.trim().toUpperCase() : '';
+    const r = REGION_MONEY[c] || REGION_MONEY.GB;
+    if (r === REGION_MONEY.GB) return amount === null || amount === undefined ? '£' : `£${amount.toFixed(2)}`;
+    if (amount === null || amount === undefined) return r.symbol;
+    const n = Number(amount);
+    const text = Number.isFinite(n) ? n.toLocaleString(r.locale, { minimumFractionDigits: r.decimals, maximumFractionDigits: r.decimals }) : String(amount);
+    return `${r.symbol} ${text}`;
+}
+// region-money:end
 
 function buildCommands(commandSet = 'esc_pos') {
     const sets = {
@@ -256,7 +273,7 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
             for (const nl of nameLines) add(`${nl}\n`);
             add(cmd.normal, cmd.boldOff);
         } else {
-            const itemPrice = `\xA3${((item.price || 0) * qty).toFixed(2)}`;
+            const itemPrice = `${regionMoney(((item.price || 0) * qty), restaurant)}`;
             // Item name — bold, with price right-aligned
             add(cmd.boldOn);
             if (byteLen(itemLabel) + byteLen(itemPrice) + 1 <= W) {
@@ -286,18 +303,18 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     line('=');
 
     if (!isKitchen && !isCompact && !isMinimal) {
-        const sub = `\xA3${(order.subtotal || 0).toFixed(2)}`;
+        const sub = `${regionMoney((order.subtotal || 0), restaurant)}`;
         add(`${rPad('Subtotal:', sub, W)}\n`);
         if ((order.delivery_fee || 0) > 0) {
-            const fee = `\xA3${order.delivery_fee.toFixed(2)}`;
+            const fee = `${regionMoney(order.delivery_fee, restaurant)}`;
             add(`${rPad('Delivery:', fee, W)}\n`);
         }
         if ((order.small_order_surcharge || 0) > 0) {
-            const sur = `\xA3${order.small_order_surcharge.toFixed(2)}`;
+            const sur = `${regionMoney(order.small_order_surcharge, restaurant)}`;
             add(`${rPad('Surcharge:', sur, W)}\n`);
         }
         if ((order.discount || 0) > 0) {
-            const disc = `-\xA3${order.discount.toFixed(2)}`;
+            const disc = `-${regionMoney(order.discount, restaurant)}`;
             add(`${rPad('Discount:', disc, W)}\n`);
         }
         line('-');
@@ -306,7 +323,7 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
     if (!isKitchen) {
         // TOTAL — double height for instant visibility
         add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
-        add(`TOTAL: \xA3${(order.total || 0).toFixed(2)}\n`);
+        add(`TOTAL: ${regionMoney((order.total || 0), restaurant)}\n`);
         add(cmd.normal, cmd.boldOff, cmd.alignLeft);
 
         if (!isMinimal) {
@@ -319,9 +336,9 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
             // when cash was actually handed over, so card-only receipts stay clean.
             if (config.show_cash_details !== false && order.cash_tendered > 0) {
                 line('-');
-                const tendered = `\xA3${Number(order.cash_tendered).toFixed(2)}`;
+                const tendered = `${regionMoney(Number(order.cash_tendered), restaurant)}`;
                 add(`${rPad('Cash Tendered:', tendered, W)}\n`);
-                const change = `\xA3${Number(order.change_due || 0).toFixed(2)}`;
+                const change = `${regionMoney(Number(order.change_due || 0), restaurant)}`;
                 add(cmd.boldOn);
                 add(`${rPad('Change Due:', change, W)}\n`);
                 add(cmd.boldOff);

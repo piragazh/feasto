@@ -52,6 +52,23 @@ async function restaurantCountryFor(base44, restaurantId, orderId) {
     }
 }
 // region-mirror:end
+// region-money:start
+// SYNC RULE: server copy of formatMoney (src/lib/money.js). Every copy must be
+// identical to scripts/region-money.snippet.js; scripts/check-region.mjs
+// enforces it and compares the answers with money.js. GB text is exactly the
+// old `£${x.toFixed(2)}`; other countries: "Rs 1,250.00".
+const REGION_MONEY = { GB: { symbol: '£', locale: 'en-GB', decimals: 2 }, LK: { symbol: 'Rs', locale: 'en-LK', decimals: 2 } };
+function regionMoney(amount, restaurantOrCountry) {
+    const raw = typeof restaurantOrCountry === 'string' ? restaurantOrCountry : restaurantOrCountry?.country;
+    const c = typeof raw === 'string' ? raw.trim().toUpperCase() : '';
+    const r = REGION_MONEY[c] || REGION_MONEY.GB;
+    if (r === REGION_MONEY.GB) return amount === null || amount === undefined ? '£' : `£${amount.toFixed(2)}`;
+    if (amount === null || amount === undefined) return r.symbol;
+    const n = Number(amount);
+    const text = Number.isFinite(n) ? n.toLocaleString(r.locale, { minimumFractionDigits: r.decimals, maximumFractionDigits: r.decimals }) : String(amount);
+    return `${r.symbol} ${text}`;
+}
+// region-money:end
 
 Deno.serve(async (req) => {
     try {
@@ -84,21 +101,21 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Order missing required fields' }, { status: 400 });
         }
 
-        // Format order details for WhatsApp message
-        const itemsList = order.items
-            .map(item => `• ${item.quantity}x ${item.name} - £${(item.price * item.quantity).toFixed(2)}`)
-            .join('\n');
-
-        const orderLabel = order.order_number || order.id.slice(-6);
-        const customerName = order.guest_name || order.created_by || 'Customer';
-        const messageBody = `🍽️ *New Order #${orderLabel}*\n\nCustomer: ${customerName}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* £${(order.subtotal || 0).toFixed(2)}\n*Delivery:* £${(order.delivery_fee || 0).toFixed(2)}\n*Total:* £${order.total.toFixed(2)}\n\nType: ${order.order_type}\nPayment: ${order.payment_method}`;
-
-        // Get restaurant details
+        // Get restaurant details (first: amounts are shown in its currency)
         let restaurant_data = null;
         if (order.restaurant_id) {
             const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: order.restaurant_id });
             restaurant_data = restaurants.length > 0 ? restaurants[0] : null;
         }
+
+        // Format order details for WhatsApp message
+        const itemsList = order.items
+            .map(item => `• ${item.quantity}x ${item.name} - ${regionMoney((item.price * item.quantity), restaurant_data)}`)
+            .join('\n');
+
+        const orderLabel = order.order_number || order.id.slice(-6);
+        const customerName = order.guest_name || order.created_by || 'Customer';
+        const messageBody = `🍽️ *New Order #${orderLabel}*\n\nCustomer: ${customerName}\nPhone: ${order.phone || 'N/A'}\nAddress: ${order.delivery_address || 'Collection'}\n\n*Items:*\n${itemsList}\n\n*Subtotal:* ${regionMoney((order.subtotal || 0), restaurant_data)}\n*Delivery:* ${regionMoney((order.delivery_fee || 0), restaurant_data)}\n*Total:* ${regionMoney(order.total, restaurant_data)}\n\nType: ${order.order_type}\nPayment: ${order.payment_method}`;
 
         // Check if WhatsApp alerts are enabled for this restaurant
         if (!restaurant_data?.whatsapp_alerts_enabled) {
