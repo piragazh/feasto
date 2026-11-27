@@ -43,6 +43,8 @@ import { readAiCheckoutToken } from '@/lib/ai-checkout-token';
 import { pendingPayment } from '@/lib/pendingPayment';
 import { handleRecoveryResult } from '@/lib/checkoutRecovery';
 import { useBrandAccent } from '@/lib/useBrandAccent';
+import { getRegion } from '@/lib/region';
+import { isValidCustomerPhone, phoneForOrder, phoneFieldText } from '@/lib/phone';
 
 // Main Checkout Component
 export default function Checkout() {
@@ -688,9 +690,17 @@ export default function Checkout() {
 
     // CRIT-2 FIX: createOrder extracted to useCreateOrder hook — locked session key is now
     // enforced as required for card payments to prevent idempotency mismatches.
+    // Outside the UK the phone is saved in one clean form (0712345678) however
+    // the customer typed it, so loyalty, coupons and repeat-customer checks see
+    // the same number. UK shops get the very same formData object as before.
+    const isUkRestaurant = getRegion(restaurant).country === 'GB';
+    const orderFormData = isUkRestaurant
+        ? formData
+        : { ...formData, phone: phoneForOrder(formData.phone, restaurant) };
+
     const { createOrder } = useCreateOrder({
         cart, restaurantId, restaurantName, restaurant,
-        orderType, isGuest, formData, isExistingAddress,
+        orderType, isGuest, formData: orderFormData, isExistingAddress,
         deliveryCoordinates, deliveryFee, smallOrderSurcharge,
         subtotal, discount, total, isScheduled, scheduledFor,
         appliedCoupons, appliedPromotions, groupOrderId,
@@ -844,7 +854,7 @@ export default function Checkout() {
         // CRITICAL SECURITY: Check rate limiting — applies to both authenticated and guest users
         try {
             const rateLimitResponse = await base44.functions.invoke('enforceRateLimiting', {
-                phone: formData.phone,
+                phone: phoneForOrder(formData.phone, restaurant),
                 guest_email: formData.guest_email
             });
             if (!rateLimitResponse?.data?.allowed) {
@@ -921,11 +931,12 @@ export default function Checkout() {
             // Only block if zones exist but customer is explicitly outside all of them (available === false).
         }
 
-        // ---- VALIDATION: UK Phone Number Format ----
-        const ukPhoneRegex = /^(\+44\s?7\d{3}|\(?07\d{3}\)?)\s?\d{3}\s?\d{3}$/;
-        if (!ukPhoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+        // ---- VALIDATION: Phone Number Format (by the restaurant's country) ----
+        // UK shops keep the exact rule and message that were live before
+        // (src/lib/phone.js); other countries use their own mobile format.
+        if (!isValidCustomerPhone(formData.phone, restaurant)) {
             console.log('BLOCKED: Invalid phone format');
-            toast.error('Please enter a valid UK phone number');
+            toast.error(phoneFieldText(restaurant).error);
             return;
         }
         
@@ -1040,7 +1051,7 @@ export default function Checkout() {
                     ? (isExistingAddress ? formData.delivery_address : `${formData.door_number ? formData.door_number + ', ' : ''}${formData.delivery_address}`)
                     : (restaurant?.address || 'Collection'),
                 delivery_coordinates: orderType === 'delivery' ? deliveryCoordinates : null,
-                phone: formData.phone,
+                phone: phoneForOrder(formData.phone, restaurant),
                 notes: formData.notes,
                 is_scheduled: isScheduled,
                 scheduled_for: isScheduled ? scheduledFor : null,
@@ -1525,11 +1536,11 @@ export default function Checkout() {
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <div>
-                                        <Label htmlFor="phone">UK Mobile Number *</Label>
+                                        <Label htmlFor="phone">{phoneFieldText(restaurant).label} *</Label>
                                         <Input
                                             id="phone"
                                             type="tel"
-                                            placeholder="07123 456789"
+                                            placeholder={phoneFieldText(restaurant).placeholder}
                                             value={formData.phone}
                                             onChange={(e) => {
                                                 setFormData({ ...formData, phone: e.target.value });
