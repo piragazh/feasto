@@ -35,10 +35,11 @@ const defaultForm = {
     is_active: true
 };
 
-function getCouponLabel(coupon) {
+// prefix: the restaurant's money prefix (useMoney) - "£" in the UK, as before.
+function getCouponLabel(coupon, prefix = '£') {
     switch (coupon.discount_type) {
         case 'percentage': return `${coupon.discount_value}% Off`;
-        case 'fixed': return `£${coupon.discount_value} Off`;
+        case 'fixed': return `${prefix}${coupon.discount_value} Off`;
         case 'free_delivery': return 'Free Delivery';
         case 'free_item': return `Free: ${coupon.free_item_name || 'Item'}`;
         case 'buy_one_get_one': return 'Buy 1 Get 1 Free';
@@ -202,7 +203,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                                                 }`}
                                             >
                                                 <Icon className="h-4 w-4 flex-shrink-0" />
-                                                {t.label}
+                                                {t.value === 'fixed' ? `${prefix} Off`.replace('£ Off', '£ Off') : t.label}
                                             </button>
                                         );
                                     })}
@@ -330,7 +331,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                                         </div>
                                         <div>
                                             <h3 className="font-mono font-bold text-base">{coupon.code}</h3>
-                                            <p className={`text-xs font-semibold ${typeInfo.color}`}>{getCouponLabel(coupon)}</p>
+                                            <p className={`text-xs font-semibold ${typeInfo.color}`}>{getCouponLabel(coupon, prefix)}</p>
                                         </div>
                                     </div>
                                     <Badge variant={coupon.is_active && !isExpired && !usageFull ? 'default' : 'secondary'} className="text-xs">
@@ -387,7 +388,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                         segment_name: 'All marketable',
                         coupon_mode: 'shared',
                         coupon_code: crmCoupon.code,
-                        body: `Hi {first_name}, use code {coupon_code} for ${getCouponLabel(crmCoupon).toLowerCase()} at {restaurant}. Order: {order_link}`,
+                        body: `Hi {first_name}, use code {coupon_code} for ${getCouponLabel(crmCoupon, prefix).toLowerCase()} at {restaurant}. Order: {order_link}`,
                     }}
                     onClose={() => setCrmCoupon(null)}
                 />
