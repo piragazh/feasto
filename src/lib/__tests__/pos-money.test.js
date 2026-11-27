@@ -278,3 +278,16 @@ describe('revenue by tender', () => {
         expect(revenueByTender({ status: 'cancelled', total: 30, cash_amount: 30, card_amount: 0 })).toEqual({ cash: 0, card: 0 });
     });
 });
+
+describe('approveDiscount — restaurant currency cap', () => {
+    it('default is the UK £20 cap, as before', () => {
+        expect(approveDiscount({ clientDiscount: 20, subtotal: 200, reasonCode: 'x' }).approved).toBe(20);
+        expect(approveDiscount({ clientDiscount: 20.01, subtotal: 200, reasonCode: 'x' }).reason).toBe('exceeds_manager_limit');
+    });
+    it('Sri Lanka cap Rs 5,000; 20% still applies', () => {
+        const lk = { reasonCode: 'x', managerMaxFixed: 5000 };
+        expect(approveDiscount({ ...lk, clientDiscount: 5000, subtotal: 30000 }).approved).toBe(5000);
+        expect(approveDiscount({ ...lk, clientDiscount: 5001, subtotal: 30000 }).reason).toBe('exceeds_manager_limit');
+        expect(approveDiscount({ ...lk, clientDiscount: 3000, subtotal: 10000 }).reason).toBe('exceeds_manager_limit');
+    });
+});

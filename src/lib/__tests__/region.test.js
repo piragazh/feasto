@@ -94,3 +94,14 @@ describe('region — table shape', () => {
         expect(Object.isFrozen(REGIONS.GB)).toBe(true);
     });
 });
+
+describe('region — money limits', () => {
+    it('UK keeps £20 discount cap and £30 refund flag', async () => {
+        const { getMoneyLimits } = await import('../region.js');
+        expect(getMoneyLimits({ country: null })).toEqual({ managerDiscountMax: 20, largeRefundFlag: 30, offlineDiscountMax: 10 });
+    });
+    it('Sri Lanka: Rs 5,000 cap, Rs 10,000 refund flag, Rs 2,000 offline (recorded)', async () => {
+        const { getMoneyLimits } = await import('../region.js');
+        expect(getMoneyLimits('LK')).toEqual({ managerDiscountMax: 5000, largeRefundFlag: 10000, offlineDiscountMax: 2000 });
+    });
+});
