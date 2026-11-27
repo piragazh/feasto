@@ -242,7 +242,7 @@ export function useCreateOrder({
                 window.gtag('event', 'conversion', {
                     send_to: 'AW-18537041821/-08mCKetsqkdEJ2fk4dF',
                     value: total,
-                    currency: 'GBP',
+                    currency: currencyCode(restaurant),
                     transaction_id: newOrder.id,
                 });
             }

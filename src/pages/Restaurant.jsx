@@ -21,7 +21,7 @@ import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSe
 import TemporaryClosureBanner from '@/components/restaurant/TemporaryClosureBanner';
 import { sellsAt, inHours, nextOpening, restaurantTz } from '@/lib/item-availability';
 import { sanitizeBranding, brandTokens, ensureBrandFont } from '@/lib/branding';
-import { formatMoney, currencySymbol } from '@/lib/money';
+import { formatMoney, currencySymbol, currencyCode } from '@/lib/money';
 import { MoneyProvider, moneyPrefix } from '@/lib/MoneyContext';
 
 // Lazy load heavy components
@@ -512,7 +512,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 window.gtag('event', 'conversion', {
                     send_to: 'AW-18537041821/_S3lCJXiuKkdEJ2fk4dF',
                     value: item.price * quantityToAdd,
-                    currency: 'GBP',
+                    currency: currencyCode(restaurant),
                 });
             }
             toast.success(`🛒 ${item.name} added to cart${promoMessage}`, {
@@ -582,7 +582,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 window.gtag('event', 'conversion', {
                     send_to: 'AW-18537041821/_S3lCJXiuKkdEJ2fk4dF',
                     value: (itemData.final_price || 0) * (itemData.quantity || 1),
-                    currency: 'GBP',
+                    currency: currencyCode(restaurant),
                 });
             }
             toast.success(`🛒 ${itemData.name} added to cart`, {
@@ -616,7 +616,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             window.gtag('event', 'conversion', {
                 send_to: 'AW-18537041821/_S3lCJXiuKkdEJ2fk4dF',
                 value: deal.deal_price,
-                currency: 'GBP',
+                currency: currencyCode(restaurant),
             });
         }
         toast.success(`🛒 ${deal.name} added to cart`, {
@@ -658,7 +658,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             window.gtag('event', 'conversion', {
                 send_to: 'AW-18537041821/_S3lCJXiuKkdEJ2fk4dF',
                 value: (dealData.deal_price || 0) * (dealData.quantity || 1),
-                currency: 'GBP',
+                currency: currencyCode(restaurant),
             });
         }
         toast.success(`🛒 ${dealData.deal_name} added to cart`, {
@@ -985,7 +985,7 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
             window.gtag('event', 'conversion', {
                 send_to: 'AW-18537041821/hxvPCI_Du6kdEJ2fk4dF',
                 value: cartTotal,
-                currency: 'GBP',
+                currency: currencyCode(restaurant),
             });
         }
         // Close drawer and navigate using React Router

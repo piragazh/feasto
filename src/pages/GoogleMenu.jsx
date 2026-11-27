@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, currencyCode } from '@/lib/money';
 
 export default function GoogleMenu() {
     const location = useLocation();
@@ -86,7 +86,7 @@ export default function GoogleMenu() {
                     "offers": {
                         "@type": "Offer",
                         "price": item.price.toFixed(2),
-                        "priceCurrency": "GBP"
+                        "priceCurrency": currencyCode(restaurant)
                     }
                 }))
             };
@@ -214,7 +214,7 @@ export default function GoogleMenu() {
                                                 itemType="https://schema.org/Offer"
                                             >
                                                 <span itemProp="price">{money(item.price)}</span>
-                                                <meta itemProp="priceCurrency" content="GBP" />
+                                                <meta itemProp="priceCurrency" content={currencyCode(restaurant)} />
                                             </div>
                                         </div>
                                     </div>

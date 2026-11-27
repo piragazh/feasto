@@ -45,7 +45,7 @@ import { handleRecoveryResult } from '@/lib/checkoutRecovery';
 import { useBrandAccent } from '@/lib/useBrandAccent';
 import { getRegion } from '@/lib/region';
 import { isValidCustomerPhone, phoneForOrder, phoneFieldText } from '@/lib/phone';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, currencyCode } from '@/lib/money';
 import { MoneyProvider } from '@/lib/MoneyContext';
 
 // Main Checkout Component
@@ -434,7 +434,7 @@ export default function Checkout() {
                         window.gtag('event', 'conversion', {
                             send_to: 'AW-18537041821/-08mCKetsqkdEJ2fk4dF',
                             value: pending.orderData?.total,
-                            currency: 'GBP',
+                            currency: currencyCode(restaurant),
                             transaction_id: result.order_id,
                         });
                     }
@@ -461,7 +461,7 @@ export default function Checkout() {
                                 window.gtag('event', 'conversion', {
                                     send_to: 'AW-18537041821/-08mCKetsqkdEJ2fk4dF',
                                     value: currentPending?.orderData?.total,
-                                    currency: 'GBP',
+                                    currency: currencyCode(restaurant),
                                     transaction_id: maybeOrders[0].id,
                                 });
                             }
