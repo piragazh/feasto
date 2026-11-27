@@ -76,10 +76,12 @@ export function getTerminalReadiness(kioskConfig) {
  * @param {object|null|undefined} kioskConfig
  * @returns {{ showCard: boolean, showCounter: boolean, terminalReadiness: TerminalReadiness }}
  */
-export function getKioskPaymentOptions(kioskConfig) {
+// cardAllowed: false where the restaurant's country has no card provider yet
+// (src/lib/region.js hasCardPayments). Default true = the rule as it was.
+export function getKioskPaymentOptions(kioskConfig, { cardAllowed = true } = {}) {
     const readiness = getTerminalReadiness(kioskConfig);
 
-    const cardConfigEnabled = kioskConfig?.payment_card_enabled === true;
+    const cardConfigEnabled = cardAllowed && kioskConfig?.payment_card_enabled === true;
     // Counter is enabled by default unless explicitly set to false
     const counterConfigEnabled = kioskConfig?.payment_counter_enabled !== false;
     // Auto-fallback: if card was meant to show but terminal isn't configured, expose counter

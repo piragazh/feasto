@@ -4,7 +4,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Wallet, DollarSign } from 'lucide-react';
 
-export default function PaymentMethods({ selectedMethod, onMethodChange, acceptsCash = true }) {
+// acceptsCard: false where the restaurant's country has no card provider yet
+// (src/lib/region.js hasCardPayments). Default true = the screen as it was.
+export default function PaymentMethods({ selectedMethod, onMethodChange, acceptsCash = true, acceptsCard = true }) {
 
     return (
         <Card>
@@ -18,6 +20,7 @@ export default function PaymentMethods({ selectedMethod, onMethodChange, accepts
                 <RadioGroup value={selectedMethod} onValueChange={onMethodChange}>
                     <div className="space-y-3">
                         {/* Card Payment */}
+                        {acceptsCard && (
                         <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                             <RadioGroupItem value="card" id="card" />
                             <Label htmlFor="card" className="flex items-center gap-3 cursor-pointer flex-1">
@@ -30,6 +33,7 @@ export default function PaymentMethods({ selectedMethod, onMethodChange, accepts
                                 </div>
                             </Label>
                         </div>
+                        )}
 
                         {/* Cash on Delivery */}
                         {acceptsCash && (
@@ -45,6 +49,13 @@ export default function PaymentMethods({ selectedMethod, onMethodChange, accepts
                                     </div>
                                 </Label>
                             </div>
+                        )}
+
+                        {/* Nothing to choose (no card provider here and cash switched off) */}
+                        {!acceptsCard && !acceptsCash && (
+                            <p className="text-sm text-gray-600 p-4 border rounded-lg bg-gray-50">
+                                This restaurant isn't taking online payments right now. Please contact the restaurant to order.
+                            </p>
                         )}
                     </div>
                 </RadioGroup>

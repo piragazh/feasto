@@ -43,7 +43,7 @@ import { readAiCheckoutToken } from '@/lib/ai-checkout-token';
 import { pendingPayment } from '@/lib/pendingPayment';
 import { handleRecoveryResult } from '@/lib/checkoutRecovery';
 import { useBrandAccent } from '@/lib/useBrandAccent';
-import { getRegion } from '@/lib/region';
+import { getRegion, hasCardPayments } from '@/lib/region';
 import { isValidCustomerPhone, phoneForOrder, phoneFieldText } from '@/lib/phone';
 import { formatMoney, currencyCode } from '@/lib/money';
 import { MoneyProvider } from '@/lib/MoneyContext';
@@ -1716,6 +1716,7 @@ export default function Checkout() {
                                             resetPaymentState();
                                         }}
                                         acceptsCash={restaurant?.accepts_cash_on_delivery !== false}
+                                        acceptsCard={hasCardPayments(restaurant)}
                                     />
                                 );
                             })()}
