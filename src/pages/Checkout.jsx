@@ -45,6 +45,8 @@ import { handleRecoveryResult } from '@/lib/checkoutRecovery';
 import { useBrandAccent } from '@/lib/useBrandAccent';
 import { getRegion } from '@/lib/region';
 import { isValidCustomerPhone, phoneForOrder, phoneFieldText } from '@/lib/phone';
+import { formatMoney } from '@/lib/money';
+import { MoneyProvider } from '@/lib/MoneyContext';
 
 // Main Checkout Component
 export default function Checkout() {
@@ -1134,7 +1136,10 @@ export default function Checkout() {
         );
     }
 
+    // Prices in this restaurant's currency (src/lib/money.js); UK shops show £ as before.
+    const money = (amount) => formatMoney(amount, restaurant);
     return (
+        <MoneyProvider restaurant={restaurant}>
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-10">
@@ -1864,5 +1869,6 @@ export default function Checkout() {
                 </div>
             )}
         </div>
+        </MoneyProvider>
     );
 }

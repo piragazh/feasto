@@ -21,6 +21,8 @@ import RestaurantSectionErrorBoundary from '@/components/restaurant/RestaurantSe
 import TemporaryClosureBanner from '@/components/restaurant/TemporaryClosureBanner';
 import { sellsAt, inHours, nextOpening, restaurantTz } from '@/lib/item-availability';
 import { sanitizeBranding, brandTokens, ensureBrandFont } from '@/lib/branding';
+import { formatMoney, currencySymbol } from '@/lib/money';
+import { MoneyProvider, moneyPrefix } from '@/lib/MoneyContext';
 
 // Lazy load heavy components
 const ImageGallery = lazy(() => import('@/components/restaurant/ImageGallery'));
@@ -1158,7 +1160,10 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
         );
     }
 
+    // Prices in this restaurant's currency (src/lib/money.js); UK shops show £ as before.
+    const money = (amount) => formatMoney(amount, restaurant);
     return (
+        <MoneyProvider restaurant={restaurant}>
         <div
             className="restaurant-page min-h-screen pb-32 md:pb-8"
             style={safeBranding.enabled && safeBranding.background_color
@@ -1729,5 +1734,6 @@ export default function Restaurant({ restaurantId: propRestaurantId }) {
                 </div>
             )}
         </div>
+        </MoneyProvider>
     );
 }

@@ -18,6 +18,7 @@ import LiveDriverTracking from '@/components/tracking/LiveDriverTracking';
 import DeliveryMilestoneNotifier from '@/components/tracking/DeliveryMilestoneNotifier';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { formatMoney } from '@/lib/money';
 
 // Fix leaflet default marker icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -168,6 +169,8 @@ export default function TrackOrder() {
     const status = statusConfig[order.status] || statusConfig.pending;
     const StatusIcon = status.icon;
 
+    // Prices in this restaurant's currency (src/lib/money.js); UK shops show £ as before.
+    const money = (amount) => formatMoney(amount, restaurant);
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Milestone Notifier */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
+import { formatMoney } from '@/lib/money';
 
 export default function GoogleMenu() {
     const location = useLocation();
@@ -125,6 +126,8 @@ export default function GoogleMenu() {
         categories[category].push(item);
     });
 
+    // Prices in this restaurant's currency (src/lib/money.js); UK shops show £ as before.
+    const money = (amount) => formatMoney(amount, restaurant);
     return (
         <div className="min-h-screen bg-white">
             {/* Restaurant Header */}

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, ShoppingCart, X, ChevronRight, CheckCircle, Search } from 'lucide-react';
 import { sellsAt, inHours, restaurantTz } from '@/lib/item-availability';
+import { formatMoney } from '@/lib/money';
 
 // tableCreateOrder charges the POS price when set (dine-in is served in store),
 // so the menu and cart must show that price, not the online one.
@@ -165,6 +166,8 @@ export default function TableOrder() {
     };
 
     // ── Loading ──
+    // Prices in this restaurant's currency (src/lib/money.js); UK shops show £ as before.
+    const money = (amount) => formatMoney(amount, restaurant);
     if (step === 'loading') return (
         <div className="min-h-screen bg-orange-50 flex items-center justify-center">
             <div className="text-center">

@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useSEO } from '@/lib/useSEO';
+import { formatMoney } from '@/lib/money';
+import { moneyPrefix } from '@/lib/MoneyContext';
 
 const statusConfig = {
     pending: { label: 'Order Placed', icon: Clock, color: 'bg-yellow-100 text-yellow-700' },
@@ -397,6 +399,9 @@ export default function Orders() {
         );
     }
 
+    // Orders from several restaurants are listed here; until each order records its
+    // currency they are shown in £, as before (src/lib/money.js).
+    const money = (amount) => formatMoney(amount);
     return (
          <PullToRefresh onRefresh={() => refetch()}>
          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
