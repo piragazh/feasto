@@ -203,7 +203,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                                                 }`}
                                             >
                                                 <Icon className="h-4 w-4 flex-shrink-0" />
-                                                {t.value === 'fixed' ? `${prefix} Off`.replace('£ Off', '£ Off') : t.label}
+                                                {t.value === 'fixed' ? `${symbol} Off` : t.label}
                                             </button>
                                         );
                                     })}
