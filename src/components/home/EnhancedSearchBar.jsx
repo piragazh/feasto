@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { formatMoney } from '@/lib/money';
+import { isListedForVisitor } from '@/lib/region';
 
 export default function EnhancedSearchBar({ onSearch, searchQuery, setSearchQuery }) {
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -15,11 +16,16 @@ export default function EnhancedSearchBar({ onSearch, searchQuery, setSearchQuer
     const navigate = useNavigate();
 
     // Fetch restaurants and menu items for suggestions
-    const { data: restaurants = [] } = useQuery({
+    const { data: allRestaurants = [] } = useQuery({
         queryKey: ['restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
         staleTime: 300000,
     });
+    // Only shops in the visitor's country are suggested; their dishes too.
+    const restaurants = React.useMemo(() => (allRestaurants || []).filter((r) => isListedForVisitor(r)), [allRestaurants]);
+    const hiddenRestaurantIds = React.useMemo(
+        () => new Set((allRestaurants || []).filter((r) => !isListedForVisitor(r)).map((r) => r.id)),
+        [allRestaurants]);
 
     const { data: menuItems = [] } = useQuery({
         queryKey: ['allMenuItems'],
@@ -66,6 +72,7 @@ export default function EnhancedSearchBar({ onSearch, searchQuery, setSearchQuer
 
         // Menu item suggestions
         const itemMatches = menuItems
+            .filter(item => !hiddenRestaurantIds.has(item.restaurant_id))
             .filter(item => 
                 item.name.toLowerCase().includes(query) || 
                 item.description?.toLowerCase().includes(query)
@@ -81,7 +88,7 @@ export default function EnhancedSearchBar({ onSearch, searchQuery, setSearchQuer
             cuisines: cuisineMatches,
             items: itemMatches
         };
-    }, [debouncedQuery, restaurants, menuItems]);
+    }, [debouncedQuery, restaurants, menuItems, hiddenRestaurantIds]);
 
     const handleSuggestionClick = (suggestion) => {
         if (suggestion.type === 'restaurant') {

@@ -155,3 +155,27 @@ export function getCashDenominations(restaurantOrCountry) {
 export function hasCardPayments(restaurant) {
     return Boolean(getRegion(restaurant).cardProvider);
 }
+
+/**
+ * The country a customer is browsing from, judged by their device's time zone
+ * (Asia/Colombo → LK). Anything else, or no answer, is GB - so UK customers,
+ * including those abroad, see exactly what they did before. No location prompt.
+ */
+export function visitorCountry(timeZone) {
+    let tz = timeZone;
+    if (tz === undefined) {
+        try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) { tz = ''; }
+    }
+    const hit = Object.values(REGIONS).find((r) => r.timezone === tz);
+    return hit ? hit.country : DEFAULT_COUNTRY;
+}
+
+/**
+ * Should this restaurant be listed on the home page / search for this visitor?
+ * Only restaurants in the visitor's own country (owner decision, 27 Nov 2026):
+ * Sri Lankan shops are hidden from UK customers and the other way round.
+ * Their own pages, links and QR codes still work.
+ */
+export function isListedForVisitor(restaurant, visitor = visitorCountry()) {
+    return normaliseCountry(restaurant?.country) === visitor;
+}

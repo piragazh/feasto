@@ -13,6 +13,7 @@ import FeaturedRestaurants from '@/components/home/FeaturedRestaurants';
 import RestaurantCardWrapper from '@/components/home/RestaurantCardWrapper';
 import EnhancedSearchBar from '@/components/home/EnhancedSearchBar';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { isListedForVisitor } from '@/lib/region';
 
 export default function Home() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -21,12 +22,14 @@ export default function Home() {
     const [userLocation, setUserLocation] = useState(null);
 
     // Fetch restaurants with optimized caching
-    const { data: restaurants = [], isLoading, refetch } = useQuery({
+    const { data: allRestaurants = [], isLoading, refetch } = useQuery({
         queryKey: ['restaurants'],
         queryFn: () => base44.entities.Restaurant.list(),
         staleTime: 10 * 60 * 1000, // Cache for 10 minutes
         gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
     });
+    // Only shops in the visitor's country are listed (UK visitors: every UK shop, as before).
+    const restaurants = useMemo(() => (allRestaurants || []).filter((r) => isListedForVisitor(r)), [allRestaurants]);
 
     useEffect(() => {
         getUserLocation();
