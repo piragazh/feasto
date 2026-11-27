@@ -15,6 +15,7 @@ import { checkoutTrace } from '@/lib/checkoutTrace';
 import { readAiCheckoutToken, clearAiCheckoutToken } from '@/lib/ai-checkout-token';
 import { pendingPayment } from '@/lib/pendingPayment';
 import { functionErrorMessage } from '@/lib/function-errors';
+import { formatMoney, currencyCode } from '@/lib/money';
 
 export function useCreateOrder({
     // Cart & restaurant
@@ -313,8 +314,8 @@ export function useCreateOrder({
                         const itemsList = cart.slice(0, 3).map(item => `${item.quantity}x ${item.name}`).join('\n');
                         const moreItems = cart.length > 3 ? `\n+${cart.length - 3} more items` : '';
                         const customerMessage = orderType === 'collection'
-                            ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\n\nCOLLECTION ORDER\nReady in 15-20 min`
-                            : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: £${total.toFixed(2)}\nPayment: ${actualPaymentMethod}`;
+                            ? `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: ${formatMoney(total, restaurant)}\n\nCOLLECTION ORDER\nReady in 15-20 min`
+                            : `✅ ORDER CONFIRMED - ${orderLabel}\n\n${restaurantName}\n\n${itemsList}${moreItems}\n\nTotal: ${formatMoney(total, restaurant)}\nPayment: ${actualPaymentMethod}`;
                         if (shouldSendWhatsApp) {
                             return base44.functions.invoke('sendWhatsAppCustomer', { to: formData.phone, message: customerMessage, orderId: newOrder.id, restaurantId, restaurantName });
                         } else {
