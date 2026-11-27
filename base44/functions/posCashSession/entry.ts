@@ -22,8 +22,8 @@
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-const SIGN_OFF_TOLERANCE = 5;           // £ - matches needsSignOff() default
-const MAX_FLOAT = 5000;                 // sanity bound on a float or movement
+// Sign-off tolerance and the float bound are per country (region-limits below):
+// UK £5 / £5000 (as before, matches needsSignOff() default), Sri Lanka Rs 500 / Rs 500,000.
 const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
 
 // ── Mirrors of the tested logic ────────────────────────────────────────────
@@ -108,6 +108,30 @@ async function audit(base44, entry) {
     catch (e) { console.warn('[CASH] audit write failed:', e?.message); }
 }
 
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag, aiCashLimit, loyaltySpendPerPoint,
+// cashSignOffTolerance, cashMaxFloat) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = {
+    GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£', aiCashLimit: 50, loyaltySpendPerPoint: 1, cashSignOffTolerance: 5, cashMaxFloat: 5000 },
+    LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ', aiCashLimit: 10000, loyaltySpendPerPoint: 100, cashSignOffTolerance: 500, cashMaxFloat: 500000 },
+};
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') return Response.json({ error: 'POST only' }, { status: 405 });
 
@@ -138,6 +162,12 @@ Deno.serve(async (req) => {
             staff_id: staff?.staff_id,
             staff_name: staff?.staff_name || 'Unattributed',
         };
+
+        // Till limits and money text in this restaurant's currency (UK unchanged).
+        const lim = regionLimits(await restaurantForRegion(base44, restaurant_id));
+        const SIGN_OFF_TOLERANCE = lim.cashSignOffTolerance; // a variance above this needs a manager
+        const MAX_FLOAT = lim.cashMaxFloat;                   // sanity bound on a float or movement
+        const P = lim.prefix;
 
         const findOpen = async () => {
             const rows = await base44.asServiceRole.entities.CashSession.filter({
@@ -170,7 +200,7 @@ Deno.serve(async (req) => {
             });
             await audit(base44, {
                 restaurant_id, action: 'cash.open', outcome: 'allowed', ...who,
-                amount: r2(float), terminal: String(term), detail: `Opened till ${term} with a £${r2(float).toFixed(2)} float`,
+                amount: r2(float), terminal: String(term), detail: `Opened till ${term} with a ${P}${r2(float).toFixed(2)} float`,
             });
             return Response.json({ session: blindView(session) });
         }
@@ -202,7 +232,7 @@ Deno.serve(async (req) => {
             await audit(base44, {
                 restaurant_id, action: `cash.${type}`, outcome: 'allowed', ...who,
                 amount: r2(amount), reason: entry.reason, terminal: String(term),
-                detail: `${type === 'paid_in' ? 'Paid in' : 'Paid out'} £${r2(amount).toFixed(2)}: ${entry.reason}`,
+                detail: `${type === 'paid_in' ? 'Paid in' : 'Paid out'} ${P}${r2(amount).toFixed(2)}: ${entry.reason}`,
             });
             return Response.json({ session: blindView(updated) });
         }
@@ -262,8 +292,8 @@ Deno.serve(async (req) => {
                 outcome: needsSignOff ? 'denied' : 'allowed',
                 ...who, amount: variance, terminal: String(term),
                 detail: [
-                    `Counted £${r2(counted).toFixed(2)}, expected £${calc.expected.toFixed(2)}`,
-                    `${variance < 0 ? 'SHORT' : variance > 0 ? 'OVER' : 'exact'} £${Math.abs(variance).toFixed(2)}`,
+                    `Counted ${P}${r2(counted).toFixed(2)}, expected ${P}${calc.expected.toFixed(2)}`,
+                    `${variance < 0 ? 'SHORT' : variance > 0 ? 'OVER' : 'exact'} ${P}${Math.abs(variance).toFixed(2)}`,
                     `${inSession.length} orders`,
                     calc.legacySplitCount ? `${calc.legacySplitCount} legacy split(s) not counted` : null,
                     needsSignOff ? 'needs manager sign-off' : null,
@@ -309,7 +339,7 @@ Deno.serve(async (req) => {
             await audit(base44, {
                 restaurant_id, action: 'cash.sign_off', outcome: 'allowed', ...who,
                 amount: s.variance, terminal: String(s.terminal),
-                detail: `Signed off £${Number(s.variance || 0).toFixed(2)} variance: ${String(note).trim().slice(0, 200)}`,
+                detail: `Signed off ${P}${Number(s.variance || 0).toFixed(2)} variance: ${String(note).trim().slice(0, 200)}`,
             });
             return Response.json({ session: signed });
         }
