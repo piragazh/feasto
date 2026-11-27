@@ -1,4 +1,4 @@
-import { formatMoney } from '@/lib/money';
+import { formatMoney } from './money.js';
 /**
  * Client-side ESC/POS byte builders — ported from the networkPrint backend function.
  * Generates raw ESC/POS command bytes for thermal printers, used by QZ Tray
