@@ -14,9 +14,11 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { staffErrorMessage } from '@/lib/function-errors';
 import { useRealtimeETA } from '@/components/tracking/ETACalculator';
+import { useMoney } from '@/lib/MoneyContext';
 import 'leaflet/dist/leaflet.css';
 
 export default function DriverActiveDelivery({ order, driver, onComplete }) {
+    const { money } = useMoney();
     // Use parent-tracked location (from watchPosition in DriverApp) — no duplicate GPS calls
     const currentLocation = driver?.current_location || null;
     const [showChat, setShowChat] = useState(false);
@@ -257,13 +259,13 @@ export default function DriverActiveDelivery({ order, driver, onComplete }) {
                                 {order.items.map((item, i) => (
                                     <div key={i} className="flex justify-between text-sm">
                                         <span>{item.quantity}x {item.name}</span>
-                                        <span>£{(item.price * item.quantity).toFixed(2)}</span>
+                                        <span>{money((item.price * item.quantity))}</span>
                                     </div>
                                 ))}
                             </div>
                             <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
                                 <span>Total:</span>
-                                <span>£{order.total.toFixed(2)}</span>
+                                <span>{money(order.total)}</span>
                             </div>
                         </div>
 

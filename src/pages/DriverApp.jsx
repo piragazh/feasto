@@ -21,10 +21,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from 'sonner';
 import { staffErrorMessage } from '@/lib/function-errors';
+import { MoneyProvider } from '@/lib/MoneyContext';
+import { formatMoney } from '@/lib/money';
+import { useRestaurantCountry } from '@/lib/useRestaurantTimeZone';
 
 export default function DriverApp() {
     const [user, setUser] = useState(null);
     const [driver, setDriver] = useState(null);
+    // Amounts in the currency of the driver's restaurant (their first one; UK = £ as before).
+    const driverCountry = useRestaurantCountry(driver && driver !== 'not_found' ? driver.restaurant_ids?.[0] : null);
+    const money = (amount) => formatMoney(amount, driverCountry);
     const [messagingOrder, setMessagingOrder] = useState(null);
     const [customerMessage, setCustomerMessage] = useState('');
     const [gpsActive, setGpsActive] = useState(false);
@@ -280,7 +286,8 @@ export default function DriverApp() {
     }
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
+        <MoneyProvider country={driverCountry}>
+<div className="h-screen flex flex-col overflow-hidden bg-gray-50">
             <style>{`
                 html, body {
                     overscroll-behavior: none;
@@ -353,17 +360,17 @@ export default function DriverApp() {
                     <div className="grid grid-cols-3 gap-2 mt-4">
                         <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
                             <div className="text-[10px] font-medium opacity-90 mb-0.5">Per Delivery</div>
-                            <p className="text-lg font-bold">£{todayEarnings.byDelivery.toFixed(2)}</p>
+                            <p className="text-lg font-bold">{money(todayEarnings.byDelivery)}</p>
                             <div className="text-[9px] opacity-75">Today</div>
                         </div>
                         <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
                             <div className="text-[10px] font-medium opacity-90 mb-0.5">Per Hour</div>
-                            <p className="text-lg font-bold">£{todayEarnings.byHour.toFixed(2)}</p>
+                            <p className="text-lg font-bold">{money(todayEarnings.byHour)}</p>
                             <div className="text-[9px] opacity-75">Today</div>
                         </div>
                         <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
                             <div className="text-[10px] font-medium opacity-90 mb-0.5">Per Mile</div>
-                            <p className="text-lg font-bold">£{todayEarnings.byMile.toFixed(2)}</p>
+                            <p className="text-lg font-bold">{money(todayEarnings.byMile)}</p>
                             <div className="text-[9px] opacity-75">Today</div>
                         </div>
                     </div>
@@ -661,5 +668,6 @@ export default function DriverApp() {
                 </DialogContent>
             </Dialog>
         </div>
+        </MoneyProvider>
     );
 }

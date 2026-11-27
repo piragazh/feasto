@@ -9,9 +9,11 @@ import { Navigation, MapPin, Phone, CheckCircle, AlertTriangle, Route, Clock } f
 import { optimizeRoute, calculateDistance, calculateETA, checkDeviation, generateDirections } from './RouteOptimizer';
 import { toast } from 'sonner';
 import { staffErrorMessage } from '@/lib/function-errors';
+import { useMoney } from '@/lib/MoneyContext';
 import 'leaflet/dist/leaflet.css';
 
 export default function MultiOrderDelivery({ orders, driver, onComplete }) {
+    const { money } = useMoney();
     const [currentLocation, setCurrentLocation] = useState(driver.current_location);
     const [optimizedOrders, setOptimizedOrders] = useState([]);
     const [currentOrderIndex, setCurrentOrderIndex] = useState(0);
@@ -303,7 +305,7 @@ export default function MultiOrderDelivery({ orders, driver, onComplete }) {
                                 {currentOrder.items?.map((item, i) => (
                                     <div key={i} className="flex justify-between text-sm">
                                         <span>{item.quantity}x {item.name}</span>
-                                        <span>£{(item.price * item.quantity).toFixed(2)}</span>
+                                        <span>{money((item.price * item.quantity))}</span>
                                     </div>
                                 ))}
                             </div>
