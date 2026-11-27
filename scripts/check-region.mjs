@@ -177,7 +177,6 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
         else ok(`${file} carries the region limits unchanged`);
     }
     const { REGION_LIMITS, regionLimits } = new Function(`${canon}\nreturn { REGION_LIMITS, regionLimits };`)();
-    const { moneyPrefix } = await import('../src/lib/MoneyContext.jsx').catch(() => ({ moneyPrefix: null }));
     const prefixOf = (c) => (getRegion(c).currencySymbol === '£' ? '£' : `${getRegion(c).currencySymbol} `);
     for (const [code, r] of Object.entries(REGIONS)) {
         const m = REGION_LIMITS[code];
@@ -189,7 +188,6 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
     const uk = regionLimits({ country: null });
     if (uk.managerDiscountMax !== 20 || uk.largeRefundFlag !== 30 || uk.prefix !== '£') bad('UK limits must stay £20 / £30');
     else ok('existing UK restaurants keep £20 / £30');
-    void moneyPrefix;
 }
 
 if (failures) { console.log(`\ncheck-region: ${failures} problem(s)`); process.exit(1); }
