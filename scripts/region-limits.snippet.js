@@ -1,9 +1,9 @@
 // region-limits:start
 // SYNC RULE: server copy of the money limits in src/lib/region.js
-// (managerDiscountMax, largeRefundFlag). Every copy must be identical to
+// (managerDiscountMax, largeRefundFlag) and the money prefix ("£" / "Rs "). Every copy must be identical to
 // scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
 // No country, an unknown one, no restaurant or a failed lookup = the UK limits.
-const REGION_LIMITS = { GB: { managerDiscountMax: 20, largeRefundFlag: 30 }, LK: { managerDiscountMax: 5000, largeRefundFlag: 10000 } };
+const REGION_LIMITS = { GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£' }, LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ' } };
 function regionLimits(restaurant) {
     const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
     return REGION_LIMITS[c] || REGION_LIMITS.GB;
