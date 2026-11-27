@@ -96,8 +96,13 @@ export function getRegion(restaurantOrCountry) {
  */
 export function getRestaurantTimeZone(restaurant) {
     const tz = typeof restaurant?.timezone === 'string' ? restaurant.timezone.trim() : '';
-    if (tz && tz.toUpperCase() !== 'UTC') return tz;
+    if (tz && tz.toUpperCase() !== 'UTC' && isValidTimeZone(tz)) return tz;
     return getRegion(restaurant).timezone;
+}
+
+/** A zone this runtime can use. A typo on a record must not crash ordering. */
+function isValidTimeZone(tz) {
+    try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); return true; } catch (_) { return false; }
 }
 
 /** True when card payments can be taken for this restaurant today. */
