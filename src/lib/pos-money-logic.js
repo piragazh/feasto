@@ -141,13 +141,15 @@ export const MANAGER_MAX_FIXED = 20;
  * has already quoted the discounted price, so the customer is charged full price
  * with nothing shown on screen. Failing loudly lets staff get approval and retry.
  */
-export function approveDiscount({ clientDiscount = 0, subtotal = 0, reasonCode, isAdmin = false }) {
+// managerMaxFixed: the restaurant's fixed cap in its own currency
+// (src/lib/region.js managerDiscountMax). Default = the UK £20, as before.
+export function approveDiscount({ clientDiscount = 0, subtotal = 0, reasonCode, isAdmin = false, managerMaxFixed = MANAGER_MAX_FIXED }) {
     if (!(clientDiscount > 0)) return { approved: 0, reason: null };
     if (!reasonCode) return { approved: null, reason: 'no_reason_code' };
     if (isAdmin) return { approved: clientDiscount, reason: null };
 
     const pct = subtotal > 0 ? (clientDiscount / subtotal) * 100 : 0;
-    if (pct > MANAGER_MAX_PCT || clientDiscount > MANAGER_MAX_FIXED) {
+    if (pct > MANAGER_MAX_PCT || clientDiscount > managerMaxFixed) {
         return { approved: null, reason: 'exceeds_manager_limit' };
     }
     return { approved: clientDiscount, reason: null };
