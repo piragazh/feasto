@@ -21,6 +21,58 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+// region-mirror:start
+// SYNC RULE: server copy of the phone rules in src/lib/region.js + src/lib/phone.js
+// (functions cannot import src/). Every copy must be identical to
+// scripts/region-mirror.snippet.js; scripts/check-region.mjs enforces it and
+// runs this code against src/lib/phone.js.
+const REGION_PHONE = {
+    GB: { dialCode: '44', trunkPrefix: '0', mobileNational: /^7\d{9}$/ },
+    LK: { dialCode: '94', trunkPrefix: '0', mobileNational: /^7\d{8}$/ },
+};
+function regionCountry(code) {
+    const c = typeof code === 'string' ? code.trim().toUpperCase() : '';
+    return REGION_PHONE[c] ? c : 'GB';
+}
+function regionMobileE164(raw, country) {
+    const r = REGION_PHONE[regionCountry(country)];
+    const text = String(raw ?? '').trim();
+    let digits = text.replace(/\D/g, '');
+    if (!digits) return null;
+    let international = text.startsWith('+');
+    if (digits.startsWith('00')) { digits = digits.slice(2); international = true; }
+    let n;
+    if (international) n = digits.startsWith(r.dialCode) ? digits.slice(r.dialCode.length) : '';
+    else if (digits.startsWith(r.dialCode) && r.mobileNational.test(digits.slice(r.dialCode.length))) n = digits.slice(r.dialCode.length);
+    else if (r.trunkPrefix && digits.startsWith(r.trunkPrefix)) n = digits.slice(r.trunkPrefix.length);
+    else n = digits;
+    return r.mobileNational.test(n) ? `+${r.dialCode}${n}` : null;
+}
+// A country's own sender setting. GB keeps the original secret names; other
+// countries add _<CODE> (HTTPSMS_FROM_LK, TWILIO_PHONE_NUMBER_LK, ...).
+function regionEnv(name, country) {
+    const c = regionCountry(country);
+    return Deno.env.get(c === 'GB' ? name : `${name}_${c}`) || '';
+}
+// The country of the restaurant a message is for: from the restaurant, else
+// from the order's restaurant, else GB. Any lookup problem means GB, which is
+// exactly how every message was handled before region support.
+async function restaurantCountryFor(base44, restaurantId, orderId) {
+    try {
+        let id = restaurantId;
+        if (!id && orderId) {
+            const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+            id = orders?.[0]?.restaurant_id;
+        }
+        if (!id) return 'GB';
+        const rows = await base44.asServiceRole.entities.Restaurant.filter({ id });
+        return regionCountry(rows?.[0]?.country);
+    } catch (_) {
+        return 'GB';
+    }
+}
+// region-mirror:end
+
 // ── Phone normalization (preserved from original) ───────────────────────
 function normalizeUkMobile(rawPhone) {
     let cleanPhone = rawPhone.replace(/[\s\-\(\)]/g, '');
@@ -57,9 +109,8 @@ function buildIdempotencyKey({ orderId, smsType, to, dedupeKey }) {
 }
 
 // ── HTTPSMS provider (primary) ──────────────────────────────────────────
-async function sendViaHttpsms({ to, message, idempotencyKey }) {
-    const apiKey = Deno.env.get('HTTPSMS_API_KEY');
-    const from = Deno.env.get('HTTPSMS_FROM');
+// apiKey / from are the sending country's httpSMS settings (see the router).
+async function sendViaHttpsms({ to, message, idempotencyKey, apiKey, from }) {
 
     if (!apiKey || !from) {
         return { success: false, provider: 'httpsms', error: 'HTTPSMS not configured', notConfigured: true };
@@ -135,10 +186,11 @@ async function sendViaHttpsms({ to, message, idempotencyKey }) {
 }
 
 // ── Twilio provider (fallback — preserved from original) ────────────────
-async function sendViaTwilio({ to, message, isFallback }) {
+// from is the sending country's Twilio number (see the router).
+async function sendViaTwilio({ to, message, isFallback, from }) {
     const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-    const twilioPhone = Deno.env.get('TWILIO_PHONE_NUMBER');
+    const twilioPhone = from;
 
     if (!accountSid || !authToken || !twilioPhone) {
         return { success: false, provider: 'twilio', error: 'Twilio not configured', notConfigured: true };
@@ -275,14 +327,33 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Missing required fields: to, message' }, { status: 400 });
         }
 
-        // ── Phone normalization & validation (preserved) ──
-        const formattedPhone = normalizeUkMobile(to);
+        // ── Which country's rules and senders apply ──
+        // The restaurant's country (region mirror above). UK restaurants, and
+        // any message whose restaurant can't be found, take the original path
+        // unchanged: same validation, same secrets, same senders.
+        const country = await restaurantCountryFor(base44, restaurantId, orderId);
+        const isUk = country === 'GB';
+
+        // ── Phone normalization & validation ──
+        const formattedPhone = isUk ? normalizeUkMobile(to) : regionMobileE164(to, country);
         if (!formattedPhone) {
             return Response.json({
-                error: 'Invalid UK mobile number. Must be a UK mobile starting with 07',
+                error: isUk
+                    ? 'Invalid UK mobile number. Must be a UK mobile starting with 07'
+                    : `Invalid mobile number for this restaurant's country (${country})`,
                 received: to,
             }, { status: 400 });
         }
+
+        // ── Senders for that country ──
+        // GB: HTTPSMS_API_KEY / HTTPSMS_FROM / TWILIO_PHONE_NUMBER, as before.
+        // Other countries: their own httpSMS phone (HTTPSMS_FROM_<CODE>, a local
+        // SIM; HTTPSMS_API_KEY_<CODE> optional, else the main key) and Twilio
+        // number (TWILIO_PHONE_NUMBER_<CODE>, else the main Twilio number).
+        // A non-UK text is never sent from the UK httpSMS SIM.
+        const httpsmsApiKey = isUk ? (Deno.env.get('HTTPSMS_API_KEY') || '') : (regionEnv('HTTPSMS_API_KEY', country) || Deno.env.get('HTTPSMS_API_KEY') || '');
+        const httpsmsFrom = regionEnv('HTTPSMS_FROM', country);
+        const twilioFrom = isUk ? (Deno.env.get('TWILIO_PHONE_NUMBER') || '') : (regionEnv('TWILIO_PHONE_NUMBER', country) || Deno.env.get('TWILIO_PHONE_NUMBER') || '');
 
         // ── Idempotency key ──
         const idempotencyKey = buildIdempotencyKey({ orderId, smsType, to: formattedPhone, dedupeKey });
@@ -297,8 +368,8 @@ Deno.serve(async (req) => {
             idempotencyKey,
         };
 
-        const httpsmsConfigured = !!(Deno.env.get('HTTPSMS_API_KEY') && Deno.env.get('HTTPSMS_FROM'));
-        const twilioConfigured = !!(Deno.env.get('TWILIO_ACCOUNT_SID') && Deno.env.get('TWILIO_AUTH_TOKEN') && Deno.env.get('TWILIO_PHONE_NUMBER'));
+        const httpsmsConfigured = !!(httpsmsApiKey && httpsmsFrom);
+        const twilioConfigured = !!(Deno.env.get('TWILIO_ACCOUNT_SID') && Deno.env.get('TWILIO_AUTH_TOKEN') && twilioFrom);
 
         // ── Neither provider configured → simulate (preserved behaviour) ──
         if (!httpsmsConfigured && !twilioConfigured) {
@@ -317,6 +388,8 @@ Deno.serve(async (req) => {
                 to: formattedPhone,
                 message,
                 idempotencyKey,
+                apiKey: httpsmsApiKey,
+                from: httpsmsFrom,
             });
 
             if (httpsmsResult.success) {
@@ -372,6 +445,7 @@ Deno.serve(async (req) => {
             to: formattedPhone,
             message,
             isFallback,
+            from: twilioFrom,
         });
 
         if (twilioResult.success) {
