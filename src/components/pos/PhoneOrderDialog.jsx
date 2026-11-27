@@ -3,6 +3,7 @@ import { Phone, User, MapPin, StickyNote, Search, CheckCircle2, Trash2, UserPlus
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import CustomerProfileModal from './CustomerProfileModal';
+import { useRegionCountry } from '@/lib/MoneyContext';
 
 const COLLECTION_TIMES = ['ASAP', '10 min', '15 min', '20 min', '25 min', '30 min', '45 min', '1 hour'];
 
@@ -32,6 +33,9 @@ async function autocompletePostcode(partial, signal) {
 }
 
 export default function PhoneOrderDialog({ open, onClose, orderType, onOrderTypeChange, isDark, restaurantId, onDetailsChange }) {
+    // postcodes.io only knows UK postcodes. Elsewhere the address is typed by
+    // hand (and customers can still be searched by what was typed).
+    const ukPostcodes = useRegionCountry() === 'GB';
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -126,7 +130,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
 
     const handlePostcodeInputChange = (val) => {
         setPostcode(val);
-        if (val.length < 3) {
+        if (val.length < 3 || !ukPostcodes) {
             setPostcodeAutocomplete([]);
             setShowPostcodeDropdown(false);
             return;
@@ -173,7 +177,7 @@ export default function PhoneOrderDialog({ open, onClose, orderType, onOrderType
 
     const handleNewPostcodeChange = async (val) => {
         setNewPostcode(val);
-        if (val.length >= 3) {
+        if (val.length >= 3 && ukPostcodes) {
             const suggestions = await autocompletePostcode(val);
             setNewPostcodeAuto(suggestions);
             setShowNewPostcodeDropdown(suggestions.length > 0);
