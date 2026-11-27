@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Search, Filter, Smartphone } from 'lucide-react';
 import { formatUKTime } from '@/lib/ukDateUtils';
+import { getRestaurantTimeZone } from '@/lib/region';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
@@ -249,7 +250,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                     <div class="separator"></div>
                     ${config.header_text ? `<p style="text-align: center; font-size: 10px;">${config.header_text}</p><div class="separator"></div>` : ''}
                     ${config.show_order_number ? `<h2 style="text-align: center;">ORDER ${orderNum}</h2>` : `<p><strong>Order:</strong> ${orderNum}</p>`}
-                    <p><strong>Time:</strong> ${formatUKTime(order.created_date, 'time')}</p>
+                    <p><strong>Time:</strong> ${formatUKTime(order.created_date, 'time', getRestaurantTimeZone(restaurant))}</p>
                     <p><strong>Type:</strong> ${order.order_type || 'Delivery'}</p>
                     <div class="separator"></div>
                     ${config.show_customer_details ? `
@@ -492,7 +493,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                                    )}
                                                </CardTitle>
                                                <p className="text-sm text-gray-500 mt-1">
-                                                   {formatUKTime(order.created_date, 'datetime12')}
+                                                   {formatUKTime(order.created_date, 'datetime12', getRestaurantTimeZone(restaurant))}
                                                </p>
                                             </div>
                                         </div>

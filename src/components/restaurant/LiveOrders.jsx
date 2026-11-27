@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle, XCircle, Clock, Phone, MapPin, Printer, Eye, Search, Filter, ChevronDown, ChevronUp, User, BadgeCheck } from 'lucide-react';
 import PrintFallbackDialog from '@/components/restaurant/PrintFallbackDialog';
 import { formatUKTime } from '@/lib/ukDateUtils';
+import { useRestaurantTimeZone } from '@/lib/useRestaurantTimeZone';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
@@ -32,6 +33,7 @@ const getOrderOperationalStatus = (order) => {
 };
 
 export default function LiveOrders({ restaurantId, onOrderUpdate }) {
+    const restaurantTimeZone = useRestaurantTimeZone(restaurantId);
     const [rejectingOrder, setRejectingOrder] = useState(null);
     const [printFallback, setPrintFallback] = useState(null); // { order, restaurant, config, errorMessage }
     const [searchQuery, setSearchQuery] = useState('');
@@ -870,7 +872,7 @@ export default function LiveOrders({ restaurantId, onOrderUpdate }) {
                                                        )}
                                                    </div>
                                                    <p className="text-sm text-gray-500 mt-1">
-                                                                      {order.created_date ? formatUKTime(order.created_date, 'datetime12') : '—'}
+                                                                      {order.created_date ? formatUKTime(order.created_date, 'datetime12', restaurantTimeZone) : '—'}
                                                                   </p>
                                                 </div>
                                             </div>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, X, Printer, MapPin, Phone, Clock, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { formatUKTime } from '@/lib/ukDateUtils';
+import { getRestaurantTimeZone } from '@/lib/region';
 import { printerManager } from '@/components/restaurant/PrinterService';
 import { toast } from 'sonner';
 
@@ -120,7 +121,7 @@ export default function PrintFallbackDialog({ order, restaurant, config, errorMe
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-gray-500">
                             <Clock className="h-3.5 w-3.5" />
-                            {order.created_date ? formatUKTime(order.created_date, 'datetime12') : '—'}
+                            {order.created_date ? formatUKTime(order.created_date, 'datetime12', getRestaurantTimeZone(restaurant)) : '—'}
                         </div>
 
                         {order.order_source === 'kiosk' && (

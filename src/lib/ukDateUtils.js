@@ -17,12 +17,16 @@ const UK_TIMEZONE = 'Europe/London';
  * @param {string} formatStr - 'time' | 'datetime' | 'date' | 'full'
  * @returns {string}
  */
-export function formatUKTime(date, formatStr = 'time') {
+export function formatUKTime(date, formatStr = 'time', timeZone = UK_TIMEZONE) {
     if (!date) return '--:--';
     const d = new Date(date);
     if (isNaN(d.getTime())) return '--:--';
 
-    const opts = { timeZone: UK_TIMEZONE };
+    // timeZone: the restaurant's clock (src/lib/region.js). Omitted, or one this
+    // device can't read, means the UK clock - the behaviour before region support.
+    let zone = timeZone || UK_TIMEZONE;
+    try { new Intl.DateTimeFormat('en-GB', { timeZone: zone }); } catch (_) { zone = UK_TIMEZONE; }
+    const opts = { timeZone: zone };
 
     switch (formatStr) {
         case 'time':
