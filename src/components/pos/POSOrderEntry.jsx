@@ -224,7 +224,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             }
             return item;
         });
-    }, [rawMenuItems, scheduleTick]);
+    }, [rawMenuItems, scheduleTick, posTz]);
 
     const { data: tables = [], refetch: refetchTables } = useQuery({
         queryKey: ['pos-tables', restaurantId],
