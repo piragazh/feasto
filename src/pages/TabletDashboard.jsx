@@ -20,7 +20,7 @@ import { printerService } from '@/components/restaurant/PrinterService';
 
 import RejectOrderDialog from '@/components/restaurant/RejectOrderDialog';
 import OrderSummary from '@/components/tablet/OrderSummary';
-import { MoneyProvider } from '@/lib/MoneyContext';
+import { MoneyProvider, useMoney } from '@/lib/MoneyContext';
 
 // ─── Login Screen ────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
