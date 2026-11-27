@@ -97,9 +97,9 @@ ck('tableCreateOrder refuses with the QR rule, now, on the restaurant clock', /w
 { const r = strip(read('src/pages/Restaurant.jsx'));
   ck('online menu: its own query key, online rule', /queryKey: \['menuItems', 'online', restaurantId\]/.test(r) && /sellsAt\(item, 'online'\)/.test(r));
   ck('online menu: outside its hours HIDDEN unless the owner chose to show it',
-    /onlineItems\.filter\(i => i\.show_outside_hours === true \|\| inHours\(i, menuNow\)\)/.test(r));
-  ck('online menu: shown-outside-hours items are greyed', /menuItems\.filter\(i => !inHours\(i, menuNow\)\)/.test(r) && /offHours=\{offHours\}/.test(r));
-  ck('REGRESSION GUARD: nothing outside its hours can be added online', /if \(item && !inHours\(item, menuNow\)\)[\s\S]{0,200}return;/.test(r)); }
+    /onlineItems\.filter\(i => i\.show_outside_hours === true \|\| inHours\(i, menuNow, menuTz\)\)/.test(r) && /const menuTz = restaurantTz\(restaurant\)/.test(r));
+  ck('online menu: shown-outside-hours items are greyed', /menuItems\.filter\(i => !inHours\(i, menuNow, menuTz\)\)/.test(r) && /offHours=\{offHours\}/.test(r));
+  ck('REGRESSION GUARD: nothing outside its hours can be added online', /if \(item && !inHours\(item, menuNow, menuTz\)\)[\s\S]{0,200}return;/.test(r)); }
 { const sch = JSON.parse(read('base44/entities/MenuItem.jsonc').replace(/^\s*\/\/.*$/gm, '')).properties.show_outside_hours;
   const form = strip(read('src/components/restaurant/MenuManagement.jsx'));
   ck('the owner\'s toggle: saved per item, OFF (hidden) by default', sch?.type === 'boolean' && sch?.default === false
@@ -116,9 +116,9 @@ ck('tableCreateOrder refuses with the QR rule, now, on the restaurant clock', /w
 { const p = strip(read('src/components/restaurant/PopularItems.jsx'));
   ck('popular rail uses the page\'s filtered list, not its own query', !/MenuItem\.filter/.test(p) && /offHours\?\.has\(item\.id\)/.test(p)); }
 { const k = strip(read('src/components/kiosk/KioskMenu.jsx'));
-  ck('kiosk menu: kiosk rule + hides off-hours items', /sellsAt\(i, 'kiosk'\)/.test(k) && /inHours\(i, kioskNow\)/.test(k)); }
+  ck('kiosk menu: kiosk rule + hides off-hours items', /sellsAt\(i, 'kiosk'\)/.test(k) && /inHours\(i, kioskNow, kioskTz\)/.test(k) && /const kioskTz = restaurantTz\(restaurant\)/.test(k)); }
 { const q = strip(read('src/pages/TableOrder.jsx'));
-  ck('QR menu: QR rule + hides off-hours items', /sellsAt\(i, 'qr'\)/.test(q) && /inHours\(i, qrNow\)/.test(q)); }
+  ck('QR menu: QR rule + hides off-hours items', /sellsAt\(i, 'qr'\)/.test(q) && /inHours\(i, qrNow, qrTz\)/.test(q) && /const qrTz = restaurantTz\(restaurant\)/.test(q)); }
 
 const good = checks.filter(Boolean).length;
 console.log(`\n  ${good}/${checks.length} correct`);
