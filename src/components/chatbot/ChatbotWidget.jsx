@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import EscalationDialog from './EscalationDialog';
 import { createPageUrl } from '@/utils';
 import { saveAiCheckoutToken } from '@/lib/ai-checkout-token';
+import { MoneyProvider, useMoney } from '@/lib/MoneyContext';
+import { formatMoney } from '@/lib/money';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const getCart = () => {
@@ -66,6 +68,7 @@ const STATUS_LABELS = {
 
 // ── sub-components ───────────────────────────────────────────────────────────
 function ItemCard({ item, onAdd }) {
+    const { money } = useMoney();
     return (
         <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl p-2 shadow-sm">
             {item.image_url ? (
@@ -75,7 +78,7 @@ function ItemCard({ item, onAdd }) {
             )}
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">{item.name}</p>
-                <p className="text-sm font-bold text-orange-600">£{item.price?.toFixed(2)}</p>
+                <p className="text-sm font-bold text-orange-600">{money(item.price)}</p>
                 {item.reason && <p className="text-xs text-gray-400 truncate">{item.reason}</p>}
             </div>
             <Button
@@ -108,13 +111,14 @@ function OrderTracker({ trackData }) {
 }
 
 function CartSummaryBar({ cart, onCheckout }) {
+    const { money } = useMoney();
     if (!cart.length) return null;
     const total = getCartTotal(cart);
     const count = cart.reduce((s, i) => s + i.quantity, 0);
     return (
         <div className="flex items-center gap-2 bg-orange-500 text-white px-3 py-2 text-xs font-medium">
             <ShoppingCart className="h-3.5 w-3.5" />
-            <span>{count} item{count !== 1 ? 's' : ''} • £{total.toFixed(2)}</span>
+            <span>{count} item{count !== 1 ? 's' : ''} • {money(total)}</span>
             <button
                 className="ml-auto text-white/80 hover:text-white underline text-xs"
                 onClick={() => (onCheckout ? onCheckout() : (window.location.href = '/Checkout'))}
@@ -126,6 +130,7 @@ function CartSummaryBar({ cart, onCheckout }) {
 }
 
 function OptionQuestion({ question, onChoose, onCancel, disabled }) {
+    const { money } = useMoney();
     return (
         <div className="bg-white border border-orange-100 rounded-xl p-2.5 w-full space-y-2">
             <p className="text-xs font-semibold text-gray-700">{question.item_name}: choose {question.group}</p>
@@ -133,7 +138,7 @@ function OptionQuestion({ question, onChoose, onCancel, disabled }) {
                 {(question.options || []).slice(0, 12).map((o, i) => (
                     <button key={i} type="button" disabled={disabled} onClick={() => onChoose(i)}
                         className="bg-orange-50 border border-orange-200 text-orange-800 text-xs font-medium px-3 py-1.5 rounded-full hover:bg-orange-100 disabled:opacity-50">
-                        {o.label}{o.extra_price ? ` +£${o.extra_price.toFixed(2)}` : ''}
+                        {o.label}{o.extra_price ? ` +${money(o.extra_price)}` : ''}
                     </button>
                 ))}
                 <button type="button" disabled={disabled} onClick={onCancel} className="text-xs text-gray-500 px-2 py-1.5 hover:text-gray-700 disabled:opacity-50">Cancel</button>
@@ -240,7 +245,7 @@ export default function ChatbotWidget() {
         let greeting;
         if (cartItems.length > 0) {
             const total = getCartTotal(cartItems);
-            greeting = `Hey! 👋 You've got ${cartItems.reduce((s,i) => s + i.quantity, 0)} items in your cart (£${total.toFixed(2)}).\n\nWant to add anything else, or shall I help you find a deal?`;
+            greeting = `Hey! 👋 You've got ${cartItems.reduce((s,i) => s + i.quantity, 0)} items in your cart (${formatMoney(total, currentRestaurant)}).\n\nWant to add anything else, or shall I help you find a deal?`;
         } else if (currentRestaurant) {
             greeting = `Hey! 👋 I'm your assistant for ${currentRestaurant.name}.\n\nI can help you build your order, find the best deals, or track your delivery.\n\nWhat are you after? 🍽️`;
         } else {
@@ -369,7 +374,7 @@ export default function ChatbotWidget() {
         // Confirm and upsell
         setMessages(prev => [...prev, {
             role: 'assistant',
-            content: `✅ Added ${item.name} to your cart!\nCart total: £${getCartTotal(cart).toFixed(2)}`,
+            content: `✅ Added ${item.name} to your cart!\nCart total: ${formatMoney(getCartTotal(cart), currentRestaurant)}`,
             quickActions: ['Add more', 'Show deals', 'Checkout →'],
             timestamp: new Date().toISOString()
         }]);
@@ -387,8 +392,9 @@ export default function ChatbotWidget() {
 
     const unreadCount = 0; // Could be extended
 
+    // Prices in the open restaurant's currency (none open = £, as before).
     return (
-        <>
+        <MoneyProvider restaurant={currentRestaurant}>
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
@@ -524,6 +530,6 @@ export default function ChatbotWidget() {
                 conversationHistory={messages}
                 onComplete={handleEscalationComplete}
             />
-        </>
+        </MoneyProvider>
     );
 }
