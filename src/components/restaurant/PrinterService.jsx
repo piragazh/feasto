@@ -1,3 +1,4 @@
+import { formatMoney } from '@/lib/money';
 // Bluetooth Thermal Printer Service
 // Supports dual printers (A/B), heartbeat monitoring, auto-reconnect
 
@@ -343,10 +344,10 @@ export class PrinterService {
                 await this.sendCommand(cmd.boldOn);
                 await this.sendText(`${item.quantity}x ${item.name}\n`);
                 await this.sendCommand(cmd.boldOff);
-                await this.sendText(`    £${((item.price || 0) * item.quantity).toFixed(2)}\n`);
+                await this.sendText(`    ${formatMoney(((item.price || 0) * item.quantity), restaurant)}\n`);
             } else {
                 const itemName = `${item.quantity}x ${item.name}`;
-                const price = `£${((item.price || 0) * item.quantity).toFixed(2)}`;
+                const price = `${formatMoney(((item.price || 0) * item.quantity), restaurant)}`;
                 const padding = lineWidth - itemName.length - price.length;
                 await this.sendText(`${itemName}${' '.repeat(Math.max(1, padding))}${price}\n`);
             }
@@ -361,21 +362,21 @@ export class PrinterService {
 
         if (!isKitchen) {
             if (config.template !== 'compact') {
-                const subtotal = `£${(order.subtotal || 0).toFixed(2)}`;
+                const subtotal = `${formatMoney((order.subtotal || 0), restaurant)}`;
                 await this.sendText(`Subtotal:${' '.repeat(Math.max(1, lineWidth - 9 - subtotal.length))}${subtotal}\n`);
                 if ((order.delivery_fee || 0) > 0) {
-                    const fee = `£${order.delivery_fee.toFixed(2)}`;
+                    const fee = `${formatMoney(order.delivery_fee, restaurant)}`;
                     await this.sendText(`Delivery:${' '.repeat(Math.max(1, lineWidth - 9 - fee.length))}${fee}\n`);
                 }
                 if ((order.discount || 0) > 0) {
-                    const disc = `-£${order.discount.toFixed(2)}`;
+                    const disc = `-${formatMoney(order.discount, restaurant)}`;
                     await this.sendText(`Discount:${' '.repeat(Math.max(1, lineWidth - 9 - disc.length))}${disc}\n`);
                 }
             }
 
             await this.sendCommand(cmd.boldOn);
             if (config.template === 'itemized') await this.sendCommand(cmd.doubleHeight);
-            const total = `£${(order.total || 0).toFixed(2)}`;
+            const total = `${formatMoney((order.total || 0), restaurant)}`;
             await this.sendText(`TOTAL:${' '.repeat(Math.max(1, lineWidth - 6 - total.length))}${total}\n`);
             await this.sendCommand(cmd.normal);
             await this.sendCommand(cmd.boldOff);
@@ -385,9 +386,9 @@ export class PrinterService {
             // Cash tendered / change - see the same block in src/lib/escpos.js.
             if (config.show_cash_details !== false && order.cash_tendered > 0) {
                 await this.sendText('--------------------------------\n');
-                const tendered = `£${Number(order.cash_tendered).toFixed(2)}`;
+                const tendered = `${formatMoney(Number(order.cash_tendered), restaurant)}`;
                 await this.sendText(`Cash Tendered:${' '.repeat(Math.max(1, lineWidth - 14 - tendered.length))}${tendered}\n`);
-                const change = `£${Number(order.change_due || 0).toFixed(2)}`;
+                const change = `${formatMoney(Number(order.change_due || 0), restaurant)}`;
                 await this.sendCommand(cmd.boldOn);
                 await this.sendText(`Change Due:${' '.repeat(Math.max(1, lineWidth - 11 - change.length))}${change}\n`);
                 await this.sendCommand(cmd.boldOff);

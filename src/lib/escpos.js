@@ -1,3 +1,4 @@
+import { formatMoney } from '@/lib/money';
 /**
  * Client-side ESC/POS byte builders — ported from the networkPrint backend function.
  * Generates raw ESC/POS command bytes for thermal printers, used by QZ Tray
@@ -223,7 +224,7 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
             for (const nl of nameLines) add(`${nl}\n`);
             add(cmd.normal, cmd.boldOff);
         } else {
-            const itemPrice = `\xA3${((item.price || 0) * qty).toFixed(2)}`;
+            const itemPrice = `${formatMoney(((item.price || 0) * qty), restaurant)}`;
             add(cmd.boldOn);
             if (byteLen(itemLabel) + byteLen(itemPrice) + 1 <= W) {
                 add(`${rPad(itemLabel, itemPrice, W)}\n`);
@@ -271,21 +272,21 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
 
     if (!isKitchen) {
         if (!isCompact && !isMinimal) {
-            const sub = `\xA3${(order.subtotal || 0).toFixed(2)}`;
+            const sub = `${formatMoney((order.subtotal || 0), restaurant)}`;
             add(`${rPad('Subtotal:', sub, W)}\n`);
             if ((order.delivery_fee || 0) > 0) {
-                const fee = `\xA3${order.delivery_fee.toFixed(2)}`;
+                const fee = `${formatMoney(order.delivery_fee, restaurant)}`;
                 add(`${rPad('Delivery:', fee, W)}\n`);
             }
             if ((order.discount || 0) > 0) {
-                const disc = `-\xA3${order.discount.toFixed(2)}`;
+                const disc = `-${formatMoney(order.discount, restaurant)}`;
                 add(`${rPad('Discount:', disc, W)}\n`);
             }
             line('-');
         }
 
         add(cmd.boldOn, cmd.doubleHeight, cmd.alignCenter);
-        add(`TOTAL: \xA3${(order.total || 0).toFixed(2)}\n`);
+        add(`TOTAL: ${formatMoney((order.total || 0), restaurant)}\n`);
         add(cmd.normal, cmd.boldOff, cmd.alignLeft);
 
         if (!isMinimal) {
@@ -298,9 +299,9 @@ export function buildReceiptBytes(order, restaurant, config, openCashDrawer = fa
             // when cash was actually handed over, so card-only receipts stay clean.
             if (config.show_cash_details !== false && order.cash_tendered > 0) {
                 line('-');
-                const tendered = `\xA3${Number(order.cash_tendered).toFixed(2)}`;
+                const tendered = `${formatMoney(Number(order.cash_tendered), restaurant)}`;
                 add(`${rPad('Cash Tendered:', tendered, W)}\n`);
-                const change = `\xA3${Number(order.change_due || 0).toFixed(2)}`;
+                const change = `${formatMoney(Number(order.change_due || 0), restaurant)}`;
                 add(cmd.boldOn);
                 add(`${rPad('Change Due:', change, W)}\n`);
                 add(cmd.boldOff);
@@ -385,19 +386,19 @@ export function buildEODBytes(restaurant, stats, reportDate, config = {}) {
 
     add(cmd.boldOn, 'SALES SUMMARY\n', cmd.boldOff);
     rPadLine('Total Orders:', String(stats.orderCount || 0));
-    rPadLine('Total Sales:', `\xA3${(stats.totalSales || 0).toFixed(2)}`);
-    rPadLine('Avg Order:', `\xA3${(stats.avgOrder || 0).toFixed(2)}`);
-    if (stats.totalDiscount > 0) rPadLine('Discounts Given:', `-\xA3${(stats.totalDiscount || 0).toFixed(2)}`);
+    rPadLine('Total Sales:', `${formatMoney((stats.totalSales || 0), restaurant)}`);
+    rPadLine('Avg Order:', `${formatMoney((stats.avgOrder || 0), restaurant)}`);
+    if (stats.totalDiscount > 0) rPadLine('Discounts Given:', `-${formatMoney((stats.totalDiscount || 0), restaurant)}`);
     line('-');
 
     add(cmd.boldOn, 'PAYMENT BREAKDOWN\n', cmd.boldOff);
     for (const [method, data] of Object.entries(stats.byMethod || {})) {
-        rPadLine(`${method.toUpperCase()} (${data.count}):`, `\xA3${(data.total || 0).toFixed(2)}`);
+        rPadLine(`${method.toUpperCase()} (${data.count}):`, `${formatMoney((data.total || 0), restaurant)}`);
     }
     line('-');
 
     add(cmd.boldOn, 'CASH SUMMARY\n', cmd.boldOff);
-    rPadLine('Cash Collected:', `\xA3${(stats.cashTotal || 0).toFixed(2)}`);
+    rPadLine('Cash Collected:', `${formatMoney((stats.cashTotal || 0), restaurant)}`);
     line('-');
 
     add(cmd.boldOn, `CANCELLED (${(stats.cancelled || []).length})\n`, cmd.boldOff);
@@ -406,7 +407,7 @@ export function buildEODBytes(restaurant, stats, reportDate, config = {}) {
     } else {
         for (const o of stats.cancelled) {
             const num = o.order_number || `#${(o.id || '').slice(-6)}`;
-            add(`  ${num}  \xA3${(o.total || 0).toFixed(2)}\n`);
+            add(`  ${num}  ${formatMoney((o.total || 0), restaurant)}\n`);
         }
     }
     line('=');
@@ -451,10 +452,10 @@ export function buildReportBytes(restaurant, reportData, config = {}) {
     add(cmd.boldOn, 'SUMMARY\n', cmd.boldOff);
     line('-');
     rPadLine('Total Orders:', String(reportData.filteredOrders?.length || 0));
-    rPadLine('Total Revenue:', `\xA3${(reportData.totalRevenue || 0).toFixed(2)}`);
-    rPadLine('Cash:', `\xA3${(reportData.cashRevenue || 0).toFixed(2)}`);
-    rPadLine('Card:', `\xA3${(reportData.cardRevenue || 0).toFixed(2)}`);
-    rPadLine('Avg Order:', `\xA3${(reportData.averageOrder || 0).toFixed(2)}`);
+    rPadLine('Total Revenue:', `${formatMoney((reportData.totalRevenue || 0), restaurant)}`);
+    rPadLine('Cash:', `${formatMoney((reportData.cashRevenue || 0), restaurant)}`);
+    rPadLine('Card:', `${formatMoney((reportData.cardRevenue || 0), restaurant)}`);
+    rPadLine('Avg Order:', `${formatMoney((reportData.averageOrder || 0), restaurant)}`);
     rPadLine('Peak Hour:', String(reportData.peakHour || 'N/A'));
 
     if (reportData.orderTypeData?.length > 0) {
@@ -472,7 +473,7 @@ export function buildReportBytes(restaurant, reportData, config = {}) {
         line('-');
         for (const item of reportData.menuItemsData.slice(0, 8)) {
             const short = item.name.length > W - 12 ? item.name.slice(0, W - 14) + '..' : item.name;
-            add(`${pad(short, `x${item.count} \xA3${(item.revenue || 0).toFixed(2)}`)}\n`);
+            add(`${pad(short, `x${item.count} ${formatMoney((item.revenue || 0), restaurant)}`)}\n`);
         }
     }
 
@@ -481,7 +482,7 @@ export function buildReportBytes(restaurant, reportData, config = {}) {
         add(cmd.boldOn, 'DAILY BREAKDOWN\n', cmd.boldOff);
         line('-');
         for (const d of reportData.salesData) {
-            rPadLine(d.date, `\xA3${(d.total || 0).toFixed(2)}`);
+            rPadLine(d.date, `${formatMoney((d.total || 0), restaurant)}`);
         }
     }
 

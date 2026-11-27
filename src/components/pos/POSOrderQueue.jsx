@@ -17,6 +17,7 @@ import POSKioskPaymentLane, { isAwaitingKioskPayment } from './POSKioskPaymentLa
 import UberPushWarning from './UberPushWarning';
 import { statusUpdateFor } from '@/lib/kds-board';
 import { PERMISSIONS } from '@/lib/posPermissions';
+import { formatMoney } from '@/lib/money';
 
 export default function POSOrderQueue({ restaurantId, posTheme = 'dark', restaurant, activeStaffMember, terminal = null }) {
     const isDark = posTheme === 'dark';
@@ -244,7 +245,7 @@ function SourceBadge({ order }) {
             const data = res?.data ?? res;
             if (data?.error) throw new Error(data.error);
 
-            toast.success(`Coupon ${couponResult.coupon_code} applied — £${couponResult.discount_amount.toFixed(2)} off`);
+            toast.success(`Coupon ${couponResult.coupon_code} applied — ${formatMoney(couponResult.discount_amount, restaurant)} off`);
             setApplyingPromo(null);
             refetch();
         } catch (err) {
@@ -360,7 +361,7 @@ function SourceBadge({ order }) {
                                             ))}
                                         </div>
 
-                                        <p className="text-accent-500 font-bold mb-3">£{order.total.toFixed(2)}</p>
+                                        <p className="text-accent-500 font-bold mb-3">{formatMoney(order.total, restaurant)}</p>
 
                                         {/* Uber was not told about a status change - say so on the ticket. */}
                                         <UberPushWarning order={order} isDark={isDark} onRetried={refetch} />
@@ -414,7 +415,7 @@ function SourceBadge({ order }) {
                                                     label: 'void an order',
                                                     orderId: order.id,
                                                     amount: order.total,
-                                                    context: `Void order ${order.order_number || order.id.slice(-6)} - £${Number(order.total || 0).toFixed(2)}`,
+                                                    context: `Void order ${order.order_number || order.id.slice(-6)} - ${formatMoney(Number(order.total || 0), restaurant)}`,
                                                 })}
                                                 className="w-full bg-red-600/90 hover:bg-red-600 active:bg-red-700 text-white text-xs h-11 rounded-xl"
                                                 title="Void / cancel this order"

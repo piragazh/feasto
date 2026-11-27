@@ -7,6 +7,7 @@ import { formatUKTime } from '@/lib/ukDateUtils';
 import { getRestaurantTimeZone } from '@/lib/region';
 import { printerManager } from '@/components/restaurant/PrinterService';
 import { toast } from 'sonner';
+import { formatMoney } from '@/lib/money';
 
 /**
  * PrintFallbackDialog — shown when no Bluetooth printer is available.
@@ -139,7 +140,7 @@ export default function PrintFallbackDialog({ order, restaurant, config, errorMe
                                 <div key={idx}>
                                     <div className="flex justify-between font-medium">
                                         <span>{item.quantity}x {item.name}</span>
-                                        <span>£{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                                        <span>{formatMoney(((item.price || 0) * item.quantity), restaurant)}</span>
                                     </div>
                                     {item.customizations && typeof item.customizations === 'object' && (
                                         <div className="ml-4 mt-0.5 space-y-0.5">
@@ -164,23 +165,23 @@ export default function PrintFallbackDialog({ order, restaurant, config, errorMe
                         <div className="space-y-1 text-sm">
                             <div className="flex justify-between text-gray-600">
                                 <span>Subtotal</span>
-                                <span>£{(order.subtotal || 0).toFixed(2)}</span>
+                                <span>{formatMoney((order.subtotal || 0), restaurant)}</span>
                             </div>
                             {(order.delivery_fee || 0) > 0 && (
                                 <div className="flex justify-between text-gray-600">
                                     <span>Delivery</span>
-                                    <span>£{(order.delivery_fee).toFixed(2)}</span>
+                                    <span>{formatMoney((order.delivery_fee), restaurant)}</span>
                                 </div>
                             )}
                             {(order.discount || 0) > 0 && (
                                 <div className="flex justify-between text-green-600">
                                     <span>Discount</span>
-                                    <span>-£{(order.discount).toFixed(2)}</span>
+                                    <span>-{formatMoney((order.discount), restaurant)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between font-bold text-base border-t border-gray-200 pt-1 mt-1">
                                 <span>TOTAL</span>
-                                <span>£{(order.total || 0).toFixed(2)}</span>
+                                <span>{formatMoney((order.total || 0), restaurant)}</span>
                             </div>
                             {order.payment_method && (
                                 <div className="text-xs text-gray-500 capitalize">

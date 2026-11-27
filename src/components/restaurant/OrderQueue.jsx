@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import RejectOrderDialog from './RejectOrderDialog';
 import { printerService } from './PrinterService';
+import { formatMoney } from '@/lib/money';
 
 export default function OrderQueue({ restaurantId, onOrderUpdate }) {
     const [selectedOrders, setSelectedOrders] = useState(new Set());
@@ -285,18 +286,18 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                         }
                         return `
                             <div class="item">
-                                <strong>${item.quantity}x ${item.name}</strong> - £${(item.price * item.quantity).toFixed(2)}
+                                <strong>${item.quantity}x ${item.name}</strong> - ${formatMoney((item.price * item.quantity), restaurant)}
                                 ${customizationText}
                             </div>
                         `;
                     }).join('')}
                     <div class="separator"></div>
                     ${config.template !== 'minimal' ? `
-                        <p>Subtotal: £${order.subtotal.toFixed(2)}</p>
-                        ${order.delivery_fee > 0 ? `<p>Delivery: £${order.delivery_fee.toFixed(2)}</p>` : ''}
-                        ${order.discount > 0 ? `<p>Discount: -£${order.discount.toFixed(2)}</p>` : ''}
+                        <p>Subtotal: ${formatMoney(order.subtotal, restaurant)}</p>
+                        ${order.delivery_fee > 0 ? `<p>Delivery: ${formatMoney(order.delivery_fee, restaurant)}</p>` : ''}
+                        ${order.discount > 0 ? `<p>Discount: -${formatMoney(order.discount, restaurant)}</p>` : ''}
                     ` : ''}
-                    <p class="total">TOTAL: £${order.total.toFixed(2)}</p>
+                    <p class="total">TOTAL: ${formatMoney(order.total, restaurant)}</p>
                     ${config.template !== 'minimal' ? `<p>Payment: ${order.payment_method}</p>` : ''}
                     ${order.notes ? `
                         <div class="separator"></div>
@@ -498,7 +499,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-2xl font-bold text-gray-900">£{order.total.toFixed(2)}</p>
+                                            <p className="text-2xl font-bold text-gray-900">{formatMoney(order.total, restaurant)}</p>
                                             <p className="text-xs text-gray-500">{order.payment_method}</p>
                                         </div>
                                     </div>
@@ -556,7 +557,7 @@ export default function OrderQueue({ restaurantId, onOrderUpdate }) {
                                                 <div key={idx} className="bg-gray-50 p-2 rounded">
                                                     <div className="flex justify-between text-sm">
                                                         <span className="font-medium">{item.quantity}x {item.name}</span>
-                                                        <span>£{(item.price * item.quantity).toFixed(2)}</span>
+                                                        <span>{formatMoney((item.price * item.quantity), restaurant)}</span>
                                                     </div>
                                                     {customizationLines.length > 0 && (
                                                         <div className="text-xs text-gray-600 ml-4 mt-1 space-y-0.5">
