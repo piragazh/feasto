@@ -98,10 +98,39 @@ describe('region — table shape', () => {
 describe('region — money limits', () => {
     it('UK keeps £20 discount cap and £30 refund flag', async () => {
         const { getMoneyLimits } = await import('../region.js');
-        expect(getMoneyLimits({ country: null })).toEqual({ managerDiscountMax: 20, largeRefundFlag: 30, offlineDiscountMax: 10 });
+        expect(getMoneyLimits({ country: null })).toEqual({ managerDiscountMax: 20, largeRefundFlag: 30, offlineDiscountMax: 10, aiCashLimit: 50, loyaltySpendPerPoint: 1, cashSignOffTolerance: 5, cashMaxFloat: 5000 });
     });
     it('Sri Lanka: Rs 5,000 cap, Rs 10,000 refund flag, Rs 2,000 offline (recorded)', async () => {
         const { getMoneyLimits } = await import('../region.js');
-        expect(getMoneyLimits('LK')).toEqual({ managerDiscountMax: 5000, largeRefundFlag: 10000, offlineDiscountMax: 2000 });
+        expect(getMoneyLimits('LK')).toEqual({ managerDiscountMax: 5000, largeRefundFlag: 10000, offlineDiscountMax: 2000, aiCashLimit: 10000, loyaltySpendPerPoint: 100, cashSignOffTolerance: 500, cashMaxFloat: 500000 });
+    });
+});
+
+describe('region — till notes and coins', () => {
+    it('UK keeps the 12 UK denominations; Sri Lanka has rupee notes and coins', async () => {
+        const { getCashDenominations } = await import('../region.js');
+        const { UK_DENOMINATIONS, countTotal } = await import('../pos-cash-logic.js');
+        for (const c of [null, undefined, '', 'GB', 'XX']) expect(getCashDenominations({ country: c })).toEqual(UK_DENOMINATIONS);
+        const lk = getCashDenominations('LK');
+        expect(lk).toEqual([5000, 2000, 1000, 500, 100, 50, 20, 10, 5, 2, 1]);
+        expect(countTotal({ '5000': 2, '1000': 3, '100': 7, '1': 4 }, lk)).toBe(13704);
+        expect(countTotal({ '0.05': 7, '20': 1 })).toBe(20.35);
+    });
+});
+
+describe('region — which shops a visitor sees listed', () => {
+    it('UK visitors (and anyone not in Sri Lanka) see every UK shop, as before', async () => {
+        const { visitorCountry, isListedForVisitor } = await import('../region.js');
+        for (const tz of ['Europe/London', 'Europe/Paris', 'America/New_York', 'UTC', '', 'Nonsense/Zone']) {
+            expect(visitorCountry(tz)).toBe('GB');
+            for (const c of [null, undefined, '', 'GB', 'gb']) expect(isListedForVisitor({ country: c }, visitorCountry(tz))).toBe(true);
+            expect(isListedForVisitor({ country: 'LK' }, visitorCountry(tz))).toBe(false);
+        }
+    });
+    it('visitors in Sri Lanka see Sri Lankan shops only', async () => {
+        const { visitorCountry, isListedForVisitor } = await import('../region.js');
+        expect(visitorCountry('Asia/Colombo')).toBe('LK');
+        expect(isListedForVisitor({ country: 'LK' }, 'LK')).toBe(true);
+        expect(isListedForVisitor({ country: null }, 'LK')).toBe(false);
     });
 });
