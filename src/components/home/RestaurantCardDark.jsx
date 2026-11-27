@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { isWithinInterval } from 'date-fns';
+import { formatMoney } from '@/lib/money';
 
 export default function RestaurantCardDark({ restaurant, distance, showFavoriteButton = true }) {
     const restaurantUrl = `${createPageUrl('Restaurant')}?id=${restaurant.id}`;
@@ -137,7 +138,7 @@ export default function RestaurantCardDark({ restaurant, distance, showFavoriteB
                             </div>
                             <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
                                 <Bike className="h-3.5 w-3.5 text-green-300" />
-                                <span className="text-white text-xs font-semibold">{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free delivery'}</span>
+                                <span className="text-white text-xs font-semibold">{restaurant.delivery_fee ? `${formatMoney(restaurant.delivery_fee, restaurant)}` : 'Free delivery'}</span>
                             </div>
                             {distance != null && (
                                 <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">

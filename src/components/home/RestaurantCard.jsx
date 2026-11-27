@@ -9,6 +9,8 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { isWithinInterval } from 'date-fns';
+import { formatMoney } from '@/lib/money';
+import { moneyPrefix } from '@/lib/MoneyContext';
 
 export default function RestaurantCard({ restaurant, distance, showFavoriteButton = true }) {
     const restaurantUrl = `${createPageUrl('Restaurant')}?id=${restaurant.id}`;
@@ -178,10 +180,10 @@ export default function RestaurantCard({ restaurant, distance, showFavoriteButto
                                 <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
                                     <Bike className="h-4 w-4 text-green-600" />
                                 </div>
-                                <span className="font-bold">{restaurant.delivery_fee ? `£${restaurant.delivery_fee.toFixed(2)}` : 'Free'}</span>
+                                <span className="font-bold">{restaurant.delivery_fee ? `${formatMoney(restaurant.delivery_fee, restaurant)}` : 'Free'}</span>
                             </div>
                             {restaurant.minimum_order > 0 && (
-                                <span className="text-gray-400 text-xs hidden lg:inline ml-auto">Min £{restaurant.minimum_order}</span>
+                                <span className="text-gray-400 text-xs hidden lg:inline ml-auto">Min {moneyPrefix(restaurant.country)}{restaurant.minimum_order}</span>
                             )}
                         </div>
                     </div>

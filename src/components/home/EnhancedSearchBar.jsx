@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { formatMoney } from '@/lib/money';
 
 export default function EnhancedSearchBar({ onSearch, searchQuery, setSearchQuery }) {
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -72,7 +73,7 @@ export default function EnhancedSearchBar({ onSearch, searchQuery, setSearchQuer
             .slice(0, 4)
             .map(item => {
                 const restaurant = restaurants.find(r => r.id === item.restaurant_id);
-                return { type: 'item', data: { ...item, restaurantName: restaurant?.name } };
+                return { type: 'item', data: { ...item, restaurantName: restaurant?.name, restaurantCountry: restaurant?.country } };
             });
 
         return {
@@ -206,7 +207,7 @@ export default function EnhancedSearchBar({ onSearch, searchQuery, setSearchQuer
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-gray-900 truncate">{suggestion.data.name}</p>
                                             <p className="text-xs text-gray-500 truncate">
-                                                {suggestion.data.restaurantName} • £{suggestion.data.price.toFixed(2)}
+                                                {suggestion.data.restaurantName} • {formatMoney(suggestion.data.price, suggestion.data.restaurantCountry)}
                                             </p>
                                         </div>
                                     </button>
