@@ -78,7 +78,32 @@ async function bumpUsage(db, restaurantId, field) {
 }
 const newSessionsByIp = new Map(); // ip -> [timestamps]
 
-const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
+// Money in the restaurant's currency (aiOrderingCore's context carries its country).
+// GB is exactly the old `£${x.toFixed(2)}`.
+const money = (n, restaurant) => regionMoney(Number(n) || 0, restaurant);
+const moneyPrefix = (restaurant) => { const s = regionMoney(null, restaurant); return s === '£' ? '£' : `${s} `; };
+const countryOf = (restaurant) => (typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '');
+// Wording in the agent's instructions. A new country adds its words here; anything else = UK, as before.
+const PLACE_WORD = { LK: 'Sri Lankan' };
+const GAP_EXAMPLE = { LK: 'Rs 200' };
+
+// region-money:start
+// SYNC RULE: server copy of formatMoney (src/lib/money.js). Every copy must be
+// identical to scripts/region-money.snippet.js; scripts/check-region.mjs
+// enforces it and compares the answers with money.js. GB text is exactly the
+// old `£${x.toFixed(2)}`; other countries: "Rs 1,250.00".
+const REGION_MONEY = { GB: { symbol: '£', locale: 'en-GB', decimals: 2 }, LK: { symbol: 'Rs', locale: 'en-LK', decimals: 2 } };
+function regionMoney(amount, restaurantOrCountry) {
+    const raw = typeof restaurantOrCountry === 'string' ? restaurantOrCountry : restaurantOrCountry?.country;
+    const c = typeof raw === 'string' ? raw.trim().toUpperCase() : '';
+    const r = REGION_MONEY[c] || REGION_MONEY.GB;
+    if (r === REGION_MONEY.GB) return amount === null || amount === undefined ? '£' : `£${amount.toFixed(2)}`;
+    if (amount === null || amount === undefined) return r.symbol;
+    const n = Number(amount);
+    const text = Number.isFinite(n) ? n.toLocaleString(r.locale, { minimumFractionDigits: r.decimals, maximumFractionDigits: r.decimals }) : String(amount);
+    return `${r.symbol} ${text}`;
+}
+// region-money:end
 const clip = (s, n) => {
     const t = String(s ?? '').trim();
     return t.length > n ? t.slice(0, n - 1) + '…' : t;
@@ -282,16 +307,16 @@ Deno.serve(async (req) => {
             const promoText = (promos || [])
                 .filter((p) => (!p.start_date || new Date(p.start_date) <= now) && (!p.end_date || new Date(p.end_date) >= now))
                 .slice(0, 8)
-                .map((p) => `- ${p.name || p.promotion_code}${p.promotion_type === 'percentage_off' ? `: ${p.discount_value}% off` : p.promotion_type === 'fixed_amount_off' ? `: £${p.discount_value} off` : p.promotion_type === 'free_delivery' ? ': free delivery' : p.description ? `: ${clip(p.description, 80)}` : ''}${p.minimum_order ? ` over £${p.minimum_order}` : ''}${p.promotion_code ? ` (code ${p.promotion_code})` : ''}`)
+                .map((p) => `- ${p.name || p.promotion_code}${p.promotion_type === 'percentage_off' ? `: ${p.discount_value}% off` : p.promotion_type === 'fixed_amount_off' ? `: ${moneyPrefix(restaurant)}${p.discount_value} off` : p.promotion_type === 'free_delivery' ? ': free delivery' : p.description ? `: ${clip(p.description, 80)}` : ''}${p.minimum_order ? ` over ${moneyPrefix(restaurant)}${p.minimum_order}` : ''}${p.promotion_code ? ` (code ${p.promotion_code})` : ''}`)
                 .join('\n');
             const o = lastOrder?.[0];
             const pending = basketRes.pending;
 
-            const prompt = `You are the ordering assistant in the website chat for ${restaurant.name}, a UK takeaway - think smart waiter, not a generic chatbot. You ONLY help with ordering from this menu, deals, and this restaurant's orders. Politely decline anything unrelated.
+            const prompt = `You are the ordering assistant in the website chat for ${restaurant.name}, a ${PLACE_WORD[countryOf(restaurant)] || 'UK'} takeaway - think smart waiter, not a generic chatbot. You ONLY help with ordering from this menu, deals, and this restaurant's orders. Politely decline anything unrelated.
 
 RESTAURANT
 - ${restaurant.closed_reason ? `CLOSED NOW: ${restaurant.closed_reason}` : 'Open now'}
-- Delivery fee: ${money(restaurant.delivery_fee)} · Min order for delivery: ${money(restaurant.minimum_order)}
+- Delivery fee: ${money(restaurant.delivery_fee, restaurant)} · Min order for delivery: ${money(restaurant.minimum_order, restaurant)}
 - Collection: ${restaurant.collection_enabled ? 'yes' : 'no'} · Delivery time: ${restaurant.delivery_time || '30-45 mins'}
 
 MENU (id | name | price; options marked * are required)
@@ -301,16 +326,16 @@ ACTIVE DEALS
 ${promoText || 'none'}
 
 BASKET (shared with the menu on the page)
-${(basketRes.basket || []).map((l) => `${l.line}. ${l.quantity}x ${l.name}${l.options ? ` (${l.options})` : ''} ${money(l.line_total)}`).join('\n') || 'empty'}${pending ? `\nWAITING FOR: the customer to choose ${pending.group} for ${pending.item_name}.` : ''}
+${(basketRes.basket || []).map((l) => `${l.line}. ${l.quantity}x ${l.name}${l.options ? ` (${l.options})` : ''} ${money(l.line_total, restaurant)}`).join('\n') || 'empty'}${pending ? `\nWAITING FOR: the customer to choose ${pending.group} for ${pending.item_name}.` : ''}
 
 CUSTOMER
-- ${user ? `Signed in as ${user.full_name || 'a customer'}` : 'Guest (not signed in)'}${o ? `\n- Latest order here: ${o.order_number || '#' + String(o.id).slice(-6).toUpperCase()}, ${STATUS_WORDS[o.status] || o.status}, ${money(o.total)}` : ''}
+- ${user ? `Signed in as ${user.full_name || 'a customer'}` : 'Guest (not signed in)'}${o ? `\n- Latest order here: ${o.order_number || '#' + String(o.id).slice(-6).toUpperCase()}, ${STATUS_WORDS[o.status] || o.status}, ${money(o.total, restaurant)}` : ''}
 
 RULES
 - Use ONLY menu ids above. Never quote a price that is not on the menu.
 - add_item: menu_item_id + quantity; put options the customer already stated in "options" with exact labels. Never guess required options - the system asks.
 - suggest: up to 3 menu ids shown as tappable cards. If the basket is empty, suggest 2 popular items. After an add, suggest at most ONE relevant extra.
-- Mention a deal when it genuinely applies ("you're £2 away from free delivery").
+- Mention a deal when it genuinely applies ("you're ${GAP_EXAMPLE[countryOf(restaurant)] || '£2'} away from free delivery").
 - Allergies: repeat the listed allergens and say to call the restaurant if it matters medically. Never say an item is allergen-free.
 - checkout when the customer is done or asks to pay. track_order when they ask where their order is.
 - handoff for complaints, refunds or a problem with an order.
@@ -391,7 +416,7 @@ RULES
         }
         if (out.checkout) {
             if (!out.cart_lines.length) { out.checkout = false; out.reply = out.reply || 'Your basket is empty - what would you like?'; }
-            else out.reply = out.reply || `Taking you to checkout - ${money(out.quote?.subtotal)} so far. 🛒`;
+            else out.reply = out.reply || `Taking you to checkout - ${money(out.quote?.subtotal, restaurant)} so far. 🛒`;
         }
         if (notes.length) out.reply = [out.reply, ...notes].filter(Boolean).join('\n');
         return reply(out);
