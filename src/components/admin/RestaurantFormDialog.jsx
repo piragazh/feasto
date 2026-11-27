@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
+import { COUNTRY_OPTIONS, getRegion, normaliseCountry } from '@/lib/region';
 
 export default function RestaurantFormDialog({ open, onClose, restaurant }) {
     const [formData, setFormData] = useState({
@@ -20,7 +21,8 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
         delivery_time: '25-35 min',
         delivery_fee: '5.00',
         minimum_order: '15.00',
-        is_open: true
+        is_open: true,
+        country: 'GB'
     });
 
     const queryClient = useQueryClient();
@@ -43,7 +45,8 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                     delivery_time: restaurant.delivery_time || '25-35 min',
                     delivery_fee: restaurant.delivery_fee?.toString() || '5.00',
                     minimum_order: restaurant.minimum_order?.toString() || '15.00',
-                    is_open: restaurant.is_open !== false
+                    is_open: restaurant.is_open !== false,
+                    country: normaliseCountry(restaurant.country)
                 });
             } else {
                 setFormData({
@@ -56,7 +59,8 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                     delivery_time: '25-35 min',
                     delivery_fee: '5.00',
                     minimum_order: '15.00',
-                    is_open: true
+                    is_open: true,
+                    country: 'GB'
                 });
             }
         }
@@ -69,7 +73,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
     };
 
     const saveMutation = useMutation({
-        mutationFn: (data) => {
+        mutationFn: ({ country, ...data }) => {
             const payload = {
                 ...data,
                 cuisine_type: data.cuisine_types?.[0] || data.cuisine_type || '',
@@ -78,6 +82,15 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                 rating: restaurant?.rating || 4.5,
                 review_count: restaurant?.review_count || 0
             };
+            // Country decides currency, clock, phone format, address lookup and
+            // card payments (src/lib/region.js). Only write it, and the matching
+            // clock, when it is new or changed, so saving an existing UK shop
+            // writes exactly what it did before.
+            const previousCountry = restaurant ? normaliseCountry(restaurant.country) : null;
+            if (!restaurant || country !== previousCountry) {
+                payload.country = country;
+                payload.timezone = getRegion(country).timezone;
+            }
             
             if (restaurant) {
                 return base44.entities.Restaurant.update(restaurant.id, payload);
@@ -167,6 +180,30 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                         />
                     </div>
 
+                    <div>
+                        <Label>Country</Label>
+                        <Select
+                            value={formData.country}
+                            onValueChange={(value) => setFormData({ ...formData, country: value })}
+                        >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {COUNTRY_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Sets currency ({getRegion(formData.country).currency}), local time, phone format and address lookup.
+                            {!getRegion(formData.country).cardProvider && ' Card payments are not available in this country yet: cash / pay at the shop only.'}
+                        </p>
+                        {restaurant && formData.country !== normaliseCountry(restaurant.country) && (
+                            <p className="text-xs text-amber-700 mt-1">
+                                Changing the country does not convert existing prices. Check the menu prices after saving.
+                            </p>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-3 gap-4">
                         <div>
                             <Label>Delivery Time</Label>
@@ -177,7 +214,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                             />
                         </div>
                         <div>
-                            <Label>Delivery Fee (£)</Label>
+                            <Label>Delivery Fee ({getRegion(formData.country).currencySymbol})</Label>
                             <Input
                                 type="number"
                                 step="0.01"
@@ -186,7 +223,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant }) {
                             />
                         </div>
                         <div>
-                            <Label>Min Order (£)</Label>
+                            <Label>Min Order ({getRegion(formData.country).currencySymbol})</Label>
                             <Input
                                 type="number"
                                 step="0.01"
