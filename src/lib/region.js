@@ -44,6 +44,14 @@ export const REGIONS = Object.freeze({
         geocodeCountry: 'gb',
         // Card payments: provider name, or null where none is set up yet.
         cardProvider: 'stripe',
+        // Money limits, in this currency. The 20% manager cap applies everywhere.
+        //   managerDiscountMax  manual discount a manager may give without admin
+        //   largeRefundFlag     refunds at or above this are flagged high severity
+        //   offlineDiscountMax  not used today: the till blocks manual discounts
+        //                       while offline. Recorded for if that is ever allowed.
+        managerDiscountMax: 20,
+        largeRefundFlag: 30,
+        offlineDiscountMax: 10,
     }),
     LK: Object.freeze({
         country: 'LK',
@@ -64,6 +72,10 @@ export const REGIONS = Object.freeze({
         // Stripe does not serve Sri Lankan merchants. Cash / pay at the shop
         // until a local gateway is added here.
         cardProvider: null,
+        // Set by MealDrop on 27 Nov 2026.
+        managerDiscountMax: 5000,
+        largeRefundFlag: 10000,
+        offlineDiscountMax: 2000,
     }),
 });
 
@@ -103,6 +115,12 @@ export function getRestaurantTimeZone(restaurant) {
 /** A zone this runtime can use. A typo on a record must not crash ordering. */
 function isValidTimeZone(tz) {
     try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); return true; } catch (_) { return false; }
+}
+
+/** Money limits for this restaurant: { managerDiscountMax, largeRefundFlag, offlineDiscountMax }. */
+export function getMoneyLimits(restaurantOrCountry) {
+    const r = getRegion(restaurantOrCountry);
+    return { managerDiscountMax: r.managerDiscountMax, largeRefundFlag: r.largeRefundFlag, offlineDiscountMax: r.offlineDiscountMax };
 }
 
 /** True when card payments can be taken for this restaurant today. */
