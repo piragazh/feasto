@@ -10,8 +10,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generatePayoutPDF } from '@/lib/payoutPDF';
 import { fetchRestaurantPayouts, fetchRestaurantBalance, downloadStatementCsv } from '@/lib/restaurantPayouts';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function RestaurantPayoutHistory({ restaurantId }) {
+    const { money } = useMoney();
     const [statusFilter, setStatusFilter] = useState('all');
     const [searchDate, setSearchDate] = useState('');
 

@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Check, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * V2 — Stepped / Big-Button touch customization UI.
@@ -12,6 +13,7 @@ import { toast } from 'sonner';
  * Business logic is identical to POSItemCustomization (same props/output).
  */
 export default function POSItemCustomizationV2({ item, open, onClose, onConfirm, posTheme = 'dark', initialCustomizations = null, initialSpecialInstructions = '', initialIsMeal = false, initialMealCustomizations = null, isEditing = false }) {
+    const { money } = useMoney();
     const isDark = posTheme === 'dark';
 
     const [customizations, setCustomizations] = useState({});

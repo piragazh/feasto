@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Edit2, XCircle, AlertCircle, MessageSquare, Minus, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function OrderModification({ restaurantId }) {
+    const { money } = useMoney();
     const [editingOrder, setEditingOrder] = useState(null);
     const [cancellingOrder, setCancellingOrder] = useState(null);
     const [cancelReason, setCancelReason] = useState('');

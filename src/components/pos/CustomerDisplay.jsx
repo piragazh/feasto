@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, CreditCard, Banknote, Clock, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMoney } from '@/lib/MoneyContext';
 
 const STORAGE_KEY = 'pos_customer_display';
 
@@ -11,6 +12,7 @@ export function publishCustomerDisplay(state) {
 
 // ── The display itself (rendered in popup window) ─────────────────────────
 export default function CustomerDisplay() {
+    const { money } = useMoney();
     const [state, setState] = useState(null);
 
     useEffect(() => {
@@ -185,6 +187,7 @@ function IdleScreen({ restaurantName, logoUrl }) {
 }
 
 function ThankYouScreen({ restaurantName, logoUrl, change }) {
+    const { money } = useMoney();
     useEffect(() => {
         const t = setTimeout(() => {
             publishCustomerDisplay({ status: 'idle', restaurantName, logoUrl });

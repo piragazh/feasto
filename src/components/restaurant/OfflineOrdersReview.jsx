@@ -10,6 +10,7 @@ import OfflineOrderReviewAction from './OfflineOrderReviewAction';
 import OfflineReviewHealthIndicator from './OfflineReviewHealthIndicator';
 import OfflineReviewAnalytics from './OfflineReviewAnalytics';
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Offline Orders Review
@@ -21,6 +22,7 @@ import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
  * - Allow manager to acknowledge/archive flagged orders
  */
 export default function OfflineOrdersReview({ restaurantId }) {
+    const { money } = useMoney();
     const [filterStatus, setFilterStatus] = useState('flagged'); // 'flagged' | 'unresolved' | 'all_offline'
 
     const { data: offlineOrders = [], isLoading, refetch } = useQuery({

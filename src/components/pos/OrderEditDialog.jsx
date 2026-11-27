@@ -16,6 +16,7 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useMoney } from '@/lib/MoneyContext';
 
 const DISCOUNT_REASON_CODES = [
     { value: 'customer_complaint', label: 'Customer Complaint' },
@@ -28,6 +29,7 @@ const DISCOUNT_REASON_CODES = [
 ];
 
 export default function OrderEditDialog({ order, open, onClose, onUpdate, restaurantId }) {
+    const { money, symbol } = useMoney();
     const [items, setItems] = useState(order?.items || []);
     const [discount, setDiscount] = useState(order?.discount || 0);
     const [discountReasonCode, setDiscountReasonCode] = useState('');

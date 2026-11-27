@@ -7,8 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from 'sonner';
 import { Users, Scissors } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function SplitBillDialog({ open, onClose, orders, table, onSplitCalculated }) {
+    const { money } = useMoney();
     const [splitMethod, setSplitMethod] = useState('equal'); // 'equal' or 'custom'
     const [numberOfPeople, setNumberOfPeople] = useState(2);
     const [customSplits, setCustomSplits] = useState([]);

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Trash2, Plus, Minus, ShoppingCart, X, Users, AlertTriangle, Pencil } from 'lucide-react';
 import { POS_RADIUS, POS_TEXT, POS_TOUCH, POS_FOCUS, POS_TRANSITION } from '@/lib/posDesign';
 import POSNoSaleButton from './POSNoSaleButton';
+import { useMoney } from '@/lib/MoneyContext';
 
 // Inline mini confirm dialog
 function ConfirmPopup({ message, onConfirm, onCancel, isDark }) {
@@ -35,6 +36,7 @@ export default function POSCart({
     restaurant,
     onEditItem,
 }) {
+    const { money } = useMoney();
     const [confirmAction, setConfirmAction] = useState(null); // { message, onConfirm }
 
     const ask = (message, onConfirm) => setConfirmAction({ message, onConfirm });

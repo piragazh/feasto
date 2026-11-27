@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Search, ChevronDown, ChevronUp, Calendar, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { useMoney } from '@/lib/MoneyContext';
 
 const STATUS_COLORS = {
     pending:               'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
@@ -35,6 +36,7 @@ const DATE_PRESETS = [
 ];
 
 function OrderRow({ order, t, isDark }) {
+    const { money } = useMoney();
     const [expanded, setExpanded] = useState(false);
     const statusClass = STATUS_COLORS[order.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/30';
 
@@ -140,6 +142,7 @@ function OrderRow({ order, t, isDark }) {
 }
 
 export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
+    const { money, prefix } = useMoney();
     const isDark = posTheme === 'dark';
     const t = {
         text:     isDark ? 'text-white'     : 'text-gray-900',

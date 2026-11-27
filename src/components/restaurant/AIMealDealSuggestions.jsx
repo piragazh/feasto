@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function AIMealDealSuggestions({ restaurantId }) {
+    const { money, prefix } = useMoney();
     const [suggestions, setSuggestions] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const queryClient = useQueryClient();

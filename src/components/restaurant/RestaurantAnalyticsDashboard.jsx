@@ -12,10 +12,12 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { DollarSign, ShoppingBag, TrendingUp, Users, Calendar as CalendarIcon, Award, CreditCard, Download } from 'lucide-react';
 import { generateReportPDF } from '@/lib/generatePDF';
 import { format, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { useMoney } from '@/lib/MoneyContext';
 
 const COLORS = ['#FF6B35', '#004E89', '#F77F00', '#06A77D', '#9B5DE5', '#F15BB5'];
 
 export default function RestaurantAnalyticsDashboard({ restaurantId }) {
+    const { money, symbol } = useMoney();
     const [dateRange, setDateRange] = useState('30days');
     const [customDateFrom, setCustomDateFrom] = useState(null);
     const [customDateTo, setCustomDateTo] = useState(null);

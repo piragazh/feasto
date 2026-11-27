@@ -6,8 +6,10 @@ import { Label } from "@/components/ui/label";
 import { base44 } from '@/api/base44Client';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function BillSplitDialog({ order, open, onClose, onUpdate, posTheme = 'dark' }) {
+    const { money } = useMoney();
     const isDark = posTheme === 'dark';
     const [splitCount, setSplitCount] = useState(2);
     const [customSplits, setCustomSplits] = useState([]);

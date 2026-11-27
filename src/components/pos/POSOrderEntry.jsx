@@ -29,6 +29,7 @@ import { isNetworkError } from '@/lib/networkStatus';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { isItemAvailableNow, scheduledPrice } from '@/lib/pos-schedule-logic';
 import { getRestaurantTimeZone } from '@/lib/region';
+import { useMoney } from '@/lib/MoneyContext';
 
 /** The sales screen in the new POS design - the same keys as the classic t. */
 export const T_V2 = {
@@ -57,6 +58,7 @@ export const T_V2 = {
 };
 
 export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveItem, onUpdateQuantity, onClearCart, onReplaceItem, cartTotal, orderType, setOrderType, posTheme = 'dark', restaurant: restaurantProp, discount, onApplyDiscount, onRemoveDiscount, terminal, newDesign = false }) {
+    const { money } = useMoney();
     const isDark = posTheme === 'dark';
     const tClassic = {
         panel:          isDark ? 'bg-[#151720] border-white/[0.06]'                                          : 'bg-white border-gray-200',

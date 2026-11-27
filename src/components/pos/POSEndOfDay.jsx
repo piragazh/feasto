@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Printer, RefreshCw, TrendingUp, DollarSign, CreditCard, Banknote, XCircle, Receipt, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function POSEndOfDay({ restaurantId, restaurant, posTheme }) {
+    const { money } = useMoney();
     const isDark = posTheme === 'dark';
     const [reportDate, setReportDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [isPrinting, setIsPrinting] = useState(false);

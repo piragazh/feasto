@@ -11,6 +11,7 @@ import { generateReportPDF } from '@/lib/generatePDF';
 import { toast } from 'sonner';
 import moment from 'moment';
 import { revenueByTender } from '@/lib/pos-money-logic';
+import { useMoney } from '@/lib/MoneyContext';
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
@@ -25,6 +26,7 @@ const PRESETS = [
 ];
 
 export default function POSReports({ restaurantId, posTheme = 'dark' }) {
+    const { money } = useMoney();
     const isDark = posTheme === 'dark';
     const t = {
         panel:      isDark ? 'bg-gray-800 border-gray-700'   : 'bg-white border-gray-200',

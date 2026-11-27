@@ -9,8 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertCircle, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function RefundManagement({ restaurantId }) {
+    const { money, prefix } = useMoney();
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [messageText, setMessageText] = useState('');
     const [rejectReason, setRejectReason] = useState('');

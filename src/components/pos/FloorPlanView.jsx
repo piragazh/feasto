@@ -4,8 +4,10 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Settings, Users } from 'lucide-react';
 import TableActionsDialog from './TableActionsDialog';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function FloorPlanView({ tables, tableOrders, onRefresh, onTableClick }) {
+    const { money } = useMoney();
     const [isDragging, setIsDragging] = useState(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [dragMoved, setDragMoved] = useState(false);

@@ -12,6 +12,7 @@ import { Plus, Edit, Trash2, Tag, Send, Gift, Truck, Percent, DollarSign, Shoppi
 import { toast } from 'sonner';
 import CampaignComposer from '@/components/crm/CampaignComposer';
 import ClearExpiredCouponsButton from '@/components/coupons/ClearExpiredCouponsButton';
+import { useMoney } from '@/lib/MoneyContext';
 
 const DISCOUNT_TYPES = [
     { value: 'percentage', label: '% Off', icon: Percent, color: 'text-blue-600', bgColor: 'bg-blue-50' },
@@ -52,6 +53,7 @@ function getTypeInfo(type) {
 }
 
 export default function CouponsManagement({ restaurantId, restaurantName }) {
+    const { prefix, symbol } = useMoney();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingCoupon, setEditingCoupon] = useState(null);
     const [formData, setFormData] = useState(defaultForm);

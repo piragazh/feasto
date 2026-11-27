@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Wallet, ArrowDownCircle, ArrowUpCircle, Lock, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { UK_DENOMINATIONS, countTotal } from '@/lib/pos-cash-logic';
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Cash drawer for one till.
@@ -23,6 +24,7 @@ import { UK_DENOMINATIONS, countTotal } from '@/lib/pos-cash-logic';
  */
 
 function DenominationCounter({ counts, onChange, t }) {
+    const { prefix } = useMoney();
     return (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {UK_DENOMINATIONS.map(d => {
@@ -45,6 +47,7 @@ function DenominationCounter({ counts, onChange, t }) {
 }
 
 export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = 'dark' }) {
+    const { money, prefix } = useMoney();
     const isDark = posTheme === 'dark';
     const t = {
         panel: isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',

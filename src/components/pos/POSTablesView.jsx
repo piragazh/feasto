@@ -10,11 +10,13 @@ import { COURSES, COURSE_LABELS, courseOf, seatOf, groupByCourse, minutesSinceFi
 import OrderEditDialog from './OrderEditDialog';
 import VoidOrderDialog from './VoidOrderDialog';
 import POSPayment from './POSPayment';
+import { useMoney } from '@/lib/MoneyContext';
 
 const TABLE_W = 90;
 const TABLE_H = 90;
 
 export default function POSTablesView({ restaurantId, posTheme = 'dark', restaurant = null }) {
+    const { money } = useMoney();
     // This view was hardcoded dark (text-white / bg-gray-800), so the whole
     // Tables tab stayed dark when the operator switched the POS to light mode.
     const isDark = posTheme === 'dark';

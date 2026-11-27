@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2, Users } from 'lucide-react';
 import { labourSummary, workedMinutes, entryPay, rateInForce, isForgottenClockOut, breakShortfall } from '@/lib/pos-labour-logic';
 import { sumRevenue } from '@/lib/pos-money-logic';
 import { roleHasPermission, PERMISSIONS } from '@/lib/posPermissions';
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Labour report: hours, cost and labour as a percentage of sales.
@@ -33,6 +34,7 @@ const RANGES = {
 };
 
 export default function POSLabourReport({ restaurantId, restaurant, activeStaffMember, posTheme = 'dark' }) {
+    const { money, prefix } = useMoney();
     const isDark = posTheme === 'dark';
     const t = {
         panel: isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',

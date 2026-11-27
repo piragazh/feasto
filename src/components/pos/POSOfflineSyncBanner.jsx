@@ -5,6 +5,7 @@ import { checkBackendReachable } from '@/lib/networkStatus';
 import { WifiOff, RefreshCw, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import POSConfirmDialog from './POSConfirmDialog';
+import { useMoney } from '@/lib/MoneyContext';
 
 // Shared sync state so header indicator and banner stay in sync
 const listeners = new Set();
@@ -219,6 +220,7 @@ export async function triggerSync(restaurantId, { manual = false } = {}) {
 }
 
 export default function POSOfflineSyncBanner({ restaurantId, onForceRefresh }) {
+    const { money } = useMoney();
     const { isOnline, pendingCount, stuckCount, isSyncing, lastSynced } = useOfflineSyncState();
     const [dismissed, setDismissed] = useState(false);
     const [showStuck, setShowStuck] = useState(false);

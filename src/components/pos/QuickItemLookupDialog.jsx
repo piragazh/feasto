@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Search } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function QuickItemLookupDialog({ open, onClose, menuItems, onItemFound, isDark }) {
+    const { money } = useMoney();
     const [itemNo, setItemNo] = useState('');
     const [notFound, setNotFound] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);

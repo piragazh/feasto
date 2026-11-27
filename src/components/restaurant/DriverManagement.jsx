@@ -12,8 +12,10 @@ import { Switch } from "@/components/ui/switch";
 import { Bike, Car, Truck, Phone, Mail, Star, Package, Clock, Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { staffErrorMessage } from '@/lib/function-errors';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function DriverManagement({ restaurantId }) {
+    const { prefix, symbol } = useMoney();
     const [editingDriver, setEditingDriver] = useState(null);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [formData, setFormData] = useState({

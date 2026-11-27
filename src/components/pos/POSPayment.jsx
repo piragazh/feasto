@@ -20,6 +20,7 @@ import {
     AlertDialogContent, AlertDialogDescription,
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Quick-cash denominations, generated from the amount still owed.
@@ -65,6 +66,7 @@ export function quickCashOptions(owed) {
 }
 
 export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackToCart, restaurantId, restaurantName, orderType, posTheme = 'dark', discount: initialDiscount, onApplyDiscount, onRemoveDiscount, restaurant, skipOrderCreation = false, existingOrderIds = null, phoneDetails = {}, quickSale = false, terminal = null }) {
+    const { money, prefix } = useMoney();
     const isDark = posTheme === 'dark';
     const t = {
         panel:    isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',

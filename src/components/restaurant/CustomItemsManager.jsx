@@ -8,10 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Edit2, X, Check, Tag } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 const EMPTY_FORM = { name: '', price: '', category: '' };
 
 export default function CustomItemsManager({ restaurantId }) {
+    const { money, symbol } = useMoney();
     const [form, setForm] = useState(EMPTY_FORM);
     const [editingIdx, setEditingIdx] = useState(null);
     const [editForm, setEditForm] = useState(EMPTY_FORM);

@@ -5,8 +5,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DollarSign } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function PartialRefundDialog({ open, onClose, order, onRefund }) {
+    const { money } = useMoney();
     const [selectedItems, setSelectedItems] = useState([]);
     const [reason, setReason] = useState('');
 

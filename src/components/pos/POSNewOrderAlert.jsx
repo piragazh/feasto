@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Bell, X, ArrowRight } from 'lucide-react';
 import { playAlert, getSoundSettings, primeAudioOnFirstGesture } from '@/lib/posSound';
 import { isAwaitingKioskPayment, needsCashierAttention } from '@/lib/kiosk-payment';
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Alerts the cashier when a NEW online order arrives.
@@ -41,6 +42,7 @@ async function fetchAlertSoundUrl() {
 }
 
 export default function POSNewOrderAlert({ restaurantId, onGoToQueue, onCountChange }) {
+    const { money } = useMoney();
     const [pendingOrders, setPendingOrders] = useState([]);
     const seenRef = useRef(null);          // null = first poll not done yet
     const dismissedRef = useRef(new Set()); // ids the cashier explicitly dismissed

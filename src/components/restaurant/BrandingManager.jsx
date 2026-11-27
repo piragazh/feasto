@@ -18,6 +18,7 @@ import {
 } from '@/lib/branding';
 import { prepareImage, ImageRejectedError, formatBytes } from '@/lib/prepareImage';
 import { SEASONAL_EFFECTS, usualDates, seasonalProblem, seasonalStatus } from '@/lib/seasonalEffects';
+import { useMoney } from '@/lib/MoneyContext';
 
 // Loaded only when an animation is picked, so Brand Studio stays light otherwise.
 const SeasonalEffect = lazy(() => import('./SeasonalEffect'));
@@ -263,6 +264,7 @@ function offStateConfig(config) {
 }
 
 export default function BrandingManager({ restaurantId }) {
+    const { money, prefix } = useMoney();
     const [config, setConfig] = useState(DEFAULT_CONFIG);
     // Last saved state, for spotting unsaved edits.
     const [baseline, setBaseline] = useState(null);

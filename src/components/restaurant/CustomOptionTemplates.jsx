@@ -9,8 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, Edit, Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function CustomOptionTemplates({ restaurantId }) {
+    const { money, prefix } = useMoney();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState(null);
     const [formData, setFormData] = useState({

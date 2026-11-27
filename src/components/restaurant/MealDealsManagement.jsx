@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, Zap, Pizza, Coffee, UtensilsCrossed, Users, ShoppingBag, Star } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 const DEAL_TEMPLATES = [
     {
@@ -80,6 +81,7 @@ const EMPTY_FORM = {
 };
 
 export default function MealDealsManagement({ restaurantId }) {
+    const { money, prefix, symbol } = useMoney();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingDeal, setEditingDeal] = useState(null);
     const [step, setStep] = useState('template'); // 'template' | 'edit'
@@ -542,6 +544,7 @@ export default function MealDealsManagement({ restaurantId }) {
 }
 
 function DealCard({ deal, onEdit, onDelete }) {
+    const { money } = useMoney();
     const discount = deal.original_price && deal.deal_price
         ? Math.round(((deal.original_price - deal.deal_price) / deal.original_price) * 100)
         : 0;

@@ -21,6 +21,7 @@ const restaurantIcon = new L.Icon({
 });
 import { MapPin, Trash2, Edit, Plus, DollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import '@geoman-io/leaflet-geoman-free';
@@ -108,6 +109,7 @@ function GeomanControl({ onDrawn, editingZone, mapKey }) {
 }
 
 export default function DeliveryZoneManagement({ restaurantId, restaurantLocation, restaurantAddress }) {
+    const { money, symbol } = useMoney();
     const [showDialog, setShowDialog] = useState(false);
     const [editingZone, setEditingZone] = useState(null);
     const [drawnCoordinates, setDrawnCoordinates] = useState(null);

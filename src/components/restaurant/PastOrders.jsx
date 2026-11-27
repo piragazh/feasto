@@ -17,8 +17,10 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function PastOrders({ restaurantId }) {
+    const { money, prefix } = useMoney();
     const restaurantTimeZone = useRestaurantTimeZone(restaurantId);
     const [refundingOrder, setRefundingOrder] = useState(null);
     const [expandedOrder, setExpandedOrder] = useState(null);

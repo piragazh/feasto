@@ -14,8 +14,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, TrendingUp, Percent, DollarSign, Gift, Truck, Calendar, X } from 'lucide-react';
 import { format, isAfter, isBefore, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function PromotionManagement({ restaurantId }) {
+    const { money, prefix, symbol } = useMoney();
     const [editingPromotion, setEditingPromotion] = useState(null);
     const [activeTab, setActiveTab] = useState('manage');
     const [formData, setFormData] = useState({

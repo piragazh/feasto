@@ -12,10 +12,12 @@ import {
 } from 'recharts';
 import { DollarSign, ShoppingBag, TrendingUp, Users, Download, Calendar } from 'lucide-react';
 import { format, subDays, isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { useMoney } from '@/lib/MoneyContext';
 
 const COLORS = ['#f97316', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b'];
 
 export default function RestaurantAnalytics({ restaurantId }) {
+    const { money, prefix } = useMoney();
     const [dateRange, setDateRange] = useState({
         start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
         end: format(new Date(), 'yyyy-MM-dd')

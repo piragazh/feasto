@@ -1,6 +1,7 @@
 import React from 'react';
 import { Settings, Users } from 'lucide-react';
 import TableActionsDialog from './TableActionsDialog';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function POSTablesGrid({
     t, isDark, tables, tableOrders,
@@ -9,6 +10,7 @@ export default function POSTablesGrid({
     tableActionsOpen, setTableActionsOpen,
     selectedTableForActions, setSelectedTableForActions,
 }) {
+    const { money } = useMoney();
     const getTableOrders = (tableId) => tableOrders.filter(o => o.table_id === tableId);
     const getTableTotal = (tableId) => getTableOrders(tableId).reduce((sum, order) => sum + order.total, 0);
 

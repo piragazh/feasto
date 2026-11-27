@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { AlertTriangle, ShieldAlert, Ban, Percent, Pencil, KeyRound, Loader2 } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Exceptions report.
@@ -61,6 +62,7 @@ const TONE = {
 };
 
 export default function POSExceptionsReport({ restaurantId, posTheme = 'dark' }) {
+    const { money, prefix } = useMoney();
     const isDark = posTheme === 'dark';
     const t = {
         panel: isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',

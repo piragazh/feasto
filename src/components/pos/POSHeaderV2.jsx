@@ -8,6 +8,7 @@ import {
     DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PRIMARY_NAV, MORE_NAV, navState, staffInitials, tillStatus } from '@/lib/posDesignV2';
+import { useMoney } from '@/lib/MoneyContext';
 
 const NAV_ICON = { 'order-entry': ShoppingCart, queue: ReceiptText, tables: LayoutGrid, kitchen: ChefHat };
 
@@ -30,6 +31,7 @@ export default function POSHeaderV2({
     onCustomerDisplay, onKiosk, staff, onSwitchStaff, onSignOut, onClassicDesign,
     printerStatus, clock,
 }) {
+    const { money } = useMoney();
     const nav = navState(activeTab);
     const status = tillStatus({ isOnline, isSyncing, pendingCount });
     // Colours follow the POS theme (it uses data-pos-v2, not Tailwind's .dark class).

@@ -26,6 +26,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tag, Loader2, XCircle, AlertCircle } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 const MAX_COUPONS = 3;
 
@@ -41,6 +42,7 @@ export default function ApplyPromotionDialog({
     appliedCouponCount = 0,  // how many coupons already on this order
     posTheme = 'dark',
 }) {
+    const { money, prefix } = useMoney();
     const isDark = posTheme === 'dark';
     const [manualCode, setManualCode] = useState('');
     const [validating, setValidating] = useState(null); // coupon code being validated

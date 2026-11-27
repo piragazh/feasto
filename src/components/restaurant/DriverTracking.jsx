@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { staffErrorMessage } from '@/lib/function-errors';
+import { useMoney } from '@/lib/MoneyContext';
 import 'leaflet/dist/leaflet.css';
 
 export default function DriverTracking({ restaurantId }) {
+    const { money } = useMoney();
     const [assigningOrder, setAssigningOrder] = useState(null);
     const [selectedDriver, setSelectedDriver] = useState('');
     const [messagingDriver, setMessagingDriver] = useState(null);

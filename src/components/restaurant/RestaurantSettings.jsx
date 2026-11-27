@@ -15,12 +15,14 @@ import CentralizedPrinterSettings from './CentralizedPrinterSettings';
 import SmsNotificationSettings from './SmsNotificationSettings';
 import WhatsAppNotificationSettings from './WhatsAppNotificationSettings';
 import TemporaryClosureSettings from './TemporaryClosureSettings';
+import { useMoney } from '@/lib/MoneyContext';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 // Colours and styling live only in Brand Studio (the dashboard's Settings → Branding tab).
 // onOpenBranding switches the dashboard to that tab.
 export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
+    const { money, prefix, symbol } = useMoney();
     const queryClient = useQueryClient();
     const [activeSection, setActiveSection] = useState('general');
 

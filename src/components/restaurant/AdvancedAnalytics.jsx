@@ -21,10 +21,12 @@ import {
 } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay, differenceInDays, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 const COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444', '#f59e0b', '#ec4899', '#14b8a6'];
 
 export default function AdvancedAnalytics({ restaurantId }) {
+    const { money, prefix, symbol } = useMoney();
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [useCustomRange, setUseCustomRange] = useState(false);

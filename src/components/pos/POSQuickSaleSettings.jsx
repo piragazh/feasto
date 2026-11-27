@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Zap, Plus, Trash2, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 const MAX_QUICK_SALE = 4;
 
@@ -22,6 +23,7 @@ const MAX_QUICK_SALE = 4;
  * mis-tap. A mis-tap here rings a sale, so the cap is deliberate.
  */
 export default function POSQuickSaleSettings({ restaurantId, restaurant }) {
+    const { money } = useMoney();
     const [items, setItems] = useState([]);
     const [saving, setSaving] = useState(false);
 

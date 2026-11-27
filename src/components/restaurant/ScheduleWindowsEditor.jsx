@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { toMinutes } from '@/lib/pos-schedule-logic';
+import { useMoney } from '@/lib/MoneyContext';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -24,6 +25,7 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
  * setting "17:00" should never have to think about BST.
  */
 export default function ScheduleWindowsEditor({ value = [], onChange, withPrice = false, basePrice = null, emptyHint }) {
+    const { money, symbol } = useMoney();
     const windows = Array.isArray(value) ? value : [];
 
     const update = (i, patch) => onChange(windows.map((w, idx) => (idx === i ? { ...w, ...patch } : w)));

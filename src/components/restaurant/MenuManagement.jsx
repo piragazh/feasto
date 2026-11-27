@@ -20,8 +20,10 @@ import CustomOptionTemplates from './CustomOptionTemplates';
 import AIMenuPerformanceAnalytics from './AIMenuPerformanceAnalytics';
 import MenuItemsGrid from './MenuItemsGrid';
 import CategoryDialog from './CategoryDialog';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function MenuManagement({ restaurantId }) {
+    const { prefix, symbol } = useMoney();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);

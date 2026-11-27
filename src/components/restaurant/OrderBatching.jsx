@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Package, MapPin, Users, CheckCircle, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 import { staffErrorMessage } from '@/lib/function-errors';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function OrderBatching({ restaurantId }) {
+    const { money } = useMoney();
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [selectedDriver, setSelectedDriver] = useState('');
     const queryClient = useQueryClient();

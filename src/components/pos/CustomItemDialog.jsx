@@ -6,8 +6,10 @@ import { Label } from "@/components/ui/label";
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import OnScreenKeyboard from './OnScreenKeyboard';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, posTheme = 'dark' }) {
+    const { prefix, symbol } = useMoney();
     const isDark = posTheme === 'dark';
     const [itemName, setItemName] = useState('');
     const [itemPrice, setItemPrice] = useState('');

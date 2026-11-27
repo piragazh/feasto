@@ -2,6 +2,7 @@ import { stockState } from '@/lib/pos-stock-logic';
 import React from 'react';
 import { Input } from "@/components/ui/input";
 import { ShoppingCart, Search } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Tile colour accent.
@@ -58,6 +59,7 @@ const TEXT_SIZE = {
 };
 
 export default function POSMenuGrid({ filteredItems, searchQuery, onSearchChange, onSearchFocus, onItemClick, t, density = 'standard', textSize = 'm', categoryImages = {} }) {
+    const { money } = useMoney();
     const type = TEXT_SIZE[textSize] || TEXT_SIZE.m;
     return (
         <div className={`col-span-1 md:col-span-7 ${t.panel} border rounded-2xl overflow-hidden flex flex-col`}>

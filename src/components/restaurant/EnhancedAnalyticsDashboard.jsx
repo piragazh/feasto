@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
@@ -55,6 +56,7 @@ const StatRow = ({ label, value, valueClass = 'text-gray-900' }) => (
 );
 
 export default function EnhancedAnalyticsDashboard({ restaurantId }) {
+    const { money, prefix } = useMoney();
     const [dateRange, setDateRange] = useState(30);
     const [forecastLoading, setForecastLoading] = useState(false);
     const [forecast, setForecast] = useState(null);

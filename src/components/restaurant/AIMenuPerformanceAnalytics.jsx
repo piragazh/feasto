@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, TrendingUp, TrendingDown, Target, Lightbulb, BarChart3, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function AIMenuPerformanceAnalytics({ restaurantId }) {
+    const { money, prefix } = useMoney();
     const [analyzing, setAnalyzing] = useState(false);
     const [insights, setInsights] = useState(null);
 

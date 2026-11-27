@@ -20,6 +20,7 @@ import RejectOrderDialog from './RejectOrderDialog';
 import DriverLocationMap from '@/components/driver/DriverLocationMap';
 import { staffErrorMessage } from '@/lib/function-errors';
 import UberPushWarning from '@/components/pos/UberPushWarning';
+import { useMoney } from '@/lib/MoneyContext';
 
 // ── Canonical visibility helper ──────────────────────────────────────────
 // Maps kiosk (order_status) and legacy (status) to unified operational state
@@ -33,6 +34,7 @@ const getOrderOperationalStatus = (order) => {
 };
 
 export default function LiveOrders({ restaurantId, onOrderUpdate }) {
+    const { money } = useMoney();
     const restaurantTimeZone = useRestaurantTimeZone(restaurantId);
     const [rejectingOrder, setRejectingOrder] = useState(null);
     const [printFallback, setPrintFallback] = useState(null); // { order, restaurant, config, errorMessage }

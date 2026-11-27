@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { AlertTriangle, Info, Loader2 } from 'lucide-react';
 import { tipsByStaff } from '@/lib/pos-money-logic';
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Tip distribution report.
@@ -32,6 +33,7 @@ const RANGES = {
 };
 
 export default function POSTipReport({ restaurantId, posTheme = 'dark' }) {
+    const { money } = useMoney();
     const isDark = posTheme === 'dark';
     const t = {
         panel: isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',

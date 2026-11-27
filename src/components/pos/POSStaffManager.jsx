@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog';
+import { useMoney } from '@/lib/MoneyContext';
 
 const ROLES = [
     { value: 'waiter',        label: 'Waiter',        color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
@@ -133,6 +134,7 @@ function StaffFormDialog({ open, onClose, staff, restaurantId, onSaved, isDark }
 }
 
 function StaffStats({ staff, orders, t }) {
+    const { money } = useMoney();
     // Sales only - cancelled/refunded orders are not takings. See statsFor().
     const staffOrders = orders.filter(o => o.staff_id === staff.id && countsAsRevenue(o));
     const revenue = sumRevenue(staffOrders);
@@ -151,6 +153,7 @@ function StaffStats({ staff, orders, t }) {
 }
 
 export default function POSStaffManager({ restaurantId, posTheme = 'dark', currentUser }) {
+    const { money, prefix } = useMoney();
     const isDark = posTheme === 'dark';
     const isAdmin = currentUser?.role === 'admin';
     const qc = useQueryClient();

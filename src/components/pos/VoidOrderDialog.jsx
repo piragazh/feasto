@@ -10,6 +10,7 @@ import {
     AlertDialogContent, AlertDialogDescription,
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useMoney } from '@/lib/MoneyContext';
 
 const REASON_CODES = [
     { value: 'customer_changed_mind', label: 'Customer changed mind' },
@@ -23,6 +24,7 @@ const REASON_CODES = [
 ];
 
 export default function VoidOrderDialog({ order, open, onClose, onUpdate, isDark = true, overrideToken }) {
+    const { money } = useMoney();
     const [reasonCode, setReasonCode] = useState('');
     const [reasonNote, setReasonNote] = useState('');
     const [isVoiding, setIsVoiding] = useState(false);

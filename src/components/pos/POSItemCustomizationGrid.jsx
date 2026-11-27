@@ -5,12 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Check, X } from 'lucide-react';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 /**
  * Grid layout — options shown in a 2-column tile grid per group.
  * All groups are scrollable on one screen (no stepping).
  */
 export default function POSItemCustomizationGrid({ item, open, onClose, onConfirm, posTheme = 'dark', initialCustomizations = null, initialSpecialInstructions = '', initialIsMeal = false, initialMealCustomizations = null, isEditing = false }) {
+    const { money } = useMoney();
     const isDark = posTheme === 'dark';
 
     const [customizations, setCustomizations] = useState({});

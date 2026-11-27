@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { X, ShoppingCart, RotateCcw, Trash2, Clock, Search, Edit2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import HeldOrderEditDialog from './HeldOrderEditDialog';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function HeldOrdersDrawer({ open, onClose, heldOrders, onRecall, onDelete, isDark, t, onUpdate }) {
+    const { money } = useMoney();
     const [searchQuery, setSearchQuery] = useState('');
     const [editingHeld, setEditingHeld] = useState(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);

@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Upload, ExternalLink, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function ImportFromJustEat({ restaurantId }) {
+    const { money } = useMoney();
     const [url, setUrl] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const [extractedItems, setExtractedItems] = useState([]);

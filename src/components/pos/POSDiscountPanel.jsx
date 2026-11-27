@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Tag, X, Percent, DollarSign, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 const REASON_CODES = [
     { value: 'staff_meal',                label: 'Staff Meal' },
@@ -32,6 +33,7 @@ export default function POSDiscountPanel({
     couponActive = false, // mutual exclusion: true when a coupon is already applied
     isOffline = false, // ✨ NEW: offline mode blocks discounts entirely
 }) {
+    const { money, prefix } = useMoney();
     const [type, setType] = useState('percentage');
     const [value, setValue] = useState('');
     const [reasonCode, setReasonCode] = useState('');

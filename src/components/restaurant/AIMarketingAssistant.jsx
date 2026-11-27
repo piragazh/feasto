@@ -7,8 +7,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Mail, Bell, Clock, TrendingUp, Users, Target, Copy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function AIMarketingAssistant({ restaurantId }) {
+    const { money } = useMoney();
     const [loading, setLoading] = useState(false);
     const [campaigns, setCampaigns] = useState([]);
     const [selectedCampaign, setSelectedCampaign] = useState(null);

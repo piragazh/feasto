@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus, Minus } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function HeldOrderEditDialog({ open, onClose, heldOrder, onSave, isDark }) {
+    const { money } = useMoney();
     const [label, setLabel] = useState(heldOrder?.label || '');
     const [items, setItems] = useState(heldOrder?.items || []);
 

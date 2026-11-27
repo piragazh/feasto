@@ -8,8 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { X } from 'lucide-react';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function POSItemCustomization({ item, open, onClose, onConfirm, posTheme = 'dark', initialCustomizations = null, initialSpecialInstructions = '', initialIsMeal = false, initialMealCustomizations = null, isEditing = false }) {
+    const { money } = useMoney();
     const isDark = posTheme === 'dark';
      const [customizations, setCustomizations] = useState({});
      const [specialInstructions, setSpecialInstructions] = useState('');

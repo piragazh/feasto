@@ -4,8 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function ThirdPartyOrdersView({ restaurantId }) {
+    const { prefix } = useMoney();
     const { data: thirdPartyOrders = [], isLoading } = useQuery({
         queryKey: ['third-party-orders', restaurantId],
         queryFn: async () => {
