@@ -21,6 +21,7 @@ import {
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useMoney } from '@/lib/MoneyContext';
+import { hasCardPayments } from '@/lib/region';
 
 /**
  * Quick-cash denominations, generated from the amount still owed.
@@ -139,7 +140,9 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
 
     // Card terminal config from restaurant
     const cardTerminal = restaurant?.printer_config?.card_terminal;
-    const hasConfiguredTerminal = !!(cardTerminal?.reader_label || cardTerminal?.reader_id);
+    // The integrated (Stripe) reader only where the country has that provider.
+    // "Card" on the shop's own card machine is still recorded everywhere.
+    const hasConfiguredTerminal = hasCardPayments(restaurant) && !!(cardTerminal?.reader_label || cardTerminal?.reader_id);
 
     // Split payment: array of { method, amount }
     const [payments, setPayments] = useState([]);

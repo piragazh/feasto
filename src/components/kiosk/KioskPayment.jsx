@@ -30,6 +30,7 @@ import { printWithCentralizedConfig } from '@/lib/printUtils';
 import { getKioskPaymentOptions } from '@/lib/kioskTerminalReadiness';
 import { functionErrorMessage } from '@/lib/kiosk-payment';
 import { useMoney } from '@/lib/MoneyContext';
+import { hasCardPayments } from '@/lib/region';
 
 // Hard timeout: if terminal hasn't responded in 90 seconds, treat as timeout
 const TERMINAL_TIMEOUT_MS = 90_000;
@@ -73,7 +74,9 @@ export default function KioskPayment({
     // Default to card if available, otherwise counter
     const kioskConfigForDefault = restaurant?.kiosk_config || {};
     const terminalConfigForDefault = kioskConfigForDefault.card_terminal || null;
-    const defaultMethod = (kioskConfigForDefault.payment_card_enabled === true && !!terminalConfigForDefault?.reader_id)
+    // No card provider in the restaurant's country (src/lib/region.js) = counter only.
+    const kioskCardAllowed = hasCardPayments(restaurant);
+    const defaultMethod = (kioskCardAllowed && kioskConfigForDefault.payment_card_enabled === true && !!terminalConfigForDefault?.reader_id)
         ? 'card'
         : 'cash';
     const [paymentMethod, setPaymentMethod] = useState(defaultMethod);
@@ -98,7 +101,7 @@ export default function KioskPayment({
     const terminalConfig = kioskConfig.card_terminal || null;
 
     // Derive payment options via shared readiness logic (same logic used in admin UI + tests)
-    const { showCard: allowCard, showCounter: allowCounter, cardUnavailable, terminalReadiness } = getKioskPaymentOptions(kioskConfig);
+    const { showCard: allowCard, showCounter: allowCounter, cardUnavailable, terminalReadiness } = getKioskPaymentOptions(kioskConfig, { cardAllowed: kioskCardAllowed });
 
     // On mount: detect if a prior payment was interrupted by a reload
     useEffect(() => {

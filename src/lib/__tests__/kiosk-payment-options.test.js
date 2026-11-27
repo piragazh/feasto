@@ -66,3 +66,20 @@ describe('the owner\'s choices are otherwise respected', () => {
         expect(o.showCounter).toBe(false);
     });
 });
+
+describe('getKioskPaymentOptions — region (card provider)', () => {
+    const cfgs = [];
+    for (const counter of [true, false, undefined]) for (const card of [true, false]) for (const reader of ['tmr_1', '']) for (const down of [true, false])
+        cfgs.push({ payment_counter_enabled: counter, payment_card_enabled: card, card_terminal: reader ? { reader_id: reader, provider: 'stripe_terminal', status: down ? 'offline' : 'online' } : null });
+    it('default (UK) gives exactly the same options as before', () => {
+        for (const c of [...cfgs, null, undefined, {}]) expect(getKioskPaymentOptions(c, {})).toEqual(getKioskPaymentOptions(c));
+        for (const c of cfgs) expect(getKioskPaymentOptions(c, { cardAllowed: true })).toEqual(getKioskPaymentOptions(c));
+    });
+    it('no card provider: never card, always a way to pay', () => {
+        for (const c of [...cfgs, null]) {
+            const o = getKioskPaymentOptions(c, { cardAllowed: false });
+            expect(o.showCard).toBe(false);
+            expect(o.showCounter).toBe(true);
+        }
+    });
+});
