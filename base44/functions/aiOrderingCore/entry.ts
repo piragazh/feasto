@@ -1017,6 +1017,22 @@ async function authorised(req, base44, body) {
 // Copied verbatim from src/lib/item-availability.js - check-item-availability.mjs compares.
 // ── ITEM AVAILABILITY (shared - keep identical in every copy) ────────────────
 const AVAILABILITY_TZ = 'Europe/London';
+// A restaurant's clock. Same rule as getRestaurantTimeZone in src/lib/region.js
+// (check-region.mjs compares them): a real zone on the record wins; blank or
+// the schema default "UTC" means "not set", so the country's zone is used; no
+// restaurant, no country or a zone the runtime can't read means the UK clock.
+// Every time rule below takes this zone and defaults to the UK clock, so a
+// caller that passes no zone behaves exactly as before region support.
+const COUNTRY_TZ = { GB: 'Europe/London', LK: 'Asia/Colombo' };
+function isValidTz(tz) {
+    try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); return true; } catch (_) { return false; }
+}
+function restaurantTz(restaurant) {
+    const tz = typeof restaurant?.timezone === 'string' ? restaurant.timezone.trim() : '';
+    if (tz && tz.toUpperCase() !== 'UTC' && isValidTz(tz)) return tz;
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return COUNTRY_TZ[c] || AVAILABILITY_TZ;
+}
 const SELLS_AT = {
     till: ['both', 'pos_only'],
     online: ['both', 'online_only'],
@@ -1035,10 +1051,10 @@ function sellsAt(item, where) {
     return (SELLS_AT[where] || []).includes(channelOf(item));
 }
 
-/** Weekday and minute-of-day in the UK, whatever the device's own zone. */
-function ukClock(date) {
+/** Weekday and minute-of-day on the restaurant's clock (UK by default), whatever the device's own zone. */
+function ukClock(date, tz = AVAILABILITY_TZ) {
     const parts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: AVAILABILITY_TZ, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+        timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     }).formatToParts(date);
     const get = (t) => parts.find(p => p.type === t)?.value;
     return { day: WEEKDAYS[get('weekday')], minutes: Number(get('hour')) * 60 + Number(get('minute')) };
@@ -1052,11 +1068,11 @@ function hhmmToMinutes(hhmm) {
 }
 
 /** Same rule as the till: days, late menus past midnight, start === end is all day. */
-function inWindow(w, date) {
+function inWindow(w, date, tz = AVAILABILITY_TZ) {
     if (!w) return false;
     const start = hhmmToMinutes(w.start), end = hhmmToMinutes(w.end);
     if (start === null || end === null) return false;
-    const { day, minutes } = ukClock(date);
+    const { day, minutes } = ukClock(date, tz);
     const days = Array.isArray(w.days) && w.days.length ? w.days : [0, 1, 2, 3, 4, 5, 6];
     if (start === end) return days.includes(day);
     if (start < end) return days.includes(day) && minutes >= start && minutes < end;
@@ -1065,20 +1081,20 @@ function inWindow(w, date) {
 }
 
 /** No windows (or an empty list) means always - scheduling is opt-in. */
-function inHours(item, date) {
+function inHours(item, date, tz = AVAILABILITY_TZ) {
     const ws = item?.availability_windows;
     if (!Array.isArray(ws) || ws.length === 0) return true;
-    return ws.some(w => inWindow(w, date));
+    return ws.some(w => inWindow(w, date, tz));
 }
 
 /**
  * Why this item cannot be sold here at `date`, or null if it can.
  * 'unavailable' - switched off; 'channel' - not sold here; 'hours' - outside its times.
  */
-function whyNotSellable(item, where, date) {
+function whyNotSellable(item, where, date, tz = AVAILABILITY_TZ) {
     if (!item || item.is_available === false) return 'unavailable';
     if (!sellsAt(item, where)) return 'channel';
-    if (!inHours(item, date)) return 'hours';
+    if (!inHours(item, date, tz)) return 'hours';
     return null;
 }
 /**
