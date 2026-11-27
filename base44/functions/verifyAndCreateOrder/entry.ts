@@ -678,6 +678,30 @@ function notSellableMessage(name, why) {
 }
 // ── END ITEM AVAILABILITY ────────────────────────────────────────────────────
 
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag, aiCashLimit, loyaltySpendPerPoint,
+// cashSignOffTolerance, cashMaxFloat) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = {
+    GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£', aiCashLimit: 50, loyaltySpendPerPoint: 1, cashSignOffTolerance: 5, cashMaxFloat: 5000 },
+    LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ', aiCashLimit: 10000, loyaltySpendPerPoint: 100, cashSignOffTolerance: 500, cashMaxFloat: 500000 },
+};
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
 Deno.serve(async (req) => {
     try {
         if (req.method !== 'POST') {
@@ -973,7 +997,9 @@ Deno.serve(async (req) => {
         const earnLoyalty = restaurantData?.loyalty_program_enabled !== false;
         const pointsMultiplier = restaurantData?.loyalty_points_multiplier || 1;
         const loyaltyPointsPerPound = 1; // Standard: 1 point per £1
-        const loyaltyPointsEarned = earnLoyalty ? Math.floor(serverTotal * loyaltyPointsPerPound * pointsMultiplier) : 0;
+        // Spend per point by country (region-limits): UK £1 (unchanged), Sri Lanka Rs 100.
+        const loyaltySpendPerPoint = regionLimits(restaurantData).loyaltySpendPerPoint;
+        const loyaltyPointsEarned = earnLoyalty ? Math.floor((serverTotal / loyaltySpendPerPoint) * loyaltyPointsPerPound * pointsMultiplier) : 0;
 
         const customerEmail = user?.email || guest_email || null;
         const customerPhone = phone || null;
