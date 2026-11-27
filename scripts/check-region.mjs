@@ -101,6 +101,22 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
     const d = R.filter((r) => restaurantTz(r) !== getRestaurantTimeZone(r));
     if (d.length) bad(`restaurantTz differs from getRestaurantTimeZone for ${d.map((x) => JSON.stringify(x)).join(', ')}`);
     else ok(`restaurant clock rule matches region.js on ${R.length} records`);
+
+    // 5. The server clock copy (receipt printers) - identical copies, same answers.
+    const CLOCK_MIRRORS = ['base44/functions/androidPrint/entry.ts', 'base44/functions/networkPrint/entry.ts'];
+    const cblock = (s) => (s.match(/\/\/ region-clock:start[\s\S]*?\/\/ region-clock:end/) || [null])[0];
+    const clock = cblock(fs.readFileSync('scripts/region-clock.snippet.js', 'utf8'));
+    for (const file of CLOCK_MIRRORS) {
+        const b = cblock(fs.readFileSync(file, 'utf8'));
+        if (!b) bad(`${file} has no region-clock block`);
+        else if (b !== clock) bad(`${file} region-clock block differs from scripts/region-clock.snippet.js`);
+        else ok(`${file} carries the region clock unchanged`);
+    }
+    const { REGION_CLOCK, regionClockTz } = new Function(`${clock}\nreturn { REGION_CLOCK, regionClockTz };`)();
+    if (JSON.stringify(REGION_CLOCK) !== JSON.stringify(want)) bad('region-clock country zones differ from region.js');
+    const dc = R.filter((r) => regionClockTz(r) !== getRestaurantTimeZone(r));
+    if (dc.length) bad(`regionClockTz differs from region.js for ${dc.map((x) => JSON.stringify(x)).join(', ')}`);
+    else ok(`server clock rule matches region.js on ${R.length} records`);
 }
 
 if (failures) { console.log(`\ncheck-region: ${failures} problem(s)`); process.exit(1); }
