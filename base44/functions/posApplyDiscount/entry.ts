@@ -28,6 +28,26 @@ const VALID_REASON_CODES = [
     'other',
 ];
 
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = { GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£' }, LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ' } };
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -92,6 +112,8 @@ Deno.serve(async (req) => {
         }
 
         // ── Threshold check ───────────────────────────────────────────────────────
+        // Fixed cap in the restaurant's own currency (region-limits below); UK £20 as before.
+        const lim = regionLimits(await restaurantForRegion(base44, restaurant_id));
         const sub = parseFloat(subtotal) || 0;
         const discountAmount = discount_type === 'percentage'
             ? (sub * value) / 100
@@ -99,12 +121,12 @@ Deno.serve(async (req) => {
 
         const exceedsThreshold =
             (discount_type === 'percentage' && value > MANAGER_MAX_PCT) ||
-            (discount_type === 'fixed'      && value > MANAGER_MAX_FIXED);
+            (discount_type === 'fixed'      && value > lim.managerDiscountMax);
 
         if (exceedsThreshold && !isAdmin) {
             console.warn(`[POS-DISCOUNT] Threshold exceeded by ${user.email}: type=${discount_type} value=${value} — requires admin`);
             return Response.json({
-                error: `Discounts above ${discount_type === 'percentage' ? `${MANAGER_MAX_PCT}%` : `£${MANAGER_MAX_FIXED}`} require admin approval`,
+                error: `Discounts above ${discount_type === 'percentage' ? `${MANAGER_MAX_PCT}%` : `${lim.prefix}${lim.managerDiscountMax}`} require admin approval`,
                 requires_admin: true,
             }, { status: 403 });
         }

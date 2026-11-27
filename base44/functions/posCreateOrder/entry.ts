@@ -150,6 +150,26 @@ function regionClockTz(restaurant) {
 }
 // region-clock:end
 
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = { GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£' }, LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ' } };
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -306,7 +326,9 @@ Deno.serve(async (req) => {
 
         // ── Manual discount validation (unchanged) ───────────────────────────────
         const MANAGER_MAX_PCT = 20;
-        const MANAGER_MAX_FIXED = 20;
+        // Fixed cap in the restaurant's own currency (region-limits below); UK £20 as before.
+        const MANAGER_MAX_FIXED = regionLimits(restaurants[0]).managerDiscountMax;
+        const MONEY_PREFIX = regionLimits(restaurants[0]).prefix;
         let approvedDiscount = 0;
         const clientDiscount = typeof orderData.discount === 'number' ? orderData.discount : 0;
         const discountReasonCode = orderData.discount_reason_code || null;
@@ -335,7 +357,7 @@ Deno.serve(async (req) => {
                 if (pct > MANAGER_MAX_PCT || clientDiscount > MANAGER_MAX_FIXED) {
                     console.warn(`[POS] discount ${clientDiscount} exceeds manager threshold (${pct.toFixed(1)}%). Rejected. restaurant=${orderData.restaurant_id} user=${user.email}`);
                     return Response.json({
-                        error: `This discount exceeds the manager limit (${MANAGER_MAX_PCT}% or £${MANAGER_MAX_FIXED}) and needs admin approval. The order has not been placed.`,
+                        error: `This discount exceeds the manager limit (${MANAGER_MAX_PCT}% or ${MONEY_PREFIX}${MANAGER_MAX_FIXED}) and needs admin approval. The order has not been placed.`,
                         requires_admin: true,
                     }, { status: 403 });
                 }
@@ -413,7 +435,7 @@ Deno.serve(async (req) => {
 
                 // Minimum spend
                 if (coupon.minimum_order && serverSubtotal < coupon.minimum_order) {
-                    return Response.json({ error: `Minimum order of £${coupon.minimum_order.toFixed(2)} required for coupon "${code}"` }, { status: 400 });
+                    return Response.json({ error: `Minimum order of ${MONEY_PREFIX}${coupon.minimum_order.toFixed(2)} required for coupon "${code}"` }, { status: 400 });
                 }
 
                 // Global usage_limit
@@ -672,8 +694,8 @@ Deno.serve(async (req) => {
         if (approvedDiscount > 0 || approvedCouponDiscount > 0) {
             try {
                 const parts = [];
-                if (approvedDiscount > 0) parts.push(`Manual £${approvedDiscount.toFixed(2)}`);
-                if (approvedCouponDiscount > 0) parts.push(`Coupon £${approvedCouponDiscount.toFixed(2)}`);
+                if (approvedDiscount > 0) parts.push(`Manual ${MONEY_PREFIX}${approvedDiscount.toFixed(2)}`);
+                if (approvedCouponDiscount > 0) parts.push(`Coupon ${MONEY_PREFIX}${approvedCouponDiscount.toFixed(2)}`);
                 await base44.asServiceRole.entities.PosAuditLog.create({
                     restaurant_id: orderData.restaurant_id,
                     action: approvedDiscount > 0 ? 'discount.apply' : 'coupon.apply',
@@ -686,7 +708,7 @@ Deno.serve(async (req) => {
                     reason: discountReasonCode || undefined,
                     detail: [
                         parts.join(' + '),
-                        `on subtotal £${serverSubtotal.toFixed(2)}`,
+                        `on subtotal ${MONEY_PREFIX}${serverSubtotal.toFixed(2)}`,
                         !staffSession ? 'No staff session - unattributed' : null,
                     ].filter(Boolean).join(' · '),
                 });

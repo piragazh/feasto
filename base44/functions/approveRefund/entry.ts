@@ -13,6 +13,26 @@ import Stripe from 'npm:stripe';
 
 const LARGE_REFUND_THRESHOLD = 30; // £ — flag in audit as high severity
 
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = { GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£' }, LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ' } };
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
 Deno.serve(async (req) => {
     if (req.method !== 'POST') {
         return Response.json({ error: 'POST only' }, { status: 405 });
@@ -43,6 +63,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Order not found' }, { status: 404 });
         }
         const order = orders[0];
+        // Large-refund flag and money text in the restaurant's own currency (region-limits below).
+        const lim = regionLimits(await restaurantForRegion(base44, order.restaurant_id));
 
         // ── Tenant check ──────────────────────────────────────────────────────────
         const isAdmin = user.role === 'admin';
@@ -76,7 +98,7 @@ Deno.serve(async (req) => {
 
         if (requestedAmount > order.total) {
             return Response.json({
-                error: `Refund amount £${requestedAmount.toFixed(2)} exceeds order total £${order.total.toFixed(2)}`,
+                error: `Refund amount ${lim.prefix}${requestedAmount.toFixed(2)} exceeds order total ${lim.prefix}${order.total.toFixed(2)}`,
             }, { status: 400 });
         }
 
@@ -87,7 +109,7 @@ Deno.serve(async (req) => {
             }, 0);
             if (Math.abs(itemsTotal - requestedAmount) > 0.02) {
                 return Response.json({
-                    error: `Partial refund items total £${itemsTotal.toFixed(2)} does not match requested £${requestedAmount.toFixed(2)}`,
+                    error: `Partial refund items total ${lim.prefix}${itemsTotal.toFixed(2)} does not match requested ${lim.prefix}${requestedAmount.toFixed(2)}`,
                 }, { status: 400 });
             }
             for (const ri of order.refund_requested_items) {
@@ -206,7 +228,7 @@ Deno.serve(async (req) => {
         });
 
         // ── Audit log ─────────────────────────────────────────────────────────────
-        const isLarge = approvedAmount >= LARGE_REFUND_THRESHOLD;
+        const isLarge = approvedAmount >= lim.largeRefundFlag;
         const auditDetails = {
             order_id,
             restaurant_id: order.restaurant_id,

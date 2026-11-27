@@ -43,6 +43,26 @@ async function verifyStaffSession(token, restaurantId) {
     }
 }
 
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = { GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£' }, LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ' } };
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -64,6 +84,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Order not found' }, { status: 404 });
         }
         const existingOrder = orders[0];
+        // Discount cap and money text in the restaurant's own currency (region-limits below).
+        const lim = regionLimits(await restaurantForRegion(base44, existingOrder.restaurant_id));
 
         if (user.role !== 'admin') {
             const managers = await base44.asServiceRole.entities.RestaurantManager.filter({
@@ -164,11 +186,11 @@ Deno.serve(async (req) => {
                 : (existingOrder.subtotal || 0);
             const discountPct = baseSubtotal > 0 ? (newDiscount / baseSubtotal) * 100 : 0;
 
-            const exceedsThreshold = newDiscount > MANAGER_MAX_FIXED || discountPct > MANAGER_MAX_PCT;
+            const exceedsThreshold = newDiscount > lim.managerDiscountMax || discountPct > MANAGER_MAX_PCT;
             if (exceedsThreshold && user.role !== 'admin') {
                 console.warn(`[POS-ORDER-EDIT] Discount threshold exceeded by ${user.email}: £${newDiscount} (${discountPct.toFixed(1)}%) — requires admin`);
                 return Response.json({
-                    error: `Discounts above £${MANAGER_MAX_FIXED} or ${MANAGER_MAX_PCT}% require admin approval`,
+                    error: `Discounts above ${lim.prefix}${lim.managerDiscountMax} or ${MANAGER_MAX_PCT}% require admin approval`,
                     requires_admin: true,
                 }, { status: 403 });
             }
@@ -240,7 +262,7 @@ Deno.serve(async (req) => {
                 amount: Math.round((newTotal - prevTotal) * 100) / 100,
                 detail: [
                     `Changed: ${changed.join(', ') || 'nothing'}`,
-                    `Total £${prevTotal.toFixed(2)} → £${newTotal.toFixed(2)}`,
+                    `Total ${lim.prefix}${prevTotal.toFixed(2)} → ${lim.prefix}${newTotal.toFixed(2)}`,
                     !staffSession ? 'No staff session - unattributed' : null,
                 ].filter(Boolean).join(' · '),
             });

@@ -91,6 +91,26 @@ function regionClockTz(restaurant) {
 }
 // region-clock:end
 
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = { GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£' }, LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ' } };
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -199,7 +219,7 @@ Deno.serve(async (req) => {
             const base = menuItem.pos_price != null ? menuItem.pos_price : menuItem.price;
             const floor = scheduledPrice(base, menuItem, pricedAt, regionClockTz(restaurants[0]));
             if (safeClaimed + 0.005 < floor) {
-                priceFlags.push(`${menuItem.name}: charged £${safeClaimed.toFixed(2)}, menu minimum £${floor.toFixed(2)}`);
+                priceFlags.push(`${menuItem.name}: charged ${regionLimits(restaurants[0]).prefix}${safeClaimed.toFixed(2)}, menu minimum ${regionLimits(restaurants[0]).prefix}${floor.toFixed(2)}`);
             }
             // Record what was ACTUALLY charged - options included - so the order
             // matches the cash in the drawer.
@@ -212,7 +232,8 @@ Deno.serve(async (req) => {
         // Offline orders may have had a discount applied without threshold enforcement.
         // Re-validate server-side before syncing.
         const MANAGER_MAX_PCT = 20;
-        const MANAGER_MAX_FIXED = 20;
+        // Fixed cap in the restaurant's own currency (region-limits below); UK £20 as before.
+        const MANAGER_MAX_FIXED = regionLimits(restaurants[0]).managerDiscountMax;
 
         let approvedDiscount = 0;
         let discountWasOffline = false;
@@ -276,7 +297,7 @@ Deno.serve(async (req) => {
                         couponValidationNote = `Coupon "${rawCouponCode}" has expired (expires_at)`;
                         console.warn(`[OFFLINE-SYNC] ${couponValidationNote}. restaurant=${offlineOrderData.restaurant_id} user=${user.email}`);
                     } else if (coupon.minimum_order && serverSubtotal < coupon.minimum_order) {
-                        couponValidationNote = `Coupon "${rawCouponCode}" requires minimum order £${coupon.minimum_order.toFixed(2)}`;
+                        couponValidationNote = `Coupon "${rawCouponCode}" requires minimum order ${regionLimits(restaurants[0]).prefix}${coupon.minimum_order.toFixed(2)}`;
                         console.warn(`[OFFLINE-SYNC] ${couponValidationNote}. restaurant=${offlineOrderData.restaurant_id} user=${user.email}`);
                     } else if (coupon.usage_limit && (coupon.usage_count || 0) >= coupon.usage_limit) {
                         couponValidationNote = `Coupon "${rawCouponCode}" has reached its usage limit`;
