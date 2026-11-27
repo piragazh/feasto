@@ -168,7 +168,7 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
 
 // 8. The server money-limits copy (discount cap, large-refund flag, money prefix).
 {
-    const LIMIT_MIRRORS = ['posApplyDiscount', 'posUpdateOrder', 'approveRefund', 'posCreateOrder', 'syncOfflineOrder'].map((f) => `base44/functions/${f}/entry.ts`);
+    const LIMIT_MIRRORS = ['posApplyDiscount', 'posUpdateOrder', 'approveRefund', 'posCreateOrder', 'syncOfflineOrder', 'aiOrderingCore', 'awardLoyaltyPoints', 'verifyAndCreateOrder', 'loyaltyBackfill', 'posCashSession'].map((f) => `base44/functions/${f}/entry.ts`);
     const lb = (s) => (s.match(/\/\/ region-limits:start[\s\S]*?\/\/ region-limits:end/) || [null])[0];
     const canon = lb(fs.readFileSync('scripts/region-limits.snippet.js', 'utf8'));
     for (const file of LIMIT_MIRRORS) {
@@ -182,12 +182,15 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
     for (const [code, r] of Object.entries(REGIONS)) {
         const m = REGION_LIMITS[code];
         if (!m) { bad(`region-limits has no ${code}`); continue; }
+        const extra = ['aiCashLimit', 'loyaltySpendPerPoint', 'cashSignOffTolerance', 'cashMaxFloat'].filter((k) => m[k] !== r[k]);
+        if (extra.length) bad(`${code} ${extra.join(', ')} differ from region.js`);
         if (m.managerDiscountMax !== r.managerDiscountMax || m.largeRefundFlag !== r.largeRefundFlag || m.prefix !== prefixOf(code)) bad(`${code} limits differ from region.js`);
         else ok(`${code} limits match region.js (cap ${m.managerDiscountMax}, refund flag ${m.largeRefundFlag})`);
     }
     if (Object.keys(REGION_LIMITS).sort().join() !== Object.keys(REGIONS).sort().join()) bad('region-limits countries differ from region.js');
     const uk = regionLimits({ country: null });
     if (uk.managerDiscountMax !== 20 || uk.largeRefundFlag !== 30 || uk.prefix !== '£') bad('UK limits must stay £20 / £30');
+    else if (uk.aiCashLimit !== 50 || uk.loyaltySpendPerPoint !== 1 || uk.cashSignOffTolerance !== 5 || uk.cashMaxFloat !== 5000) bad('UK AI cash £50 / 1 point per £1 / £5 tolerance / £5000 float must stay');
     else ok('existing UK restaurants keep £20 / £30');
 }
 
