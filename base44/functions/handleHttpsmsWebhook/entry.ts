@@ -30,6 +30,58 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+// region-mirror:start
+// SYNC RULE: server copy of the phone rules in src/lib/region.js + src/lib/phone.js
+// (functions cannot import src/). Every copy must be identical to
+// scripts/region-mirror.snippet.js; scripts/check-region.mjs enforces it and
+// runs this code against src/lib/phone.js.
+const REGION_PHONE = {
+    GB: { dialCode: '44', trunkPrefix: '0', mobileNational: /^7\d{9}$/ },
+    LK: { dialCode: '94', trunkPrefix: '0', mobileNational: /^7\d{8}$/ },
+};
+function regionCountry(code) {
+    const c = typeof code === 'string' ? code.trim().toUpperCase() : '';
+    return REGION_PHONE[c] ? c : 'GB';
+}
+function regionMobileE164(raw, country) {
+    const r = REGION_PHONE[regionCountry(country)];
+    const text = String(raw ?? '').trim();
+    let digits = text.replace(/\D/g, '');
+    if (!digits) return null;
+    let international = text.startsWith('+');
+    if (digits.startsWith('00')) { digits = digits.slice(2); international = true; }
+    let n;
+    if (international) n = digits.startsWith(r.dialCode) ? digits.slice(r.dialCode.length) : '';
+    else if (digits.startsWith(r.dialCode) && r.mobileNational.test(digits.slice(r.dialCode.length))) n = digits.slice(r.dialCode.length);
+    else if (r.trunkPrefix && digits.startsWith(r.trunkPrefix)) n = digits.slice(r.trunkPrefix.length);
+    else n = digits;
+    return r.mobileNational.test(n) ? `+${r.dialCode}${n}` : null;
+}
+// A country's own sender setting. GB keeps the original secret names; other
+// countries add _<CODE> (HTTPSMS_FROM_LK, TWILIO_PHONE_NUMBER_LK, ...).
+function regionEnv(name, country) {
+    const c = regionCountry(country);
+    return Deno.env.get(c === 'GB' ? name : `${name}_${c}`) || '';
+}
+// The country of the restaurant a message is for: from the restaurant, else
+// from the order's restaurant, else GB. Any lookup problem means GB, which is
+// exactly how every message was handled before region support.
+async function restaurantCountryFor(base44, restaurantId, orderId) {
+    try {
+        let id = restaurantId;
+        if (!id && orderId) {
+            const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+            id = orders?.[0]?.restaurant_id;
+        }
+        if (!id) return 'GB';
+        const rows = await base44.asServiceRole.entities.Restaurant.filter({ id });
+        return regionCountry(rows?.[0]?.country);
+    } catch (_) {
+        return 'GB';
+    }
+}
+// region-mirror:end
+
 // ── Base64URL decode ───────────────────────────────────────────────────
 function base64UrlToBytes(str) {
     let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
@@ -70,10 +122,11 @@ async function verifyHttpsmsJwt(token, signingKey) {
 
 // ── Twilio fallback (inline — same logic as sendSMS sendViaTwilio) ─────
 // SECURITY: `to` and `message` come from the trusted SmsLog, NOT the webhook.
-async function sendViaTwilioFallback({ to, message }) {
+// from: the Twilio number for the message's country (see the caller).
+async function sendViaTwilioFallback({ to, message, from }) {
     const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-    const twilioPhone = Deno.env.get('TWILIO_PHONE_NUMBER');
+    const twilioPhone = from;
 
     if (!accountSid || !authToken || !twilioPhone) {
         return { success: false, error: 'Twilio not configured', notConfigured: true };
@@ -352,9 +405,16 @@ Deno.serve(async (req) => {
 
             // ── Send via Twilio using TRUSTED SmsLog data ──
             // SECURITY: to and message come from the stored SmsLog, not the webhook payload.
+            // Sender for the restaurant's country (region mirror above): GB keeps
+            // TWILIO_PHONE_NUMBER; others use TWILIO_PHONE_NUMBER_<CODE>, else the main number.
+            const fallbackCountry = await restaurantCountryFor(base44, smsLog.restaurant_id, smsLog.order_id);
+            const fallbackFrom = fallbackCountry === 'GB'
+                ? Deno.env.get('TWILIO_PHONE_NUMBER')
+                : (regionEnv('TWILIO_PHONE_NUMBER', fallbackCountry) || Deno.env.get('TWILIO_PHONE_NUMBER'));
             const twilioResult = await sendViaTwilioFallback({
                 to: smsLog.to,
                 message: smsLog.message,
+                from: fallbackFrom,
             });
 
             // ── Update original SmsLog fallback_status ──

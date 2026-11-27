@@ -1,6 +1,58 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import twilio from 'npm:twilio@4.10.0';
 
+// region-mirror:start
+// SYNC RULE: server copy of the phone rules in src/lib/region.js + src/lib/phone.js
+// (functions cannot import src/). Every copy must be identical to
+// scripts/region-mirror.snippet.js; scripts/check-region.mjs enforces it and
+// runs this code against src/lib/phone.js.
+const REGION_PHONE = {
+    GB: { dialCode: '44', trunkPrefix: '0', mobileNational: /^7\d{9}$/ },
+    LK: { dialCode: '94', trunkPrefix: '0', mobileNational: /^7\d{8}$/ },
+};
+function regionCountry(code) {
+    const c = typeof code === 'string' ? code.trim().toUpperCase() : '';
+    return REGION_PHONE[c] ? c : 'GB';
+}
+function regionMobileE164(raw, country) {
+    const r = REGION_PHONE[regionCountry(country)];
+    const text = String(raw ?? '').trim();
+    let digits = text.replace(/\D/g, '');
+    if (!digits) return null;
+    let international = text.startsWith('+');
+    if (digits.startsWith('00')) { digits = digits.slice(2); international = true; }
+    let n;
+    if (international) n = digits.startsWith(r.dialCode) ? digits.slice(r.dialCode.length) : '';
+    else if (digits.startsWith(r.dialCode) && r.mobileNational.test(digits.slice(r.dialCode.length))) n = digits.slice(r.dialCode.length);
+    else if (r.trunkPrefix && digits.startsWith(r.trunkPrefix)) n = digits.slice(r.trunkPrefix.length);
+    else n = digits;
+    return r.mobileNational.test(n) ? `+${r.dialCode}${n}` : null;
+}
+// A country's own sender setting. GB keeps the original secret names; other
+// countries add _<CODE> (HTTPSMS_FROM_LK, TWILIO_PHONE_NUMBER_LK, ...).
+function regionEnv(name, country) {
+    const c = regionCountry(country);
+    return Deno.env.get(c === 'GB' ? name : `${name}_${c}`) || '';
+}
+// The country of the restaurant a message is for: from the restaurant, else
+// from the order's restaurant, else GB. Any lookup problem means GB, which is
+// exactly how every message was handled before region support.
+async function restaurantCountryFor(base44, restaurantId, orderId) {
+    try {
+        let id = restaurantId;
+        if (!id && orderId) {
+            const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
+            id = orders?.[0]?.restaurant_id;
+        }
+        if (!id) return 'GB';
+        const rows = await base44.asServiceRole.entities.Restaurant.filter({ id });
+        return regionCountry(rows?.[0]?.country);
+    } catch (_) {
+        return 'GB';
+    }
+}
+// region-mirror:end
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -59,17 +111,32 @@ Deno.serve(async (req) => {
             return Response.json({ success: false, message: 'No WhatsApp phone configured for this restaurant' });
         }
 
-        // Normalize phone number (ensure it starts with country code)
-        if (toPhone.startsWith('07')) {
-            toPhone = '+44' + toPhone.slice(1);
-        } else if (!toPhone.startsWith('+')) {
-            toPhone = '+' + toPhone;
+        // The restaurant's country decides the number format (region mirror
+        // above). UK restaurants keep the original rule unchanged.
+        const country = regionCountry(restaurant_data?.country);
+        const isUk = country === 'GB';
+        if (isUk) {
+            // Normalize phone number (ensure it starts with country code)
+            if (toPhone.startsWith('07')) {
+                toPhone = '+44' + toPhone.slice(1);
+            } else if (!toPhone.startsWith('+')) {
+                toPhone = '+' + toPhone;
+            }
+        } else {
+            const e164 = regionMobileE164(toPhone, country);
+            if (!e164) {
+                return Response.json({ success: false, message: `Restaurant WhatsApp number is not a valid mobile for ${country}` });
+            }
+            toPhone = e164;
         }
 
         // Initialize Twilio client
         const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
         const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-        const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
+        // Main (UK) WhatsApp number for every country unless it has its own.
+        const twilioPhoneNumber = isUk
+            ? Deno.env.get('TWILIO_PHONE_NUMBER')
+            : (regionEnv('TWILIO_WHATSAPP_NUMBER', country) || Deno.env.get('TWILIO_PHONE_NUMBER'));
 
         if (!accountSid || !authToken || !twilioPhoneNumber) {
             await base44.asServiceRole.entities.SmsLog.create({
