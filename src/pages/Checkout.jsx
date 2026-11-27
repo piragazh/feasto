@@ -1298,7 +1298,7 @@ export default function Checkout() {
                                                         if (!coords || !coords.lat || !coords.lng) {
                                                             try {
                                                                 const response = await fetch(
-                                                                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address.address || '')}&countrycodes=GB&limit=1`
+                                                                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address.address || '')}&countrycodes=${getRegion(restaurant).country === 'GB' ? 'GB' : getRegion(restaurant).geocodeCountry}&limit=1`
                                                                 );
                                                                 const results = await response.json();
                                                                 if (results && results.length > 0) {
