@@ -4,11 +4,18 @@ import { Input } from "@/components/ui/input";
 import { MapPin, Loader2, Navigation } from 'lucide-react';
 import { useGeolocation, reverseGeocode } from './useGeolocation';
 import { toast } from 'sonner';
+import { useRegionCountry } from '@/lib/MoneyContext';
+import { getRegion } from '@/lib/region';
 
 // UK postcode regex
 const UK_POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
 
-export default function LocationPicker({ onLocationSelect, className = '', value = '' }) {
+export default function LocationPicker({ onLocationSelect, className = '', value = '', country: countryProp }) {
+    // Which country to search: the restaurant's (from the page's provider, or a
+    // prop). UK keeps the original search: GB only, with the postcode shortcut.
+    const contextCountry = useRegionCountry();
+    const region = getRegion(countryProp ?? contextCountry);
+    const isUk = region.country === 'GB';
     const [address, setAddress] = useState(value);
     const { location, loading, getCurrentLocation } = useGeolocation();
     const [isGettingAddress, setIsGettingAddress] = useState(false);
@@ -42,7 +49,7 @@ export default function LocationPicker({ onLocationSelect, className = '', value
 
     const geocodeAddress = async (text) => {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&countrycodes=GB&limit=5&addressdetails=1`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&countrycodes=${isUk ? 'GB' : region.geocodeCountry}&limit=5&addressdetails=1`
         );
         const results = await response.json();
         return results.map(r => ({
@@ -71,7 +78,7 @@ export default function LocationPicker({ onLocationSelect, className = '', value
             setGeocodingAddress(true);
             try {
                 // If it looks like a UK postcode, search immediately
-                const query = UK_POSTCODE_RE.test(val.trim()) ? `${val.trim()}, UK` : val;
+                const query = isUk && UK_POSTCODE_RE.test(val.trim()) ? `${val.trim()}, UK` : val;
                 const results = await geocodeAddress(query);
                 if (results.length > 0) {
                     setSuggestions(results);
@@ -105,7 +112,7 @@ export default function LocationPicker({ onLocationSelect, className = '', value
                 )}
                 <Input
                     ref={autocompleteRef}
-                    placeholder="Enter postcode or street address..."
+                    placeholder={isUk ? "Enter postcode or street address..." : "Enter street address or area..."}
                     value={address}
                     onChange={handleAddressChange}
                     onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
