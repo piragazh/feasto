@@ -52,6 +52,16 @@ export const REGIONS = Object.freeze({
         managerDiscountMax: 20,
         largeRefundFlag: 30,
         offlineDiscountMax: 10,
+        //   aiCashLimit           AI chat/phone orders above this can't be cash
+        //   loyaltySpendPerPoint  spend that earns 1 point (before multipliers)
+        //   cashSignOffTolerance  till count off by more than this needs a manager
+        //   cashMaxFloat          sanity bound on a float or paid in/out (count: x4)
+        //   cashDenominations     notes and coins in the till count, largest first
+        aiCashLimit: 50,
+        loyaltySpendPerPoint: 1,
+        cashSignOffTolerance: 5,
+        cashMaxFloat: 5000,
+        cashDenominations: Object.freeze([50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01]),
     }),
     LK: Object.freeze({
         country: 'LK',
@@ -76,6 +86,12 @@ export const REGIONS = Object.freeze({
         managerDiscountMax: 5000,
         largeRefundFlag: 10000,
         offlineDiscountMax: 2000,
+        aiCashLimit: 10000,
+        loyaltySpendPerPoint: 100,
+        cashSignOffTolerance: 500,
+        // Not set by MealDrop: the UK bound scaled like the tolerance (x100).
+        cashMaxFloat: 500000,
+        cashDenominations: Object.freeze([5000, 2000, 1000, 500, 100, 50, 20, 10, 5, 2, 1]),
     }),
 });
 
@@ -117,10 +133,22 @@ function isValidTimeZone(tz) {
     try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); return true; } catch (_) { return false; }
 }
 
-/** Money limits for this restaurant: { managerDiscountMax, largeRefundFlag, offlineDiscountMax }. */
+/**
+ * Money limits for this restaurant: { managerDiscountMax, largeRefundFlag, offlineDiscountMax,
+ * aiCashLimit, loyaltySpendPerPoint, cashSignOffTolerance, cashMaxFloat }.
+ */
 export function getMoneyLimits(restaurantOrCountry) {
     const r = getRegion(restaurantOrCountry);
-    return { managerDiscountMax: r.managerDiscountMax, largeRefundFlag: r.largeRefundFlag, offlineDiscountMax: r.offlineDiscountMax };
+    return {
+        managerDiscountMax: r.managerDiscountMax, largeRefundFlag: r.largeRefundFlag, offlineDiscountMax: r.offlineDiscountMax,
+        aiCashLimit: r.aiCashLimit, loyaltySpendPerPoint: r.loyaltySpendPerPoint,
+        cashSignOffTolerance: r.cashSignOffTolerance, cashMaxFloat: r.cashMaxFloat,
+    };
+}
+
+/** Notes and coins for a till count, largest first. */
+export function getCashDenominations(restaurantOrCountry) {
+    return getRegion(restaurantOrCountry).cashDenominations;
 }
 
 /** True when card payments can be taken for this restaurant today. */
