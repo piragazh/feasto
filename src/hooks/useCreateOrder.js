@@ -16,6 +16,7 @@ import { readAiCheckoutToken, clearAiCheckoutToken } from '@/lib/ai-checkout-tok
 import { pendingPayment } from '@/lib/pendingPayment';
 import { functionErrorMessage } from '@/lib/function-errors';
 import { formatMoney, currencyCode } from '@/lib/money';
+import { getMoneyLimits } from '@/lib/region';
 
 export function useCreateOrder({
     // Cart & restaurant
@@ -117,7 +118,8 @@ export function useCreateOrder({
 
             const earnLoyalty = restaurant?.loyalty_program_enabled !== false;
             const pointsMultiplier = restaurant?.loyalty_points_multiplier || 1;
-            const pointsToEarn = earnLoyalty ? Math.floor(total * pointsPerPound * pointsMultiplier) : 0;
+            // Spend per point by country: UK £1 (unchanged), Sri Lanka Rs 100 (src/lib/region.js).
+            const pointsToEarn = earnLoyalty ? Math.floor((total / getMoneyLimits(restaurant).loyaltySpendPerPoint) * pointsPerPound * pointsMultiplier) : 0;
 
             const sanitizeInput = (input) => {
                 if (!input || typeof input !== 'string') return '';

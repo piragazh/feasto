@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMoney } from '@/lib/MoneyContext';
+import { getMoneyLimits } from '@/lib/region';
 
 export default function CheckoutOrderSummary({
     cart, restaurantName, subtotal, orderType, deliveryFee, zoneAvailable, tiered, zoneMinimum,
@@ -103,7 +104,7 @@ export default function CheckoutOrderSummary({
                     {restaurant?.loyalty_program_enabled !== false && (
                         <div className="flex justify-between text-orange-600 text-sm pt-2">
                             <span>🎁 You'll earn</span>
-                            <span className="font-semibold">{Math.floor(total * pointsPerPound * (restaurant?.loyalty_points_multiplier || 1))} pts</span>
+                            <span className="font-semibold">{Math.floor((total / getMoneyLimits(restaurant).loyaltySpendPerPoint) * pointsPerPound * (restaurant?.loyalty_points_multiplier || 1))} pts</span>
                         </div>
                     )}
                     {smallOrderSurcharge > 0 && (

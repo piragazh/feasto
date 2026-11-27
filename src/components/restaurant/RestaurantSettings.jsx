@@ -16,13 +16,14 @@ import SmsNotificationSettings from './SmsNotificationSettings';
 import WhatsAppNotificationSettings from './WhatsAppNotificationSettings';
 import TemporaryClosureSettings from './TemporaryClosureSettings';
 import { useMoney } from '@/lib/MoneyContext';
+import { getMoneyLimits } from '@/lib/region';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 // Colours and styling live only in Brand Studio (the dashboard's Settings → Branding tab).
 // onOpenBranding switches the dashboard to that tab.
 export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
-    const { money, prefix, symbol } = useMoney();
+    const { money, prefix, symbol, country } = useMoney();
     const queryClient = useQueryClient();
     const [activeSection, setActiveSection] = useState('general');
 
@@ -750,7 +751,7 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
                                         onChange={(e) => setFormData({ ...formData, loyalty_points_multiplier: parseFloat(e.target.value) })}
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Customers earn {formData.loyalty_points_multiplier || 1} points per {prefix}1 spent
+                                        Customers earn {formData.loyalty_points_multiplier || 1} points per {prefix}{getMoneyLimits(country).loyaltySpendPerPoint} spent
                                     </p>
                                 </div>
                             )}
