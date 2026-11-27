@@ -426,7 +426,7 @@ export default function POSDashboard() {
                     canSwitchTill={maxPos > 1}
                     onSwitchTill={() => setPosNumber(null)}
                     onCustomerDisplay={() => {
-                        publishCustomerDisplay({ status: 'idle', restaurantName: restaurant?.name, logoUrl: restaurant?.logo_url });
+                        publishCustomerDisplay({ status: 'idle', restaurantName: restaurant?.name, logoUrl: restaurant?.logo_url, country: restaurant?.country });
                         window.open(createPageUrl('CustomerDisplay'), '_blank', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
                     }}
                     onKiosk={() => window.open(createPageUrl('KioskDashboard') + `?restaurant_id=${restaurant.id}`, '_blank')}
@@ -542,7 +542,7 @@ export default function POSDashboard() {
                         {/* Customer Display button */}
                         <button
                             onClick={() => {
-                                publishCustomerDisplay({ status: 'idle', restaurantName: restaurant?.name, logoUrl: restaurant?.logo_url });
+                                publishCustomerDisplay({ status: 'idle', restaurantName: restaurant?.name, logoUrl: restaurant?.logo_url, country: restaurant?.country });
                                 window.open(createPageUrl('CustomerDisplay'), '_blank', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
                             }}
                             aria-label="Open customer display in new window"

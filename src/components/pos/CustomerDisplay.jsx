@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, CreditCard, Banknote, Clock, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMoney } from '@/lib/MoneyContext';
+import { formatMoney } from '@/lib/money';
 
 const STORAGE_KEY = 'pos_customer_display';
 
@@ -12,7 +12,6 @@ export function publishCustomerDisplay(state) {
 
 // ── The display itself (rendered in popup window) ─────────────────────────
 export default function CustomerDisplay() {
-    const { money } = useMoney();
     const [state, setState] = useState(null);
 
     useEffect(() => {
@@ -31,6 +30,8 @@ export default function CustomerDisplay() {
     // Active order — extract state first (hooks below must come before early returns)
     const { items = [], subtotal = 0, discount, total = 0, remaining, paymentMethod, restaurantName, logoUrl } = state || {};
     const effectiveTotal = total;
+    // The till publishes its restaurant's country; prices follow it (UK = £ as before).
+    const money = (amount) => formatMoney(amount, state?.country);
 
     // Hooks must be called unconditionally before any early returns — moved up
     const [time, setTime] = useState(new Date());
@@ -45,7 +46,7 @@ export default function CustomerDisplay() {
     }
 
     if (state.status === 'paid') {
-        return <ThankYouScreen restaurantName={state?.restaurantName} logoUrl={state?.logoUrl} change={state.change} />;
+        return <ThankYouScreen restaurantName={state?.restaurantName} logoUrl={state?.logoUrl} change={state.change} country={state?.country} />;
     }
 
     return (
@@ -186,11 +187,11 @@ function IdleScreen({ restaurantName, logoUrl }) {
     );
 }
 
-function ThankYouScreen({ restaurantName, logoUrl, change }) {
-    const { money } = useMoney();
+function ThankYouScreen({ restaurantName, logoUrl, change, country }) {
+    const money = (amount) => formatMoney(amount, country);
     useEffect(() => {
         const t = setTimeout(() => {
-            publishCustomerDisplay({ status: 'idle', restaurantName, logoUrl });
+            publishCustomerDisplay({ status: 'idle', restaurantName, logoUrl, country });
         }, 5000);
         return () => clearTimeout(t);
     }, []);

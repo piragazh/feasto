@@ -232,6 +232,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             status: cart.length > 0 ? 'order' : 'idle',
             restaurantName,
             logoUrl: restaurant?.logo_url,
+            country: restaurant?.country,
             items: cart,
             subtotal: cartSubtotal,
             discount: (manualDiscountAmount > 0 || couponDiscountAmount > 0)
@@ -433,6 +434,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
             publishCustomerDisplay({
                 status: 'paid',
                 restaurantName,
+                country: restaurant?.country,
                 change: changeNow,
             });
 

@@ -151,6 +151,7 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
             status: cart.length > 0 ? 'order' : 'idle',
             restaurantName: restaurant?.name,
             logoUrl: restaurant?.logo_url,
+            country: restaurant?.country,
             items: cart,
             subtotal,
             discount,
