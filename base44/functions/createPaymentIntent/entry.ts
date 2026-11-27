@@ -192,6 +192,18 @@ function notSellableMessage(name, why) {
 }
 // ── END ITEM AVAILABILITY ────────────────────────────────────────────────────
 
+// region-card:start
+// SYNC RULE: server copy of cardProvider in src/lib/region.js. Every copy must
+// be identical to scripts/region-card.snippet.js; scripts/check-region.mjs
+// enforces it. A country with null has no card provider yet (cash / pay at the
+// shop only). No country, an unknown one or no restaurant = GB, as before.
+const REGION_CARD = { GB: 'stripe', LK: null };
+function regionCardProvider(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return Object.prototype.hasOwnProperty.call(REGION_CARD, c) ? REGION_CARD[c] : REGION_CARD.GB;
+}
+// region-card:end
+
 Deno.serve(async (req) => {
     const requestId = `pi_req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -276,6 +288,11 @@ Deno.serve(async (req) => {
             // restaurant can't be read, the UK clock is used, as before.
             const tzRow = (await sb.entities.Restaurant.filter({ id: restaurant_id }).catch(() => []))?.[0];
             const atTz = restaurantTz(tzRow);
+            // No card provider in the restaurant's country (region-card below):
+            // refuse before any card intent is made. UK restaurants are unaffected.
+            if (tzRow && !regionCardProvider(tzRow)) {
+                return errorResponse('CARD_NOT_AVAILABLE', 'Card payments are not available for this restaurant. Please choose cash.');
+            }
             for (const it of items) {
                 const id = String(it?.menu_item_id || it?.id || '');
                 if (!id || id.startsWith('deal_')) continue;       // meal deals are validated by verifyAndCreateOrder

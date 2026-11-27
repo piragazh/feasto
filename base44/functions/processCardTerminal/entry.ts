@@ -27,6 +27,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 // Authorization window: 10 minutes from approval to order creation
 const AUTH_EXPIRY_MS = 10 * 60 * 1000;
 
+// region-card:start
+// SYNC RULE: server copy of cardProvider in src/lib/region.js. Every copy must
+// be identical to scripts/region-card.snippet.js; scripts/check-region.mjs
+// enforces it. A country with null has no card provider yet (cash / pay at the
+// shop only). No country, an unknown one or no restaurant = GB, as before.
+const REGION_CARD = { GB: 'stripe', LK: null };
+function regionCardProvider(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return Object.prototype.hasOwnProperty.call(REGION_CARD, c) ? REGION_CARD[c] : REGION_CARD.GB;
+}
+// region-card:end
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -47,6 +59,11 @@ Deno.serve(async (req) => {
         const restaurants = await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId });
         if (!restaurants?.[0]) {
             return Response.json({ error: 'Restaurant not found', success: false }, { status: 404 });
+        }
+        // The card reader is a Stripe reader: not where the restaurant's country
+        // has no card provider (region-card below). UK restaurants are unaffected.
+        if (!regionCardProvider(restaurants[0])) {
+            return Response.json({ error: 'Card payments are not available for this restaurant', success: false }, { status: 400 });
         }
 
         const ref = transactionRef || `KIOSK-${restaurantId.slice(-6).toUpperCase()}-${Date.now()}`;
