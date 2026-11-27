@@ -14,7 +14,8 @@
  * Run: node scripts/check-region.mjs   (part of npm run check:mirrors)
  */
 import fs from 'node:fs';
-import { REGIONS } from '../src/lib/region.js';
+import { REGIONS, getRestaurantTimeZone } from '../src/lib/region.js';
+import { restaurantTz, COUNTRY_TZ } from '../src/lib/item-availability.js';
 import { toE164 } from '../src/lib/phone.js';
 
 const MIRRORS = [
@@ -86,6 +87,21 @@ if (mirror.regionEnv('HTTPSMS_FROM', 'GB') !== 'uk' || mirror.regionEnv('HTTPSMS
 delete env.HTTPSMS_FROM_LK;
 if (mirror.regionEnv('HTTPSMS_FROM', 'LK') !== '') bad('a missing LK setting must not fall back to the UK SIM');
 else ok('a missing LK httpSMS phone never falls back to the UK SIM');
+
+// 4. The restaurant clock rule inside the shared availability block
+//    (copied into the order servers) matches region.js.
+{
+    const want = Object.fromEntries(Object.entries(REGIONS).map(([c, r]) => [c, r.timezone]));
+    if (JSON.stringify(COUNTRY_TZ) !== JSON.stringify(want)) bad(`item-availability COUNTRY_TZ ${JSON.stringify(COUNTRY_TZ)} != region.js ${JSON.stringify(want)}`);
+    else ok('availability block country clocks match region.js');
+    const R = [null, undefined, {}, { country: null, timezone: 'UTC' }, { timezone: '' }, { timezone: 'utc' },
+        { country: 'LK', timezone: 'UTC' }, { country: 'lk' }, { country: 'LK', timezone: 'Asia/Dubai' },
+        { country: 'GB', timezone: 'Europe/London' }, { country: 'XX' }, { timezone: 'Not/AZone' },
+        { country: 'LK', timezone: 'Not/AZone' }, { timezone: 'America/New_York' }, { country: 7 }];
+    const d = R.filter((r) => restaurantTz(r) !== getRestaurantTimeZone(r));
+    if (d.length) bad(`restaurantTz differs from getRestaurantTimeZone for ${d.map((x) => JSON.stringify(x)).join(', ')}`);
+    else ok(`restaurant clock rule matches region.js on ${R.length} records`);
+}
 
 if (failures) { console.log(`\ncheck-region: ${failures} problem(s)`); process.exit(1); }
 console.log('\ncheck-region: all good');
