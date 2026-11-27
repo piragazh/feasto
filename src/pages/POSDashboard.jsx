@@ -37,6 +37,8 @@ import POSThemeSettings from '@/components/pos/POSThemeSettings.jsx';
 import POSNewOrderAlert from '@/components/pos/POSNewOrderAlert.jsx';
 import { playItemAdded, playItemRemoved } from '@/lib/posSound';
 import { toast } from 'sonner';
+import { MoneyProvider } from '@/lib/MoneyContext';
+import { formatMoney } from '@/lib/money';
 
 /**
  * Isolated clock.
@@ -384,8 +386,11 @@ export default function POSDashboard() {
         );
     }
 
+    // Prices in this restaurant's currency (src/lib/money.js); UK shops show £ as before.
+    const money = (amount) => formatMoney(amount, restaurant);
     return (
-        <div
+        <MoneyProvider restaurant={restaurant}>
+<div
             data-pos-root
             data-pos-v2={newDesign ? (isDark ? 'dark' : 'light') : undefined}
             className={`h-full min-h-0 ${newDesign ? 'bg-pos-ground text-pos-text' : t.bg} flex flex-col overflow-hidden`}
@@ -510,7 +515,7 @@ export default function POSDashboard() {
 
                         <div className="flex items-center gap-2 bg-accent-500/10 border border-accent-500/30 rounded-xl px-3 py-2">
                             <ShoppingCart className="h-4 w-4 text-accent-400" />
-                            <span className="text-accent-500 font-bold text-sm">{cart.reduce((s, i) => s + i.quantity, 0)} · £{cartTotal.toFixed(2)}</span>
+                            <span className="text-accent-500 font-bold text-sm">{cart.reduce((s, i) => s + i.quantity, 0)} · {money(cartTotal)}</span>
                         </div>
 
                         {/* QZ Tray status + Open Cash Drawer button */}
@@ -687,5 +692,6 @@ export default function POSDashboard() {
                 )}
             </main>
         </div>
+        </MoneyProvider>
     );
 }

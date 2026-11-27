@@ -20,6 +20,7 @@ import { printerService } from '@/components/restaurant/PrinterService';
 
 import RejectOrderDialog from '@/components/restaurant/RejectOrderDialog';
 import OrderSummary from '@/components/tablet/OrderSummary';
+import { MoneyProvider } from '@/lib/MoneyContext';
 
 // ─── Login Screen ────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
@@ -182,6 +183,7 @@ function Sidebar({ restaurant, activeTab, onTabChange, onLogout, mobileOpen, onM
 
 // ─── Live Orders Section ──────────────────────────────────────────────────────
 function LiveOrdersSection({ restaurantId }) {
+    const { money } = useMoney();
     const [rejectingOrder, setRejectingOrder] = useState(null);
     const queryClient = useQueryClient();
 
@@ -244,9 +246,9 @@ function LiveOrdersSection({ restaurantId }) {
         <p><strong>Type:</strong> ${order.order_type?.toUpperCase()}</p>
         <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
         <div class="sep"></div>
-        ${order.items.map(i => `<p>${i.quantity}x ${i.name} — £${((i.price || 0) * i.quantity).toFixed(2)}</p>`).join('')}
+        ${order.items.map(i => `<p>${i.quantity}x ${i.name} — ${money(((i.price || 0) * i.quantity))}</p>`).join('')}
         <div class="sep"></div>
-        <p class="total">TOTAL: £${(order.total || 0).toFixed(2)}</p>
+        <p class="total">TOTAL: ${money((order.total || 0))}</p>
         </body></html>`);
         printWindow.document.close();
         printWindow.print();
@@ -298,7 +300,7 @@ function LiveOrdersSection({ restaurantId }) {
                                 </div>
                                 <p className="text-sm text-gray-500 mt-1">{format(new Date(order.created_date), 'h:mm a, MMM d')}</p>
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">£{(order.total || 0).toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-gray-900">{money((order.total || 0))}</p>
                         </div>
 
                         {/* AI Summary */}
@@ -311,7 +313,7 @@ function LiveOrdersSection({ restaurantId }) {
                              {order.items.map((item, i) => (
                                  <div key={i} className="flex justify-between text-sm">
                                      <span className="font-medium">{item.quantity}x {item.name}</span>
-                                     <span className="text-gray-600">£{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                                     <span className="text-gray-600">{money(((item.price || 0) * item.quantity))}</span>
                                  </div>
                              ))}
                          </div>
@@ -406,6 +408,7 @@ function LiveOrdersSection({ restaurantId }) {
 
 // ─── Menu Section ─────────────────────────────────────────────────────────────
 function MenuSection({ restaurantId }) {
+    const { money } = useMoney();
     const [search, setSearch] = useState('');
     const [catFilter, setCatFilter] = useState('all');
     const queryClient = useQueryClient();
@@ -480,7 +483,7 @@ function MenuSection({ restaurantId }) {
                             <p className={`font-semibold text-gray-900 ${!item.is_available ? 'line-through text-gray-400' : ''}`}>{item.name}</p>
                             <div className="flex items-center gap-2 mt-0.5">
                                 <Badge variant="outline" className="text-xs">{item.category}</Badge>
-                                <span className="text-orange-600 font-bold text-sm">£{item.price?.toFixed(2)}</span>
+                                <span className="text-orange-600 font-bold text-sm">{money(item.price)}</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -670,6 +673,7 @@ function MessagesSection({ restaurantId }) {
 
 // ─── Order History Section ───────────────────────────────────────────────────
 function OrderHistorySection({ restaurantId }) {
+    const { money } = useMoney();
     const [dateFilter, setDateFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [expandedOrder, setExpandedOrder] = useState(null);
@@ -706,9 +710,9 @@ function OrderHistorySection({ restaurantId }) {
         <p><strong>Type:</strong> ${order.order_type?.toUpperCase()}</p>
         <p><strong>Time:</strong> ${format(new Date(order.created_date), 'HH:mm')}</p>
         <div class="sep"></div>
-        ${order.items.map(i => `<p>${i.quantity}x ${i.name} — £${((i.price || 0) * i.quantity).toFixed(2)}</p>`).join('')}
+        ${order.items.map(i => `<p>${i.quantity}x ${i.name} — ${money(((i.price || 0) * i.quantity))}</p>`).join('')}
         <div class="sep"></div>
-        <p class="total">TOTAL: £${(order.total || 0).toFixed(2)}</p>
+        <p class="total">TOTAL: ${money((order.total || 0))}</p>
         </body></html>`);
         printWindow.document.close();
         printWindow.print();
@@ -816,7 +820,7 @@ function OrderHistorySection({ restaurantId }) {
                                         {getStatusLabel(order.status)}
                                     </Badge>
                                 </div>
-                                <span className="text-lg font-bold text-gray-900">£{(order.total || 0).toFixed(2)}</span>
+                                <span className="text-lg font-bold text-gray-900">{money((order.total || 0))}</span>
                             </div>
                             <div className="flex items-center justify-between text-xs text-gray-500">
                                 <span>{format(new Date(order.created_date), 'd MMM, HH:mm')}</span>
@@ -836,7 +840,7 @@ function OrderHistorySection({ restaurantId }) {
                                             {order.items.map((item, i) => (
                                                 <div key={i} className="flex justify-between text-xs">
                                                     <span className="font-medium">{item.quantity}x {item.name}</span>
-                                                    <span className="text-gray-600">£{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                                                    <span className="text-gray-600">{money(((item.price || 0) * item.quantity))}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -1322,7 +1326,8 @@ export default function TabletDashboard() {
     const tabLabels = { orders: 'Live Orders', history: 'Order History', messages: 'Messages', menu: 'Menu Items', printer: 'Printer Settings' };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <MoneyProvider restaurant={restaurant}>
+<div className="min-h-screen bg-gray-50 flex">
             <Sidebar
                 restaurant={restaurant}
                 activeTab={activeTab}
@@ -1384,5 +1389,6 @@ export default function TabletDashboard() {
                 </main>
             </div>
         </div>
+        </MoneyProvider>
     );
 }

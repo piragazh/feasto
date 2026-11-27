@@ -58,6 +58,7 @@ import RequireAuth from '@/components/auth/RequireAuth';
 import { captureUberConnectIntent, peekUberConnectIntent } from '@/lib/uberConnectIntent';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
+import { MoneyProvider } from '@/lib/MoneyContext';
 
 // ── Nav definition ──────────────────────────────────────────────────────────
 const buildNavSections = (restaurant, pendingOrders, unreadMessagesCount, refundRequests, unresolvedOfflineReviewCount) => [
@@ -528,7 +529,8 @@ function RestaurantDashboardInner() {
     const pageTitle = currentItem?.label || currentSection?.label || 'Dashboard';
 
     return (
-        <div className="flex h-screen overflow-hidden bg-gray-50">
+        <MoneyProvider restaurant={restaurant}>
+<div className="flex h-screen overflow-hidden bg-gray-50">
             <NotificationSoundManager restaurantId={restaurant?.id} />
 
             {showOnboarding && (
@@ -606,6 +608,7 @@ function RestaurantDashboardInner() {
                 </main>
             </div>
         </div>
+        </MoneyProvider>
     );
 }
 

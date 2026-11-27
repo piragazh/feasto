@@ -6,6 +6,8 @@ import { Delete, ArrowLeft, Send, Plus, Minus, Trash2, Search, LogOut } from 'lu
 import { saveStaffSession, getStaffSessionToken, clearStaffSession } from '@/lib/posStaffSession';
 import { PERMISSIONS, roleHasPermission } from '@/lib/posPermissions';
 import { applyPaletteToDocument, DEFAULT_PALETTE } from '@/lib/posThemes';
+import { MoneyProvider } from '@/lib/MoneyContext';
+import { formatMoney } from '@/lib/money';
 
 /**
  * Waiter App — table-side ordering on a phone or iPad.
@@ -384,7 +386,7 @@ export default function WaiterApp() {
                                         <span className="text-[11px] font-normal text-gray-400 capitalize">
                                             {(() => {
                                                 const n = ordersFor(t.id).length;
-                                                if (n > 0) return `${n} order${n === 1 ? '' : 's'} · £${totalFor(t.id).toFixed(2)}`;
+                                                if (n > 0) return `${n} order${n === 1 ? '' : 's'} · ${money(totalFor(t.id))}`;
                                                 return busy ? String(t.status || '').replace('_', ' ') : `${t.capacity || 0} seats`;
                                             })()}
                                         </span>
@@ -428,14 +430,14 @@ export default function WaiterApp() {
                                 <span className="text-white text-sm font-semibold">
                                     {o.order_number ? `#${o.order_number}` : `#${o.id.slice(-6)}`}
                                 </span>
-                                <span className="text-white font-bold tabular-nums">£{Number(o.total || 0).toFixed(2)}</span>
+                                <span className="text-white font-bold tabular-nums">{money(Number(o.total || 0))}</span>
                             </div>
                             <div className="space-y-1">
                                 {(o.items || []).map((it, i) => (
                                     <div key={i} className="flex justify-between text-gray-400 text-xs">
                                         <span className="truncate pr-2">{it.quantity}x {it.name}</span>
                                         <span className="tabular-nums flex-shrink-0">
-                                            £{(Number(it.price || 0) * (it.quantity || 1)).toFixed(2)}
+                                            {money((Number(it.price || 0) * (it.quantity || 1)))}
                                         </span>
                                     </div>
                                 ))}
@@ -452,7 +454,7 @@ export default function WaiterApp() {
                     {orders.length > 0 && (
                         <div className="flex items-baseline justify-between mb-1">
                             <span className="text-gray-400 text-xs uppercase tracking-wide font-semibold">Table total</span>
-                            <span className="text-white text-2xl font-bold tabular-nums leading-none">£{total.toFixed(2)}</span>
+                            <span className="text-white text-2xl font-bold tabular-nums leading-none">{money(total)}</span>
                         </div>
                     )}
 
@@ -493,8 +495,11 @@ export default function WaiterApp() {
         return true;
     });
 
+    // Prices in this restaurant's currency (src/lib/money.js); UK shops show £ as before.
+    const money = (amount) => formatMoney(amount, restaurant);
     return (
-        <div data-pos-root className="min-h-screen bg-[#0f1117] flex flex-col">
+        <MoneyProvider restaurant={restaurant}>
+<div data-pos-root className="min-h-screen bg-[#0f1117] flex flex-col">
             <header className="flex items-center gap-2 p-3 border-b border-white/10 flex-shrink-0">
                 {/* Back to the table, keeping it selected - the waiter is still
                     serving it. Clearing the cart here would silently discard a
@@ -556,7 +561,7 @@ export default function WaiterApp() {
                                         </span>
                                     )}
                                 </p>
-                                <p className="text-orange-400 text-lg font-bold tabular-nums leading-none mt-1">£{Number(price).toFixed(2)}</p>
+                                <p className="text-orange-400 text-lg font-bold tabular-nums leading-none mt-1">{money(Number(price))}</p>
                             </div>
                             {inCart && (
                                 <span className="h-7 min-w-[28px] px-2 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -594,7 +599,7 @@ export default function WaiterApp() {
                                     <Plus className="h-5 w-5" />
                                 </button>
                                 <span className="text-orange-400 text-base font-bold tabular-nums w-[72px] text-right flex-shrink-0">
-                                    £{(c.price * c.quantity).toFixed(2)}
+                                    {money((c.price * c.quantity))}
                                 </span>
                             </div>
                         ))}
@@ -602,7 +607,7 @@ export default function WaiterApp() {
 
                     <div className="flex items-baseline justify-between mb-2">
                         <span className="text-gray-400 text-xs uppercase tracking-wide font-semibold">Total</span>
-                        <span className="text-white text-3xl font-bold tabular-nums leading-none">£{cartTotal.toFixed(2)}</span>
+                        <span className="text-white text-3xl font-bold tabular-nums leading-none">{money(cartTotal)}</span>
                     </div>
 
                     <button onClick={sendToKitchen} disabled={sending}
@@ -616,5 +621,6 @@ export default function WaiterApp() {
                 </div>
             )}
         </div>
+        </MoneyProvider>
     );
 }
