@@ -28,6 +28,7 @@ import { cacheMenuItems, getCachedMenuItems, cacheRestaurant, getCachedRestauran
 import { isNetworkError } from '@/lib/networkStatus';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
 import { isItemAvailableNow, scheduledPrice } from '@/lib/pos-schedule-logic';
+import { getRestaurantTimeZone } from '@/lib/region';
 
 /** The sales screen in the new POS design - the same keys as the classic t. */
 export const T_V2 = {
@@ -206,14 +207,17 @@ export default function POSOrderEntry({ restaurantId, cart, onAddItem, onRemoveI
         return () => clearInterval(id);
     }, []);
 
+    // Item times and timed prices run on the restaurant's own clock (UK unless
+    // its country says otherwise) - the same zone posCreateOrder uses.
+    const posTz = getRestaurantTimeZone(restaurant);
     const menuItems = useMemo(() => {
         const now = new Date(scheduleTick);
         return rawMenuItems.map(item => {
-            if (!isItemAvailableNow(item, now)) {
+            if (!isItemAvailableNow(item, now, posTz)) {
                 return { ...item, is_available: false, _scheduled_out: true };
             }
             const base = item.pos_price != null ? item.pos_price : item.price;
-            const timed = scheduledPrice(base, item, now);
+            const timed = scheduledPrice(base, item, now, posTz);
             if (timed < base) {
                 const active = (item.price_windows || []).find(w => Number(w.price) === timed);
                 return { ...item, pos_price: timed, _base_price: base, _price_label: active?.label || 'Offer' };
