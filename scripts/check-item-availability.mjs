@@ -51,6 +51,18 @@ for (const startIso of ['2026-03-22T00:00:00Z', '2026-10-18T00:00:00Z']) {
 }
 ck('time windows: same answer as the till (pos-schedule-logic)', diffs.length === 0, diffs.length ? `${diffs.length} differ, e.g. ${diffs[0]}` : `${n} instants, incl. both clock changes`);
 
+// Same again on another restaurant clock (region support): the zone passed in
+// is the one used, by both rules.
+{ let m = 0; const d2 = [];
+  for (let t = Date.parse('2026-10-18T00:00:00Z'); t < Date.parse('2026-10-25T00:00:00Z'); t += 17 * 60e3) {
+    const d = new Date(t);
+    for (const ws of WINDOWS) { m++; const item = { availability_windows: ws };
+      if (A.inHours(item, d, 'Asia/Colombo') !== isItemAvailableNow(item, d, 'Asia/Colombo')) d2.push(`${d.toISOString()} ${JSON.stringify(ws)}`); } }
+  ck('time windows on the Colombo clock: same answer as the till', d2.length === 0, d2.length ? `${d2.length} differ` : `${m} instants`); }
+{ const item = { availability_windows: [{ days: [], start: '17:00', end: '19:00' }] };
+  const at = new Date('2026-11-27T12:00:00Z');   // 12:00 London, 17:30 Colombo
+  ck('no zone = UK clock; Colombo zone = Colombo clock', A.inHours(item, at) === false && A.inHours(item, at, 'Asia/Colombo') === true); }
+
 // ── 3. the channel table ────────────────────────────────────────────────────
 const expect = { till: ['both', 'pos_only'], online: ['both', 'online_only'], kiosk: ['both'], qr: ['both'] };
 const bad = [];
