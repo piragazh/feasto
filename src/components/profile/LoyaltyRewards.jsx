@@ -9,8 +9,10 @@ import { Award, Star, Gift, TrendingUp, Crown, Copy, CheckCircle2, AlertCircle }
 import { Progress } from "@/components/ui/progress";
 import { toast } from 'sonner';
 import RedeemRewardDialog from '../loyalty/RedeemRewardDialog';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function LoyaltyRewards({ user }) {
+    const { money, prefix } = useMoney();
     const [selectedReward, setSelectedReward] = useState(null);
     const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
     const queryClient = useQueryClient();

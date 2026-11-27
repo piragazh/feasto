@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function CategoryDealCustomizationModal({ deal, menuItems, open, onClose, onAddToCart }) {
+    const { money } = useMoney();
     const [selections, setSelections] = useState({});
     const [itemCustomizations, setItemCustomizations] = useState({});
     const [quantity, setQuantity] = useState(1);

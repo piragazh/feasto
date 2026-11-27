@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Trash2, Plus, Minus, ShoppingCart, X, Pencil } from 'lucide-react';
 import KioskItemModal from './KioskItemModal';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function KioskCart({
     cart, cartTotal, orderType, restaurant,
     onUpdateQuantity, onRemoveItem, onBack, onCheckout, onClearCart,
     onEditItem
 }) {
+    const { money } = useMoney();
     const [editingItem, setEditingItem] = useState(null);
     const orderTypeLabel = orderType === 'dine_in' ? 'Eat In' : 'Takeaway';
 

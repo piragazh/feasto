@@ -3,8 +3,10 @@ import { base44 } from '@/api/base44Client';
 import { Card } from "@/components/ui/card";
 import { Gift, Lock, Check } from 'lucide-react';
 import { isWithinInterval } from 'date-fns';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function AvailablePromotions({ restaurantId, subtotal, onPromotionApply, appliedPromotions = [] }) {
+    const { money, prefix } = useMoney();
     const [availablePromotions, setAvailablePromotions] = useState([]);
     const [loading, setLoading] = useState(true);
 

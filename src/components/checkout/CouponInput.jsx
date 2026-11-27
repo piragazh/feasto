@@ -12,8 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tag, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function CouponInput({ restaurantId, subtotal, onCouponApply }) {
+    const { money } = useMoney();
     const [code, setCode] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [appliedCoupon, setAppliedCoupon] = useState(null);

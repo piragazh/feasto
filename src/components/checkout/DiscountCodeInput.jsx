@@ -16,10 +16,12 @@ import { Tag, Loader2, Check, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { isWithinInterval } from 'date-fns';
 import { useEffect } from 'react';
+import { useMoney } from '@/lib/MoneyContext';
 
 const MAX_COUPONS = 3; // Must match server MAX_COUPONS_PER_ORDER
 
 export default function DiscountCodeInput({ restaurantId, subtotal, cartItems = [], onCouponApply, onPromotionApply }) {
+    const { money } = useMoney();
     const [code, setCode] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [appliedCoupons, setAppliedCoupons] = useState([]);

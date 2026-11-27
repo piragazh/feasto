@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { X, BarChart3, ShoppingBag, Clock, DollarSign, Shield, AlertTriangle, Lock, LogOut, Link2, Unlink, CheckCircle2 } from 'lucide-react';
 import { bindDevice, unbindDevice, getBindingMeta } from '@/lib/kioskDeviceBinding';
+import { useMoney } from '@/lib/MoneyContext';
 
 // Module-level rate limit state — persists across re-renders, reset only on page reload
 // This prevents an attacker from unmounting/remounting to bypass attempt counting
@@ -36,6 +37,7 @@ const ADMIN_AUTO_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes inactivity → auto-lo
 const FALLBACK_DEFAULT_PIN = '0000';
 
 export default function KioskAdminPanel({ restaurant, onClose, onRebind }) {
+    const { money } = useMoney();
     const [pin, setPin] = useState('');
     const [unlocked, setUnlocked] = useState(false);
     const [error, setError] = useState('');

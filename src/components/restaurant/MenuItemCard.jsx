@@ -2,8 +2,10 @@ import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Plus, Flame, Leaf, Gift, Settings2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function MenuItemCard({ item, promotion, onAddToCart }) {
+    const { money } = useMoney();
     const [expanded, setExpanded] = React.useState(false);
     const hasCustomizations = item.customization_options?.length > 0;
     const isAvailable = item.is_available !== false;

@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, EyeOff, Image as ImageIcon, Sparkles, Copy, Clipboard, ChevronLeft, ChevronRight } from 'lucide-react';
 import { MenuItemBadges } from './MenuItemAdvancedFields';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function MenuItemsGrid({
     items,
@@ -18,6 +19,7 @@ export default function MenuItemsGrid({
     onMoveItem,
     title = 'Menu Items'
 }) {
+    const { money } = useMoney();
     if (items.length === 0) return null;
 
     return (

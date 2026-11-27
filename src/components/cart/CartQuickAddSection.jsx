@@ -3,8 +3,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function CartQuickAddSection({ quickAddItems, onAddToCart, onClose }) {
+    const { money } = useMoney();
     if (!quickAddItems || quickAddItems.length === 0) return null;
 
     return (

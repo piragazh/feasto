@@ -5,11 +5,13 @@ import { ShoppingCart, Search, ArrowLeft, ChevronRight, X, WifiOff } from 'lucid
 import KioskItemModal from './KioskItemModal';
 import { StaffHelpScreen } from './KioskStaffHelp';
 import { sellsAt, inHours, restaurantTz } from '@/lib/item-availability';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function KioskMenu({
     restaurant, restaurantId, cart, cartTotal, cartCount,
     orderType, onAddItem, onViewCart, onBack
 }) {
+    const { money } = useMoney();
     const [selectedCategory, setSelectedCategory] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedItem, setSelectedItem] = useState(null);
@@ -236,6 +238,7 @@ export default function KioskMenu({
 }
 
 function KioskMenuCard({ item, cartCount, onClick }) {
+    const { money } = useMoney();
     const price = item.pos_price != null ? item.pos_price : item.price;
     return (
         <button

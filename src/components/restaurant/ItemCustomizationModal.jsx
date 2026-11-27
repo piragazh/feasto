@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Minus } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
+import { useMoney } from '@/lib/MoneyContext';
 
 const ALLERGEN_ICONS = {
     gluten: '🌾', crustaceans: '🦞', eggs: '🥚', fish: '🐟', peanuts: '🥜',
@@ -16,6 +17,7 @@ const ALLERGEN_ICONS = {
 };
 
 export default function ItemCustomizationModal({ item, open, onClose, onAddToCart }) {
+    const { money } = useMoney();
     const [quantity, setQuantity] = useState(1);
     const [customizations, setCustomizations] = useState({});
     const [itemQuantities, setItemQuantities] = useState({});

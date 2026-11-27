@@ -1,8 +1,10 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Plus, Flame, Leaf, Gift } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function MenuItemCardCompact({ item, promotion, onAddToCart }) {
+    const { money } = useMoney();
     const isAvailable = item.is_available !== false;
 
     return (

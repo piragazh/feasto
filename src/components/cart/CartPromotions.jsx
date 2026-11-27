@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Gift, Lock } from 'lucide-react';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function CartPromotions({ restaurantId, subtotal, onPromotionApply }) {
+    const { money, prefix } = useMoney();
     const [availablePromotions, setAvailablePromotions] = useState([]);
     const [loading, setLoading] = useState(true);
 

@@ -2,8 +2,10 @@ import AllergenNotice from '@/components/shared/AllergenNotice';
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { priceSelection } from '@/lib/item-pricing';
+import { useMoney } from '@/lib/MoneyContext';
 
 function MealSubCustomizations({ opt, selectedUpgrade, customizations, setCustomizations, setError }) {
+    const { money } = useMoney();
     if (!selectedUpgrade) return null;
     const mealCustomizations = opt.meal_customizations ||
         opt.options?.find(o => o.label === selectedUpgrade)?.meal_customizations;
@@ -94,6 +96,7 @@ function MealSubCustomizations({ opt, selectedUpgrade, customizations, setCustom
 }
 
 export default function KioskItemModal({ item, onClose, onAdd, initialCustomizations, initialItemQuantities, initialQuantity, kioskConfig }) {
+    const { money } = useMoney();
     const [quantity, setQuantity] = useState(initialQuantity || 1);
     const [customizations, setCustomizations] = useState({});
     const [itemQuantities, setItemQuantities] = useState({});

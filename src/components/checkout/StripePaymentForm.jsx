@@ -5,8 +5,10 @@ import { Loader2, CreditCard } from 'lucide-react';
 
 import { checkoutTrace } from '@/lib/checkoutTrace';
 import { useExpressCheckoutFlag } from '@/hooks/useExpressCheckoutFlag';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function StripePaymentForm({ onSuccess, amount, clientSecret, expressConfirmFiredRef, sessionKeyAtFormRender, getSessionKey }) {
+    const { prefix } = useMoney();
     const stripe = useStripe();
     const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);

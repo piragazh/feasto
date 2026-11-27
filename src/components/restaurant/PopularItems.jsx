@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Plus, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function PopularItems({ restaurantId, menuItems = [], offHours, onItemClick }) {
     const scrollRef = React.useRef(null);
@@ -122,6 +123,7 @@ export default function PopularItems({ restaurantId, menuItems = [], offHours, o
 }
 
 function PopularItemCard({ item, onClick }) {
+    const { money } = useMoney();
     const calories = item.nutrition?.calories;
 
     return (

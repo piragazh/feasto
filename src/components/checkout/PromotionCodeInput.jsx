@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tag, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isWithinInterval } from 'date-fns';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function PromotionCodeInput({ restaurantId, subtotal, onPromotionApply }) {
+    const { money } = useMoney();
     const [code, setCode] = useState('');
     const [isChecking, setIsChecking] = useState(false);
     const [appliedPromotion, setAppliedPromotion] = useState(null);

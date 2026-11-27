@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function MealDealCard({ deal, onAddToCart, onCustomize, hasCustomization }) {
+    const { money, prefix } = useMoney();
     const discount = deal.original_price && deal.original_price > deal.deal_price
         ? Math.round(((deal.original_price - deal.deal_price) / deal.original_price) * 100)
         : 0;

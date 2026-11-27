@@ -8,8 +8,10 @@ import { Package, Clock, CheckCircle, XCircle, ChevronRight } from 'lucide-react
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import moment from 'moment';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function OrderHistory({ userEmail }) {
+    const { money } = useMoney();
     const { data: orders = [], isLoading } = useQuery({
         queryKey: ['user-orders', userEmail],
         queryFn: () => base44.entities.Order.filter({ created_by: userEmail }, '-created_date', 50),

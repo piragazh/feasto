@@ -7,8 +7,10 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CartPromotions from './CartPromotions';
 import CartQuickAddContainer from './CartQuickAddContainer';
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function CartDrawer({ open, onOpenChange, cart, updateQuantity, removeFromCart, clearCart, restaurantName, restaurantId, orderType = 'delivery', onOrderTypeChange, onProceedToCheckout, collectionEnabled = false, restaurant = null, onPromotionApply = null, onAddItem = null }) {
+    const { money } = useMoney();
 
     const [optimisticCart, setOptimisticCart] = React.useState(cart);
 

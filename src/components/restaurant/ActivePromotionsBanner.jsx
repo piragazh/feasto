@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Tag, Percent, Gift, Truck, Zap, ShoppingBag, Clock } from 'lucide-react';
 import { isWithinInterval, formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
+import { useMoney } from '@/lib/MoneyContext';
 
 const PROMO_STYLES = {
     percentage_off:   { bg: 'from-violet-500 to-purple-600', light: 'bg-violet-50 border-violet-200', icon: Percent,      badge: 'bg-violet-100 text-violet-700' },
@@ -17,7 +18,8 @@ const PROMO_STYLES = {
 
 const DEFAULT_STYLE = { bg: 'from-orange-500 to-red-500', light: 'bg-orange-50 border-orange-200', icon: Tag, badge: 'bg-orange-100 text-orange-700' };
 
-function getPromoValue(promo) {
+// money: the restaurant's currency formatter (useMoney), passed in by the banner.
+function getPromoValue(promo, money) {
     switch (promo.promotion_type) {
         case 'percentage_off':   return `${promo.discount_value}% OFF`;
         case 'fixed_amount_off': return `${money(promo.discount_value)} OFF`;
@@ -31,6 +33,7 @@ function getPromoValue(promo) {
 }
 
 export default function ActivePromotionsBanner({ restaurantId }) {
+    const { money } = useMoney();
     const { data: promotions = [] } = useQuery({
         queryKey: ['active-promotions', restaurantId],
         queryFn: async () => {
@@ -66,7 +69,7 @@ export default function ActivePromotionsBanner({ restaurantId }) {
                 {promotions.map((promo, index) => {
                     const style = PROMO_STYLES[promo.promotion_type] || DEFAULT_STYLE;
                     const Icon = style.icon;
-                    const value = getPromoValue(promo);
+                    const value = getPromoValue(promo, money);
                     const endsIn = formatDistanceToNow(new Date(promo.end_date), { addSuffix: true });
 
                     return (

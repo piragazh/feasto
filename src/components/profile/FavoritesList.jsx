@@ -8,8 +8,10 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function FavoritesList({ user, onUpdate }) {
+    const { money } = useMoney();
     const queryClient = useQueryClient();
 
     const { data: favoriteRestaurants = [] } = useQuery({

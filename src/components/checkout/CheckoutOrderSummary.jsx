@@ -1,11 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMoney } from '@/lib/MoneyContext';
 
 export default function CheckoutOrderSummary({
     cart, restaurantName, subtotal, orderType, deliveryFee, zoneAvailable, tiered, zoneMinimum,
     smallOrderSurcharge, discount, appliedCoupons, appliedPromotions, total, minimumOrder,
     restaurant, pointsPerPound
 }) {
+    const { money } = useMoney();
     return (
         <Card className="sticky top-24">
             <CardHeader>
