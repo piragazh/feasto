@@ -59,6 +59,7 @@
  *   BASE44_APP_URL    public origin for pay links (default https://app.mealdrop.co.uk)
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 const LOG = '[aiOrderingCore]';
 const APP_URL = (Deno.env.get('BASE44_APP_URL') || 'https://app.mealdrop.co.uk').replace(/\/$/, '');
@@ -66,12 +67,24 @@ const CHECKOUT_TTL_MS = 2 * 60 * 60 * 1000;
 const MAX_QTY = 50;
 const EVENT_LOG_MAX = 50;
 // Cash rules (owner decision, Nov 2026): the same for every customer.
-const CASH_LIMIT = 50;                              // £ - above this an AI order is card (pay link) only
+// Cash limit per country (region-limits aiCashLimit): UK £50, Sri Lanka Rs 10,000.
+// Above it an AI order is card (pay link) only - or, where the country has no
+// card provider yet, not taken by the AI at all (the website takes it).
+const cashLimitFor = (restaurant) => regionLimits(restaurant).aiCashLimit;
+// How the limit is spoken ("over 50 pounds"). A new country needs its word here.
+const CURRENCY_WORD = { '£': 'pounds', 'Rs ': 'rupees' };
+const currencyWord = (restaurant) => CURRENCY_WORD[regionLimits(restaurant).prefix] || 'pounds';
+const cardAvailable = (restaurant) => Boolean(regionCardProvider(restaurant));
 const OPEN_CASH_WINDOW_MS = 6 * 60 * 60 * 1000;     // an unfinished cash order older than this no longer blocks
 const OPEN_STATUSES = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_collection'];
 
 // ── Small helpers ───────────────────────────────────────────────────────────
-const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
+// Money text in the restaurant's currency (GB: exactly the old `£${x.toFixed(2)}`).
+// The restaurant of the request being handled is held per request, so two shops'
+// requests running at once never mix. Before a restaurant is loaded = GB.
+const regionScope = new AsyncLocalStorage<{ restaurant: any }>();
+const setRegionRestaurant = (r) => { const st = regionScope.getStore(); if (st) st.restaurant = r || null; };
+const money = (n) => regionMoney(Number(n) || 0, regionScope.getStore()?.restaurant || null);
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const nowIso = () => new Date().toISOString();
 const clip = (s, n) => {
@@ -731,7 +744,7 @@ function quote(session, restaurant) {
         delivery_checked: type !== 'delivery' || !!dq,
         delivery_available: type !== 'delivery' ? null : (dq ? dq.available !== false : null),
         // Not part of the Checkout mirror: whether an AI agent may offer cash for this basket
-        cash_allowed: restaurant?.accepts_cash_on_delivery !== false && total <= CASH_LIMIT,
+        cash_allowed: restaurant?.accepts_cash_on_delivery !== false && total <= cashLimitFor(restaurant),
     };
 }
 
@@ -1116,7 +1129,61 @@ function notSellableMessage(name, why) {
 // ── END ITEM AVAILABILITY ────────────────────────────────────────────────────
 
 // ── Entry point ─────────────────────────────────────────────────────────────
-Deno.serve(async (req) => {
+// region-money:start
+// SYNC RULE: server copy of formatMoney (src/lib/money.js). Every copy must be
+// identical to scripts/region-money.snippet.js; scripts/check-region.mjs
+// enforces it and compares the answers with money.js. GB text is exactly the
+// old `£${x.toFixed(2)}`; other countries: "Rs 1,250.00".
+const REGION_MONEY = { GB: { symbol: '£', locale: 'en-GB', decimals: 2 }, LK: { symbol: 'Rs', locale: 'en-LK', decimals: 2 } };
+function regionMoney(amount, restaurantOrCountry) {
+    const raw = typeof restaurantOrCountry === 'string' ? restaurantOrCountry : restaurantOrCountry?.country;
+    const c = typeof raw === 'string' ? raw.trim().toUpperCase() : '';
+    const r = REGION_MONEY[c] || REGION_MONEY.GB;
+    if (r === REGION_MONEY.GB) return amount === null || amount === undefined ? '£' : `£${amount.toFixed(2)}`;
+    if (amount === null || amount === undefined) return r.symbol;
+    const n = Number(amount);
+    const text = Number.isFinite(n) ? n.toLocaleString(r.locale, { minimumFractionDigits: r.decimals, maximumFractionDigits: r.decimals }) : String(amount);
+    return `${r.symbol} ${text}`;
+}
+// region-money:end
+// region-card:start
+// SYNC RULE: server copy of cardProvider in src/lib/region.js. Every copy must
+// be identical to scripts/region-card.snippet.js; scripts/check-region.mjs
+// enforces it. A country with null has no card provider yet (cash / pay at the
+// shop only). No country, an unknown one or no restaurant = GB, as before.
+const REGION_CARD = { GB: 'stripe', LK: null };
+function regionCardProvider(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return Object.prototype.hasOwnProperty.call(REGION_CARD, c) ? REGION_CARD[c] : REGION_CARD.GB;
+}
+// region-card:end
+// region-limits:start
+// SYNC RULE: server copy of the money limits in src/lib/region.js
+// (managerDiscountMax, largeRefundFlag, aiCashLimit, loyaltySpendPerPoint,
+// cashSignOffTolerance, cashMaxFloat) and the money prefix ("£" / "Rs "). Every copy must be identical to
+// scripts/region-limits.snippet.js; scripts/check-region.mjs enforces it.
+// No country, an unknown one, no restaurant or a failed lookup = the UK limits.
+const REGION_LIMITS = {
+    GB: { managerDiscountMax: 20, largeRefundFlag: 30, prefix: '£', aiCashLimit: 50, loyaltySpendPerPoint: 1, cashSignOffTolerance: 5, cashMaxFloat: 5000 },
+    LK: { managerDiscountMax: 5000, largeRefundFlag: 10000, prefix: 'Rs ', aiCashLimit: 10000, loyaltySpendPerPoint: 100, cashSignOffTolerance: 500, cashMaxFloat: 500000 },
+};
+function regionLimits(restaurant) {
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_LIMITS[c] || REGION_LIMITS.GB;
+}
+async function restaurantForRegion(base44, restaurantId) {
+    try {
+        if (!restaurantId) return null;
+        return (await base44.asServiceRole.entities.Restaurant.filter({ id: restaurantId }))?.[0] || null;
+    } catch (_) {
+        return null;
+    }
+}
+// region-limits:end
+
+Deno.serve((req) => regionScope.run({ restaurant: null }, () => handleRequest(req)));
+
+async function handleRequest(req) {
     if (req.method !== 'POST') return Response.json({ ok: false, error: 'POST only' }, { status: 405 });
     let body;
     try { body = await req.json(); } catch { return fail('BAD_JSON', 'Body must be JSON', {}, 400); }
@@ -1143,6 +1210,7 @@ Deno.serve(async (req) => {
             // A malformed id makes the database throw rather than return nothing
             const restaurant = (await db.Restaurant.filter({ id: String(restaurantId) }).catch(() => []))[0];
             if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
+            setRegionRestaurant(restaurant);
             restaurant.__promos = await loadPromotions(db, restaurant.id);
 
             // Same call id twice (a platform retry) returns the same session
@@ -1180,6 +1248,7 @@ Deno.serve(async (req) => {
         }
         const restaurant = (await db.Restaurant.filter({ id: before.restaurant_id }))[0];
         if (!restaurant) return fail('RESTAURANT_NOT_FOUND', 'Restaurant not found.');
+        setRegionRestaurant(restaurant);
         const fresh = ['place_cash_order', 'send_payment_link'].includes(action);
         restaurant.__promos = await loadPromotions(db, restaurant.id, fresh); // read by quote()
 
@@ -1545,6 +1614,16 @@ Deno.serve(async (req) => {
             }
 
             case 'send_payment_link': {
+                // No card provider in this country yet (Sri Lanka): no pay link - the
+                // checkout would refuse the card anyway and the customer would be stuck.
+                if (!cardAvailable(restaurant)) {
+                    refuse('CARD_NOT_AVAILABLE', 'Card payment is not available for this restaurant.', {
+                        say: restaurant.accepts_cash_on_delivery === false
+                            ? "Sorry, we can't take payment here. Please contact the shop directly."
+                            : "We don't take card payments here, only cash. Shall I place it as a cash order?",
+                    });
+                    break;
+                }
                 const atCheckout = body.details_at_checkout === true;
                 if (body.notes) s.order_notes = cleanNote(body.notes, 300);
                 const r = readiness(s, restaurant, menu, { detailsAtCheckout: atCheckout });
@@ -1579,7 +1658,10 @@ Deno.serve(async (req) => {
             }
 
             case 'place_cash_order': {
-                if (restaurant.accepts_cash_on_delivery === false) { refuse('NO_CASH', "Sorry, we can't take cash for this order. I can send you a payment link instead."); break; }
+                if (restaurant.accepts_cash_on_delivery === false) {
+                    if (!cardAvailable(restaurant)) { refuse('NO_CASH', "Sorry, we can't take this order here. Please contact the shop directly."); break; }
+                    refuse('NO_CASH', "Sorry, we can't take cash for this order. I can send you a payment link instead."); break;
+                }
                 if (s.order_id) { done({ order_id: s.order_id, duplicate: true, say: 'Your order is already placed.' }); break; }
                 const r = readiness(s, restaurant, menu);
                 if (!r.q) { refuse(r.code, r.error, r.question ? { question: r.question } : {}); break; }
@@ -1587,23 +1669,29 @@ Deno.serve(async (req) => {
                 if (!s.customer_phone) { refuse('PHONE_NEEDED', "What's the best phone number for the order?"); break; }
                 if (s.order_type === 'delivery' && !s.delivery_address) { refuse('ADDRESS_NEEDED', "What's the delivery address?"); break; }
 
-                // Cash rules: up to CASH_LIMIT, and one cash order in progress per number. Card is always offered instead.
-                if (r.q.total > CASH_LIMIT) {
-                    refuse('CASH_LIMIT', `Cash orders are limited to ${money(CASH_LIMIT)}; this one is ${money(r.q.total)}.`, {
-                        cash_limit: CASH_LIMIT, say: `For orders over ${CASH_LIMIT} pounds we take payment by card. I can text you a secure link to pay.`,
+                // Cash rules: up to the country's cash limit, and one cash order in progress per number.
+                // Card is offered instead - where the country has card payments.
+                const cashLimit = cashLimitFor(restaurant);
+                const card = cardAvailable(restaurant);
+                if (r.q.total > cashLimit) {
+                    refuse('CASH_LIMIT', `Cash orders are limited to ${money(cashLimit)}; this one is ${money(r.q.total)}.`, {
+                        cash_limit: cashLimit,
+                        say: card
+                            ? `For orders over ${cashLimit} ${currencyWord(restaurant)} we take payment by card. I can text you a secure link to pay.`
+                            : `Orders over ${cashLimit} ${currencyWord(restaurant)} can't be taken here. Please place it on our website.`,
                     });
                     break;
                 }
                 // A blocked number is not told it is blocked: it is simply offered card, like anyone over the limit
                 if (await cashBlocked(db, s.customer_phone)) {
                     refuse('CASH_BLOCKED', 'This number is on the block list: card only.', {
-                        say: 'This order needs to be paid by card. I can text you a secure link to pay.',
+                        say: card ? 'This order needs to be paid by card. I can text you a secure link to pay.' : "Sorry, I can't take this order. Please contact the shop directly.",
                     });
                     break;
                 }
                 if (await openCashOrder(db, s.customer_phone)) {
                     refuse('CASH_ORDER_OPEN', 'This number already has a cash order in progress.', {
-                        say: "There's already a cash order in progress on this number, so this one needs to be paid by card. I can text you a secure link to pay.",
+                        say: card ? "There's already a cash order in progress on this number, so this one needs to be paid by card. I can text you a secure link to pay." : "There's already an order in progress on this number. Please wait for it before placing another.",
                     });
                     break;
                 }
@@ -1760,7 +1848,7 @@ Deno.serve(async (req) => {
         console.error(`${LOG} ${action} failed:`, e?.message, e?.stack);
         return fail('INTERNAL', 'Something went wrong.', { say: 'Sorry, something went wrong on our side.' }, 500);
     }
-});
+}
 
 /** The question waiting for the customer, if an item still needs option choices. */
 function pendingQuestion(session, menu) {
@@ -1877,7 +1965,9 @@ async function contextOf(db, session, restaurant, opts = {}) {
             collection_enabled: !!restaurant.collection_enabled,
             collection_open: !!restaurant.collection_enabled && !closed && !hoursClosedReason(restaurant, 'collection'),
             accepts_cash: restaurant.accepts_cash_on_delivery !== false,
-            cash_limit: CASH_LIMIT,
+            cash_limit: cashLimitFor(restaurant),
+            card_payments: cardAvailable(restaurant),
+            country: restaurant.country || null,
             delivery_fee: round2(restaurant.delivery_fee ?? 0),
             minimum_order: round2(restaurant.minimum_order ?? 0),
             delivery_time: restaurant.delivery_time || '30-45 mins',
