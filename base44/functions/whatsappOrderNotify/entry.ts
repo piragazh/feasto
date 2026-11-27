@@ -63,7 +63,7 @@ function orderVars(order, restaurant, convo) {
         order_number: order.order_number || `#${order.id.slice(-6).toUpperCase()}`,
         restaurant_name: restaurant?.name || order.restaurant_name || '',
         customer_name: order.guest_name || convo?.customer_name || 'there',
-        total: `£${(Number(order.total) || 0).toFixed(2)}`,
+        total: `${regionMoney((Number(order.total) || 0), restaurant)}`,
         eta: order.estimated_delivery || restaurant?.delivery_time || 'soon',
         delivery_address: order.delivery_address || '',
         items_count: String((order.items || []).length),
@@ -105,6 +105,24 @@ async function sendWa(channel, to, payload) {
     if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`);
     return data?.messages?.[0]?.id || null;
 }
+
+// region-money:start
+// SYNC RULE: server copy of formatMoney (src/lib/money.js). Every copy must be
+// identical to scripts/region-money.snippet.js; scripts/check-region.mjs
+// enforces it and compares the answers with money.js. GB text is exactly the
+// old `£${x.toFixed(2)}`; other countries: "Rs 1,250.00".
+const REGION_MONEY = { GB: { symbol: '£', locale: 'en-GB', decimals: 2 }, LK: { symbol: 'Rs', locale: 'en-LK', decimals: 2 } };
+function regionMoney(amount, restaurantOrCountry) {
+    const raw = typeof restaurantOrCountry === 'string' ? restaurantOrCountry : restaurantOrCountry?.country;
+    const c = typeof raw === 'string' ? raw.trim().toUpperCase() : '';
+    const r = REGION_MONEY[c] || REGION_MONEY.GB;
+    if (r === REGION_MONEY.GB) return amount === null || amount === undefined ? '£' : `£${amount.toFixed(2)}`;
+    if (amount === null || amount === undefined) return r.symbol;
+    const n = Number(amount);
+    const text = Number.isFinite(n) ? n.toLocaleString(r.locale, { minimumFractionDigits: r.decimals, maximumFractionDigits: r.decimals }) : String(amount);
+    return `${r.symbol} ${text}`;
+}
+// region-money:end
 
 Deno.serve(async (req) => {
     try {

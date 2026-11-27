@@ -123,7 +123,8 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
 // 6. The server money copy (receipts, restaurant alerts) - identical copies, same text.
 {
     const MONEY_MIRRORS = ['base44/functions/androidPrint/entry.ts', 'base44/functions/networkPrint/entry.ts',
-        'base44/functions/sendWhatsAppOrder/entry.ts', 'base44/functions/notifyRestaurantNewOrder/entry.ts'];
+        'base44/functions/sendWhatsAppOrder/entry.ts', 'base44/functions/notifyRestaurantNewOrder/entry.ts',
+        'base44/functions/whatsappOrderNotify/entry.ts', 'base44/functions/sendNotificationFromTemplate/entry.ts'];
     const mblock = (s) => (s.match(/\/\/ region-money:start[\s\S]*?\/\/ region-money:end/) || [null])[0];
     const canon = mblock(fs.readFileSync('scripts/region-money.snippet.js', 'utf8'));
     for (const file of MONEY_MIRRORS) {
