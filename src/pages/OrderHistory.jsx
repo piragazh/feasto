@@ -14,13 +14,12 @@ import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { useRestaurantCountries } from '@/lib/useRestaurantCountries';
 import { formatMoney } from '@/lib/money';
-import { moneyPrefix } from '@/lib/MoneyContext';
 
 export default function OrderHistory() {
     const [statusFilter, setStatusFilter] = useState('all');
     // Each order in its own restaurant's currency; summary totals only use a non-£
     // currency when every listed order is from that country (GB = as before).
-    const { moneyFor, commonCountry, countryOf } = useRestaurantCountries();
+    const { moneyFor, commonCountry } = useRestaurantCountries();
     const [searchQuery, setSearchQuery] = useState('');
     const [dateFilter, setDateFilter] = useState('all'); // all, today, week, month, year
 
@@ -278,7 +277,7 @@ export default function OrderHistory() {
                                             <div className="flex justify-between items-center pt-3 border-t">
                                                 <span className="font-semibold text-gray-900">Total</span>
                                                 <span className="text-xl font-bold text-orange-600">
-                                                    {order.total == null ? moneyPrefix(countryOf(order.restaurant_id)) : moneyFor(order.total, order.restaurant_id)}
+                                                    {moneyFor(order.total, order.restaurant_id)}
                                                 </span>
                                             </div>
 
