@@ -227,7 +227,7 @@ export default function POSLabourReport({ restaurantId, restaurant, activeStaffM
                                                             <td colSpan={5} className="pb-3">
                                                                 <div className="flex flex-wrap items-end gap-2 p-3 rounded-xl border border-accent-500/30 bg-accent-500/5">
                                                                     <label className="flex flex-col gap-1">
-                                                                        <span className={`${t.sub} text-[11px]`}>Hourly rate £</span>
+                                                                        <span className={`${t.sub} text-[11px]`}>Hourly rate {prefix}</span>
                                                                         <input type="number" step="0.01" min="0" value={rateInput}
                                                                             onChange={e => setRateInput(e.target.value)}
                                                                             className={`h-11 w-28 rounded-xl px-2 ${t.input}`} />

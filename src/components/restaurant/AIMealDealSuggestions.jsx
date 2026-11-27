@@ -48,7 +48,7 @@ export default function AIMealDealSuggestions({ restaurantId }) {
             const prompt = `You are a restaurant business consultant specializing in creating profitable meal deals. Based on the following data, suggest 3 compelling meal deal combinations.
 
 Restaurant Menu Items:
-${menuItems.map(item => `- ${item.name} (£${item.price}) - ${item.category || 'Main'} ${item.is_popular ? '(Popular)' : ''}`).join('\n')}
+${menuItems.map(item => `- ${item.name} (${prefix}${item.price}) - ${item.category || 'Main'} ${item.is_popular ? '(Popular)' : ''}`).join('\n')}
 
 Item Popularity from Recent Orders:
 ${Object.entries(itemPopularity).length > 0 

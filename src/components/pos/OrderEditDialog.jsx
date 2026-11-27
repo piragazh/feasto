@@ -198,7 +198,7 @@ export default function OrderEditDialog({ order, open, onClose, onUpdate, restau
 
                         {/* Discount */}
                         <div>
-                            <Label className="text-white text-sm">Discount (£)</Label>
+                            <Label className="text-white text-sm">Discount ({symbol})</Label>
                             <Input
                                 type="number"
                                 value={discount}

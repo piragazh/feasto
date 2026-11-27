@@ -108,7 +108,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                                     <div className="text-left w-full">
                                         <div className="text-sm font-medium">{item.name}</div>
                                         <div className="text-xs text-accent-400">
-                                            £{typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
+                                            {prefix}{typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
                                         </div>
                                     </div>
                                 </Button>
@@ -133,7 +133,7 @@ export default function CustomItemDialog({ open, onClose, onAdd, restaurantId, p
                     </div>
 
                     <div>
-                        <Label className={`${labelCls} mb-2`}>Price (£)</Label>
+                        <Label className={`${labelCls} mb-2`}>Price ({symbol})</Label>
                         <Input
                             type="number"
                             step="0.01"

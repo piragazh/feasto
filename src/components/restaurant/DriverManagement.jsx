@@ -273,15 +273,15 @@ export default function DriverManagement({ restaurantId }) {
                                                 <div className="text-xs text-blue-700 font-medium mb-1">Pay Rates</div>
                                                 <div className="flex justify-between text-xs">
                                                     <span className="text-blue-600">Per Delivery:</span>
-                                                    <span className="font-semibold text-blue-900">£{config.per_delivery_fee || 0}</span>
+                                                    <span className="font-semibold text-blue-900">{prefix}{config.per_delivery_fee || 0}</span>
                                                 </div>
                                                 <div className="flex justify-between text-xs">
                                                     <span className="text-blue-600">Per Hour:</span>
-                                                    <span className="font-semibold text-blue-900">£{config.hourly_rate || 0}</span>
+                                                    <span className="font-semibold text-blue-900">{prefix}{config.hourly_rate || 0}</span>
                                                 </div>
                                                 <div className="flex justify-between text-xs">
                                                     <span className="text-blue-600">Per Mile:</span>
-                                                    <span className="font-semibold text-blue-900">£{config.per_mile_rate || 0}</span>
+                                                    <span className="font-semibold text-blue-900">{prefix}{config.per_mile_rate || 0}</span>
                                                 </div>
                                             </div>
                                         );
@@ -393,7 +393,7 @@ export default function DriverManagement({ restaurantId }) {
                             <p className="text-xs text-gray-500">Set all rates - driver will see earnings calculated for each method</p>
                             
                             <div>
-                                <Label htmlFor="per_delivery_fee">Per Delivery Fee (£)</Label>
+                                <Label htmlFor="per_delivery_fee">Per Delivery Fee ({symbol})</Label>
                                 <Input
                                     id="per_delivery_fee"
                                     type="number"
@@ -405,7 +405,7 @@ export default function DriverManagement({ restaurantId }) {
                             </div>
 
                             <div>
-                                <Label htmlFor="hourly_rate">Hourly Rate (£)</Label>
+                                <Label htmlFor="hourly_rate">Hourly Rate ({symbol})</Label>
                                 <Input
                                     id="hourly_rate"
                                     type="number"
@@ -417,7 +417,7 @@ export default function DriverManagement({ restaurantId }) {
                             </div>
 
                             <div>
-                                <Label htmlFor="per_mile_rate">Per Mile Rate (£)</Label>
+                                <Label htmlFor="per_mile_rate">Per Mile Rate ({symbol})</Label>
                                 <Input
                                     id="per_mile_rate"
                                     type="number"

@@ -212,7 +212,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                             {needsValue && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label>{formData.discount_type === 'percentage' ? 'Discount %' : 'Amount (£)'} *</Label>
+                                        <Label>{formData.discount_type === 'percentage' ? 'Discount %' : `Amount (${symbol})`} *</Label>
                                         <Input
                                             type="number" step="0.01" min="0"
                                             value={formData.discount_value}
@@ -223,7 +223,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                                     </div>
                                     {formData.discount_type === 'percentage' && (
                                         <div>
-                                            <Label>Max Discount (£)</Label>
+                                            <Label>Max Discount ({symbol})</Label>
                                             <Input
                                                 type="number" step="0.01" min="0"
                                                 value={formData.max_discount}
@@ -257,7 +257,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                             </div>
 
                             <div>
-                                <Label>Min Order (£)</Label>
+                                <Label>Min Order ({symbol})</Label>
                                 <Input
                                     type="number" step="0.01" min="0"
                                     value={formData.minimum_order}
@@ -343,7 +343,7 @@ export default function CouponsManagement({ restaurantId, restaurantName }) {
                                 )}
 
                                 <div className="flex flex-wrap gap-2 mb-3 text-xs text-gray-500">
-                                    {coupon.minimum_order && <span>Min: £{coupon.minimum_order}</span>}
+                                    {coupon.minimum_order && <span>Min: {prefix}{coupon.minimum_order}</span>}
                                     {coupon.valid_until && <span>Until: {new Date(coupon.valid_until).toLocaleDateString()}</span>}
                                     {coupon.usage_limit && <span>Used: {coupon.usage_count || 0}/{coupon.usage_limit}</span>}
                                 </div>

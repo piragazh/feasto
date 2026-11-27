@@ -405,7 +405,7 @@ export default function POSStaffManager({ restaurantId, posTheme = 'dark', curre
                             {[
                                 { label: 'Orders', value: selectedOrders.length, icon: ShoppingCart, color: 'text-accent-400' },
                                 { label: 'Revenue', value: `${money(selectedRevenue)}`, icon: TrendingUp, color: 'text-green-400' },
-                                { label: 'Avg. Order', value: selectedOrders.length ? `${money((selectedRevenue / selectedOrders.length))}` : '£0.00', icon: DollarSign, color: 'text-blue-400' },
+                                { label: 'Avg. Order', value: selectedOrders.length ? `${money((selectedRevenue / selectedOrders.length))}` : `${prefix}0.00`, icon: DollarSign, color: 'text-blue-400' },
                             ].map(({ label, value, icon: Icon, color }) => (
                                 <div key={label} className={`${t.panel} border rounded-2xl p-4`}>
                                     <Icon className={`h-5 w-5 ${color} mb-2`} />

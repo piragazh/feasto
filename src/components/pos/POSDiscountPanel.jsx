@@ -186,7 +186,7 @@ export default function POSDiscountPanel({
                     onClick={() => setType('fixed')}
                     className={`h-11 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${type === 'fixed' ? typeBtnActive : typeBtnInactive}`}
                 >
-                    <DollarSign className="h-3 w-3" /> Fixed £
+                    <DollarSign className="h-3 w-3" /> Fixed {prefix}
                 </button>
             </div>
 
@@ -211,7 +211,7 @@ export default function POSDiscountPanel({
                             onClick={() => setValue(String(a))}
                             className={`h-11 rounded-xl text-xs font-bold transition-colors ${value === String(a) ? typeBtnActive : typeBtnInactive}`}
                         >
-                            £{a}
+                            {prefix}{a}
                         </button>
                     ))}
                 </div>
@@ -226,7 +226,7 @@ export default function POSDiscountPanel({
                     step={type === 'percentage' ? 1 : 0.01}
                     value={value}
                     onChange={e => setValue(e.target.value)}
-                    placeholder={type === 'percentage' ? '% e.g. 15' : '£ e.g. 5.00'}
+                    placeholder={type === 'percentage' ? '% e.g. 15' : `${prefix} e.g. 5.00`}
                     className={inputCls}
                 />
             </div>

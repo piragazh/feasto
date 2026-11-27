@@ -1056,7 +1056,7 @@ Make the palettes diverse: e.g. one warm/energetic, one cool/professional, one d
                                             borderRadius: buttonRadiusMap[pv.button_style] || '8px'
                                         }}
                                     >
-                                        View Cart — £12.99
+                                        View Cart — {prefix}12.99
                                     </button>
                                 </div>
                                 {seasonal.type !== 'none' && (

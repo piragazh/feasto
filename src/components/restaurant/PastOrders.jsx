@@ -142,11 +142,11 @@ export default function PastOrders({ restaurantId }) {
                                     <div className="border-t mt-2 pt-2 space-y-1 text-sm">
                                         <div className="flex justify-between">
                                             <span>Subtotal:</span>
-                                            <span>£{order.subtotal?.toFixed(2) || '0.00'}</span>
+                                            <span>{prefix}{order.subtotal?.toFixed(2) || '0.00'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Delivery Fee:</span>
-                                            <span>£{order.delivery_fee?.toFixed(2) || '0.00'}</span>
+                                            <span>{prefix}{order.delivery_fee?.toFixed(2) || '0.00'}</span>
                                         </div>
                                         {order.discount > 0 && (
                                             <div className="flex justify-between text-green-600">
@@ -233,7 +233,7 @@ export default function PastOrders({ restaurantId }) {
                                         {order.refund_request_description && (
                                             <p><strong>Details:</strong> {order.refund_request_description}</p>
                                         )}
-                                        <p><strong>Amount:</strong> £{order.refund_requested_amount?.toFixed(2) || '0.00'}</p>
+                                        <p><strong>Amount:</strong> {prefix}{order.refund_requested_amount?.toFixed(2) || '0.00'}</p>
                                         {order.refund_requested_items && order.refund_requested_items.length > 0 && (
                                             <div>
                                                 <p className="font-semibold">Items:</p>

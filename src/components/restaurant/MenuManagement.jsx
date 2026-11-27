@@ -898,7 +898,7 @@ CRITICAL REQUIREMENTS:
                                     <h3 className="text-sm font-semibold text-gray-900">Prices</h3>
                                 </div>
                                 <div>
-                                    <Label>Online Price (£) *</Label>
+                                    <Label>Online Price ({symbol}) *</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -908,7 +908,7 @@ CRITICAL REQUIREMENTS:
                                     />
                                 </div>
                                 <div>
-                                    <Label>POS / In-Store Price (£)</Label>
+                                    <Label>POS / In-Store Price ({symbol})</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -919,7 +919,7 @@ CRITICAL REQUIREMENTS:
                                     <p className="text-xs text-gray-500 mt-1">Leave empty to use the online price in POS</p>
                                 </div>
                                 <div>
-                                    <Label>Marketplace Price (£)</Label>
+                                    <Label>Marketplace Price ({symbol})</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -1457,8 +1457,8 @@ CRITICAL REQUIREMENTS:
                                                     <>
                                                         <div className="grid grid-cols-[1fr_100px_100px_auto] gap-2 mb-1">
                                                              <span className="text-xs text-gray-400 font-medium">Option</span>
-                                                             <span className="text-xs text-gray-400 font-medium">Online £</span>
-                                                             <span className="text-xs text-purple-500 font-medium">POS £</span>
+                                                             <span className="text-xs text-gray-400 font-medium">Online {prefix}</span>
+                                                             <span className="text-xs text-purple-500 font-medium">POS {prefix}</span>
                                                              <span />
                                                          </div>
                                                          <Label className="text-sm font-medium">Meal Pricing</Label>
@@ -1657,7 +1657,7 @@ CRITICAL REQUIREMENTS:
                                                                                 <Input
                                                                                     type="number"
                                                                                     step="0.01"
-                                                                                    placeholder="£"
+                                                                                    placeholder={`${prefix}`}
                                                                                     value={opt.price}
                                                                                     onChange={(e) => {
                                                                                         const newCustoms = [...formData.customization_options];
@@ -1729,8 +1729,8 @@ CRITICAL REQUIREMENTS:
                                                     <>
                                                         <div className="grid grid-cols-[1fr_100px_100px_auto] gap-2 mb-1">
                                                             <span className="text-xs text-gray-400 font-medium">Option</span>
-                                                            <span className="text-xs text-gray-400 font-medium">Online £</span>
-                                                            <span className="text-xs text-purple-500 font-medium">POS £</span>
+                                                            <span className="text-xs text-gray-400 font-medium">Online {prefix}</span>
+                                                            <span className="text-xs text-purple-500 font-medium">POS {prefix}</span>
                                                             <span />
                                                         </div>
                                                         {custom.options.map((opt, optIdx) => (

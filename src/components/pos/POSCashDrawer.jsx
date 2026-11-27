@@ -26,7 +26,7 @@ function DenominationCounter({ counts, onChange, t }) {
     return (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {UK_DENOMINATIONS.map(d => {
-                const label = d >= 1 ? `£${d}` : `${Math.round(d * 100)}p`;
+                const label = d >= 1 ? `${prefix}${d}` : `${Math.round(d * 100)}p`;
                 return (
                     <label key={d} className={`flex flex-col gap-1 p-2 rounded-xl border ${t.box}`}>
                         <span className={`${t.sub} text-[11px] font-semibold`}>{label}</span>
@@ -129,7 +129,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                         <p className="text-red-300 text-sm font-semibold">This variance needs a manager to sign it off.</p>
                         <textarea
                             value={signOffNote} onChange={e => setSignOffNote(e.target.value)}
-                            placeholder="What explains it? e.g. change given wrongly on a £50 note"
+                            placeholder={`What explains it? e.g. change given wrongly on a ${prefix}50 note`}
                             className={`w-full min-h-[80px] rounded-xl p-3 text-sm ${t.input}`}
                         />
                         <button
@@ -245,7 +245,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
                 <div className="space-y-2">
                     <p className={`${t.text} font-semibold`}>{mode === 'paid_in' ? 'Cash added to the drawer' : 'Cash taken from the drawer'}</p>
                     <input type="number" inputMode="decimal" min="0" step="0.01" value={amount}
-                        onChange={e => setAmount(e.target.value)} placeholder="Amount £"
+                        onChange={e => setAmount(e.target.value)} placeholder={`Amount ${prefix}`}
                         aria-label="Amount" className={`h-12 w-full rounded-xl px-3 text-lg font-bold ${t.input}`} />
                     <input value={reason} onChange={e => setReason(e.target.value)}
                         placeholder={mode === 'paid_in' ? 'e.g. change top-up from the safe' : 'e.g. cash tips paid to staff'}

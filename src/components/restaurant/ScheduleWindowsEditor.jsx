@@ -85,7 +85,7 @@ export default function ScheduleWindowsEditor({ value = [], onChange, withPrice 
                             {withPrice && (
                                 <>
                                     <div>
-                                        <Label className="text-xs">Price (£)</Label>
+                                        <Label className="text-xs">Price ({symbol})</Label>
                                         <Input
                                             type="number" step="0.01" min="0"
                                             value={w.price ?? ''}

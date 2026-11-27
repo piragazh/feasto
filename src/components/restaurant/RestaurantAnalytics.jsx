@@ -286,7 +286,7 @@ export default function RestaurantAnalytics({ restaurantId }) {
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="date" />
                             <YAxis />
-                            <Tooltip formatter={(value) => `£${value}`} />
+                            <Tooltip formatter={(value) => `${prefix}${value}`} />
                             <Legend />
                             <Line type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} />
                         </LineChart>

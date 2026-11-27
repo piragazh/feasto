@@ -334,7 +334,7 @@ export default function RestaurantAnalyticsDashboard({ restaurantId }) {
                             <YAxis />
                             <Tooltip />
                             <Legend />
-                            <Line type="monotone" dataKey="revenue" stroke="#FF6B35" name="Revenue (£)" strokeWidth={2} />
+                            <Line type="monotone" dataKey="revenue" stroke="#FF6B35" name={`Revenue (${symbol})`} strokeWidth={2} />
                             <Line type="monotone" dataKey="orders" stroke="#004E89" name="Orders" strokeWidth={2} />
                         </LineChart>
                     </ResponsiveContainer>

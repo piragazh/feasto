@@ -217,7 +217,7 @@ export default function MealDealsManagement({ restaurantId }) {
                 <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-xl">
                     <div className="text-5xl mb-4">🍽️</div>
                     <h3 className="text-lg font-semibold text-gray-700 mb-1">No combo deals yet</h3>
-                    <p className="text-sm text-gray-500 mb-4">Create deals like "Pizza & Drink", "Any 2 Burgers for £7" or a "Family Feast"</p>
+                    <p className="text-sm text-gray-500 mb-4">Create deals like "Pizza & Drink", "Any 2 Burgers for {prefix}7" or a "Family Feast"</p>
                     <Button
                         className="bg-orange-500 hover:bg-orange-600"
                         onClick={() => { setStep('template'); setEditingDeal(null); setFormData(EMPTY_FORM); setDialogOpen(true); }}
@@ -281,7 +281,7 @@ export default function MealDealsManagement({ restaurantId }) {
                                     <Input
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="e.g. Any 2 Burgers for £7, Family Feast"
+                                        placeholder={`e.g. Any 2 Burgers for ${prefix}7, Family Feast`}
                                         required
                                     />
                                 </div>
@@ -307,7 +307,7 @@ export default function MealDealsManagement({ restaurantId }) {
                             {/* Pricing */}
                             <div className="grid grid-cols-2 gap-4 p-4 bg-orange-50 rounded-xl border border-orange-100">
                                 <div>
-                                    <Label>Original Price (£)</Label>
+                                    <Label>Original Price ({symbol})</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -319,7 +319,7 @@ export default function MealDealsManagement({ restaurantId }) {
                                     <p className="text-xs text-gray-500 mt-1">Shows as strikethrough</p>
                                 </div>
                                 <div>
-                                    <Label>Deal Price (£) *</Label>
+                                    <Label>Deal Price ({symbol}) *</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -330,7 +330,7 @@ export default function MealDealsManagement({ restaurantId }) {
                                         required
                                     />
                                     {savingsPct > 0 && (
-                                        <p className="text-xs text-green-600 mt-1 font-medium">🎉 Save {savingsPct}% (£{savings})</p>
+                                        <p className="text-xs text-green-600 mt-1 font-medium">🎉 Save {savingsPct}% ({prefix}{savings})</p>
                                     )}
                                 </div>
                             </div>

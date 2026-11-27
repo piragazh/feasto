@@ -183,7 +183,7 @@ export default function CustomOptionTemplates({ restaurantId }) {
                                                 <Input
                                                     type="number"
                                                     step="0.01"
-                                                    placeholder="£"
+                                                    placeholder={`${prefix}`}
                                                     value={opt.price}
                                                     onChange={(e) => updateOption(idx, 'price', e.target.value)}
                                                     className="w-24"

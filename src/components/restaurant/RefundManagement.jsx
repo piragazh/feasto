@@ -127,7 +127,7 @@ export default function RefundManagement({ restaurantId }) {
                                             )}
                                         </div>
                                         <Badge className="bg-yellow-500 text-white">
-                                            £{order.refund_requested_amount?.toFixed(2) || '0.00'}
+                                            {prefix}{order.refund_requested_amount?.toFixed(2) || '0.00'}
                                         </Badge>
                                     </div>
 

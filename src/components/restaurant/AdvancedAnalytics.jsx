@@ -563,7 +563,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                     fill="#f97316" 
                                     stroke="#f97316" 
                                     fillOpacity={0.3}
-                                    name="Revenue (£)"
+                                    name={`Revenue (${symbol})`}
                                 />
                                 <Bar 
                                     yAxisId="right"
@@ -617,7 +617,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                             dataKey="predicted_revenue" 
                                             stroke="#8b5cf6" 
                                             strokeWidth={2}
-                                            name="Predicted Revenue (£)"
+                                            name={`Predicted Revenue (${symbol})`}
                                         />
                                         <Line 
                                             type="monotone" 
@@ -670,7 +670,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                         <XAxis dataKey="day" />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="revenue" fill="#3b82f6" name="Revenue (£)" />
+                                        <Bar dataKey="revenue" fill="#3b82f6" name={`Revenue (${symbol})`} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </CardContent>
@@ -759,7 +759,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                         <XAxis type="number" />
                                         <YAxis dataKey="name" type="category" width={120} />
                                         <Tooltip />
-                                        <Bar dataKey="revenue" fill="#f97316" name="Revenue (£)" />
+                                        <Bar dataKey="revenue" fill="#f97316" name={`Revenue (${symbol})`} />
                                     </BarChart>
                                 </ResponsiveContainer>
                                 <div className="mt-4 space-y-2">
@@ -788,7 +788,7 @@ Provide daily forecasts with revenue and order count predictions.`,
                                             cx="50%"
                                             cy="50%"
                                             labelLine={false}
-                                            label={(entry) => `${entry.category}: £${entry.revenue.toFixed(0)}`}
+                                            label={(entry) => `${entry.category}: ${prefix}${entry.revenue.toFixed(0)}`}
                                             outerRadius={90}
                                             fill="#8884d8"
                                             dataKey="revenue"

@@ -500,7 +500,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="delivery_fee">Delivery Fee (£) *</Label>
+                                <Label htmlFor="delivery_fee">Delivery Fee ({symbol}) *</Label>
                                 <Input
                                     id="delivery_fee"
                                     type="number"
@@ -520,7 +520,7 @@ export default function DeliveryZoneManagement({ restaurantId, restaurantLocatio
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="min_order_value">Min Order Value (£)</Label>
+                                <Label htmlFor="min_order_value">Min Order Value ({symbol})</Label>
                                 <Input
                                     id="min_order_value"
                                     type="number"

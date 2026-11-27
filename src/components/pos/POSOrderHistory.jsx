@@ -247,7 +247,7 @@ export default function POSOrderHistory({ restaurantId, posTheme = 'dark' }) {
                 </div>
                 <div>
                     <p className={`${t.textMuted} text-[11px] font-semibold uppercase tracking-wider`}>Avg. Order</p>
-                    <p className={`${t.text} font-bold text-lg`}>£{filtered.length ? (totalRevenue / filtered.filter(o => !['cancelled','refunded'].includes(o.status)).length || 0).toFixed(2) : '0.00'}</p>
+                    <p className={`${t.text} font-bold text-lg`}>{prefix}{filtered.length ? (totalRevenue / filtered.filter(o => !['cancelled','refunded'].includes(o.status)).length || 0).toFixed(2) : '0.00'}</p>
                 </div>
             </div>
 

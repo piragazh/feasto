@@ -180,8 +180,8 @@ export default function POSExceptionsReport({ restaurantId, posTheme = 'dark' })
                                 <tr className={t.sub}>
                                     <th className="text-left font-medium pb-2">Staff</th>
                                     <th className="text-right font-medium pb-2">Voids</th>
-                                    <th className="text-right font-medium pb-2">Voided £</th>
-                                    <th className="text-right font-medium pb-2">Discounted £</th>
+                                    <th className="text-right font-medium pb-2">Voided {prefix}</th>
+                                    <th className="text-right font-medium pb-2">Discounted {prefix}</th>
                                     <th className="text-right font-medium pb-2">Edits</th>
                                 </tr>
                             </thead>

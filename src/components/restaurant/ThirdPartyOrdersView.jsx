@@ -65,7 +65,7 @@ export default function ThirdPartyOrdersView({ restaurantId }) {
                                     </div>
                                 </div>
                                 <p className="text-sm text-gray-600">
-                                    {order.items?.length || 0} items • £{order.total?.toFixed(2) || '0.00'}
+                                    {order.items?.length || 0} items • {prefix}{order.total?.toFixed(2) || '0.00'}
                                 </p>
                             </div>
                             <Badge variant="secondary">{order.status}</Badge>

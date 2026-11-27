@@ -54,7 +54,7 @@ export default function AIMenuPerformanceAnalytics({ restaurantId }) {
                 .join('\n');
 
             const menuSummary = menuItems.map(item => 
-                `${item.name} (${item.category}) - £${item.price} ${item.is_popular ? '[Popular]' : ''} ${item.is_available === false ? '[Unavailable]' : ''}`
+                `${item.name} (${item.category}) - ${prefix}${item.price} ${item.is_popular ? '[Popular]' : ''} ${item.is_available === false ? '[Unavailable]' : ''}`
             ).join('\n');
 
             const promotionSummary = promotions.filter(p => p.is_active).map(p =>

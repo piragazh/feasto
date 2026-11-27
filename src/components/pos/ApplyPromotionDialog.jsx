@@ -193,7 +193,7 @@ export default function ApplyPromotionDialog({
                                                     {coupon.discount_type === 'percentage'
                                                         ? `${coupon.discount_value}% off`
                                                         : coupon.discount_type === 'fixed'
-                                                        ? `£${coupon.discount_value} off`
+                                                        ? `${prefix}${coupon.discount_value} off`
                                                         : coupon.discount_type === 'free_delivery'
                                                         ? 'Free delivery'
                                                         : coupon.discount_type === 'free_item'
@@ -201,8 +201,8 @@ export default function ApplyPromotionDialog({
                                                         : coupon.discount_type
 
                                                     }
-                                                    {coupon.minimum_order ? ` · Min £${coupon.minimum_order}` : ''}
-                                                    {coupon.max_discount ? ` · Max £${coupon.max_discount}` : ''}
+                                                    {coupon.minimum_order ? ` · Min ${prefix}${coupon.minimum_order}` : ''}
+                                                    {coupon.max_discount ? ` · Max ${prefix}${coupon.max_discount}` : ''}
                                                 </p>
                                                 {coupon.description && (
                                                     <p className="text-gray-500 text-xs mt-0.5 truncate">{coupon.description}</p>

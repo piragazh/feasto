@@ -272,7 +272,7 @@ export default function PromotionManagement({ restaurantId }) {
                                                                 : promotion.promotion_type === 'buy_one_get_one' ? 'BOGO'
                                                                 : promotion.promotion_type === 'buy_two_get_one' ? 'B2G1'
                                                                 : promotion.promotion_type === 'free_delivery' ? 'Free'
-                                                                : `£${promotion.discount_value}`}
+                                                                : `${prefix}${promotion.discount_value}`}
                                                         </p>
                                                     </div>
                                                     <div>
@@ -447,7 +447,7 @@ export default function PromotionManagement({ restaurantId }) {
                                                 <div key={idx} className="border rounded-lg p-3 space-y-2">
                                                     <div className="flex items-end gap-2">
                                                         <div className="flex-1">
-                                                            <Label className="text-xs">Min Order (£)</Label>
+                                                            <Label className="text-xs">Min Order ({symbol})</Label>
                                                             <Input
                                                                 type="number"
                                                                 min="0"
@@ -476,7 +476,7 @@ export default function PromotionManagement({ restaurantId }) {
                                                                 </SelectTrigger>
                                                                 <SelectContent>
                                                                     <SelectItem value="percentage">%</SelectItem>
-                                                                    <SelectItem value="fixed">£</SelectItem>
+                                                                    <SelectItem value="fixed">{prefix}</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
@@ -588,7 +588,7 @@ export default function PromotionManagement({ restaurantId }) {
                                 {formData.promotion_type !== 'free_delivery' && formData.promotion_type !== 'buy_one_get_one' && formData.promotion_type !== 'buy_two_get_one' && formData.promotion_type !== 'tiered_discount' && formData.promotion_type !== 'combo_deal' && (
                                     <div>
                                         <Label>
-                                            Discount Value * ({formData.promotion_type === 'percentage_off' ? '%' : '£'})
+                                            Discount Value * ({formData.promotion_type === 'percentage_off' ? '%' : `${prefix}`})
                                         </Label>
                                         <Input
                                             type="number"
@@ -602,7 +602,7 @@ export default function PromotionManagement({ restaurantId }) {
                                 )}
 
                                 <div>
-                                    <Label>Minimum Order Amount (£)</Label>
+                                    <Label>Minimum Order Amount ({symbol})</Label>
                                     <Input
                                         type="number"
                                         min="0"

@@ -829,7 +829,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                         <div className="grid grid-cols-4 gap-2 mb-4">
                             {quickCash.map(amt => (
                                 <Button key={amt} disabled={blockedForPhoneDetails} onClick={() => handleQuickCash(amt)} className={`pos-quick-cash ${POS_TOUCH.control} disabled:opacity-40 ${POS_RADIUS.control} text-base font-bold ${POS_TRANSITION} ${POS_FOCUS} ${t.inactBtn}`}>
-                                    £{amt}
+                                    {prefix}{amt}
                                 </Button>
                             ))}
                         </div>
@@ -876,7 +876,7 @@ export default function POSPayment({ cart, cartTotal, onPaymentComplete, onBackT
                             {quickCash.map(amt => (
                                 <Button key={amt} onClick={() => setRawValue(String(amt * 100))}
                                     className={`pos-quick-cash ${POS_TOUCH.control} ${POS_RADIUS.control} text-sm font-bold ${numericInput === amt ? 'bg-green-600 text-white border-green-600' : t.inactBtn}`}>
-                                    £{amt}
+                                    {prefix}{amt}
                                 </Button>
                             ))}
                         </div>

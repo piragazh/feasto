@@ -205,7 +205,7 @@ export default function EnhancedAnalyticsDashboard({ restaurantId }) {
             const avg = recent.reduce((s, r) => s + r, 0) / recent.length;
             const response = await base44.integrations.Core.InvokeLLM({
                 prompt: `Forecast restaurant daily sales for next 7 days.
-Historical Revenue (last 14 days): ${recent.map(r => `£${r}`).join(', ')}
+Historical Revenue (last 14 days): ${recent.map(r => `${prefix}${r}`).join(', ')}
 Avg Daily: ${money(avg)}, Total Orders (${dateRange}d): ${filteredOrders.length}, Growth: ${kpis.growthRate}%
 Return structured forecast.`,
                 response_json_schema: {
@@ -466,8 +466,8 @@ Return structured forecast.`,
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `£${v}`} />
-                                    <Tooltip formatter={(v, n) => [`£${v}`, n]} />
+                                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${prefix}${v}`} />
+                                    <Tooltip formatter={(v, n) => [`${prefix}${v}`, n]} />
                                     <Legend />
                                     <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} fill="url(#revGrad)" name="Revenue" />
                                     <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#profitGrad)" name="Net Profit" />
@@ -547,7 +547,7 @@ Return structured forecast.`,
                                             labelLine={false}>
                                             {paymentData.map((_, i) => <Cell key={i} fill={['#3b82f6', '#10b981'][i]} />)}
                                         </Pie>
-                                        <Tooltip formatter={v => `£${v}`} />
+                                        <Tooltip formatter={v => `${prefix}${v}`} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </CardContent>

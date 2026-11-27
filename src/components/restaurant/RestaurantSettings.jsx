@@ -557,7 +557,7 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label>Delivery Fee (£) — for orders above minimum</Label>
+                                <Label>Delivery Fee ({symbol}) — for orders above minimum</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -566,7 +566,7 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
                                 />
                             </div>
                             <div>
-                                <Label>Minimum Order (£) — for free/standard delivery</Label>
+                                <Label>Minimum Order ({symbol}) — for free/standard delivery</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -596,7 +596,7 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
                             {formData.tiered_delivery.enabled && (
                                 <div className="grid grid-cols-2 gap-4 pt-2">
                                     <div>
-                                        <Label>Lower Minimum Order (£)</Label>
+                                        <Label>Lower Minimum Order ({symbol})</Label>
                                         <Input
                                             type="number"
                                             step="0.01"
@@ -610,7 +610,7 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
                                         <p className="text-xs text-gray-500 mt-1">Minimum for the lower tier</p>
                                     </div>
                                     <div>
-                                        <Label>Delivery Fee for Lower Tier (£)</Label>
+                                        <Label>Delivery Fee for Lower Tier ({symbol})</Label>
                                         <Input
                                             type="number"
                                             step="0.01"
@@ -748,7 +748,7 @@ export default function RestaurantSettings({ restaurantId, onOpenBranding }) {
                                         onChange={(e) => setFormData({ ...formData, loyalty_points_multiplier: parseFloat(e.target.value) })}
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Customers earn {formData.loyalty_points_multiplier || 1} points per £1 spent
+                                        Customers earn {formData.loyalty_points_multiplier || 1} points per {prefix}1 spent
                                     </p>
                                 </div>
                             )}

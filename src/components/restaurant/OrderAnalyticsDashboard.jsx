@@ -318,9 +318,9 @@ export default function OrderAnalyticsDashboard({ restaurantId }) {
                                         <XAxis dataKey="date" />
                                         <YAxis yAxisId="left" />
                                         <YAxis yAxisId="right" orientation="right" />
-                                        <Tooltip formatter={(value, name) => name === 'Revenue (£)' ? `${money(value)}` : value} />
+                                        <Tooltip formatter={(value, name) => name === `Revenue (${symbol})` ? `${money(value)}` : value} />
                                         <Legend />
-                                        <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#f97316" name="Revenue (£)" strokeWidth={2} />
+                                        <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#f97316" name={`Revenue (${symbol})`} strokeWidth={2} />
                                         <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#0ea5e9" name="Orders" strokeWidth={2} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -355,7 +355,7 @@ export default function OrderAnalyticsDashboard({ restaurantId }) {
                                         <Tooltip />
                                         <Legend />
                                         <Bar dataKey="quantity" fill="#f97316" name="Orders" />
-                                        <Bar dataKey="revenue" fill="#0ea5e9" name="Revenue (£)" />
+                                        <Bar dataKey="revenue" fill="#0ea5e9" name={`Revenue (${symbol})`} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             ) : (
