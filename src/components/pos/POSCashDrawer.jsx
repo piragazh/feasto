@@ -4,7 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Wallet, ArrowDownCircle, ArrowUpCircle, Lock, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { getStaffSessionToken } from '@/lib/posStaffSession';
-import { UK_DENOMINATIONS, countTotal } from '@/lib/pos-cash-logic';
+import { countTotal } from '@/lib/pos-cash-logic';
+import { getCashDenominations } from '@/lib/region';
 import { useMoney } from '@/lib/MoneyContext';
 
 /**
@@ -24,10 +25,11 @@ import { useMoney } from '@/lib/MoneyContext';
  */
 
 function DenominationCounter({ counts, onChange, t }) {
-    const { prefix } = useMoney();
+    const { prefix, country } = useMoney();
+    // The restaurant's own notes and coins (UK: £50 … 1p, as before; Sri Lanka: Rs 5000 … Rs 1).
     return (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {UK_DENOMINATIONS.map(d => {
+            {getCashDenominations(country).map(d => {
                 const label = d >= 1 ? `${prefix}${d}` : `${Math.round(d * 100)}p`;
                 return (
                     <label key={d} className={`flex flex-col gap-1 p-2 rounded-xl border ${t.box}`}>
@@ -47,7 +49,7 @@ function DenominationCounter({ counts, onChange, t }) {
 }
 
 export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = 'dark' }) {
-    const { money, prefix } = useMoney();
+    const { money, prefix, country } = useMoney();
     const isDark = posTheme === 'dark';
     const t = {
         panel: isDark ? 'bg-[#151720] border-white/[0.06]' : 'bg-white border-gray-200',
@@ -93,7 +95,7 @@ export default function POSCashDrawer({ restaurantId, terminal = 1, posTheme = '
         finally { setBusy(false); }
     };
 
-    const counted = countTotal(counts);
+    const counted = countTotal(counts, getCashDenominations(country));
 
     // ── Revealed result after a count ────────────────────────────────────────
     if (result) {

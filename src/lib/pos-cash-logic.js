@@ -109,9 +109,10 @@ export const UK_DENOMINATIONS = [50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02,
  * reported 1p variance, and a 1p variance on every shift erodes trust in the
  * whole report.
  */
-export function countTotal(counts = {}) {
+export function countTotal(counts = {}, denominations = UK_DENOMINATIONS) {
+    // denominations: the restaurant's notes and coins (getCashDenominations in region.js); UK by default.
     let pence = 0;
-    for (const d of UK_DENOMINATIONS) {
+    for (const d of denominations) {
         const n = Math.max(0, Math.floor(Number(counts[String(d)] || 0)));
         pence += n * Math.round(d * 100);
     }
