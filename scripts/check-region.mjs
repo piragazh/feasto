@@ -103,7 +103,7 @@ else ok('a missing LK httpSMS phone never falls back to the UK SIM');
     else ok(`restaurant clock rule matches region.js on ${R.length} records`);
 
     // 5. The server clock copy (receipt printers) - identical copies, same answers.
-    const CLOCK_MIRRORS = ['base44/functions/androidPrint/entry.ts', 'base44/functions/networkPrint/entry.ts'];
+    const CLOCK_MIRRORS = ['base44/functions/androidPrint/entry.ts', 'base44/functions/networkPrint/entry.ts', 'base44/functions/posCreateOrder/entry.ts', 'base44/functions/syncOfflineOrder/entry.ts'];
     const cblock = (s) => (s.match(/\/\/ region-clock:start[\s\S]*?\/\/ region-clock:end/) || [null])[0];
     const clock = cblock(fs.readFileSync('scripts/region-clock.snippet.js', 'utf8'));
     for (const file of CLOCK_MIRRORS) {

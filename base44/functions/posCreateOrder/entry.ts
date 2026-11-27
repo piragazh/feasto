@@ -101,11 +101,11 @@ function toMinutes(hhmm) {
     return h * 60 + min;
 }
 
-function isWithinWindow(w, date) {
+function isWithinWindow(w, date, timeZone = SCHEDULE_TZ) {
     if (!w) return false;
     const start = toMinutes(w.start), end = toMinutes(w.end);
     if (start === null || end === null) return false;
-    const { day, minutes } = localClock(date);
+    const { day, minutes } = localClock(date, timeZone);
     const days = Array.isArray(w.days) && w.days.length ? w.days : [0, 1, 2, 3, 4, 5, 6];
     if (start === end) return days.includes(day);
     if (start < end) return days.includes(day) && minutes >= start && minutes < end;
@@ -113,13 +113,13 @@ function isWithinWindow(w, date) {
     return minutes < end && days.includes((day + 6) % 7);
 }
 
-function isItemAvailableNow(item, date) {
+function isItemAvailableNow(item, date, timeZone = SCHEDULE_TZ) {
     const ws = item?.availability_windows;
     if (!Array.isArray(ws) || ws.length === 0) return true;
-    return ws.some(w => isWithinWindow(w, date));
+    return ws.some(w => isWithinWindow(w, date, timeZone));
 }
 
-function scheduledPrice(base, item, date) {
+function scheduledPrice(base, item, date, timeZone = SCHEDULE_TZ) {
     const ws = item?.price_windows;
     let best = Number(base);
     if (!Array.isArray(ws) || ws.length === 0) return best;
@@ -130,10 +130,25 @@ function scheduledPrice(base, item, date) {
         if (raw === '' || raw === null || raw === undefined || (typeof raw === 'string' && raw.trim() === '')) continue;
         const p = Number(raw);
         if (!Number.isFinite(p) || p < 0) continue;
-        if (isWithinWindow(w, date) && p < best) best = p;
+        if (isWithinWindow(w, date, timeZone) && p < best) best = p;
     }
     return best;
 }
+
+// region-clock:start
+// SYNC RULE: server copy of getRestaurantTimeZone (src/lib/region.js).
+// Every copy must be identical to scripts/region-clock.snippet.js;
+// scripts/check-region.mjs enforces it and compares it with region.js.
+const REGION_CLOCK = { GB: 'Europe/London', LK: 'Asia/Colombo' };
+function regionClockTz(restaurant) {
+    const tz = typeof restaurant?.timezone === 'string' ? restaurant.timezone.trim() : '';
+    if (tz && tz.toUpperCase() !== 'UTC') {
+        try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); return tz; } catch (_) { /* fall through */ }
+    }
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_CLOCK[c] || 'Europe/London';
+}
+// region-clock:end
 
 Deno.serve(async (req) => {
     try {
@@ -199,6 +214,9 @@ Deno.serve(async (req) => {
         if (!restaurants || restaurants.length === 0) {
             return Response.json({ error: 'Restaurant not found' }, { status: 404 });
         }
+        // Item times and timed prices run on the restaurant's own clock
+        // (UK unless its country says otherwise).
+        const posTz = regionClockTz(restaurants[0]);
 
         // SKIP ITEM PRICE VALIDATION
         // POS is staff-operated terminal with local controls and audit trail.
@@ -260,7 +278,7 @@ Deno.serve(async (req) => {
                     stale_menu: true,
                 }, { status: 409 });
             }
-            if (menuItem.is_available === false || !isItemAvailableNow(menuItem, now)) {
+            if (menuItem.is_available === false || !isItemAvailableNow(menuItem, now, posTz)) {
                 return Response.json({
                     error: `"${menuItem.name}" isn't available at this time.`,
                     unavailable: true,
@@ -268,7 +286,7 @@ Deno.serve(async (req) => {
             }
 
             const base = menuItem.pos_price != null ? menuItem.pos_price : menuItem.price;
-            const floor = scheduledPrice(base, menuItem, now);
+            const floor = scheduledPrice(base, menuItem, now, posTz);
 
             // Penny tolerance for floating-point noise, never more.
             if (claimed + 0.005 < floor) {
