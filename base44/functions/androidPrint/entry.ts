@@ -29,6 +29,21 @@ const GS = 0x1D;
 // opened it on both. 200ms is well within spec and safe for the solenoid.
 const CASH_DRAWER_CMD = [ESC, 0x70, 0x00, 0x64, 0x64];
 
+// region-clock:start
+// SYNC RULE: server copy of getRestaurantTimeZone (src/lib/region.js).
+// Every copy must be identical to scripts/region-clock.snippet.js;
+// scripts/check-region.mjs enforces it and compares it with region.js.
+const REGION_CLOCK = { GB: 'Europe/London', LK: 'Asia/Colombo' };
+function regionClockTz(restaurant) {
+    const tz = typeof restaurant?.timezone === 'string' ? restaurant.timezone.trim() : '';
+    if (tz && tz.toUpperCase() !== 'UTC') {
+        try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); return tz; } catch (_) { /* fall through */ }
+    }
+    const c = typeof restaurant?.country === 'string' ? restaurant.country.trim().toUpperCase() : '';
+    return REGION_CLOCK[c] || 'Europe/London';
+}
+// region-clock:end
+
 function buildCommands(commandSet = 'esc_pos') {
     const sets = {
         esc_pos:     { init: [ESC,0x40], alignCenter: [ESC,0x61,0x01], alignLeft: [ESC,0x61,0x00], boldOn: [ESC,0x45,0x01], boldOff: [ESC,0x45,0x00], cut: [GS,0x56,0x41,0x00], doubleHeight: [ESC,0x21,0x10], normal: [ESC,0x21,0x00] },
@@ -85,8 +100,10 @@ function buildReceiptBytes(order, restaurant, config, openCashDrawer = false) {
 
     if (config.template !== 'compact') {
         const _dt = new Date(order.created_date || Date.now());
-        const _timeStr = _dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
-        const _dateStr = _dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'Europe/London' });
+        // Printed on the restaurant's own clock (UK unless its country says otherwise).
+        const _tz = regionClockTz(restaurant);
+        const _timeStr = _dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: _tz });
+        const _dateStr = _dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: _tz });
         add(`${_timeStr}  ${_dateStr}\n`);
     }
     const orderTypeLabel = order.order_type
